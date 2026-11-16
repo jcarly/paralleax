@@ -42,7 +42,9 @@ export function StoryGroupTreeRows(props: StoryGroupTreeRowsProps) {
       aria-describedby="group-keyboard-help"
       className="story-group-tree"
       tabIndex={props.entries.length && !selectedEntryVisible ? 0 : -1}
-      onFocus={(event) => focusFirstEntry(event, props)}
+      onFocus={(event) => {
+        focusFirstEntry(event, props);
+      }}
     >
       {props.entries.map((entry) => (
         <GroupExplorerEntryRow
@@ -69,8 +71,12 @@ function GroupExplorerEntryRow({
         depth={entry.depth}
         selected={props.selectedInteractionId === entry.interaction.id}
         inTree
-        onKeyDown={(event) => props.onInteractionKeyDown(event, entry.interaction.id)}
-        onSelect={() => props.onSelectInteraction(entry.interaction.id)}
+        onKeyDown={(event) => {
+          props.onInteractionKeyDown(event, entry.interaction.id);
+        }}
+        onSelect={() => {
+          props.onSelectInteraction(entry.interaction.id);
+        }}
       />
     );
   }
@@ -100,13 +106,25 @@ function GroupTreeRow({
       dragging={Boolean(props.activeId)}
       drop={drop}
       invalid={isInvalidDrop(group.id, props)}
-      onToggle={() => props.onToggle(group.id)}
-      onSelect={() => props.onSelectGroup(group.id)}
-      onFocus={() => props.onFocusGroup(getGroupMembers(group.id, props))}
-      onMenu={(position) => props.onMenu(group.id, position)}
+      onToggle={() => {
+        props.onToggle(group.id);
+      }}
+      onSelect={() => {
+        props.onSelectGroup(group.id);
+      }}
+      onFocus={() => {
+        props.onFocusGroup(getGroupMembers(group.id, props));
+      }}
+      onMenu={(position) => {
+        props.onMenu(group.id, position);
+      }}
       onRename={(title) => props.onRename(group.id, title)}
-      onRenameComplete={(restoreFocus) => props.onRenameComplete(group.id, restoreFocus)}
-      onKeyDown={(event) => props.onGroupKeyDown(event, group)}
+      onRenameComplete={(restoreFocus) => {
+        props.onRenameComplete(group.id, restoreFocus);
+      }}
+      onKeyDown={(event) => {
+        props.onGroupKeyDown(event, group);
+      }}
     />
   );
 }

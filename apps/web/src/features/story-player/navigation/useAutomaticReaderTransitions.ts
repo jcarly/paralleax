@@ -41,7 +41,9 @@ export function useAutomaticReaderTransitions(options: AutomaticReaderTransition
     optionsRef.current = options;
   });
   useEffect(() => scheduleAutomaticOpening(optionsRef.current));
-  useLayoutEffect(() => advanceEmptyInteraction(optionsRef.current));
+  useLayoutEffect(() => {
+    advanceEmptyInteraction(optionsRef.current);
+  });
   return shouldHideAutomaticReaderPassThrough(options);
 }
 

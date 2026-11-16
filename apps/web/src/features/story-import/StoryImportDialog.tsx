@@ -70,10 +70,9 @@ export function StoryImportDialog({
       );
       let result: StoryImportOutcome;
       if (format === 'qsp') {
-        progressSession = await openQspImportProgress(
-          (qspProgress) => setProgress({ phase: 'qsp-analysis', progress: qspProgress }),
-          controller?.signal,
-        );
+        progressSession = await openQspImportProgress((qspProgress) => {
+          setProgress({ phase: 'qsp-analysis', progress: qspProgress });
+        }, controller?.signal);
         result = await importQspFiles(
           files,
           isAdministrator,
@@ -132,11 +131,11 @@ export function StoryImportDialog({
           role="dialog"
           aria-modal="true"
           aria-labelledby="story-import-title"
-          onKeyDown={(event) =>
+          onKeyDown={(event) => {
             handleModalDialogKeyDown(event, () => {
               if (!pending) onClose();
-            })
-          }
+            });
+          }}
         >
           <div className="dialog-icon" aria-hidden="true">
             ⇧

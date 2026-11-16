@@ -106,7 +106,9 @@ function uploadBinary<T>(
 ): Promise<T> {
   return new Promise((resolve, reject) => {
     const xhr = new XMLHttpRequest();
-    const abort = () => xhr.abort();
+    const abort = () => {
+      xhr.abort();
+    };
     const cleanup = () => signal?.removeEventListener('abort', abort);
     const rejectCancelled = () => {
       cleanup();

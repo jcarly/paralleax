@@ -33,7 +33,7 @@ describe('FeedbackButton', () => {
     expect(formbricksFeedbackClient.setup).not.toHaveBeenCalled();
     await user.click(button);
 
-    await waitFor(() =>
+    await waitFor(() => {
       expect(formbricksFeedbackClient.trackFeedback).toHaveBeenCalledWith(
         'en',
         expect.objectContaining({
@@ -42,8 +42,8 @@ describe('FeedbackButton', () => {
           paralleax_version: '0.1.0',
           paralleax_language: 'en',
         }),
-      ),
-    );
+      );
+    });
     expect(formbricksFeedbackClient.trackFeedback).not.toHaveBeenCalledWith(
       expect.anything(),
       expect.objectContaining({ storyId: expect.anything() }),

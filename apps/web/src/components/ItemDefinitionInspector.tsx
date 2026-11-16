@@ -50,14 +50,18 @@ export function ItemDefinitionInspector({
         imageUrl={itemDefinition.imageUrl}
         semanticCommentCounts={semanticCommentCounts}
         onOpenSemanticComments={onOpenSemanticComments}
-        onChange={(imageUrl) => onChange({ ...itemDefinition, imageUrl })}
+        onChange={(imageUrl) => {
+          onChange({ ...itemDefinition, imageUrl });
+        }}
         onCommit={(imageUrl) => void onPatch(itemDefinition.id, { imageUrl })}
       />
       <InspectorNameField
         value={itemDefinition.name}
         textCommentCounts={textCommentCounts}
         onOpenTextComments={onOpenTextComments}
-        onChange={(name) => onChange({ ...itemDefinition, name })}
+        onChange={(name) => {
+          onChange({ ...itemDefinition, name });
+        }}
         onCommit={(name) => onPatch(itemDefinition.id, { name })}
       />
       <InspectorCategoryField
@@ -65,14 +69,18 @@ export function ItemDefinitionInspector({
         suggestions={categorySuggestions}
         semanticCommentCounts={semanticCommentCounts}
         onOpenSemanticComments={onOpenSemanticComments}
-        onChange={(category) => onChange({ ...itemDefinition, category })}
+        onChange={(category) => {
+          onChange({ ...itemDefinition, category });
+        }}
         onCommit={(category) => void onPatch(itemDefinition.id, { category })}
       />
       <InspectorDescriptionField
         value={itemDefinition.description}
         textCommentCounts={textCommentCounts}
         onOpenTextComments={onOpenTextComments}
-        onChange={(description) => onChange({ ...itemDefinition, description })}
+        onChange={(description) => {
+          onChange({ ...itemDefinition, description });
+        }}
         onCommit={(description) => void onPatch(itemDefinition.id, { description })}
       />
       <InspectorCommentSlot

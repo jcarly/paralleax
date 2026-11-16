@@ -56,19 +56,21 @@ describe('usePendingSaveGuard', () => {
     const router = mount();
     await router.navigate(-1);
     expect(await screen.findByRole('dialog', { name: 'Unsaved changes' })).toBeInTheDocument();
-    await waitFor(() =>
-      expect(screen.getByRole('button', { name: 'Stay on this page' })).toHaveFocus(),
-    );
+    await waitFor(() => {
+      expect(screen.getByRole('button', { name: 'Stay on this page' })).toHaveFocus();
+    });
     expect(screen.getByTestId('location')).toHaveTextContent('/stories/story-1/edit');
     await userEvent.click(screen.getByRole('button', { name: 'Stay on this page' }));
     expect(screen.queryByRole('dialog')).not.toBeInTheDocument();
     await router.navigate(-1);
     await userEvent.click(await screen.findByRole('button', { name: 'Leave page' }));
-    await waitFor(() => expect(screen.getByTestId('location')).toHaveTextContent('/other'));
+    await waitFor(() => {
+      expect(screen.getByTestId('location')).toHaveTextContent('/other');
+    });
     await router.navigate(1);
-    await waitFor(() =>
-      expect(screen.getByTestId('location')).toHaveTextContent('/stories/story-1/edit'),
-    );
+    await waitFor(() => {
+      expect(screen.getByTestId('location')).toHaveTextContent('/stories/story-1/edit');
+    });
   });
 
   it('blocks links and code navigation', async () => {
@@ -83,7 +85,9 @@ describe('usePendingSaveGuard', () => {
   it('allows navigation after saving succeeds', async () => {
     mount(false);
     fireEvent.click(screen.getByRole('link', { name: 'Leave by link' }));
-    await waitFor(() => expect(screen.getByTestId('location')).toHaveTextContent('/other'));
+    await waitFor(() => {
+      expect(screen.getByTestId('location')).toHaveTextContent('/other');
+    });
     expect(screen.queryByRole('dialog')).not.toBeInTheDocument();
     const unload = new Event('beforeunload', { cancelable: true });
     window.dispatchEvent(unload);

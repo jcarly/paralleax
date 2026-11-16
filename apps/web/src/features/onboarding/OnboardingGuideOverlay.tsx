@@ -126,7 +126,9 @@ function useGuideOverlayPosition(
 
   useLayoutEffect(() => {
     const state: GuideOverlayState = { focus, positionerRef, setPosition };
-    const update = () => refreshGuideOverlay(state);
+    const update = () => {
+      refreshGuideOverlay(state);
+    };
     if (typeof ResizeObserver !== 'undefined') {
       state.resizeObserver = new ResizeObserver(update);
       if (positionerRef.current) {

@@ -56,8 +56,12 @@ export function useStoryContextNavigation({
     }
   }, [isContextPanelOpen]);
 
-  const toggleContextPanel = useCallback(() => setIsContextPanelOpen((isOpen) => !isOpen), []);
-  const openContextPanel = useCallback(() => setIsContextPanelOpen(true), []);
+  const toggleContextPanel = useCallback(() => {
+    setIsContextPanelOpen((isOpen) => !isOpen);
+  }, []);
+  const openContextPanel = useCallback(() => {
+    setIsContextPanelOpen(true);
+  }, []);
   const toggleContextSection = useCallback((section: StoryContextSection) => {
     setOpenContextSections((sections) => ({ ...sections, [section]: !sections[section] }));
   }, []);
@@ -74,7 +78,9 @@ export function useStoryContextNavigation({
       );
     }
   }, []);
-  const clearSearch = useCallback(() => setSearchQuery(''), [setSearchQuery]);
+  const clearSearch = useCallback(() => {
+    setSearchQuery('');
+  }, [setSearchQuery]);
 
   const normalizedSearchQuery = searchQuery.trim().toLocaleLowerCase();
   const occurrenceCounts = useMemo(

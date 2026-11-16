@@ -26,9 +26,9 @@ async function verifyEmptySimulationBodyEntry(user: ReturnType<typeof userEvent.
     await screen.findByRole('textbox', { name: 'Current interaction content' }),
   ).toBeInTheDocument();
   await user.click(screen.getByLabelText('Current interaction title'));
-  await waitFor(() =>
-    expect(screen.getByRole('button', { name: 'Add content' })).toBeInTheDocument(),
-  );
+  await waitFor(() => {
+    expect(screen.getByRole('button', { name: 'Add content' })).toBeInTheDocument();
+  });
   expect(document.querySelector('.simulation-body-editor')).toBeNull();
 }
 
@@ -132,11 +132,11 @@ describe('StoryPlayer simulation authoring', () => {
     await user.type(bodyInput, 'Rewritten content.');
     await user.tab();
 
-    await waitFor(() =>
+    await waitFor(() => {
       expect(api.updateInteraction).toHaveBeenCalledWith('story-1', 'next', {
         body: '<p>Rewritten content.</p>',
-      }),
-    );
+      });
+    });
     expect(screen.getByText('Rewritten content.')).toBeInTheDocument();
     expect(document.querySelector('.simulation-body-editor .rich-text-editor')).toBeNull();
   });
@@ -179,7 +179,9 @@ describe('StoryPlayer simulation authoring', () => {
     expect(screen.queryByRole('button', { name: 'Retry' })).not.toBeInTheDocument();
     await user.click(screen.getByRole('button', { name: 'Reload Story' }));
 
-    await waitFor(() => expect(api.getStoryRuntimeBootstrap).toHaveBeenCalled());
+    await waitFor(() => {
+      expect(api.getStoryRuntimeBootstrap).toHaveBeenCalled();
+    });
     expect(await screen.findByText('Story changes saved')).toBeInTheDocument();
     expect(api.createInteraction).toHaveBeenCalledOnce();
   });

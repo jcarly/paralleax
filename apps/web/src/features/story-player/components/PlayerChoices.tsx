@@ -72,9 +72,9 @@ export function PlayerChoices({
                 aria-label={t('player.newOptionTitle')}
                 placeholder={interactionTitlePlaceholder(interaction, t)}
                 value={interaction.title}
-                onChange={(event) =>
-                  onPatchInteraction(interaction.id, { title: event.target.value })
-                }
+                onChange={(event) => {
+                  onPatchInteraction(interaction.id, { title: event.target.value });
+                }}
                 onBlur={(event) => void onSaveChoiceTitle(interaction, event.target.value)}
                 onKeyDown={(event) => {
                   if (event.key === 'Enter') {
@@ -88,7 +88,9 @@ export function PlayerChoices({
             <button
               className={`choice ${available ? 'available' : 'unavailable'} ${isSimulationMode && !available && forceUnavailableOptions ? 'forced' : ''}`}
               disabled={isSimulationMode && !available && !forceUnavailableOptions}
-              onClick={() => onChoose(interaction)}
+              onClick={() => {
+                onChoose(interaction);
+              }}
               title={
                 available
                   ? getConditionSummary(story, interaction, currentInteractionId ?? null, t)

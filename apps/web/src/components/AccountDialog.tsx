@@ -84,7 +84,9 @@ export function AccountDialog({
           role="dialog"
           aria-modal="true"
           aria-labelledby="account-dialog-title"
-          onKeyDown={(event) => handleModalDialogKeyDown(event, onClose)}
+          onKeyDown={(event) => {
+            handleModalDialogKeyDown(event, onClose);
+          }}
         >
           <div className="dialog-icon" aria-hidden="true">
             â—‡
@@ -109,7 +111,9 @@ export function AccountDialog({
                 aria-label={t('account.displayName')}
                 autoComplete="nickname"
                 value={displayName}
-                onChange={(event) => setDisplayName(event.target.value)}
+                onChange={(event) => {
+                  setDisplayName(event.target.value);
+                }}
                 minLength={2}
                 maxLength={50}
                 required
@@ -149,7 +153,9 @@ export function AccountDialog({
                   autoComplete="current-password"
                   type="password"
                   value={currentPassword}
-                  onChange={(event) => setCurrentPassword(event.target.value)}
+                  onChange={(event) => {
+                    setCurrentPassword(event.target.value);
+                  }}
                   required
                 />
               </label>
@@ -160,7 +166,9 @@ export function AccountDialog({
                   autoComplete="new-password"
                   type="password"
                   value={newPassword}
-                  onChange={(event) => setNewPassword(event.target.value)}
+                  onChange={(event) => {
+                    setNewPassword(event.target.value);
+                  }}
                   minLength={8}
                   required
                 />

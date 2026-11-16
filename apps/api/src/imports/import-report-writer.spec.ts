@@ -100,9 +100,9 @@ describe('import report writer', () => {
     const reportPath = join(tempDir, 'snapshot.jsonl');
     const writer = new ImportReportWriter({ reportPath });
 
-    expect(() =>
-      writer.writeIssue({ severity: 'error', code: 'before_start', message: 'Not yet started.' }),
-    ).toThrow('must be started');
+    expect(() => {
+      writer.writeIssue({ severity: 'error', code: 'before_start', message: 'Not yet started.' });
+    }).toThrow('must be started');
 
     await writer.persistSnapshot({
       warningCount: 1,
@@ -114,9 +114,9 @@ describe('import report writer', () => {
     });
 
     expect((await readFile(reportPath, 'utf8')).trim().split('\n')).toHaveLength(2);
-    expect(() =>
-      writer.writeIssue({ severity: 'error', code: 'after_close', message: 'Already closed.' }),
-    ).toThrow('must be started');
+    expect(() => {
+      writer.writeIssue({ severity: 'error', code: 'after_close', message: 'Already closed.' });
+    }).toThrow('must be started');
   });
 
   it('requires either an explicit path or complete storage metadata', () => {

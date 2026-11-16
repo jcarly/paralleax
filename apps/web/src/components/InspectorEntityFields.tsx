@@ -130,8 +130,12 @@ export function InspectorDescriptionField({
           data-comment-field="description"
           rows={7}
           value={value}
-          onChange={(event) => onChange(event.target.value)}
-          onBlur={(event) => onCommit(event.target.value)}
+          onChange={(event) => {
+            onChange(event.target.value);
+          }}
+          onBlur={(event) => {
+            onCommit(event.target.value);
+          }}
         />
       </label>
     </InspectorCommentField>

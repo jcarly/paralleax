@@ -101,29 +101,33 @@ describe('StatDefinitionInspector', () => {
     const assignedValue = screen.getByLabelText('Initial value for Story');
     fireEvent.change(assignedValue, { target: { value: '6' } });
     fireEvent.blur(assignedValue, { target: { value: '6' } });
-    await waitFor(() =>
+    await waitFor(() => {
       expect(updateAssignment).toHaveBeenCalledWith('story-1', 'story-energy', {
         initialValue: 6,
-      }),
-    );
+      });
+    });
 
     await userEvent.click(screen.getByRole('button', { name: 'Remove variable from Story' }));
-    await waitFor(() => expect(deleteAssignment).toHaveBeenCalledWith('story-1', 'story-energy'));
+    await waitFor(() => {
+      expect(deleteAssignment).toHaveBeenCalledWith('story-1', 'story-energy');
+    });
 
     await userEvent.selectOptions(screen.getByLabelText('Attach to'), 'location:location-1');
     fireEvent.change(screen.getByLabelText('Initial value'), { target: { value: '8' } });
     await userEvent.click(screen.getByRole('button', { name: 'Assign' }));
-    await waitFor(() =>
+    await waitFor(() => {
       expect(createAssignment).toHaveBeenCalledWith('story-1', {
         statDefinitionId: 'energy',
         ownerType: 'location',
         ownerId: 'location-1',
         initialValue: 8,
-      }),
-    );
+      });
+    });
 
     await userEvent.click(screen.getByRole('button', { name: 'Delete variable' }));
-    await waitFor(() => expect(deleteDefinition).toHaveBeenCalledWith('story-1', 'energy'));
+    await waitFor(() => {
+      expect(deleteDefinition).toHaveBeenCalledWith('story-1', 'energy');
+    });
     expect(onStory).toHaveBeenCalledWith(nextStory);
     expect(onClose).toHaveBeenCalledOnce();
   });

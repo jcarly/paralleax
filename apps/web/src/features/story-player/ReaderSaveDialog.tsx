@@ -140,8 +140,12 @@ export function ReaderSaveDialog({
           role="dialog"
           aria-modal="true"
           aria-labelledby="reader-save-dialog-title"
-          onKeyDown={(event) => handleModalDialogKeyDown(event, onClose)}
-          onMouseDown={(event) => event.stopPropagation()}
+          onKeyDown={(event) => {
+            handleModalDialogKeyDown(event, onClose);
+          }}
+          onMouseDown={(event) => {
+            event.stopPropagation();
+          }}
         >
           <div className="reader-save-dialog-header">
             <div>
@@ -163,7 +167,9 @@ export function ReaderSaveDialog({
                 value={name}
                 maxLength={MAX_READER_SAVE_NAME_LENGTH}
                 placeholder={t('player.saves.namePlaceholder')}
-                onChange={(event) => setName(event.target.value)}
+                onChange={(event) => {
+                  setName(event.target.value);
+                }}
               />
             </label>
             <button

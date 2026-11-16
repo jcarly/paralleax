@@ -28,15 +28,15 @@ export function UngroupedInteractionList(props: UngroupedInteractionListProps) {
         type="button"
         className="ghost story-ungrouped-toggle"
         aria-expanded={open}
-        onClick={() =>
+        onClick={() => {
           toggleList({
             searching,
             open,
             query: props.searchQuery,
             setExpanded,
             setCollapsedQuery: setCollapsedSearchQuery,
-          })
-        }
+          });
+        }}
       >
         <span aria-hidden="true">{open ? 'â–¾' : 'â–¸'}</span>
         <span>{t('editor.groups.ungroupedCount', { count: results.length })}</span>
@@ -100,7 +100,9 @@ function UngroupedInteractionRows({
           interaction={interaction}
           depth={0}
           selected={selectedInteractionId === interaction.id}
-          onSelect={() => onSelect(interaction.id)}
+          onSelect={() => {
+            onSelect(interaction.id);
+          }}
         />
       ))}
     </div>

@@ -4,7 +4,9 @@ import { afterEach, describe, expect, it } from 'vitest';
 import { DesignSystemPage } from './DesignSystemPage';
 
 describe('DesignSystemPage', () => {
-  afterEach(() => cleanup());
+  afterEach(() => {
+    cleanup();
+  });
 
   it('documents foundations, controls, and narrative patterns', () => {
     render(

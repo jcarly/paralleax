@@ -35,7 +35,9 @@ export function StatValueNodeView({ node, editor, extension, getPos }: NodeViewP
             context.onEditVariable(position, assignmentId, itemId);
           }
         }}
-        onRemove={() => deleteNode(editor, position, node.nodeSize)}
+        onRemove={() => {
+          deleteNode(editor, position, node.nodeSize);
+        }}
       >
         {label}
       </TokenActions>
@@ -70,7 +72,9 @@ export function InteractionLinkNodeView({ node, editor, extension, getPos }: Nod
             context.onEditInteractionLink(position, text, targetId);
           }
         }}
-        onRemove={() => deleteNode(editor, position, node.nodeSize)}
+        onRemove={() => {
+          deleteNode(editor, position, node.nodeSize);
+        }}
       >{`🔗 ${text} | ${target}`}</TokenActions>
     </NodeViewWrapper>
   );
@@ -131,7 +135,9 @@ function ConditionControls({
         title={context.t('richText.addAnotherCondition')}
         type="button"
         onMouseDown={keepEditorFocus}
-        onClick={() => context.onAddConditionalCondition(blockId)}
+        onClick={() => {
+          context.onAddConditionalCondition(blockId);
+        }}
       >
         +
       </button>
@@ -159,7 +165,9 @@ function ConditionControl({
         contentEditable={false}
         type="button"
         onMouseDown={keepEditorFocus}
-        onClick={() => context.onEditConditionalCondition(blockId, index)}
+        onClick={() => {
+          context.onEditConditionalCondition(blockId, index);
+        }}
       >
         {label}
       </button>
@@ -170,7 +178,9 @@ function ConditionControl({
         title={context.t('richText.removeConditionToken')}
         type="button"
         onMouseDown={keepEditorFocus}
-        onClick={() => context.onRemoveConditionalCondition(blockId, index)}
+        onClick={() => {
+          context.onRemoveConditionalCondition(blockId, index);
+        }}
       >
         ×
       </button>

@@ -8,7 +8,9 @@ describe('story editor selection', () => {
   it('resolves each exclusive inspector target from the canonical story', () => {
     const { result } = renderSelection();
 
-    act(() => result.current.selectExclusive({ type: 'location', id: 'location-1' }));
+    act(() => {
+      result.current.selectExclusive({ type: 'location', id: 'location-1' });
+    });
     expect(result.current.selectedLocation?.name).toBe('Bridge');
     expect(result.current.selectedContextReference).toEqual({ type: 'location', id: 'location-1' });
     expect(result.current.selectedCommentTarget).toEqual({
@@ -16,33 +18,45 @@ describe('story editor selection', () => {
       targetId: 'location-1',
     });
 
-    act(() => result.current.selectExclusive({ type: 'character', id: 'character-1' }));
+    act(() => {
+      result.current.selectExclusive({ type: 'character', id: 'character-1' });
+    });
     expect(result.current.selectedCharacter?.name).toBe('Captain');
     expect(result.current.selectedLocation).toBeUndefined();
 
-    act(() => result.current.selectExclusive({ type: 'statDefinition', id: 'stat-1' }));
+    act(() => {
+      result.current.selectExclusive({ type: 'statDefinition', id: 'stat-1' });
+    });
     expect(result.current.selectedStatDefinition?.name).toBe('Alarm');
 
-    act(() => result.current.selectExclusive({ type: 'itemDefinition', id: 'item-1' }));
+    act(() => {
+      result.current.selectExclusive({ type: 'itemDefinition', id: 'item-1' });
+    });
     expect(result.current.selectedItemDefinition?.name).toBe('Key');
 
-    act(() => result.current.selectExclusive({ type: 'graphDecoration', id: 'decoration-1' }));
+    act(() => {
+      result.current.selectExclusive({ type: 'graphDecoration', id: 'decoration-1' });
+    });
     expect(result.current.selectedGraphDecoration?.kind).toBe('frame');
 
-    act(() => result.current.selectExclusive({ type: 'statDefinitionCreation' }));
+    act(() => {
+      result.current.selectExclusive({ type: 'statDefinitionCreation' });
+    });
     expect(result.current.isCreatingStatDefinition).toBe(true);
     expect(result.current.selectedGraphDecoration).toBeUndefined();
 
-    act(() => result.current.selectExclusive({ type: 'interaction', id: 'target' }));
+    act(() => {
+      result.current.selectExclusive({ type: 'interaction', id: 'target' });
+    });
     expect(result.current.selected?.title).toBe('Target');
     expect(result.current.isCreatingStatDefinition).toBe(false);
 
-    act(() =>
+    act(() => {
       result.current.selectExclusive({
         type: 'trigger',
         trigger: { interactionId: 'target', triggerId: 'target-trigger' },
-      }),
-    );
+      });
+    });
     expect(result.current.selectedTriggerTarget?.trigger.id).toBe('target-trigger');
     expect(result.current.selected).toBeUndefined();
     expect(result.current.hasInspectorSelection).toBe(true);
@@ -51,8 +65,12 @@ describe('story editor selection', () => {
   it('can focus an interaction while preserving context navigation', () => {
     const { result } = renderSelection();
 
-    act(() => result.current.selectExclusive({ type: 'location', id: 'location-1' }));
-    act(() => result.current.focusInteraction('target'));
+    act(() => {
+      result.current.selectExclusive({ type: 'location', id: 'location-1' });
+    });
+    act(() => {
+      result.current.focusInteraction('target');
+    });
 
     expect(result.current.selected?.id).toBe('target');
     expect(result.current.selectedLocation?.id).toBe('location-1');
@@ -62,7 +80,9 @@ describe('story editor selection', () => {
       targetId: 'target',
     });
 
-    act(() => result.current.clearSelection());
+    act(() => {
+      result.current.clearSelection();
+    });
     expect(result.current.hasInspectorSelection).toBe(false);
     expect(result.current.selected).toBeUndefined();
     expect(result.current.selectedLocation).toBeUndefined();
@@ -72,14 +92,28 @@ describe('story editor selection', () => {
     const story = storyFixture();
     const { result } = renderHook(() => useStoryEditorSelection(story));
     const nodes = buildInteractionNodes(story, undefined);
-    act(() => result.current.selectGraphInteractions(['source']));
-    act(() => result.current.handleGraphSelectionStart({ shiftKey: true, altKey: false }));
-    act(() => result.current.handleGraphSelectionChange({ nodes: [nodes[1]], edges: [] }));
-    act(() => result.current.handleGraphSelectionEnd());
+    act(() => {
+      result.current.selectGraphInteractions(['source']);
+    });
+    act(() => {
+      result.current.handleGraphSelectionStart({ shiftKey: true, altKey: false });
+    });
+    act(() => {
+      result.current.handleGraphSelectionChange({ nodes: [nodes[1]], edges: [] });
+    });
+    act(() => {
+      result.current.handleGraphSelectionEnd();
+    });
     expect(result.current.graphSelection?.interactionIds).toEqual(['source', 'target']);
-    act(() => result.current.handleGraphSelectionStart({ shiftKey: false, altKey: true }));
-    act(() => result.current.handleGraphSelectionChange({ nodes: [nodes[0]], edges: [] }));
-    act(() => result.current.handleGraphSelectionEnd());
+    act(() => {
+      result.current.handleGraphSelectionStart({ shiftKey: false, altKey: true });
+    });
+    act(() => {
+      result.current.handleGraphSelectionChange({ nodes: [nodes[0]], edges: [] });
+    });
+    act(() => {
+      result.current.handleGraphSelectionEnd();
+    });
     expect(result.current.graphSelection?.interactionIds).toEqual(['target']);
   });
 
@@ -90,11 +124,15 @@ describe('story editor selection', () => {
       { id: 'child', title: 'Child', interactionIds: ['target'], parentGroupId: 'group' },
     ];
     const { result } = renderHook(() => useStoryEditorSelection(story));
-    act(() => result.current.selectExclusive({ type: 'group', id: 'group' }));
+    act(() => {
+      result.current.selectExclusive({ type: 'group', id: 'group' });
+    });
     expect([...result.current.groupInteractionIds!]).toEqual(['source', 'target']);
     expect(result.current.hasInspectorSelection).toBe(false);
     expect(result.current.selectedGraphNodeIds.size).toBe(0);
-    act(() => result.current.selectInteraction('source'));
+    act(() => {
+      result.current.selectInteraction('source');
+    });
     expect(result.current.groupInteractionIds).toBeUndefined();
   });
 
@@ -104,17 +142,23 @@ describe('story editor selection', () => {
     const interactionNode = buildInteractionNodes(story, undefined)[0];
     const triggerNode = buildTriggerNodes(story)[0];
 
-    act(() => result.current.handleGraphSelectionChange({ nodes: [interactionNode], edges: [] }));
+    act(() => {
+      result.current.handleGraphSelectionChange({ nodes: [interactionNode], edges: [] });
+    });
     expect(result.current.graphSelection).toBeUndefined();
 
-    act(() => result.current.handleGraphSelectionStart());
-    act(() =>
+    act(() => {
+      result.current.handleGraphSelectionStart();
+    });
+    act(() => {
       result.current.handleGraphSelectionChange({
         nodes: [interactionNode, triggerNode],
         edges: [],
-      }),
-    );
-    act(() => result.current.handleGraphSelectionEnd());
+      });
+    });
+    act(() => {
+      result.current.handleGraphSelectionEnd();
+    });
 
     expect(result.current.graphSelection).toEqual({
       interactionIds: ['source'],
@@ -132,8 +176,12 @@ describe('story editor selection', () => {
       'trigger:target:target-trigger',
     ]);
 
-    act(() => result.current.handleGraphSelectionStart());
-    act(() => result.current.handleGraphSelectionEnd());
+    act(() => {
+      result.current.handleGraphSelectionStart();
+    });
+    act(() => {
+      result.current.handleGraphSelectionEnd();
+    });
     expect(result.current.graphSelection).toBeUndefined();
   });
 });

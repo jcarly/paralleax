@@ -153,7 +153,9 @@ function expectOwnerReferencesRemoved(story: Story, fixture: OwnerStatFixture): 
   expect(root.statEffects).toEqual([]);
   expect(getTriggerConditions(trigger)).toEqual([]);
   expect(() => findStatAssignment(story, characterStat.id)).toThrow(NotFoundException);
-  expect(() => deleteStatDefinition(story, definition.id)).toThrow(NotFoundException);
+  expect(() => {
+    deleteStatDefinition(story, definition.id);
+  }).toThrow(NotFoundException);
 }
 
 type StatsValidationFixture = {
@@ -218,7 +220,9 @@ function expectInvalidStatEffects(fixture: StatsValidationFixture): void {
     () => validateStatEffects(story, [{ statId: 'missing-stat', operation: 'set', value: 1 }]),
   ];
 
-  invalidEffects.forEach((validate) => expect(validate).toThrow(BadRequestException));
+  invalidEffects.forEach((validate) => {
+    expect(validate).toThrow(BadRequestException);
+  });
 }
 
 function expectValidStatEffects(fixture: StatsValidationFixture): void {

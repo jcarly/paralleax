@@ -315,7 +315,7 @@ function TestReactFlow({
           {edge.data?.inputInteractionId && edge.data.interactionId ? (
             <button
               data-testid={`delete-link-${edge.data.inputInteractionId}-${edge.data.interactionId}`}
-              onClick={() =>
+              onClick={() => {
                 (edge.data?.triggerIds ?? [edge.data?.triggerId]).forEach((triggerId) => {
                   if (triggerId && edge.data?.inputInteractionId && edge.data.interactionId) {
                     edge.data.onDeleteTriggerInput?.(
@@ -324,8 +324,8 @@ function TestReactFlow({
                       edge.data.inputInteractionId,
                     );
                   }
-                })
-              }
+                });
+              }}
             />
           ) : null}
         </div>

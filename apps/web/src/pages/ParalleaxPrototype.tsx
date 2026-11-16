@@ -98,7 +98,9 @@ function TriggerConditionRow({
       <div className="pp-condition-type">
         <select
           value={conditionKind}
-          onChange={(event) => setConditionKind(event.target.value as ConditionKind)}
+          onChange={(event) => {
+            setConditionKind(event.target.value as ConditionKind);
+          }}
         >
           {Object.entries(conditionLabels).map(([value, label]) => (
             <option key={value} value={value}>
@@ -242,16 +244,16 @@ function TriggerConditionGroup({
         <TriggerConditionRow
           key={condition.id}
           initialKind={condition.kind}
-          onRemove={() =>
-            setConditions((current) => current.filter(({ id }) => id !== condition.id))
-          }
+          onRemove={() => {
+            setConditions((current) => current.filter(({ id }) => id !== condition.id));
+          }}
         />
       ))}
       <button
         className="pp-inline-add"
-        onClick={() =>
-          setConditions((current) => [...current, { id: Date.now(), kind: 'character-stat' }])
-        }
+        onClick={() => {
+          setConditions((current) => [...current, { id: Date.now(), kind: 'character-stat' }]);
+        }}
       >
         ＋ Add condition
       </button>
@@ -264,7 +266,7 @@ function EffectList({ kind, initialCount = 1 }: { kind: EffectKind; initialCount
   const [effects, setEffects] = useState(() =>
     Array.from({ length: initialCount }, (_, index) => ({ id: index + 1 })),
   );
-  const move = (index: number, direction: -1 | 1) =>
+  const move = (index: number, direction: -1 | 1) => {
     setEffects((current) => {
       const next = [...current];
       const target = index + direction;
@@ -272,6 +274,7 @@ function EffectList({ kind, initialCount = 1 }: { kind: EffectKind; initialCount
       [next[index], next[target]] = [next[target], next[index]];
       return next;
     });
+  };
   return (
     <>
       {effects.map((effect, index) => (
@@ -283,22 +286,26 @@ function EffectList({ kind, initialCount = 1 }: { kind: EffectKind; initialCount
             <span>
               <button
                 disabled={index === 0}
-                onClick={() => move(index, -1)}
+                onClick={() => {
+                  move(index, -1);
+                }}
                 aria-label="Move effect up"
               >
                 ↑
               </button>
               <button
                 disabled={index === effects.length - 1}
-                onClick={() => move(index, 1)}
+                onClick={() => {
+                  move(index, 1);
+                }}
                 aria-label="Move effect down"
               >
                 ↓
               </button>
               <button
-                onClick={() =>
-                  setEffects((current) => current.filter(({ id }) => id !== effect.id))
-                }
+                onClick={() => {
+                  setEffects((current) => current.filter(({ id }) => id !== effect.id));
+                }}
                 aria-label="Remove effect"
               >
                 ×
@@ -372,7 +379,9 @@ function EffectList({ kind, initialCount = 1 }: { kind: EffectKind; initialCount
       ))}
       <button
         className="pp-inline-add"
-        onClick={() => setEffects((current) => [...current, { id: Date.now() }])}
+        onClick={() => {
+          setEffects((current) => [...current, { id: Date.now() }]);
+        }}
       >
         ＋ Add {kind} effect
       </button>
@@ -505,7 +514,9 @@ function Inspector({
             <Field label="Advance story time">
               <select
                 value={durationMode}
-                onChange={(event) => setDurationMode(event.target.value as 'delay' | 'fixed')}
+                onChange={(event) => {
+                  setDurationMode(event.target.value as 'delay' | 'fixed');
+                }}
               >
                 <option value="delay">By a duration</option>
                 <option value="fixed">To a fixed date and time</option>
@@ -588,7 +599,11 @@ function Inspector({
           </div>
           <div className="pp-section-title">
             <b>Alternative condition groups</b>
-            <button onClick={() => setTriggerGroups((current) => [...current, Date.now()])}>
+            <button
+              onClick={() => {
+                setTriggerGroups((current) => [...current, Date.now()]);
+              }}
+            >
               ＋ Add OR group
             </button>
           </div>
@@ -611,7 +626,9 @@ function Inspector({
                   }
                   onRemove={
                     triggerGroups.length > 1
-                      ? () => setTriggerGroups((current) => current.filter((id) => id !== groupId))
+                      ? () => {
+                          setTriggerGroups((current) => current.filter((id) => id !== groupId));
+                        }
                       : undefined
                   }
                 />
@@ -723,18 +740,20 @@ function Inspector({
                 min="0"
                 max={statEntity?.maximum ?? 10}
                 value={statDefault}
-                onChange={(event) => setStatDefault(Number(event.target.value))}
+                onChange={(event) => {
+                  setStatDefault(Number(event.target.value));
+                }}
               />
               <input
                 type="number"
                 min="0"
                 max={statEntity?.maximum ?? 10}
                 value={statDefault}
-                onChange={(event) =>
+                onChange={(event) => {
                   setStatDefault(
                     Math.min(statEntity?.maximum ?? 10, Math.max(0, Number(event.target.value))),
-                  )
-                }
+                  );
+                }}
               />
             </div>
           </Field>
@@ -902,7 +921,7 @@ const initialGraphEdges = [
 function StoryGraph({ select }: { select: (kind: InspectorKind) => void }) {
   const [nodes, setNodes, onNodesChange] = useNodesState(initialGraphNodes);
   const [edges, setEdges, onEdgesChange] = useEdgesState(initialGraphEdges);
-  const addInteraction = () =>
+  const addInteraction = () => {
     setNodes((current) => [
       ...current,
       {
@@ -917,6 +936,7 @@ function StoryGraph({ select }: { select: (kind: InspectorKind) => void }) {
         },
       },
     ]);
+  };
   const connect = (connection: Connection) => {
     const source = nodes.find((node) => node.id === connection.source);
     const target = nodes.find((node) => node.id === connection.target);
@@ -954,7 +974,9 @@ function StoryGraph({ select }: { select: (kind: InspectorKind) => void }) {
         onNodesChange={onNodesChange}
         onEdgesChange={onEdgesChange}
         onConnect={connect}
-        onNodeClick={(_, node) => select(node.type === 'trigger' ? 'trigger' : 'interaction')}
+        onNodeClick={(_, node) => {
+          select(node.type === 'trigger' ? 'trigger' : 'interaction');
+        }}
         fitView
         minZoom={0.35}
         maxZoom={1.6}
@@ -979,7 +1001,9 @@ function Player({ onExit }: { onExit: () => void }) {
   const [keyCharge, setKeyCharge] = useState(2);
   const [storyTime, setStoryTime] = useState('23:40');
   const [history, setHistory] = useState(['23:40 · Simulation started']);
-  const record = (entry: string) => setHistory((current) => [entry, ...current]);
+  const record = (entry: string) => {
+    setHistory((current) => [entry, ...current]);
+  };
   const restart = () => {
     setScene('hidden');
     setTrust(3);
@@ -1162,7 +1186,9 @@ function Player({ onExit }: { onExit: () => void }) {
             <input
               type="checkbox"
               checked={forced}
-              onChange={(event) => setForced(event.target.checked)}
+              onChange={(event) => {
+                setForced(event.target.checked);
+              }}
             />{' '}
             Force unavailable options <small>Simulation only</small>
           </label>
@@ -1183,18 +1209,26 @@ function PrototypeStoryEditor({ onNavigate }: { onNavigate: (route: PrototypeRou
     setSelected(kind);
     setSelectedEntityId(id);
   };
-  useEffect(
-    () => localStorage.setItem('paralleax-prototype-sidebar', collapsed ? 'collapsed' : 'open'),
-    [collapsed],
-  );
-  if (playing) return <Player onExit={() => setPlaying(false)} />;
+  useEffect(() => {
+    localStorage.setItem('paralleax-prototype-sidebar', collapsed ? 'collapsed' : 'open');
+  }, [collapsed]);
+  if (playing)
+    return (
+      <Player
+        onExit={() => {
+          setPlaying(false);
+        }}
+      />
+    );
   return (
     <div className={`pp-shell ${collapsed ? 'is-collapsed' : ''}`}>
       <header className="pp-topbar">
         <button
           className="pp-editor-brand"
           type="button"
-          onClick={() => onNavigate(prototypeRoutes.stories)}
+          onClick={() => {
+            onNavigate(prototypeRoutes.stories);
+          }}
         >
           <span className="pp-logo">P</span>
           <b>Paralleax</b>
@@ -1207,18 +1241,30 @@ function PrototypeStoryEditor({ onNavigate }: { onNavigate: (route: PrototypeRou
         </nav>
         <div className="pp-spacer" />
         <span className="pp-saved">● Saved</span>
-        <button type="button" onClick={() => onNavigate(prototypeRoutes.designSystem)}>
+        <button
+          type="button"
+          onClick={() => {
+            onNavigate(prototypeRoutes.designSystem);
+          }}
+        >
           Design system
         </button>
         <button>Share</button>
-        <button className="pp-play" onClick={() => setPlaying(true)}>
+        <button
+          className="pp-play"
+          onClick={() => {
+            setPlaying(true);
+          }}
+        >
           ▶ Simulate
         </button>
       </header>
       <aside className="pp-sidebar">
         <button
           className="pp-collapse"
-          onClick={() => setCollapsed(!collapsed)}
+          onClick={() => {
+            setCollapsed(!collapsed);
+          }}
           title="Toggle sidebar"
         >
           {collapsed ? '›' : '‹'}
@@ -1240,7 +1286,9 @@ function PrototypeStoryEditor({ onNavigate }: { onNavigate: (route: PrototypeRou
                     ? 'selected pp-context-row'
                     : 'pp-context-row'
                 }
-                onClick={() => openEntity('character', 'character-mara')}
+                onClick={() => {
+                  openEntity('character', 'character-mara');
+                }}
               >
                 <span className="pp-thumb pp-mara">MV</span>
                 <span>
@@ -1254,7 +1302,9 @@ function PrototypeStoryEditor({ onNavigate }: { onNavigate: (route: PrototypeRou
                     ? 'selected pp-context-row'
                     : 'pp-context-row'
                 }
-                onClick={() => openEntity('character', 'character-ivo')}
+                onClick={() => {
+                  openEntity('character', 'character-ivo');
+                }}
               >
                 <span className="pp-thumb pp-ivo">IH</span>
                 <span>
@@ -1268,7 +1318,9 @@ function PrototypeStoryEditor({ onNavigate }: { onNavigate: (route: PrototypeRou
                     ? 'selected pp-context-row'
                     : 'pp-context-row'
                 }
-                onClick={() => openEntity('character', 'character-keeper')}
+                onClick={() => {
+                  openEntity('character', 'character-keeper');
+                }}
               >
                 <span className="pp-thumb pp-keeper">K</span>
                 <span>
@@ -1276,7 +1328,12 @@ function PrototypeStoryEditor({ onNavigate }: { onNavigate: (route: PrototypeRou
                 </span>
                 <i>›</i>
               </button>
-              <button className="pp-side-add" onClick={() => openEntity('character')}>
+              <button
+                className="pp-side-add"
+                onClick={() => {
+                  openEntity('character');
+                }}
+              >
                 ＋ Add character
               </button>
             </details>
@@ -1291,7 +1348,9 @@ function PrototypeStoryEditor({ onNavigate }: { onNavigate: (route: PrototypeRou
                     ? 'selected pp-context-row'
                     : 'pp-context-row'
                 }
-                onClick={() => openEntity('location', 'location-glasshouse')}
+                onClick={() => {
+                  openEntity('location', 'location-glasshouse');
+                }}
               >
                 <span className="pp-thumb pp-glass">⌖</span>
                 <span>
@@ -1305,7 +1364,9 @@ function PrototypeStoryEditor({ onNavigate }: { onNavigate: (route: PrototypeRou
                     ? 'selected pp-context-row'
                     : 'pp-context-row'
                 }
-                onClick={() => openEntity('location', 'location-quarter')}
+                onClick={() => {
+                  openEntity('location', 'location-quarter');
+                }}
               >
                 <span className="pp-thumb pp-quarter">⌖</span>
                 <span>
@@ -1319,7 +1380,9 @@ function PrototypeStoryEditor({ onNavigate }: { onNavigate: (route: PrototypeRou
                     ? 'selected pp-context-row'
                     : 'pp-context-row'
                 }
-                onClick={() => openEntity('location', 'location-archive')}
+                onClick={() => {
+                  openEntity('location', 'location-archive');
+                }}
               >
                 <span className="pp-thumb pp-archive">⌖</span>
                 <span>
@@ -1333,7 +1396,9 @@ function PrototypeStoryEditor({ onNavigate }: { onNavigate: (route: PrototypeRou
                     ? 'selected pp-context-row'
                     : 'pp-context-row'
                 }
-                onClick={() => openEntity('location', 'location-market')}
+                onClick={() => {
+                  openEntity('location', 'location-market');
+                }}
               >
                 <span className="pp-thumb pp-market">⌖</span>
                 <span>
@@ -1341,7 +1406,12 @@ function PrototypeStoryEditor({ onNavigate }: { onNavigate: (route: PrototypeRou
                 </span>
                 <i>›</i>
               </button>
-              <button className="pp-side-add" onClick={() => openEntity('location')}>
+              <button
+                className="pp-side-add"
+                onClick={() => {
+                  openEntity('location');
+                }}
+              >
                 ＋ Add location
               </button>
             </details>
@@ -1354,7 +1424,9 @@ function PrototypeStoryEditor({ onNavigate }: { onNavigate: (route: PrototypeRou
                 className={
                   selectedEntityId === 'stat-trust' ? 'selected pp-stat-context' : 'pp-stat-context'
                 }
-                onClick={() => openEntity('stat', 'stat-trust')}
+                onClick={() => {
+                  openEntity('stat', 'stat-trust');
+                }}
               >
                 <span className="pp-stat-symbol">↗</span>
                 <span>Trust</span>
@@ -1366,7 +1438,9 @@ function PrototypeStoryEditor({ onNavigate }: { onNavigate: (route: PrototypeRou
                     ? 'selected pp-stat-context'
                     : 'pp-stat-context'
                 }
-                onClick={() => openEntity('stat', 'stat-health')}
+                onClick={() => {
+                  openEntity('stat', 'stat-health');
+                }}
               >
                 <span className="pp-stat-symbol health">♥</span>
                 <span>Health</span>
@@ -1378,7 +1452,9 @@ function PrototypeStoryEditor({ onNavigate }: { onNavigate: (route: PrototypeRou
                     ? 'selected pp-stat-context'
                     : 'pp-stat-context'
                 }
-                onClick={() => openEntity('stat', 'stat-insight')}
+                onClick={() => {
+                  openEntity('stat', 'stat-insight');
+                }}
               >
                 <span className="pp-stat-symbol insight">✦</span>
                 <span>Insight</span>
@@ -1390,13 +1466,20 @@ function PrototypeStoryEditor({ onNavigate }: { onNavigate: (route: PrototypeRou
                     ? 'selected pp-stat-context'
                     : 'pp-stat-context'
                 }
-                onClick={() => openEntity('stat', 'stat-charge')}
+                onClick={() => {
+                  openEntity('stat', 'stat-charge');
+                }}
               >
                 <span className="pp-stat-symbol charge">ϟ</span>
                 <span>Charge</span>
                 <small>Item stat</small>
               </button>
-              <button className="pp-side-add" onClick={() => openEntity('stat')}>
+              <button
+                className="pp-side-add"
+                onClick={() => {
+                  openEntity('stat');
+                }}
+              >
                 ＋ Add stat
               </button>
             </details>
@@ -1409,7 +1492,9 @@ function PrototypeStoryEditor({ onNavigate }: { onNavigate: (route: PrototypeRou
                 className={
                   selectedEntityId === 'item-satchel' ? 'selected pp-context-row' : 'pp-context-row'
                 }
-                onClick={() => openEntity('item', 'item-satchel')}
+                onClick={() => {
+                  openEntity('item', 'item-satchel');
+                }}
               >
                 <span className="pp-thumb pp-satchel">▣</span>
                 <span>
@@ -1421,7 +1506,9 @@ function PrototypeStoryEditor({ onNavigate }: { onNavigate: (route: PrototypeRou
                 className={
                   selectedEntityId === 'item-key' ? 'selected pp-context-row' : 'pp-context-row'
                 }
-                onClick={() => openEntity('item', 'item-key')}
+                onClick={() => {
+                  openEntity('item', 'item-key');
+                }}
               >
                 <span className="pp-thumb pp-key">⌕</span>
                 <span>
@@ -1433,7 +1520,9 @@ function PrototypeStoryEditor({ onNavigate }: { onNavigate: (route: PrototypeRou
                 className={
                   selectedEntityId === 'item-vial' ? 'selected pp-context-row' : 'pp-context-row'
                 }
-                onClick={() => openEntity('item', 'item-vial')}
+                onClick={() => {
+                  openEntity('item', 'item-vial');
+                }}
               >
                 <span className="pp-thumb pp-vial">◒</span>
                 <span>
@@ -1445,7 +1534,9 @@ function PrototypeStoryEditor({ onNavigate }: { onNavigate: (route: PrototypeRou
                 className={
                   selectedEntityId === 'item-map' ? 'selected pp-context-row' : 'pp-context-row'
                 }
-                onClick={() => openEntity('item', 'item-map')}
+                onClick={() => {
+                  openEntity('item', 'item-map');
+                }}
               >
                 <span className="pp-thumb pp-map">⌁</span>
                 <span>
@@ -1453,7 +1544,12 @@ function PrototypeStoryEditor({ onNavigate }: { onNavigate: (route: PrototypeRou
                 </span>
                 <i>›</i>
               </button>
-              <button className="pp-side-add" onClick={() => openEntity('item')}>
+              <button
+                className="pp-side-add"
+                onClick={() => {
+                  openEntity('item');
+                }}
+              >
                 ＋ Add item
               </button>
             </details>
@@ -1486,7 +1582,11 @@ function PrototypeStoryEditor({ onNavigate }: { onNavigate: (route: PrototypeRou
           <button>Redo</button>
           <button>•••</button>
         </div>
-        <StoryGraph select={(kind) => openEntity(kind)} />
+        <StoryGraph
+          select={(kind) => {
+            openEntity(kind);
+          }}
+        />
       </main>
       {selected && (
         <Inspector

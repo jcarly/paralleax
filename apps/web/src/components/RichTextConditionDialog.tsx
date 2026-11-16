@@ -53,9 +53,9 @@ export function RichTextConditionDialog({
           <AddConditionControl
             initiallyOpen
             unavailableReasons={conditionUnavailableReasons(story, currentInteractionId, t)}
-            onAdd={(type) =>
-              setCondition(createTriggerCondition(story, currentInteractionId, type))
-            }
+            onAdd={(type) => {
+              setCondition(createTriggerCondition(story, currentInteractionId, type));
+            }}
           />
         )}
         <div className="modal-dialog-actions rich-text-dialog-actions">

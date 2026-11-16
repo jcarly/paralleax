@@ -249,7 +249,9 @@ describe('Auth API', () => {
         password: 'changed horse battery staple',
       })
       .expect(200)
-      .expect(({ body }) => expect(body.email).toBe('security@example.com'));
+      .expect(({ body }) => {
+        expect(body.email).toBe('security@example.com');
+      });
     await agent
       .post('/api/auth/password-reset')
       .send({ email: 'security@example.com' })

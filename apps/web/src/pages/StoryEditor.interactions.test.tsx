@@ -82,7 +82,9 @@ describe('StoryEditor interactions', () => {
     await user.click(screen.getByRole('button', { name: 'Add root' }));
     expect(api.createInteraction).toHaveBeenCalledWith('story-1', { position: rootPosition });
     expect(await screen.findByText('Created root')).toBeInTheDocument();
-    await waitFor(() => expect(screen.getByLabelText('Title')).toHaveValue('Created root'));
+    await waitFor(() => {
+      expect(screen.getByLabelText('Title')).toHaveValue('Created root');
+    });
 
     await user.click(
       within(screen.getByTestId('flow-node-interaction-1')).getByRole('button', {
@@ -93,11 +95,11 @@ describe('StoryEditor interactions', () => {
       parentId: 'interaction-1',
       position: childPosition,
     });
-    await waitFor(() =>
+    await waitFor(() => {
       expect(reactFlowFitViewMock).toHaveBeenCalledWith(
         expect.objectContaining({ nodes: [{ id: 'interaction-2' }] }),
-      ),
-    );
+      );
+    });
     expect(screen.getByLabelText('Title')).toHaveValue('Second interaction');
   });
 
@@ -112,7 +114,9 @@ describe('StoryEditor interactions', () => {
       }),
     );
 
-    await waitFor(() => expect(elkLayout.computeStoryGraphElkLayout).toHaveBeenCalled());
+    await waitFor(() => {
+      expect(elkLayout.computeStoryGraphElkLayout).toHaveBeenCalled();
+    });
     const calls = vi.mocked(elkLayout.computeStoryGraphElkLayout).mock.calls;
     const layoutOptions = calls[calls.length - 1]?.[1];
     expect(layoutOptions?.interactionSizes?.get('interaction-1')).toEqual({
@@ -147,7 +151,9 @@ describe('StoryEditor interactions', () => {
 
     await userEvent.click(screen.getByTestId('begin-source-interaction-1'));
 
-    await waitFor(() => expect(screen.queryByTitle('Create new trigger')).not.toBeInTheDocument());
+    await waitFor(() => {
+      expect(screen.queryByTitle('Create new trigger')).not.toBeInTheDocument();
+    });
   });
 
   it('creates a child interaction when a source connection is dropped on empty canvas', async () => {
@@ -174,7 +180,9 @@ describe('StoryEditor interactions', () => {
         position: { x: 425, y: 412 },
       });
     });
-    await waitFor(() => expect(screen.getByLabelText('Title')).toHaveValue('Dropped output'));
+    await waitFor(() => {
+      expect(screen.getByLabelText('Title')).toHaveValue('Dropped output');
+    });
   });
 
   it('creates a child interaction from the hovered node action', async () => {
@@ -265,7 +273,9 @@ describe('StoryEditor interactions', () => {
       });
       expect(api.updateTrigger).not.toHaveBeenCalled();
     });
-    await waitFor(() => expect(screen.getByLabelText('Title')).toHaveValue('Dropped input'));
+    await waitFor(() => {
+      expect(screen.getByLabelText('Title')).toHaveValue('Dropped input');
+    });
   });
 
   it('creates a parent interaction from the hovered node action', async () => {
@@ -310,7 +320,9 @@ describe('StoryEditor interactions', () => {
       });
       expect(api.updateTrigger).not.toHaveBeenCalled();
     });
-    await waitFor(() => expect(screen.getByLabelText('Title')).toHaveValue('Created source'));
+    await waitFor(() => {
+      expect(screen.getByLabelText('Title')).toHaveValue('Created source');
+    });
   });
 
   it('places a new child interaction below occupied vertical outputs instead of overlapping them', async () => {
@@ -385,9 +397,9 @@ describe('StoryEditor interactions', () => {
     expect(api.updateInteraction).toHaveBeenCalledWith('story-1', 'interaction-1', {
       body: '<p>Long new content</p>',
     });
-    await waitFor(() =>
-      expect(screen.getByLabelText('Content')).toHaveTextContent('Long new content'),
-    );
+    await waitFor(() => {
+      expect(screen.getByLabelText('Content')).toHaveTextContent('Long new content');
+    });
   });
 
   it('serializes title and body saves so reopening keeps both edits', async () => {
@@ -410,7 +422,9 @@ describe('StoryEditor interactions', () => {
     await user.type(content, 'Saved content');
     await user.tab();
 
-    await waitFor(() => expect(api.updateInteraction).toHaveBeenCalledTimes(1));
+    await waitFor(() => {
+      expect(api.updateInteraction).toHaveBeenCalledTimes(1);
+    });
     expect(screen.getByRole('status', { name: 'Story save status' })).toHaveTextContent('Saving…');
     expect(api.updateInteraction).toHaveBeenNthCalledWith(1, 'story-1', 'interaction-1', {
       title: 'Saved title',
@@ -418,9 +432,13 @@ describe('StoryEditor interactions', () => {
 
     const titleStory = cloneStory();
     titleStory.interactions[0].title = 'Saved title';
-    await act(async () => resolveTitleSave(titleStory));
+    await act(async () => {
+      resolveTitleSave(titleStory);
+    });
 
-    await waitFor(() => expect(api.updateInteraction).toHaveBeenCalledTimes(2));
+    await waitFor(() => {
+      expect(api.updateInteraction).toHaveBeenCalledTimes(2);
+    });
     expect(api.updateInteraction).toHaveBeenNthCalledWith(2, 'story-1', 'interaction-1', {
       body: '<p>Saved content</p>',
     });
@@ -428,7 +446,9 @@ describe('StoryEditor interactions', () => {
     const fullySavedStory = cloneStory();
     fullySavedStory.interactions[0].title = 'Saved title';
     fullySavedStory.interactions[0].body = '<p>Saved content</p>';
-    await act(async () => resolveBodySave(fullySavedStory));
+    await act(async () => {
+      resolveBodySave(fullySavedStory);
+    });
 
     expect(await screen.findByDisplayValue('Saved title')).toBeInTheDocument();
     expect(screen.getByLabelText('Content')).toHaveTextContent('Saved content');
@@ -451,7 +471,9 @@ describe('StoryEditor interactions', () => {
     );
 
     await user.click(screen.getByRole('button', { name: 'Reload story' }));
-    await waitFor(() => expect(api.getStory).toHaveBeenCalledTimes(2));
+    await waitFor(() => {
+      expect(api.getStory).toHaveBeenCalledTimes(2);
+    });
   });
 
   it('does not erase title or body when a drag save only returns a position update', async () => {
@@ -554,7 +576,7 @@ describe('StoryEditor interactions', () => {
     await renderEditor(story);
     await userEvent.click(screen.getByTestId('drag-node-trigger:interaction-2:trigger-2'));
 
-    await waitFor(() =>
+    await waitFor(() => {
       expect(api.updateStoryGraphPositions).toHaveBeenCalledWith('story-1', {
         interactionUpdates: [],
         triggerUpdates: [
@@ -564,8 +586,8 @@ describe('StoryEditor interactions', () => {
             position: { x: 425, y: 315 },
           },
         ],
-      }),
-    );
+      });
+    });
   });
 
   it('deletes the selected interaction', async () => {

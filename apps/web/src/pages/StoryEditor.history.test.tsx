@@ -64,10 +64,14 @@ describe('Story editor history', () => {
     });
 
     await renderEditor({ ...cloneStory(), revision: 2 });
-    await waitFor(() => expect(api.getStoryHistory).toHaveBeenCalledOnce());
+    await waitFor(() => {
+      expect(api.getStoryHistory).toHaveBeenCalledOnce();
+    });
     await user.click(screen.getByRole('button', { name: 'Open Story history' }));
 
-    await waitFor(() => expect(api.getStoryHistory).toHaveBeenCalledTimes(2));
+    await waitFor(() => {
+      expect(api.getStoryHistory).toHaveBeenCalledTimes(2);
+    });
     expect(screen.getByRole('complementary', { name: 'History' })).toBeInTheDocument();
     expect(screen.getByText('Interaction created')).toBeInTheDocument();
     expect(screen.getByText('Alice')).toBeInTheDocument();
@@ -84,11 +88,15 @@ describe('Story editor history', () => {
 
     await renderEditor(changed);
     const undo = await screen.findByRole('button', { name: 'Undo last Story change' });
-    await waitFor(() => expect(undo).toBeEnabled());
+    await waitFor(() => {
+      expect(undo).toBeEnabled();
+    });
     await user.click(undo);
 
     expect(api.undoStoryChange).toHaveBeenCalledWith('story-1');
-    await waitFor(() => expect(screen.getByDisplayValue('Test story')).toBeInTheDocument());
+    await waitFor(() => {
+      expect(screen.getByDisplayValue('Test story')).toBeInTheDocument();
+    });
     expect(screen.getByRole('button', { name: 'Redo Story change' })).toBeEnabled();
   });
 
@@ -105,24 +113,28 @@ describe('Story editor history', () => {
     });
 
     await renderEditor({ ...cloneStory(), revision: 2, title: 'Changed title' });
-    await waitFor(() =>
-      expect(screen.getByRole('button', { name: 'Undo last Story change' })).toBeEnabled(),
-    );
+    await waitFor(() => {
+      expect(screen.getByRole('button', { name: 'Undo last Story change' })).toBeEnabled();
+    });
     await user.keyboard('{Control>}z{/Control}');
-    await waitFor(() => expect(api.undoStoryChange).toHaveBeenCalledTimes(1));
-    await waitFor(() =>
-      expect(screen.getByRole('button', { name: 'Redo Story change' })).toBeEnabled(),
-    );
+    await waitFor(() => {
+      expect(api.undoStoryChange).toHaveBeenCalledTimes(1);
+    });
+    await waitFor(() => {
+      expect(screen.getByRole('button', { name: 'Redo Story change' })).toBeEnabled();
+    });
     await user.keyboard('{Control>}{Shift>}z{/Shift}{/Control}');
-    await waitFor(() => expect(api.redoStoryChange).toHaveBeenCalledTimes(1));
+    await waitFor(() => {
+      expect(api.redoStoryChange).toHaveBeenCalledTimes(1);
+    });
   });
 
   it('leaves Ctrl+Z inside a text field to the native editor history', async () => {
     const user = userEvent.setup();
     await renderEditor({ ...baseStory, revision: 2 });
-    await waitFor(() =>
-      expect(screen.getByRole('button', { name: 'Undo last Story change' })).toBeEnabled(),
-    );
+    await waitFor(() => {
+      expect(screen.getByRole('button', { name: 'Undo last Story change' })).toBeEnabled();
+    });
 
     await user.click(screen.getByDisplayValue('Test story'));
     await user.keyboard('{Control>}z{/Control}');
@@ -144,13 +156,17 @@ describe('Story editor history', () => {
     });
 
     await renderEditor(cloneStory());
-    await waitFor(() => expect(api.getStoryHistory).toHaveBeenCalledOnce());
+    await waitFor(() => {
+      expect(api.getStoryHistory).toHaveBeenCalledOnce();
+    });
     const title = screen.getByDisplayValue('Test story');
     await user.clear(title);
     await user.type(title, 'Renamed story');
     await user.tab();
 
-    await waitFor(() => expect(api.renameStory).toHaveBeenCalledWith('story-1', 'Renamed story'));
+    await waitFor(() => {
+      expect(api.renameStory).toHaveBeenCalledWith('story-1', 'Renamed story');
+    });
     expect(api.getStoryHistory).toHaveBeenCalledOnce();
     expect(screen.getByRole('button', { name: 'Undo last Story change' })).toBeEnabled();
   });
@@ -174,23 +190,25 @@ describe('Story editor history', () => {
 
     await renderEditor(original);
     await user.click(screen.getByRole('button', { name: 'Organize graph' }));
-    await waitFor(() => expect(api.updateStoryGraphPositions).toHaveBeenCalledOnce());
-    await waitFor(() =>
+    await waitFor(() => {
+      expect(api.updateStoryGraphPositions).toHaveBeenCalledOnce();
+    });
+    await waitFor(() => {
       expect(screen.getByTestId('flow-node-interaction-2')).toHaveAttribute(
         'data-node-y',
         String(positioned.interactions[1].position.y),
-      ),
-    );
+      );
+    });
 
     await user.click(screen.getByRole('button', { name: 'Undo last Story change' }));
 
     expect(api.undoStoryChange).toHaveBeenCalledWith('story-1');
-    await waitFor(() =>
+    await waitFor(() => {
       expect(screen.getByTestId('flow-node-interaction-2')).toHaveAttribute(
         'data-node-y',
         String(original.interactions[1].position.y),
-      ),
-    );
+      );
+    });
 
     await act(async () => {
       resolveUndo?.({
@@ -202,8 +220,8 @@ describe('Story editor history', () => {
       });
       await pendingUndo;
     });
-    await waitFor(() =>
-      expect(screen.getByRole('button', { name: 'Redo Story change' })).toBeEnabled(),
-    );
+    await waitFor(() => {
+      expect(screen.getByRole('button', { name: 'Redo Story change' })).toBeEnabled();
+    });
   });
 });

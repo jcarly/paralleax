@@ -25,7 +25,9 @@ const access: StoryAccessConfiguration = {
 };
 
 describe('StoryAccessSettings', () => {
-  afterEach(() => cleanup());
+  afterEach(() => {
+    cleanup();
+  });
 
   beforeEach(async () => {
     vi.resetAllMocks();
@@ -146,7 +148,7 @@ describe('StoryAccessSettings', () => {
     await user.selectOptions(screen.getByLabelText('Reading'), 'unlisted');
     await user.selectOptions(screen.getByLabelText('Editing'), 'collaborators');
     await user.selectOptions(screen.getByLabelText('Comments'), 'readers');
-    await waitFor(() =>
+    await waitFor(() => {
       expect(api.updateStoryAccess).toHaveBeenLastCalledWith(
         'story-1',
         expect.objectContaining({
@@ -154,8 +156,8 @@ describe('StoryAccessSettings', () => {
           editPolicy: 'collaborators',
           commentPolicy: 'readers',
         }),
-      ),
-    );
+      );
+    });
     expect(api.updateStoryAccess).toHaveBeenCalledTimes(3);
     expect(screen.queryByRole('button', { name: 'Save access' })).not.toBeInTheDocument();
     expect(await screen.findByText('Access saved.')).toBeInTheDocument();
@@ -216,12 +218,16 @@ describe('StoryAccessSettings', () => {
       </StrictMode>,
     );
 
-    await act(async () => resolveCurrent(structuredClone(access)));
+    await act(async () => {
+      resolveCurrent(structuredClone(access));
+    });
     const reading = await screen.findByLabelText('Reading');
     await user.selectOptions(reading, 'invitation');
     expect(reading).toHaveValue('invitation');
 
-    await act(async () => resolveObsolete(structuredClone(access)));
+    await act(async () => {
+      resolveObsolete(structuredClone(access));
+    });
     expect(reading).toHaveValue('invitation');
   });
 });

@@ -88,7 +88,9 @@ export function CommentDiscussionCard({
                   className="secondary"
                   type="button"
                   title={t('comments.reattachHelp')}
-                  onMouseDown={(event) => event.preventDefault()}
+                  onMouseDown={(event) => {
+                    event.preventDefault();
+                  }}
                   onClick={() => void onReattach()}
                 >
                   {t('comments.reattach')}
@@ -127,7 +129,9 @@ export function CommentDiscussionCard({
                   value={body}
                   maxLength={4000}
                   rows={3}
-                  onChange={(event) => setBody(event.target.value)}
+                  onChange={(event) => {
+                    setBody(event.target.value);
+                  }}
                 />
               </label>
               <button type="submit" disabled={pending || !body.trim()}>
@@ -199,7 +203,9 @@ export function CommentDraftCard({
             value={body}
             maxLength={4000}
             rows={3}
-            onChange={(event) => setBody(event.target.value)}
+            onChange={(event) => {
+              setBody(event.target.value);
+            }}
           />
         </label>
         <div>
