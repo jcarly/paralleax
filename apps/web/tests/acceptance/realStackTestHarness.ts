@@ -91,8 +91,14 @@ export async function createStory(page: Page, prefix: string) {
 
   await expect(page).toHaveURL(new RegExp(`/stories/${story.id}/edit`));
   await expect(page.locator('.story-title-input')).toHaveValue(storyTitle);
-  await expect(page.getByRole('button', { name: 'Add root' })).toBeVisible();
-  await expect(page.getByRole('heading', { name: 'Explore the graph' })).toBeVisible();
+  await expect(page.getByTestId('interaction-node').first()).toBeVisible();
+  await expect(page.getByRole('navigation', { name: 'Story context' })).toBeVisible();
+  await expect(page.getByRole('complementary', { name: 'Inspector' })).toBeVisible();
+  await expect(page.getByRole('button', { name: 'Add root' })).toBeEnabled();
+  await expect(page.getByRole('link', { name: 'Test from start' })).toBeVisible();
+  const closeGuide = page.getByRole('button', { name: 'Close guide' });
+  await expect(closeGuide).toBeVisible();
+  await closeGuide.click();
 
   return { storyId: story.id, storyTitle };
 }
@@ -195,11 +201,13 @@ export async function editInteraction(
 ) {
   const inspector = page.getByRole('complementary', { name: 'Inspector' });
   const titleField = interactionTitleField(inspector);
+  await page.getByRole('button', { name: 'Fit View' }).click();
+  const target = interactionNode(page, currentTitle).last();
+  await expect(target).toBeInViewport();
+  await target.click();
   await expect(titleField).toBeVisible();
-  if ((await titleField.inputValue()) !== currentTitle) {
-    await interactionNode(page, currentTitle).last().click();
-    await expect(titleField).toHaveValue(currentTitle);
-  }
+  await expect(titleField).toHaveValue('');
+  await expect(titleField).toHaveAttribute('placeholder', currentTitle);
   const titleUpdate = waitForInteractionPatch(page);
   await titleField.fill(title);
   await titleField.blur();

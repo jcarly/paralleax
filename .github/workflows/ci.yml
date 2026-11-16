@@ -414,6 +414,16 @@ jobs:
       - name: Set up Railway CLI
         run: npm install --global @railway/cli@5.68.0
 
+      - name: Verify Railway release credentials
+        env:
+          RAILWAY_API_TOKEN: ${{ secrets.RAILWAY_API_TOKEN }}
+        run: |
+          set -euo pipefail
+          : "${RAILWAY_API_TOKEN:?Configure a Railway account or workspace token as the RAILWAY_API_TOKEN Actions secret}"
+          for service in "$RAILWAY_API_SERVICE" "$RAILWAY_WEB_SERVICE"; do
+            railway deployment list --json --limit 1 --service "$service" --environment "$RAILWAY_ENVIRONMENT" --project "$RAILWAY_PROJECT_ID" >/dev/null
+          done
+
       - name: Prepare Buildx
         run: |
           docker buildx create --name paralleax-release --driver docker-container --use
@@ -521,12 +531,12 @@ jobs:
 
       - name: Deploy API then web by immutable digest
         env:
-          RAILWAY_TOKEN: ${{ secrets.RAILWAY_TOKEN }}
+          RAILWAY_API_TOKEN: ${{ secrets.RAILWAY_API_TOKEN }}
           API_IMAGE: ${{ steps.api-image.outputs.image }}
           WEB_IMAGE: ${{ steps.web-image.outputs.image }}
         run: |
           set -euo pipefail
-          : "${RAILWAY_TOKEN:?Configure the RAILWAY_TOKEN GitHub Actions secret}"
+          : "${RAILWAY_API_TOKEN:?Configure a Railway account or workspace token as the RAILWAY_API_TOKEN Actions secret}"
 
           deploy_and_wait() {
             local service="$1"
@@ -535,7 +545,7 @@ jobs:
 
             before="$(railway deployment list --json --limit 1 --service "$service" --environment "$RAILWAY_ENVIRONMENT" --project "$RAILWAY_PROJECT_ID")"
             before_id="$(printf '%s' "$before" | jq -r '.[0].id // empty')"
-            railway service source connect --image "$image" --service "$service" --environment "$RAILWAY_ENVIRONMENT" --project "$RAILWAY_PROJECT_ID" --yes --json
+            railway service source connect --image "$image" --service "$service" --environment "$RAILWAY_ENVIRONMENT" --project "$RAILWAY_PROJECT_ID"
             deadline=$((SECONDS + 900))
 
             while (( SECONDS < deadline )); do

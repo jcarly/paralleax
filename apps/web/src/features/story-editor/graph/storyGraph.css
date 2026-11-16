@@ -187,8 +187,9 @@
 }
 .node-create-child {
   bottom: -15px;
-  left: 50%;
-  transform: translateX(-50%) scale(1);
+  right: 10px;
+  left: auto;
+  transform: scale(1);
 }
 .routing-handle.react-flow__handle {
   width: 2px;

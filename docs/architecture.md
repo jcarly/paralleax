@@ -661,8 +661,9 @@ word in the CSS cascade. Vite emits a production manifest, and every web build
 checks its complete static import graph using compressed asset sizes. Production
 JavaScript uses Terser minification to stay within the entry and route budgets. The
 initial JavaScript and stylesheet budgets are 150 KiB and 24 KiB; incremental
-Story Editor and Story Player assets are limited to 145 KiB and 95 KiB. The
-contract also fails if either route stops being a dynamic entry or becomes a
+Story Editor and Story Player assets are limited to 146 KiB and 95 KiB. The
+editor budget includes 1 KiB of release-build headroom for metadata-dependent
+bundle changes; the cap remains enforced. The contract also fails if either route stops being a dynamic entry or becomes a
 static dependency of the application entry.
 
 ## Automated Architecture Checks

@@ -1,17 +1,19 @@
-import { EntityNameInput } from './EntityNameInput';
 import { getStatValueType, type ItemDefinition, type StatDefinition } from '@paralleax/shared';
 import { useTranslation } from 'react-i18next';
 import {
-  InspectorCommentField,
   InspectorCommentSlot,
   type InspectorSemanticCommentProps,
   type InspectorTextCommentProps,
 } from '../features/comments/InspectorCommentField';
-import { CategoryField } from './CategoryField';
 import { FieldHelpTooltip } from './FieldHelpTooltip';
-import { ImageUrlField } from './ImageUrlField';
 import { RemoveRowButton } from './RemoveRowButton';
 import { StatValueField } from './StatValueField';
+import {
+  InspectorCategoryField,
+  InspectorDescriptionField,
+  InspectorImageField,
+  InspectorNameField,
+} from './InspectorEntityFields';
 
 export function ItemDefinitionInspector({
   itemDefinition,
@@ -44,65 +46,35 @@ export function ItemDefinitionInspector({
         <h3>{t('inspector.item')}</h3>
         <FieldHelpTooltip label={t('inspector.item')} help={t('inspector.itemInstanceHelp')} />
       </div>
-      <InspectorCommentSlot
-        slot={{ kind: 'field', field: 'imageUrl' }}
-        label={t('inspector.imageUrl')}
+      <InspectorImageField
+        imageUrl={itemDefinition.imageUrl}
         semanticCommentCounts={semanticCommentCounts}
         onOpenSemanticComments={onOpenSemanticComments}
-      >
-        <ImageUrlField
-          imageUrl={itemDefinition.imageUrl}
-          onChange={(imageUrl) => onChange({ ...itemDefinition, imageUrl })}
-          onBlur={(imageUrl) => void onPatch(itemDefinition.id, { imageUrl })}
-        />
-      </InspectorCommentSlot>
-      <InspectorCommentField
-        field="name"
-        label={t('inspector.name')}
+        onChange={(imageUrl) => onChange({ ...itemDefinition, imageUrl })}
+        onCommit={(imageUrl) => void onPatch(itemDefinition.id, { imageUrl })}
+      />
+      <InspectorNameField
+        value={itemDefinition.name}
         textCommentCounts={textCommentCounts}
         onOpenTextComments={onOpenTextComments}
-      >
-        <label className="form-field form-field--compact">
-          {t('inspector.name')}
-          <EntityNameInput
-            data-comment-field="name"
-            value={itemDefinition.name}
-            onChange={(name) => onChange({ ...itemDefinition, name })}
-            onCommit={(name) => onPatch(itemDefinition.id, { name })}
-          />
-        </label>
-      </InspectorCommentField>
-      <InspectorCommentSlot
-        slot={{ kind: 'field', field: 'category' }}
-        label={t('inspector.category')}
+        onChange={(name) => onChange({ ...itemDefinition, name })}
+        onCommit={(name) => onPatch(itemDefinition.id, { name })}
+      />
+      <InspectorCategoryField
+        category={itemDefinition.category}
+        suggestions={categorySuggestions}
         semanticCommentCounts={semanticCommentCounts}
         onOpenSemanticComments={onOpenSemanticComments}
-      >
-        <CategoryField
-          category={itemDefinition.category}
-          suggestions={categorySuggestions}
-          onChange={(category) => onChange({ ...itemDefinition, category })}
-          onBlur={(category) => void onPatch(itemDefinition.id, { category })}
-        />
-      </InspectorCommentSlot>
-      <InspectorCommentField
-        field="description"
-        label={t('inspector.description')}
+        onChange={(category) => onChange({ ...itemDefinition, category })}
+        onCommit={(category) => void onPatch(itemDefinition.id, { category })}
+      />
+      <InspectorDescriptionField
+        value={itemDefinition.description}
         textCommentCounts={textCommentCounts}
         onOpenTextComments={onOpenTextComments}
-      >
-        <label className="form-field form-field--compact">
-          {t('inspector.description')}
-          <textarea
-            className="form-control form-control--compact form-control--multiline"
-            data-comment-field="description"
-            rows={7}
-            value={itemDefinition.description}
-            onChange={(event) => onChange({ ...itemDefinition, description: event.target.value })}
-            onBlur={(event) => void onPatch(itemDefinition.id, { description: event.target.value })}
-          />
-        </label>
-      </InspectorCommentField>
+        onChange={(description) => onChange({ ...itemDefinition, description })}
+        onCommit={(description) => void onPatch(itemDefinition.id, { description })}
+      />
       <InspectorCommentSlot
         slot={{ kind: 'section', section: 'stats' }}
         label={t('inspector.itemStats')}

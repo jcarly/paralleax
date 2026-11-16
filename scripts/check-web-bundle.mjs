@@ -23,8 +23,8 @@ const compressedAssetBytes = new Map(
 );
 const metrics = analyzeWebBundle(manifest, compressedAssetBytes);
 
-assertWebBundleBudgets(metrics);
 console.log(formatWebBundleReport(metrics));
+assertWebBundleBudgets(metrics);
 
 function isMeasuredAsset(asset) {
   return asset.endsWith('.js') || asset.endsWith('.css');

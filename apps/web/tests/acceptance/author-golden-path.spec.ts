@@ -1,4 +1,5 @@
 import { expect, test } from '@playwright/test';
+import type { Story } from '@paralleax/shared';
 import {
   createdInteraction,
   editInspectorField,
@@ -6,6 +7,7 @@ import {
   expectSuccessful,
   interactionNode,
   registerAndCreateStory,
+  requestApiJson,
   waitForApiResponse,
   waitForInteractionPatch,
   waitForTriggerPatch,
@@ -14,7 +16,10 @@ import {
 test('an author creates, persists, resumes, and simulates a conditional story', async ({
   page,
 }) => {
-  const { email, password, storyTitle } = await registerAndCreateStory(page, 'Alpha acceptance');
+  const { email, password, storyId, storyTitle } = await registerAndCreateStory(
+    page,
+    'Alpha acceptance',
+  );
 
   const locationCreation = waitForApiResponse(page, 'POST', /\/api\/stories\/[^/]+\/locations$/);
   await page.getByRole('button', { name: 'Add location' }).click();
@@ -44,15 +49,21 @@ test('an author creates, persists, resumes, and simulates a conditional story', 
   await inspector.getByRole('button', { name: 'Assign', exact: true }).click();
   await expectSuccessful(assignmentCreation);
 
-  const rootCreation = waitForApiResponse(page, 'POST', /\/api\/stories\/[^/]+\/interactions$/);
-  await page.getByRole('button', { name: 'Add root' }).click();
-  const root = await createdInteraction(rootCreation);
-  await expect(page.locator('.onboarding-guide-positioner')).toHaveCSS('position', 'fixed');
-  await expect(interactionNode(page, 'New interaction')).toHaveClass(/onboarding-target-highlight/);
-  await interactionNode(page, 'New interaction').click();
-  await expect(page.getByRole('heading', { name: 'Write a scene' })).toBeVisible();
-  await editInteraction(page, 'New interaction', 'Opening', 'Alice enters the atrium.');
-  await expect(page.getByRole('heading', { name: 'Create a choice' })).toBeVisible();
+  const initialStory = await requestApiJson<Story>(page, 'GET', `/api/stories/${storyId}`);
+  const root = initialStory.interactions.find(({ triggers }) =>
+    triggers.some(({ inputInteractionIds }) => inputInteractionIds.length === 0),
+  );
+  if (!root) {
+    throw new Error('The new Story is missing its opening Interaction');
+  }
+  const middle = initialStory.interactions.find(({ triggers }) =>
+    triggers.some(({ inputInteractionIds }) => inputInteractionIds.includes(root.id)),
+  );
+  if (!middle) {
+    throw new Error('The new Story is missing its seeded child Interaction');
+  }
+  await editInteraction(page, 'Start', 'Opening', 'Alice enters the atrium.');
+  await editInteraction(page, 'New interaction', 'Gain courage', 'Alice chooses to continue.');
 
   let openingNode = interactionNode(page, 'Opening');
   await openingNode.click();
@@ -64,23 +75,17 @@ test('an author creates, persists, resumes, and simulates a conditional story', 
   await inspector.getByRole('checkbox', { name: 'Alice' }).check();
   await expectSuccessful(characterAssignment);
 
-  const middleCreation = waitForApiResponse(page, 'POST', /\/api\/stories\/[^/]+\/interactions$/);
-  await openingNode.getByRole('button', { name: 'Create child interaction' }).click();
-  const middle = await createdInteraction(middleCreation);
-  await editInteraction(page, 'New interaction', 'Gain courage', 'Alice chooses to continue.');
-
-  await page.getByRole('button', { name: 'Fit View' }).click();
-  await expect(openingNode).toBeVisible();
   const alternativeCreation = waitForApiResponse(
     page,
     'POST',
     /\/api\/stories\/[^/]+\/interactions$/,
   );
-  await openingNode.getByRole('button', { name: 'Create child interaction' }).click();
+  const createBranch = openingNode.getByRole('button', { name: 'Create child interaction' });
+  await expect(createBranch).toBeInViewport();
+  await createBranch.click();
   const alternative = await createdInteraction(alternativeCreation);
   await editInteraction(page, 'New interaction', 'Leave the atrium', 'Alice takes another path.');
   await page.getByRole('button', { name: 'Fit View' }).click();
-  await expect(page.getByRole('heading', { name: 'Test your story' })).toBeVisible();
 
   await page.getByRole('button', { name: 'Collapse story context' }).click();
   await interactionNode(page, 'Gain courage').click();
@@ -129,6 +134,10 @@ test('an author creates, persists, resumes, and simulates a conditional story', 
   await expect(interactionNode(page, 'Gain courage')).toBeVisible();
   await expect(interactionNode(page, 'Resolve')).toBeVisible();
   const storyContext = page.getByRole('navigation', { name: 'Story context' });
+  const expandStoryContext = storyContext.getByRole('button', { name: 'Expand story context' });
+  if (await expandStoryContext.count()) {
+    await expandStoryContext.click();
+  }
   for (const section of ['Locations', 'Characters', 'Variables']) {
     const toggle = storyContext.getByRole('button', { name: new RegExp(section) });
     if ((await toggle.getAttribute('aria-expanded')) === 'false') {

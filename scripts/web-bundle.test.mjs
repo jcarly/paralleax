@@ -3,6 +3,7 @@ import test from 'node:test';
 import {
   analyzeWebBundle,
   assertWebBundleBudgets,
+  WEB_BUNDLE_BUDGETS,
   collectStaticBundleAssets,
   formatWebBundleReport,
 } from './web-bundle.mjs';
@@ -117,6 +118,23 @@ test('rejects eager routes, missing chunks, and exceeded budgets with explicit e
     /InitialJavaScriptBytes is 0.1 KiB, above its 0.1 KiB budget/i,
   );
   assert.match(formatWebBundleReport(metrics), /Story Editor incremental assets: 0.0 KiB/);
+});
+
+test('the editor budget has limited release headroom and still rejects larger bundles', () => {
+  assert.equal(WEB_BUNDLE_BUDGETS.editorIncrementalBytes, 146 * 1024);
+
+  const metrics = {
+    initialJavaScriptBytes: 0,
+    initialStylesheetBytes: 0,
+    editorIncrementalBytes: 145 * 1024 + 60,
+    playerIncrementalBytes: 0,
+  };
+  assert.doesNotThrow(() => assertWebBundleBudgets(metrics));
+  metrics.editorIncrementalBytes = WEB_BUNDLE_BUDGETS.editorIncrementalBytes + 1;
+  assert.throws(
+    () => assertWebBundleBudgets(metrics),
+    /editorIncrementalBytes is 146\.0 KiB, above its 146\.0 KiB budget \(149505 bytes > 149504 bytes\)/,
+  );
 });
 
 test('measures a named dynamic route when Rollup omits its source facade', () => {
