@@ -48,7 +48,13 @@ export function useStoryPlayerLoading({
     })
       .then((result) => {
         if (cancelled) return;
-        onLoaded(result, () => setLoadedKey(loadKey), loadKey);
+        onLoaded(
+          result,
+          () => {
+            setLoadedKey(loadKey);
+          },
+          loadKey,
+        );
       })
       .catch((caught: unknown) => {
         if (cancelled || recoverFromStoryAccessError(caught)) return;

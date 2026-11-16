@@ -20,10 +20,18 @@ export function ModalPortal({ children }: { children: ReactNode }) {
       className="modal-portal"
       ref={portalRef}
       tabIndex={-1}
-      onKeyDown={(event) => event.stopPropagation()}
-      onKeyUp={(event) => event.stopPropagation()}
-      onMouseDown={(event) => event.stopPropagation()}
-      onClick={(event) => event.stopPropagation()}
+      onKeyDown={(event) => {
+        event.stopPropagation();
+      }}
+      onKeyUp={(event) => {
+        event.stopPropagation();
+      }}
+      onMouseDown={(event) => {
+        event.stopPropagation();
+      }}
+      onClick={(event) => {
+        event.stopPropagation();
+      }}
     >
       <ModalPortalContext.Provider value={portalRef}>{children}</ModalPortalContext.Provider>
     </div>,

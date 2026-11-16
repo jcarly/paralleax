@@ -24,7 +24,9 @@ class FakeEventSource {
   emit(type: string, data?: object) {
     const event =
       data === undefined ? new Event(type) : new MessageEvent(type, { data: JSON.stringify(data) });
-    this.listeners.get(type)?.forEach((listener) => listener(event));
+    this.listeners.get(type)?.forEach((listener) => {
+      listener(event);
+    });
   }
 
   close() {
@@ -66,7 +68,9 @@ describe('useStoryRealtime', () => {
     expect(onInvalidate).toHaveBeenCalledOnce();
     expect(onInvalidate).toHaveBeenCalledWith('changed');
 
-    act(() => source.emit('story-deleted'));
+    act(() => {
+      source.emit('story-deleted');
+    });
     expect(onInvalidate).toHaveBeenLastCalledWith('deleted');
   });
 
@@ -81,7 +85,9 @@ describe('useStoryRealtime', () => {
     });
     expect(onInvalidate).not.toHaveBeenCalled();
 
-    act(() => source.emit('story-changed', { revision: 2 }));
+    act(() => {
+      source.emit('story-changed', { revision: 2 });
+    });
     rerender(<Fixture onInvalidate={onInvalidate} revision={2} />);
     await act(async () => {
       vi.advanceTimersByTime(75);

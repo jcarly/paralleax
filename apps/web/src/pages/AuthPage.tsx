@@ -145,7 +145,9 @@ export function AuthPage({
                     autoComplete="nickname"
                     placeholder={t('auth.displayNamePlaceholder')}
                     value={displayName}
-                    onChange={(event) => setDisplayName(event.target.value)}
+                    onChange={(event) => {
+                      setDisplayName(event.target.value);
+                    }}
                     minLength={2}
                     maxLength={50}
                     required
@@ -160,7 +162,9 @@ export function AuthPage({
                   type="email"
                   placeholder={t('auth.emailPlaceholder')}
                   value={email}
-                  onChange={(event) => setEmail(event.target.value)}
+                  onChange={(event) => {
+                    setEmail(event.target.value);
+                  }}
                   required
                 />
               </label>
@@ -174,11 +178,18 @@ export function AuthPage({
                     type={showPassword ? 'text' : 'password'}
                     placeholder={isRegister ? t('auth.newPasswordPlaceholder') : undefined}
                     value={password}
-                    onChange={(event) => setPassword(event.target.value)}
+                    onChange={(event) => {
+                      setPassword(event.target.value);
+                    }}
                     minLength={8}
                     required
                   />
-                  <button type="button" onClick={() => setShowPassword((current) => !current)}>
+                  <button
+                    type="button"
+                    onClick={() => {
+                      setShowPassword((current) => !current);
+                    }}
+                  >
                     {t(showPassword ? 'auth.hidePassword' : 'auth.showPassword')}
                   </button>
                 </span>
@@ -192,7 +203,9 @@ export function AuthPage({
                     autoComplete="new-password"
                     type={showPassword ? 'text' : 'password'}
                     value={confirmation}
-                    onChange={(event) => setConfirmation(event.target.value)}
+                    onChange={(event) => {
+                      setConfirmation(event.target.value);
+                    }}
                     required
                   />
                   {confirmation && !passwordsMatch ? (

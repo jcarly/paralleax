@@ -40,11 +40,15 @@ export function RichTextEditor(props: RichTextEditorProps) {
         linkSelectionText={editor.linkSelectionText}
         conditionalEdit={editor.conditionalEdit}
         currentCondition={editor.currentCondition}
-        onCancelVariable={() => editor.setEditingVariable(undefined)}
+        onCancelVariable={() => {
+          editor.setEditingVariable(undefined);
+        }}
         onConfirmVariable={editor.addVariable}
         onCancelLink={editor.cancelLinkDialog}
         onConfirmLink={editor.addInteractionLink}
-        onCancelCondition={() => editor.setConditionalEdit(undefined)}
+        onCancelCondition={() => {
+          editor.setConditionalEdit(undefined);
+        }}
         onConfirmCondition={editor.confirmCondition}
       />
     </div>

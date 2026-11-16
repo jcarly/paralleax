@@ -46,7 +46,9 @@ export function RichTextVariableDialog({
         autoFocus
         story={story}
         selectedTarget={initialTarget}
-        onSelectionClear={() => setSelection(undefined)}
+        onSelectionClear={() => {
+          setSelection(undefined);
+        }}
         onSelect={setSelection}
       />
 

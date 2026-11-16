@@ -8,5 +8,7 @@ export function transitionPlayerInteraction(update: () => void): void {
     return;
   }
 
-  document.startViewTransition(() => flushSync(update));
+  document.startViewTransition(() => {
+    flushSync(update);
+  });
 }

@@ -26,9 +26,13 @@ describe('useReaderProgressPersistence', () => {
       useReaderProgressPersistence({ authenticated: true, storyId: 'story-1' }),
     );
 
-    act(() => result.current.save(sessionFixture()));
+    act(() => {
+      result.current.save(sessionFixture());
+    });
     expect(result.current.status).toBe('saving');
-    await waitFor(() => expect(result.current.status).toBe('saved'));
+    await waitFor(() => {
+      expect(result.current.status).toBe('saved');
+    });
     expect(api.saveReaderProgress).toHaveBeenCalledWith(
       'story-1',
       {
@@ -51,8 +55,12 @@ describe('useReaderProgressPersistence', () => {
       result.current.reset();
     });
 
-    await waitFor(() => expect(api.deleteReaderProgress).toHaveBeenCalledWith('story-1', 'reader'));
-    await waitFor(() => expect(result.current.status).toBe('idle'));
+    await waitFor(() => {
+      expect(api.deleteReaderProgress).toHaveBeenCalledWith('story-1', 'reader');
+    });
+    await waitFor(() => {
+      expect(result.current.status).toBe('idle');
+    });
   });
 
   it('does not persist an anonymous reader session', () => {
@@ -79,9 +87,13 @@ describe('useReaderProgressPersistence', () => {
       }),
     );
 
-    act(() => result.current.save(sessionFixture()));
+    act(() => {
+      result.current.save(sessionFixture());
+    });
 
-    await waitFor(() => expect(result.current.status).toBe('saved'));
+    await waitFor(() => {
+      expect(result.current.status).toBe('saved');
+    });
     expect(api.saveReaderProgress).toHaveBeenCalledWith(
       'story-1',
       expect.objectContaining({ journeyInteractionIds: ['start'] }),
@@ -94,9 +106,13 @@ describe('useReaderProgressPersistence', () => {
       useReaderProgressPersistence({ authenticated: true, storyId: 'story-1' }),
     );
 
-    act(() => result.current.save(sessionFixture(), 'simulation'));
+    act(() => {
+      result.current.save(sessionFixture(), 'simulation');
+    });
 
-    await waitFor(() => expect(result.current.status).toBe('saved'));
+    await waitFor(() => {
+      expect(result.current.status).toBe('saved');
+    });
     expect(api.saveReaderProgress).toHaveBeenCalledWith(
       'story-1',
       expect.objectContaining({ journeyInteractionIds: ['start'] }),
@@ -110,11 +126,12 @@ describe('useReaderProgressPersistence', () => {
       .mockImplementationOnce(
         () =>
           new Promise((resolve) => {
-            resolveFirstSave = () =>
+            resolveFirstSave = () => {
               resolve({
                 state: sessionFixture(),
                 updatedAt: '2026-08-26T08:00:00.000Z',
               });
+            };
           }),
       )
       .mockResolvedValueOnce({
@@ -126,22 +143,34 @@ describe('useReaderProgressPersistence', () => {
       { initialProps: { storyId: 'story-1' } },
     );
 
-    act(() => result.current.save(sessionFixture()));
-    await waitFor(() => expect(api.saveReaderProgress).toHaveBeenCalledTimes(1));
+    act(() => {
+      result.current.save(sessionFixture());
+    });
+    await waitFor(() => {
+      expect(api.saveReaderProgress).toHaveBeenCalledTimes(1);
+    });
 
     rerender({ storyId: 'story-2' });
-    act(() => result.current.save(sessionFixture()));
+    act(() => {
+      result.current.save(sessionFixture());
+    });
 
-    await waitFor(() => expect(api.saveReaderProgress).toHaveBeenCalledTimes(2));
+    await waitFor(() => {
+      expect(api.saveReaderProgress).toHaveBeenCalledTimes(2);
+    });
     expect(api.saveReaderProgress).toHaveBeenLastCalledWith(
       'story-2',
       expect.objectContaining({ journeyInteractionIds: ['start'] }),
       'reader',
     );
-    await waitFor(() => expect(result.current.status).toBe('saved'));
+    await waitFor(() => {
+      expect(result.current.status).toBe('saved');
+    });
 
     act(() => resolveFirstSave?.());
-    await waitFor(() => expect(result.current.status).toBe('saved'));
+    await waitFor(() => {
+      expect(result.current.status).toBe('saved');
+    });
   });
 });
 

@@ -48,7 +48,9 @@ export function StorySettingsDialog({
           role="dialog"
           aria-modal="true"
           aria-labelledby="story-settings-title"
-          onKeyDown={(event) => handleModalDialogKeyDown(event, onClose)}
+          onKeyDown={(event) => {
+            handleModalDialogKeyDown(event, onClose);
+          }}
         >
           <header className="story-settings-header">
             <span className="story-settings-heading-icon" aria-hidden="true">
@@ -78,7 +80,9 @@ export function StorySettingsDialog({
                 className={activeTab === tab ? 'active' : ''}
                 autoFocus={initialTab === 'access' && tab === 'access'}
                 data-modal-autofocus={initialTab === 'access' && tab === 'access' ? '' : undefined}
-                onClick={() => setActiveTab(tab)}
+                onClick={() => {
+                  setActiveTab(tab);
+                }}
               >
                 {t(`storySettings.${tab}`)}
               </button>

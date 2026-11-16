@@ -25,7 +25,12 @@ export function CommentPinNode({ data }: NodeProps) {
   const comment = data as CommentPinNodeData;
 
   return (
-    <div className="comment-post-it" onClick={(event) => event.stopPropagation()}>
+    <div
+      className="comment-post-it"
+      onClick={(event) => {
+        event.stopPropagation();
+      }}
+    >
       {comment.thread && comment.canManageThread ? (
         <div className="comment-post-it-drag-handle" title={t('comments.movePostIt')}>
           <span aria-hidden="true">⠿</span>
@@ -33,7 +38,9 @@ export function CommentPinNode({ data }: NodeProps) {
       ) : null}
       <div
         className="comment-post-it-content nodrag nopan"
-        onPointerDown={(event) => event.stopPropagation()}
+        onPointerDown={(event) => {
+          event.stopPropagation();
+        }}
       >
         {comment.thread ? (
           <CommentDiscussionCard
@@ -43,7 +50,9 @@ export function CommentPinNode({ data }: NodeProps) {
             canManageThread={comment.canManageThread}
             canDeleteThread={comment.canDeleteThread}
             variant="post-it"
-            onExpand={() => comment.onOpen(comment.thread!.id)}
+            onExpand={() => {
+              comment.onOpen(comment.thread!.id);
+            }}
             onReply={(body) => comment.onReply(comment.thread!.id, body)}
             onStatus={(status) => comment.onStatus(comment.thread!.id, status)}
             onDelete={() => comment.onDelete(comment.thread!.id)}

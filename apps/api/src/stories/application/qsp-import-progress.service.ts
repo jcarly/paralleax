@@ -27,8 +27,12 @@ export class QspImportProgressService {
       });
 
       const progressSubscription: Subscription = channel.progress.subscribe({
-        next: (progress) => subscriber.next({ type: 'progress', data: progress }),
-        complete: () => subscriber.complete(),
+        next: (progress) => {
+          subscriber.next({ type: 'progress', data: progress });
+        },
+        complete: () => {
+          subscriber.complete();
+        },
       });
       const heartbeat = setInterval(() => {
         subscriber.next({

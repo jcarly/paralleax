@@ -27,7 +27,9 @@ export function ExpressionEditor({
   const [pickerOpen, setPickerOpen] = useState(false);
   const [editing, setEditing] = useState({ source: value, draft: value });
   const draft = editing.source === value ? editing.draft : value;
-  const setDraft = (nextValue: string) => setEditing({ source: value, draft: nextValue });
+  const setDraft = (nextValue: string) => {
+    setEditing({ source: value, draft: nextValue });
+  };
   const targets = getStatTargets(story);
   const isValidExpression = (expression: string) => {
     const resultType = inferExpressionType(expression, ({ id, itemId }) => {
@@ -56,7 +58,12 @@ export function ExpressionEditor({
           if (isValidExpression(event.target.value)) onBlur?.(event.target.value);
         }}
       />
-      <button type="button" onClick={() => setPickerOpen((open) => !open)}>
+      <button
+        type="button"
+        onClick={() => {
+          setPickerOpen((open) => !open);
+        }}
+      >
         {t('interactionInspector.insertVariableExpression')}
       </button>
       {pickerOpen ? (

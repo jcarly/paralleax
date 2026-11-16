@@ -124,7 +124,11 @@ test.describe('Constrained overlays and editor panels', () => {
       await page.evaluate(
         () =>
           new Promise<void>((resolve) =>
-            requestAnimationFrame(() => requestAnimationFrame(() => resolve())),
+            requestAnimationFrame(() =>
+              requestAnimationFrame(() => {
+                resolve();
+              }),
+            ),
           ),
       );
 
@@ -148,7 +152,9 @@ test.describe('Constrained overlays and editor panels', () => {
     await page.goto('/stories/story-1/edit');
     await page
       .getByRole('button', { name: 'Story settings' })
-      .evaluate((button: HTMLButtonElement) => button.click());
+      .evaluate((button: HTMLButtonElement) => {
+        button.click();
+      });
 
     const dialog = page.getByRole('dialog', { name: 'Story settings' });
     await expect(dialog).toBeVisible();
@@ -206,7 +212,9 @@ test.describe('Constrained overlays and editor panels', () => {
     await page.goto('/stories/story-1/edit');
     await page
       .getByRole('button', { name: 'Story settings' })
-      .evaluate((button: HTMLButtonElement) => button.click());
+      .evaluate((button: HTMLButtonElement) => {
+        button.click();
+      });
     await page.getByRole('tab', { name: 'Access' }).click();
     await expect(page.getByLabel('Reading', { exact: true })).toBeVisible();
 

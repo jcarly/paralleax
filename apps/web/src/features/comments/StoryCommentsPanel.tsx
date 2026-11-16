@@ -115,7 +115,13 @@ export function StoryCommentsPanel({
         </section>
       ) : selectedThread ? (
         <section className="comment-thread-detail">
-          <button className="ghost comments-back" type="button" onClick={() => onSelect(undefined)}>
+          <button
+            className="ghost comments-back"
+            type="button"
+            onClick={() => {
+              onSelect(undefined);
+            }}
+          >
             ← {t('comments.allThreads')}
           </button>
           <div className="comment-thread-heading">
@@ -170,7 +176,9 @@ export function StoryCommentsPanel({
                   className="secondary"
                   type="button"
                   title={t('comments.reattachHelp')}
-                  onMouseDown={(event) => event.preventDefault()}
+                  onMouseDown={(event) => {
+                    event.preventDefault();
+                  }}
                   onClick={() => void onReattach(selectedThread.id)}
                 >
                   {t('comments.reattach')}
@@ -221,7 +229,9 @@ export function StoryCommentsPanel({
                 className="comment-thread-row"
                 type="button"
                 key={thread.id}
-                onClick={() => onSelect(thread.id)}
+                onClick={() => {
+                  onSelect(thread.id);
+                }}
               >
                 <span className="comment-thread-pin" aria-hidden="true">
                   ◆
@@ -249,7 +259,9 @@ export function StoryCommentsPanel({
               value={body}
               maxLength={4000}
               rows={4}
-              onChange={(event) => setBody(event.target.value)}
+              onChange={(event) => {
+                setBody(event.target.value);
+              }}
             />
           </label>
           <button type="submit" disabled={pending || !body.trim()}>

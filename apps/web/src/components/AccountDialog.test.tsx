@@ -23,7 +23,9 @@ describe('AccountDialog', () => {
   };
 
   beforeEach(() => vi.resetAllMocks());
-  afterEach(() => cleanup());
+  afterEach(() => {
+    cleanup();
+  });
 
   it('changes the password and allows other sessions to be revoked', async () => {
     const interaction = userEvent.setup();

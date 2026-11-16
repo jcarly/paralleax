@@ -194,7 +194,9 @@ export class StoryImportService {
         job.id,
         effectiveAbortSignal,
         willPersist
-          ? () => this.qspProgress.publish(userId, progressId, { phase: 'saving', completed: 0 })
+          ? () => {
+              this.qspProgress.publish(userId, progressId, { phase: 'saving', completed: 0 });
+            }
           : undefined,
       );
       if (outcome.status === 'imported') {

@@ -32,9 +32,13 @@ describe('useSimulationMutationPersistence', () => {
       canRetry: true,
     });
 
-    act(() => result.current.retry());
+    act(() => {
+      result.current.retry();
+    });
     expect(result.current.status).toBe('saving');
-    await waitFor(() => expect(result.current.status).toBe('saved'));
+    await waitFor(() => {
+      expect(result.current.status).toBe('saved');
+    });
     expect(operation).toHaveBeenCalledTimes(2);
     expect(applyResult).toHaveBeenCalledWith('saved');
   });

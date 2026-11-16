@@ -132,19 +132,28 @@ it('accepts 2,000 Interactions and rejects the 2,001st', () => {
     ...baseStory(),
     interactions: Array.from({ length: 2_000 }, (_, index) => interaction(String(index))),
   };
-  expect(() => assertStoryWithinQuotas(story)).not.toThrow();
+  expect(() => {
+    assertStoryWithinQuotas(story);
+  }).not.toThrow();
   story.interactions.push(interaction('extra'));
-  expectQuotaExceeded(() => assertStoryWithinQuotas(story), {
-    resource: 'interactions',
-    limit: 2_000,
-    current: 0,
-    attempted: 2_001,
-  });
+  expectQuotaExceeded(
+    () => {
+      assertStoryWithinQuotas(story);
+    },
+    {
+      resource: 'interactions',
+      limit: 2_000,
+      current: 0,
+      attempted: 2_001,
+    },
+  );
 });
 
 it.each(quotaResourceCases)(
   'allows the exact %s ceiling and rejects the next entity',
-  (resource, makeStory) => expectQuotaResourceBoundary(resource, makeStory),
+  (resource, makeStory) => {
+    expectQuotaResourceBoundary(resource, makeStory);
+  },
 );
 
 it('counts UTF-8 bytes exactly and excludes response-only projections', () => {
@@ -154,40 +163,40 @@ it('counts UTF-8 bytes exactly and excludes response-only projections', () => {
     Buffer.byteLength('Story', 'utf8') +
     Buffer.byteLength('é', 'utf8');
   expect(measureStoryQuotaUsage(story).serializedBytes).toBe(bytes);
-  expect(() =>
+  expect(() => {
     assertStoryWithinQuotas(story, undefined, {
       ...DEFAULT_STORY_QUOTAS,
       serializedBytes: bytes,
-    }),
-  ).not.toThrow();
-  expect(() =>
+    });
+  }).not.toThrow();
+  expect(() => {
     assertStoryWithinQuotas(story, undefined, {
       ...DEFAULT_STORY_QUOTAS,
       serializedBytes: bytes - 1,
-    }),
-  ).toThrow();
+    });
+  }).toThrow();
 });
 
 it('allows an existing over-limit Story to remain stable or shrink, but not grow', () => {
   const current = resources.interactions();
   const quotas = { ...DEFAULT_STORY_QUOTAS, interactions: 1 };
-  expect(() =>
-    assertStoryWithinQuotas({ ...current, title: 'New title' }, current, quotas),
-  ).not.toThrow();
-  expect(() =>
+  expect(() => {
+    assertStoryWithinQuotas({ ...current, title: 'New title' }, current, quotas);
+  }).not.toThrow();
+  expect(() => {
     assertStoryWithinQuotas(
       { ...current, interactions: [current.interactions[0]] },
       current,
       quotas,
-    ),
-  ).not.toThrow();
-  expect(() =>
+    );
+  }).not.toThrow();
+  expect(() => {
     assertStoryWithinQuotas(
       { ...current, interactions: [...current.interactions, interaction('c')] },
       current,
       quotas,
-    ),
-  ).toThrow();
+    );
+  }).toThrow();
 });
 
 it('accepts valid environment overrides and rejects invalid limits', () => {
@@ -204,14 +213,21 @@ function expectQuotaResourceBoundary(
   const story = makeStory();
   const quotas = { ...DEFAULT_STORY_QUOTAS, [resource]: 2 };
   expect(measureStoryQuotaUsage(story)[resource]).toBe(2);
-  expect(() => assertStoryWithinQuotas(story, undefined, quotas)).not.toThrow();
+  expect(() => {
+    assertStoryWithinQuotas(story, undefined, quotas);
+  }).not.toThrow();
   const exceeded = { ...quotas, [resource]: 1 };
-  expectQuotaExceeded(() => assertStoryWithinQuotas(story, undefined, exceeded), {
-    resource,
-    limit: 1,
-    current: 0,
-    attempted: 2,
-  });
+  expectQuotaExceeded(
+    () => {
+      assertStoryWithinQuotas(story, undefined, exceeded);
+    },
+    {
+      resource,
+      limit: 1,
+      current: 0,
+      attempted: 2,
+    },
+  );
 }
 
 function expectQuotaExceeded(

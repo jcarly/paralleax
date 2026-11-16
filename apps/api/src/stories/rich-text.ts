@@ -83,8 +83,12 @@ function createSanitizerOptions(
     exclusiveFilter: ({ tag, attribs }) =>
       (tag === 'div' || tag === 'span') &&
       attribs['data-rich-text-conditional-controls'] !== undefined,
-    onOpenTag: (tagName, attributes) => trackInertMarkerOpen(tagName, attributes, markerState),
-    onCloseTag: (tagName) => trackInertMarkerClose(tagName, markerState),
+    onOpenTag: (tagName, attributes) => {
+      trackInertMarkerOpen(tagName, attributes, markerState);
+    },
+    onCloseTag: (tagName) => {
+      trackInertMarkerClose(tagName, markerState);
+    },
     textFilter: story ? createTextFilter(story, markerState) : undefined,
     transformTags: createTagTransformers(story),
   };

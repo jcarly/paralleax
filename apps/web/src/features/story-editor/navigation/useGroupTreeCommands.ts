@@ -38,12 +38,16 @@ export function useGroupTreeCommands(
       if (expandGroupId) {
         setExpandedIds((current) => new Set([...current, expandGroupId]));
       }
-      void mutate(() => props.onUpdate(group.id, input)).then(() => focusRow(group.id));
+      void mutate(() => props.onUpdate(group.id, input)).then(() => {
+        focusRow(group.id);
+      });
     },
     [focusRow, mutate, props, setExpandedIds, tree],
   );
   const expandGroup = useCallback(
-    (groupId: string) => setExpandedIds((current) => new Set([...current, groupId])),
+    (groupId: string) => {
+      setExpandedIds((current) => new Set([...current, groupId]));
+    },
     [setExpandedIds],
   );
   return { busy, message, mutate, groupInteractionIds, moveGroup, expandGroup };

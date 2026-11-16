@@ -70,8 +70,12 @@ export function StoryList({
   const loading = loadedRequestKey !== listRequestKey;
 
   useEffect(() => {
-    const timeout = window.setTimeout(() => setDebouncedQuery(query), 250);
-    return () => window.clearTimeout(timeout);
+    const timeout = window.setTimeout(() => {
+      setDebouncedQuery(query);
+    }, 250);
+    return () => {
+      window.clearTimeout(timeout);
+    };
   }, [query]);
 
   useEffect(() => {
@@ -263,7 +267,9 @@ export function StoryList({
               className="product-secondary"
               type="button"
               disabled={Boolean(pending)}
-              onClick={(event) => openImportDialog(event.currentTarget)}
+              onClick={(event) => {
+                openImportDialog(event.currentTarget);
+              }}
             >
               <span aria-hidden="true">⇧</span> {t('library.import.action')}
             </button>
@@ -271,7 +277,9 @@ export function StoryList({
               className="product-primary"
               data-onboarding-target="story-create"
               type="button"
-              onClick={(event) => openCreationDialog(event.currentTarget)}
+              onClick={(event) => {
+                openCreationDialog(event.currentTarget);
+              }}
             >
               <span aria-hidden="true">＋</span> {t('library.newStory')}
             </button>
@@ -288,7 +296,9 @@ export function StoryList({
             type="search"
             placeholder={t('library.searchPlaceholder')}
             value={query}
-            onChange={(event) => setQuery(event.target.value)}
+            onChange={(event) => {
+              setQuery(event.target.value);
+            }}
           />
         </label>
         {isAuthenticated ? (
@@ -306,7 +316,9 @@ export function StoryList({
                 className={filter === value ? 'active' : ''}
                 key={value}
                 type="button"
-                onClick={() => setFilter(value)}
+                onClick={() => {
+                  setFilter(value);
+                }}
               >
                 {t(label)}
               </button>
@@ -316,7 +328,12 @@ export function StoryList({
         <label className="library-sort">
           <span>{t('library.sortBy')}</span>
           {/* eslint-disable-next-line design-system/require-shared-form-control -- sorting is a compact toolbar control, not a property field */}
-          <select value={sort} onChange={(event) => setSort(event.target.value as StorySort)}>
+          <select
+            value={sort}
+            onChange={(event) => {
+              setSort(event.target.value as StorySort);
+            }}
+          >
             <option value="updated">{t('library.lastEdited')}</option>
             <option value="title">{t('library.sortTitle')}</option>
           </select>
@@ -327,7 +344,9 @@ export function StoryList({
             aria-pressed={view === 'grid'}
             className={view === 'grid' ? 'active' : ''}
             type="button"
-            onClick={() => setView('grid')}
+            onClick={() => {
+              setView('grid');
+            }}
           >
             ▦
           </button>
@@ -336,7 +355,9 @@ export function StoryList({
             aria-pressed={view === 'list'}
             className={view === 'list' ? 'active' : ''}
             type="button"
-            onClick={() => setView('list')}
+            onClick={() => {
+              setView('list');
+            }}
           >
             ☷
           </button>
@@ -422,7 +443,9 @@ export function StoryList({
             <button
               className="product-secondary"
               type="button"
-              onClick={(event) => openCreationDialog(event.currentTarget)}
+              onClick={(event) => {
+                openCreationDialog(event.currentTarget);
+              }}
             >
               {t('library.createStory')}
             </button>
@@ -438,11 +461,11 @@ export function StoryList({
               role="dialog"
               aria-modal="true"
               aria-label={t('library.dialog.title')}
-              onKeyDown={(event) =>
+              onKeyDown={(event) => {
                 handleModalDialogKeyDown(event, () => {
                   if (pending !== 'story') closeCreationDialog();
-                })
-              }
+                });
+              }}
             >
               <form onSubmit={(event) => void create(event)}>
                 <label className="form-field form-field--standard">
@@ -453,7 +476,9 @@ export function StoryList({
                     data-modal-autofocus
                     placeholder={t('library.dialog.placeholder')}
                     value={newTitle}
-                    onChange={(event) => setNewTitle(event.target.value)}
+                    onChange={(event) => {
+                      setNewTitle(event.target.value);
+                    }}
                   />
                 </label>
                 <div className="dialog-actions">
