@@ -242,9 +242,6 @@ class QspDraftGraphBuilder {
     const queue = [owner];
     for (let index = 0; index < queue.length; index += 1) {
       const current = queue[index];
-      if (current === undefined) {
-        continue;
-      }
       for (const parent of this.ancestors[current] ?? []) {
         if (!found.has(parent)) {
           found.add(parent);
@@ -255,7 +252,7 @@ class QspDraftGraphBuilder {
 
     const variables = [...found].flatMap((index) => {
       const variable = this.returnVariables.get(index);
-      return variable ? [variable] : [];
+      return variable !== undefined && variable !== '' ? [variable] : [];
     });
     this.activeVariableCache.set(owner, variables);
     return variables;
@@ -290,7 +287,7 @@ class QspDraftGraphBuilder {
       exit: entry.analysis.statements.find(
         (statement): statement is Exit => statement.kind === 'exit',
       ),
-      normalExits: end ? [end] : [],
+      normalExits: end !== undefined && end !== '' ? [end] : [],
     };
     this.mapActions(mapping);
     this.exits.set(owner, mapping.normalExits);
@@ -320,13 +317,18 @@ class QspDraftGraphBuilder {
       conditionGroups: mapping.action.conditionGroups,
     });
     const actionInput = actionSource(mapping);
-    if (actionInput) {
+    if (actionInput !== undefined && actionInput !== '') {
       this.addEdge(actionInput, key);
     }
-    if (actionEnd && actionInput) {
+    if (
+      actionEnd !== undefined &&
+      actionEnd !== '' &&
+      actionInput !== undefined &&
+      actionInput !== ''
+    ) {
       mapping.normalExits.push(actionEnd);
     }
-    if (mapping.action.image) {
+    if (mapping.action.image !== undefined && mapping.action.image !== '') {
       this.reportActionImage(mapping.action);
     }
     this.onMapped(mapping.action.source.fileName);
@@ -420,9 +422,6 @@ class QspDraftGraphBuilder {
     }
     if (statement.kind === 'exit') {
       return { kind: 'complete', key: path.node.key };
-    }
-    if (statement.kind !== 'call') {
-      return { kind: 'continue' };
     }
 
     const call = this.calls.get(statement);
@@ -638,7 +637,11 @@ function isOrdered(owner: number, analysis: QspCodeAnalysis, returnVariables: Ma
 
 function actionSource(mapping: ActionMapping) {
   const { end, ordered, exit, owner, action } = mapping;
-  if (end && (!ordered || !exit || exit.source.line >= action.source.line)) {
+  if (
+    end !== undefined &&
+    end !== '' &&
+    (!ordered || !exit || exit.source.line >= action.source.line)
+  ) {
     return end;
   }
   return ordered ? undefined : 'location:' + owner;
@@ -761,9 +764,6 @@ function collectComponent(start: number, reverse: Set<number>[], seen: Set<numbe
   seen.add(start);
   for (let index = 0; index < queue.length; index += 1) {
     const node = queue[index];
-    if (node === undefined) {
-      continue;
-    }
     component.push(node);
     for (const target of reverse[node] ?? []) {
       if (!seen.has(target)) {

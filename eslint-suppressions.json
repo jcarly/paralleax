@@ -3646,35 +3646,8 @@
     }
   },
   "packages/shared/src/import-export/qsp/control-flow.ts": {
-    "@typescript-eslint/no-non-null-assertion": {
-      "count": 4
-    },
-    "@typescript-eslint/no-unnecessary-condition": {
-      "count": 1
-    },
-    "@typescript-eslint/strict-boolean-expressions": {
-      "count": 6
-    },
-    "complexity": {
-      "count": 4
-    },
-    "curly": {
-      "count": 25
-    },
-    "max-depth": {
-      "count": 2
-    },
     "max-lines": {
       "count": 1
-    },
-    "max-lines-per-function": {
-      "count": 3
-    },
-    "max-params": {
-      "count": 1
-    },
-    "sonarjs/cognitive-complexity": {
-      "count": 5
     }
   },
   "packages/shared/src/import-export/qsp/expressions.test.ts": {
