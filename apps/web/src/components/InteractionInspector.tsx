@@ -121,7 +121,9 @@ function AddEffectControl({
         className="ghost interaction-add-effect"
         title={t('interactionInspector.addEffect')}
         type="button"
-        onClick={() => setIsChoosing(true)}
+        onClick={() => {
+          setIsChoosing(true);
+        }}
       >
         <span aria-hidden="true">+</span>
       </button>
@@ -141,7 +143,9 @@ function AddEffectControl({
           className="ghost interaction-effect-picker-cancel"
           title={t('interactionInspector.cancelAddEffect')}
           type="button"
-          onClick={() => setIsChoosing(false)}
+          onClick={() => {
+            setIsChoosing(false);
+          }}
         >
           ×
         </button>
@@ -517,7 +521,6 @@ function InteractionInspectorView({
                 ? {
                     autoFocus: true,
                     className: 'interaction-inspector-title-input',
-                    'data-comment-field': 'title',
                     'aria-label': t('interactionInspector.title'),
                     placeholder: interactionTitlePlaceholder(interaction, t),
                     value: interaction.title,
@@ -833,11 +836,11 @@ function InteractionInspectorView({
                           aria-label={t('interactionInspector.deleteStatEffect')}
                           className="ghost danger interaction-effect-remove"
                           type="button"
-                          onClick={() =>
+                          onClick={() => {
                             saveStatEffects(
                               statEffects.filter((_, candidateIndex) => candidateIndex !== index),
-                            )
-                          }
+                            );
+                          }}
                         >
                           x
                         </button>

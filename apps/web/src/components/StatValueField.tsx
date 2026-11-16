@@ -37,9 +37,9 @@ export function StatValueField({
       aria-label={ariaLabel}
       type={valueType === 'number' ? 'number' : 'text'}
       value={String(value)}
-      onChange={(event) =>
-        onChange(valueType === 'number' ? Number(event.target.value) : event.target.value)
-      }
+      onChange={(event) => {
+        onChange(valueType === 'number' ? Number(event.target.value) : event.target.value);
+      }}
       onBlur={(event) =>
         onBlur?.(valueType === 'number' ? Number(event.target.value) : event.target.value)
       }

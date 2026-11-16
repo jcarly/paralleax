@@ -61,9 +61,9 @@ function reader(story: Story) {
 function assertCanonical(story: Story) {
   const ids = new Set(story.interactions.map(({ id }) => id));
   const assignments = new Set(story.stats?.map((stat) => stat.id));
-  story.interactions.forEach((interaction) =>
-    assertCanonicalInteraction(interaction, ids, assignments),
-  );
+  story.interactions.forEach((interaction) => {
+    assertCanonicalInteraction(interaction, ids, assignments);
+  });
 }
 
 function assertCanonicalInteraction(
@@ -76,10 +76,12 @@ function assertCanonicalInteraction(
   expect(new Set(interaction.statEffects?.map(({ statId }) => statId)).size).toBe(
     interaction.statEffects?.length ?? 0,
   );
-  interaction.statEffects?.forEach(({ statId }) => expect(assignmentIds.has(statId)).toBe(true));
-  interaction.triggers.forEach((trigger) =>
-    assertCanonicalTrigger(trigger, interactionIds, assignmentIds),
-  );
+  interaction.statEffects?.forEach(({ statId }) => {
+    expect(assignmentIds.has(statId)).toBe(true);
+  });
+  interaction.triggers.forEach((trigger) => {
+    assertCanonicalTrigger(trigger, interactionIds, assignmentIds);
+  });
 }
 
 function assertCanonicalTrigger(
@@ -91,7 +93,9 @@ function assertCanonicalTrigger(
   const conditionStatIds = getTriggerConditionGroups(trigger)
     .flatMap(({ conditions }) => conditions)
     .flatMap((condition) => ('statId' in condition ? [condition.statId] : []));
-  conditionStatIds.forEach((statId) => expect(assignmentIds.has(statId)).toBe(true));
+  conditionStatIds.forEach((statId) => {
+    expect(assignmentIds.has(statId)).toBe(true);
+  });
 }
 
 it('splits one caller around the shared content and preserves effect ordering', () => {

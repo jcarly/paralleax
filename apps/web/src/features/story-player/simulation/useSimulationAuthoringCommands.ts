@@ -51,10 +51,11 @@ export function useSimulationAuthoringCommands({
       }
       await runMutation(
         () => api.updateInteraction(storyId, current.id, patch),
-        (result) =>
+        (result) => {
           setStory((currentStory) =>
             currentStory ? applyInteractionResponse(currentStory, result) : currentStory,
-          ),
+          );
+        },
       );
     },
     [current, runMutation, setStory, storyId],
@@ -122,10 +123,11 @@ export function useSimulationAuthoringCommands({
       setEditingChoiceId(undefined);
       await runMutation(
         () => api.updateInteraction(storyId, interaction.id, { title }),
-        (result) =>
+        (result) => {
           setStory((currentStory) =>
             currentStory ? applyInteractionResponse(currentStory, result) : currentStory,
-          ),
+          );
+        },
       );
     },
     [runMutation, setEditingChoiceId, setStory, storyId],

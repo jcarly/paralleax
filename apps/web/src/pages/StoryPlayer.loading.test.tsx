@@ -81,7 +81,9 @@ describe('StoryPlayer loading and presentation', () => {
     });
 
     source?.emit('story-changed');
-    await waitFor(() => expect(staleSliceRequested).toBe(true));
+    await waitFor(() => {
+      expect(staleSliceRequested).toBe(true);
+    });
 
     await user.click(screen.getByRole('button', { name: 'Next' }));
     expect(await screen.findByDisplayValue('Next')).toBeInTheDocument();
@@ -93,11 +95,11 @@ describe('StoryPlayer loading and presentation', () => {
       await Promise.resolve();
     });
 
-    await waitFor(() =>
+    await waitFor(() => {
       expect(vi.mocked(api.getStoryRuntimeSlice).mock.calls.length).toBeGreaterThan(
         sliceCallsBeforeRelease,
-      ),
-    );
+      );
+    });
     expect(screen.getByDisplayValue('Next')).toBeInTheDocument();
     expect(screen.getByRole('button', { name: 'Secret' })).toBeInTheDocument();
   });
@@ -175,7 +177,9 @@ describe('StoryPlayer loading and presentation', () => {
     };
     let releaseFirst = () => {};
     const firstRequest = new Promise<typeof story>((resolve) => {
-      releaseFirst = () => resolve(firstStory);
+      releaseFirst = () => {
+        resolve(firstStory);
+      };
     });
     vi.mocked(api.getStory).mockImplementation((storyId) =>
       storyId === 'story-1' ? firstRequest : Promise.resolve(secondStory),
@@ -194,7 +198,9 @@ describe('StoryPlayer loading and presentation', () => {
     await user.click(screen.getByRole('link', { name: 'Open second Story' }));
     expect(await screen.findAllByText('Second active Story')).not.toHaveLength(0);
 
-    act(() => releaseFirst());
+    act(() => {
+      releaseFirst();
+    });
     await act(async () => Promise.resolve());
 
     expect(screen.queryByText('First delayed Story')).not.toBeInTheDocument();
@@ -241,7 +247,7 @@ describe('StoryPlayer loading and presentation', () => {
 
     expect(screen.getByText('You arrive.')).toBeInTheDocument();
     expect(await screen.findByRole('button', { name: 'Next' })).toBeInTheDocument();
-    await waitFor(() =>
+    await waitFor(() => {
       expect(api.saveReaderProgress).toHaveBeenCalledWith(
         'story-1',
         {
@@ -251,8 +257,8 @@ describe('StoryPlayer loading and presentation', () => {
           stepStartedAt: [expect.any(String), expect.any(String)],
         },
         'reader',
-      ),
-    );
+      );
+    });
 
     await user.click(screen.getByRole('button', { name: 'Next' }));
     expect(screen.getByRole('heading', { name: 'Next' })).toBeVisible();
@@ -398,13 +404,13 @@ describe('StoryPlayer loading and presentation', () => {
     expect(screen.queryByRole('heading', { name: 'Next' })).not.toBeInTheDocument();
     expect(screen.getByText('Harbor')).toBeInTheDocument();
     expect(screen.getByText('2026-07-27 10:00')).toBeInTheDocument();
-    await waitFor(() =>
+    await waitFor(() => {
       expect(api.saveReaderProgress).toHaveBeenLastCalledWith(
         'story-1',
         expect.objectContaining({ journeyInteractionIds: ['start', 'next', 'hidden'] }),
         'reader',
-      ),
-    );
+      );
+    });
   });
 
   it('keeps an empty interaction visible when its only destination is unavailable', async () => {
@@ -454,13 +460,13 @@ describe('StoryPlayer loading and presentation', () => {
 
     expect(await screen.findByRole('heading', { name: 'Secret' })).toBeInTheDocument();
     expect(await screen.findByRole('button', { name: 'Next' })).toBeInTheDocument();
-    await waitFor(() =>
+    await waitFor(() => {
       expect(api.saveReaderProgress).toHaveBeenLastCalledWith(
         'story-1',
         expect.objectContaining({ journeyInteractionIds: ['start', 'next', 'hidden'] }),
         'reader',
-      ),
-    );
+      );
+    });
   });
 
   it('keeps empty interactions selectable in Simulation Mode', async () => {
@@ -523,7 +529,9 @@ describe('StoryPlayer loading and presentation', () => {
     });
 
     expect(await screen.findByRole('heading', { name: 'Start' })).toBeInTheDocument();
-    await waitFor(() => expect(api.saveReaderProgress).toHaveBeenCalledTimes(1));
+    await waitFor(() => {
+      expect(api.saveReaderProgress).toHaveBeenCalledTimes(1);
+    });
     expect(api.saveReaderProgress).toHaveBeenCalledWith(
       'story-1',
       expect.objectContaining({ journeyInteractionIds: ['start'] }),

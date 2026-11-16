@@ -38,7 +38,9 @@ export function TriggerConditionFields({
           className="form-control form-control--compact"
           aria-label={t('triggerInspector.conditionInteraction')}
           value={condition.interactionId}
-          onChange={(event) => onChange({ ...condition, interactionId: event.target.value })}
+          onChange={(event) => {
+            onChange({ ...condition, interactionId: event.target.value });
+          }}
         >
           {story.interactions
             .filter(({ id }) => id !== currentInteractionId)
@@ -52,9 +54,9 @@ export function TriggerConditionFields({
           className="form-control form-control--compact"
           aria-label={t('triggerInspector.interactionOperator')}
           value={condition.hasBeenVisited ? 'visited' : 'not-visited'}
-          onChange={(event) =>
-            onChange({ ...condition, hasBeenVisited: event.target.value === 'visited' })
-          }
+          onChange={(event) => {
+            onChange({ ...condition, hasBeenVisited: event.target.value === 'visited' });
+          }}
         >
           <option value="visited">{t('triggerInspector.visited')}</option>
           <option value="not-visited">{t('triggerInspector.notVisited')}</option>
@@ -69,7 +71,9 @@ export function TriggerConditionFields({
           className="form-control form-control--compact"
           aria-label={t('triggerInspector.conditionLocation')}
           value={condition.locationId}
-          onChange={(event) => onChange({ ...condition, locationId: event.target.value })}
+          onChange={(event) => {
+            onChange({ ...condition, locationId: event.target.value });
+          }}
         >
           {(story.locations ?? []).map((location) => (
             <option key={location.id} value={location.id}>
@@ -81,9 +85,9 @@ export function TriggerConditionFields({
           className="form-control form-control--compact"
           aria-label={t('triggerInspector.locationOperator')}
           value={condition.isCurrentLocation ? 'current' : 'not-current'}
-          onChange={(event) =>
-            onChange({ ...condition, isCurrentLocation: event.target.value === 'current' })
-          }
+          onChange={(event) => {
+            onChange({ ...condition, isCurrentLocation: event.target.value === 'current' });
+          }}
         >
           <option value="current">{t('triggerInspector.currentLocation')}</option>
           <option value="not-current">{t('triggerInspector.notCurrentLocation')}</option>
@@ -98,7 +102,9 @@ export function TriggerConditionFields({
           className="form-control form-control--compact"
           aria-label={t('triggerInspector.conditionCharacter')}
           value={condition.characterId}
-          onChange={(event) => onChange({ ...condition, characterId: event.target.value })}
+          onChange={(event) => {
+            onChange({ ...condition, characterId: event.target.value });
+          }}
         >
           {(story.characters ?? []).map((character) => (
             <option key={character.id} value={character.id}>
@@ -110,9 +116,9 @@ export function TriggerConditionFields({
           className="form-control form-control--compact"
           aria-label={t('triggerInspector.characterOperator')}
           value={condition.isPresent ? 'present' : 'absent'}
-          onChange={(event) =>
-            onChange({ ...condition, isPresent: event.target.value === 'present' })
-          }
+          onChange={(event) => {
+            onChange({ ...condition, isPresent: event.target.value === 'present' });
+          }}
         >
           <option value="present">{t('triggerInspector.present')}</option>
           <option value="absent">{t('triggerInspector.absent')}</option>
@@ -138,7 +144,9 @@ export function TriggerConditionFields({
           className="form-control form-control--compact"
           aria-label={t('triggerInspector.conditionItem')}
           value={condition.itemDefinitionId}
-          onChange={(event) => onChange({ ...condition, itemDefinitionId: event.target.value })}
+          onChange={(event) => {
+            onChange({ ...condition, itemDefinitionId: event.target.value });
+          }}
         >
           {(story.itemDefinitions ?? []).map((definition) => (
             <option key={definition.id} value={definition.id}>
@@ -150,7 +158,9 @@ export function TriggerConditionFields({
           className="form-control form-control--compact"
           aria-label={t('triggerInspector.itemOperator')}
           value={condition.isOwned ? 'owned' : 'not-owned'}
-          onChange={(event) => onChange({ ...condition, isOwned: event.target.value === 'owned' })}
+          onChange={(event) => {
+            onChange({ ...condition, isOwned: event.target.value === 'owned' });
+          }}
         >
           <option value="owned">{t('triggerInspector.owned')}</option>
           <option value="not-owned">{t('triggerInspector.notOwned')}</option>
@@ -193,7 +203,9 @@ export function AddConditionControl({
       <button
         className="secondary trigger-add-condition"
         type="button"
-        onClick={() => setIsChoosing(true)}
+        onClick={() => {
+          setIsChoosing(true);
+        }}
       >
         {t('triggerInspector.addCondition')}
       </button>
@@ -213,7 +225,9 @@ export function AddConditionControl({
           className="ghost trigger-condition-picker-cancel"
           title={t('triggerInspector.cancelAddCondition')}
           type="button"
-          onClick={() => setIsChoosing(false)}
+          onClick={() => {
+            setIsChoosing(false);
+          }}
         >
           ×
         </button>
@@ -308,9 +322,9 @@ function StatConditionFields({
         className="form-control form-control--compact"
         aria-label={t('triggerInspector.statOperator')}
         value={condition.operator}
-        onChange={(event) =>
-          onChange({ ...condition, operator: event.target.value as StatCondition['operator'] })
-        }
+        onChange={(event) => {
+          onChange({ ...condition, operator: event.target.value as StatCondition['operator'] });
+        }}
       >
         <option value="eq">{t('triggerInspector.equals')}</option>
         <option value="neq">{t('triggerInspector.notEquals')}</option>
@@ -405,21 +419,23 @@ function StatConditionFields({
           value={condition.expression ?? ''}
           expectedType={valueType}
           onChange={() => undefined}
-          onBlur={(expression) =>
+          onBlur={(expression) => {
             onChange({
               statId: condition.statId,
               ...(condition.itemId ? { itemId: condition.itemId } : {}),
               operator: condition.operator,
               expression,
-            })
-          }
+            });
+          }}
         />
       ) : valueType === 'boolean' ? (
         <select
           className="form-control form-control--compact"
           aria-label={t('triggerInspector.statValue')}
           value={String(condition.value)}
-          onChange={(event) => onChange({ ...condition, value: event.target.value === 'true' })}
+          onChange={(event) => {
+            onChange({ ...condition, value: event.target.value === 'true' });
+          }}
         >
           <option value="true">true</option>
           <option value="false">false</option>
@@ -430,12 +446,12 @@ function StatConditionFields({
           aria-label={t('triggerInspector.statValue')}
           type={valueType === 'number' ? 'number' : 'text'}
           value={String(condition.value)}
-          onChange={(event) =>
+          onChange={(event) => {
             onChange({
               ...condition,
               value: valueType === 'number' ? Number(event.target.value) : event.target.value,
-            })
-          }
+            });
+          }}
         />
       )}
     </>
@@ -463,8 +479,9 @@ function TemporalConditionFields({
 }) {
   const { t } = useTranslation();
   const temporal = condition.temporal;
-  const update = (patch: Partial<TemporalCondition['temporal']>) =>
+  const update = (patch: Partial<TemporalCondition['temporal']>) => {
     onChange({ temporal: { ...temporal, ...patch } });
+  };
 
   return (
     <fieldset className="temporal-condition">
@@ -475,13 +492,13 @@ function TemporalConditionFields({
             <input
               type="checkbox"
               checked={(temporal.weekdays ?? []).includes(value)}
-              onChange={(event) =>
+              onChange={(event) => {
                 update({
                   weekdays: event.target.checked
                     ? [...(temporal.weekdays ?? []), value]
                     : (temporal.weekdays ?? []).filter((weekday) => weekday !== value),
-                })
-              }
+                });
+              }}
             />
             {t(`triggerInspector.weekday.${value}`)}
           </label>
@@ -504,7 +521,9 @@ function TemporalConditionFields({
             aria-label={t('triggerInspector.deleteAllowedDate', { number: index + 1 })}
             className="ghost danger"
             type="button"
-            onClick={() => update({ dates: temporal.dates?.filter((_, item) => item !== index) })}
+            onClick={() => {
+              update({ dates: temporal.dates?.filter((_, item) => item !== index) });
+            }}
           >
             x
           </button>
@@ -539,9 +558,9 @@ function TemporalConditionFields({
             aria-label={t('triggerInspector.deleteDateRange', { number: index + 1 })}
             className="ghost danger"
             type="button"
-            onClick={() =>
-              update({ dateRanges: temporal.dateRanges?.filter((_, item) => item !== index) })
-            }
+            onClick={() => {
+              update({ dateRanges: temporal.dateRanges?.filter((_, item) => item !== index) });
+            }}
           >
             x
           </button>
@@ -576,9 +595,9 @@ function TemporalConditionFields({
             aria-label={t('triggerInspector.deleteTimeSlot', { number: index + 1 })}
             className="ghost danger"
             type="button"
-            onClick={() =>
-              update({ timeSlots: temporal.timeSlots?.filter((_, item) => item !== index) })
-            }
+            onClick={() => {
+              update({ timeSlots: temporal.timeSlots?.filter((_, item) => item !== index) });
+            }}
           >
             x
           </button>
@@ -588,32 +607,34 @@ function TemporalConditionFields({
         <button
           className="secondary"
           type="button"
-          onClick={() => update({ dates: [...(temporal.dates ?? []), defaultDate] })}
+          onClick={() => {
+            update({ dates: [...(temporal.dates ?? []), defaultDate] });
+          }}
         >
           {t('triggerInspector.addDate')}
         </button>
         <button
           className="secondary"
           type="button"
-          onClick={() =>
+          onClick={() => {
             update({
               dateRanges: [
                 ...(temporal.dateRanges ?? []),
                 { startDate: defaultDate, endDate: defaultDate },
               ],
-            })
-          }
+            });
+          }}
         >
           {t('triggerInspector.addDateRange')}
         </button>
         <button
           className="secondary"
           type="button"
-          onClick={() =>
+          onClick={() => {
             update({
               timeSlots: [...(temporal.timeSlots ?? []), { startTime: '09:00', endTime: '17:00' }],
-            })
-          }
+            });
+          }}
         >
           {t('triggerInspector.addTimeSlot')}
         </button>

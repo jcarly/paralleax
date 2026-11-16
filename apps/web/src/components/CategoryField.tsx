@@ -31,7 +31,9 @@ export function CategoryField({
         list={suggestions.length > 0 ? suggestionsId : undefined}
         maxLength={100}
         placeholder={t('inspector.uncategorized')}
-        onChange={(event) => onChange(event.target.value)}
+        onChange={(event) => {
+          onChange(event.target.value);
+        }}
         onBlur={(event) => {
           const nextCategory = event.target.value.trim();
           onChange(nextCategory);

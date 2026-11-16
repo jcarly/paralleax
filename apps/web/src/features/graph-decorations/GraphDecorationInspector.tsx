@@ -23,7 +23,9 @@ export function GraphDecorationInspector({
           aria-label={t('decoration.color')}
           type="color"
           value={decoration.color}
-          onChange={(event) => onPatch({ color: event.target.value })}
+          onChange={(event) => {
+            onPatch({ color: event.target.value });
+          }}
         />
       </label>
       {decoration.kind === 'frame' ? (
@@ -34,7 +36,9 @@ export function GraphDecorationInspector({
               label={t('decoration.width')}
               value={Math.round(decoration.width)}
               min={120}
-              onCommit={(width) => onPatch({ width })}
+              onCommit={(width) => {
+                onPatch({ width });
+              }}
             />
           </label>
           <label className="form-field form-field--compact">
@@ -43,7 +47,9 @@ export function GraphDecorationInspector({
               label={t('decoration.height')}
               value={Math.round(decoration.height)}
               min={80}
-              onCommit={(height) => onPatch({ height })}
+              onCommit={(height) => {
+                onPatch({ height });
+              }}
             />
           </label>
         </div>
@@ -72,7 +78,9 @@ export function GraphDecorationInspector({
               value={decoration.fontSize}
               min={10}
               max={96}
-              onCommit={(fontSize) => onPatch({ fontSize })}
+              onCommit={(fontSize) => {
+                onPatch({ fontSize });
+              }}
             />
           </label>
           <label className="form-field form-field--compact">
@@ -80,11 +88,11 @@ export function GraphDecorationInspector({
             <select
               className="form-control form-control--compact"
               value={decoration.fontFamily}
-              onChange={(event) =>
+              onChange={(event) => {
                 onPatch({
                   fontFamily: event.target.value as 'sans' | 'serif' | 'monospace' | 'display',
-                })
-              }
+                });
+              }}
             >
               <option value="sans">{t('decoration.font.sans')}</option>
               <option value="serif">{t('decoration.font.serif')}</option>
@@ -97,9 +105,9 @@ export function GraphDecorationInspector({
               <input
                 type="checkbox"
                 checked={decoration.fontWeight === 'bold'}
-                onChange={(event) =>
-                  onPatch({ fontWeight: event.target.checked ? 'bold' : 'normal' })
-                }
+                onChange={(event) => {
+                  onPatch({ fontWeight: event.target.checked ? 'bold' : 'normal' });
+                }}
               />
               {t('decoration.bold')}
             </label>
@@ -107,9 +115,9 @@ export function GraphDecorationInspector({
               <input
                 type="checkbox"
                 checked={decoration.fontStyle === 'italic'}
-                onChange={(event) =>
-                  onPatch({ fontStyle: event.target.checked ? 'italic' : 'normal' })
-                }
+                onChange={(event) => {
+                  onPatch({ fontStyle: event.target.checked ? 'italic' : 'normal' });
+                }}
               />
               {t('decoration.italic')}
             </label>
@@ -154,7 +162,9 @@ function DecorationNumberInput({
       min={min}
       {...(max === undefined ? {} : { max })}
       defaultValue={value}
-      onBlur={(event) => commit(event.currentTarget)}
+      onBlur={(event) => {
+        commit(event.currentTarget);
+      }}
       onKeyDown={(event) => {
         if (event.key === 'Enter') {
           event.currentTarget.blur();

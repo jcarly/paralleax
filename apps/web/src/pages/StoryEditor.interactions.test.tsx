@@ -88,10 +88,8 @@ describe('StoryEditor interactions', () => {
 
     await user.click(screen.getByRole('button', { name: 'Add root' }));
     expect(api.createInteraction).toHaveBeenCalledWith('story-1', { position: rootPosition });
-    expect(await screen.findByRole('button', { name: 'Title: Created root' })).toBeInTheDocument();
-    await waitFor(() =>
-      expect(screen.getByRole('button', { name: 'Title: Created root' })).toBeInTheDocument(),
-    );
+    expect(await screen.findByText('Created root')).toBeInTheDocument();
+    await waitFor(() => expect(screen.getByText('Created root')).toBeInTheDocument());
 
     await user.click(
       within(screen.getByTestId('flow-node-interaction-1')).getByRole('button', {
@@ -102,11 +100,11 @@ describe('StoryEditor interactions', () => {
       parentId: 'interaction-1',
       position: childPosition,
     });
-    await waitFor(() =>
+    await waitFor(() => {
       expect(reactFlowFitViewMock).toHaveBeenCalledWith(
         expect.objectContaining({ nodes: [{ id: 'interaction-2' }] }),
-      ),
-    );
+      );
+    });
     expect(screen.getByRole('button', { name: 'Title: Second interaction' })).toBeInTheDocument();
   });
 
@@ -144,7 +142,9 @@ describe('StoryEditor interactions', () => {
       }),
     );
 
-    await waitFor(() => expect(elkLayout.computeStoryGraphElkLayout).toHaveBeenCalled());
+    await waitFor(() => {
+      expect(elkLayout.computeStoryGraphElkLayout).toHaveBeenCalled();
+    });
     const calls = vi.mocked(elkLayout.computeStoryGraphElkLayout).mock.calls;
     const layoutOptions = calls[calls.length - 1]?.[1];
     expect(layoutOptions?.interactionSizes?.get('interaction-1')).toEqual({
@@ -179,7 +179,9 @@ describe('StoryEditor interactions', () => {
 
     await userEvent.click(screen.getByTestId('begin-source-interaction-1'));
 
-    await waitFor(() => expect(screen.queryByTitle('Create new trigger')).not.toBeInTheDocument());
+    await waitFor(() => {
+      expect(screen.queryByTitle('Create new trigger')).not.toBeInTheDocument();
+    });
   });
 
   it('creates a child interaction when a source connection is dropped on empty canvas', async () => {
@@ -440,7 +442,7 @@ describe('StoryEditor interactions', () => {
       .mockImplementationOnce(() => new Promise<Story>((resolve) => (resolveBodySave = resolve)));
 
     await renderEditor();
-    fireEvent.click(screen.getByTestId('flow-node-interaction-1'));
+    await user.click(screen.getByTestId('flow-node-interaction-1'));
 
     await user.click(screen.getByRole('button', { name: 'Title: Original title' }));
     const titleInput = screen.getByLabelText('Title');
@@ -453,17 +455,26 @@ describe('StoryEditor interactions', () => {
     await user.type(content, 'Saved content');
     await user.tab();
 
-    await waitFor(() => expect(api.updateInteraction).toHaveBeenCalledTimes(1));
-    expect(screen.getByRole('status', { name: 'Story save status' })).toHaveTextContent('Saving…');
+    await waitFor(() => {
+      expect(api.updateInteraction).toHaveBeenCalledTimes(1);
+    });
+    expect(screen.getByRole('status', { name: 'Saving…' })).toHaveAttribute(
+      'aria-label',
+      'Saving…',
+    );
     expect(api.updateInteraction).toHaveBeenNthCalledWith(1, 'story-1', 'interaction-1', {
       title: 'Saved title',
     });
 
     const titleStory = cloneStory();
     titleStory.interactions[0].title = 'Saved title';
-    await act(async () => resolveTitleSave(titleStory));
+    await act(async () => {
+      resolveTitleSave(titleStory);
+    });
 
-    await waitFor(() => expect(api.updateInteraction).toHaveBeenCalledTimes(2));
+    await waitFor(() => {
+      expect(api.updateInteraction).toHaveBeenCalledTimes(2);
+    });
     expect(api.updateInteraction).toHaveBeenNthCalledWith(2, 'story-1', 'interaction-1', {
       body: '<p>Saved content</p>',
     });
@@ -471,7 +482,9 @@ describe('StoryEditor interactions', () => {
     const fullySavedStory = cloneStory();
     fullySavedStory.interactions[0].title = 'Saved title';
     fullySavedStory.interactions[0].body = '<p>Saved content</p>';
-    await act(async () => resolveBodySave(fullySavedStory));
+    await act(async () => {
+      resolveBodySave(fullySavedStory);
+    });
 
     expect(screen.getByRole('button', { name: 'Title: Saved title' })).toBeInTheDocument();
     expect(screen.getByRole('group', { name: 'Content. Select to edit' })).toHaveTextContent(
@@ -492,12 +505,15 @@ describe('StoryEditor interactions', () => {
     await user.tab();
 
     expect(await screen.findByRole('alert')).toHaveTextContent('Database unavailable');
-    expect(screen.getByRole('status', { name: 'Story save status' })).toHaveTextContent(
+    expect(screen.getByRole('status', { name: 'Save failed' })).toHaveAttribute(
+      'aria-label',
       'Save failed',
     );
 
     await user.click(screen.getByRole('button', { name: 'Reload story' }));
-    await waitFor(() => expect(api.getStory).toHaveBeenCalledTimes(2));
+    await waitFor(() => {
+      expect(api.getStory).toHaveBeenCalledTimes(2);
+    });
   });
 
   it('does not erase title or body when a drag save only returns a position update', async () => {
@@ -600,7 +616,7 @@ describe('StoryEditor interactions', () => {
     await renderEditor(story);
     await userEvent.click(screen.getByTestId('drag-node-trigger:interaction-2:trigger-2'));
 
-    await waitFor(() =>
+    await waitFor(() => {
       expect(api.updateStoryGraphPositions).toHaveBeenCalledWith('story-1', {
         interactionUpdates: [],
         triggerUpdates: [
@@ -610,8 +626,8 @@ describe('StoryEditor interactions', () => {
             position: { x: 425, y: 315 },
           },
         ],
-      }),
-    );
+      });
+    });
   });
 
   it('deletes the selected interaction', async () => {

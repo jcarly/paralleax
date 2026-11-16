@@ -57,7 +57,9 @@ export function RichTextInteractionLinkDialog({
             data-modal-autofocus
             value={text}
             placeholder={t('richText.linkTextPlaceholder')}
-            onChange={(event) => setText(event.target.value)}
+            onChange={(event) => {
+              setText(event.target.value);
+            }}
           />
         </label>
         <label className="form-field form-field--standard rich-text-variable-field">
@@ -65,7 +67,9 @@ export function RichTextInteractionLinkDialog({
           <select
             className="form-control form-control--standard"
             value={targetId}
-            onChange={(event) => setTargetId(event.target.value)}
+            onChange={(event) => {
+              setTargetId(event.target.value);
+            }}
           >
             <option value="" disabled>
               {t('richText.chooseInteractionTarget')}

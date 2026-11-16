@@ -76,12 +76,17 @@ export function useStoryComments(storyId: string, enabled: boolean) {
     const refresh = () => void reload();
     source.addEventListener('ready', refresh);
     source.addEventListener('comments-changed', refresh);
-    source.onopen = () => setLiveStoryId(storyId);
-    source.onerror = () =>
+    source.onopen = () => {
+      setLiveStoryId(storyId);
+    };
+    source.onerror = () => {
       setLiveStoryId((connectedStoryId) =>
         connectedStoryId === storyId ? undefined : connectedStoryId,
       );
-    return () => source.close();
+    };
+    return () => {
+      source.close();
+    };
   }, [enabled, reload, storyId]);
 
   const loading = enabled && loadedStoryId !== storyId;
@@ -109,7 +114,9 @@ export function useStoryComments(storyId: string, enabled: boolean) {
     setSelectedThreadId(undefined);
   }, []);
 
-  const cancelDraft = useCallback(() => setDraftAnchor(undefined), []);
+  const cancelDraft = useCallback(() => {
+    setDraftAnchor(undefined);
+  }, []);
 
   const upsert = useCallback((thread: StoryCommentThread) => {
     setThreads((items) => {

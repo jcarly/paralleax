@@ -90,10 +90,10 @@ function groupContextEntities<T extends { id: string; category?: string }>(items
   }
   return [...groups.entries()]
     .sort(([left], [right]) => {
-      if (left === uncategorizedLabel) {
+      if (left === undefined) {
         return 1;
       }
-      if (right === uncategorizedLabel) {
+      if (right === undefined) {
         return -1;
       }
       return left.localeCompare(right);

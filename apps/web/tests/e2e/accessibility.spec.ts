@@ -152,7 +152,9 @@ test.describe('automated accessibility', () => {
 async function expectBackgroundIsolated(page: Page, dialog: Locator) {
   await expect(page.locator('#root')).toHaveAttribute('inert', '');
   const account = page.locator('.product-user');
-  await account.evaluate((control: HTMLElement) => control.focus());
+  await account.evaluate((control: HTMLElement) => {
+    control.focus();
+  });
   expect(await dialog.evaluate((element) => element.contains(document.activeElement))).toBe(true);
   const covered = await account.evaluate((control) => {
     const box = control.getBoundingClientRect();

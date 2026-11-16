@@ -17,7 +17,9 @@ describe('story context navigation', () => {
   it('filters context entities and navigates interaction text occurrences', () => {
     const harness = renderNavigation();
 
-    act(() => harness.result.current.setSearchQuery(' ALARM '));
+    act(() => {
+      harness.result.current.setSearchQuery(' ALARM ');
+    });
 
     expect(harness.result.current.navigationInteractionIds).toEqual(['source', 'target']);
     expect(harness.result.current.occurrenceCounts.get('source')).toBe(1);
@@ -25,7 +27,9 @@ describe('story context navigation', () => {
     expect(harness.result.current.filteredStatDefinitions.map(({ id }) => id)).toEqual(['stat-1']);
     expect(harness.result.current.filteredLocations).toEqual([]);
 
-    act(() => harness.result.current.navigateInteractions(1));
+    act(() => {
+      harness.result.current.navigateInteractions(1);
+    });
     expect(harness.selectInteraction).toHaveBeenCalledWith('source');
     expect(harness.focusInteraction).not.toHaveBeenCalled();
     expect(harness.fitView).toHaveBeenCalledWith({
@@ -35,19 +39,25 @@ describe('story context navigation', () => {
       maxZoom: 1,
     });
 
-    act(() => harness.result.current.clearSearch());
+    act(() => {
+      harness.result.current.clearSearch();
+    });
     expect(harness.result.current.searchQuery).toBe('');
   });
 
   it('navigates interactions found through incoming Trigger conditions', () => {
     const harness = renderNavigation();
-    act(() => harness.result.current.setSearchQuery('Mira'));
+    act(() => {
+      harness.result.current.setSearchQuery('Mira');
+    });
 
     expect(harness.result.current.matchingInteractionIds).toEqual(['target']);
     expect(harness.result.current.navigationInteractionIds).toEqual(['target']);
     expect(harness.result.current.occurrenceCounts).toEqual(new Map());
 
-    act(() => harness.result.current.navigateInteractions(1));
+    act(() => {
+      harness.result.current.navigateInteractions(1);
+    });
     expect(harness.selectInteraction).toHaveBeenCalledWith('target');
   });
 
@@ -61,11 +71,15 @@ describe('story context navigation', () => {
     expect([...harness.result.current.emphasizedInteractionIds!]).toEqual(['source', 'target']);
     expect(harness.result.current.currentNavigationIndex).toBe(0);
 
-    act(() => harness.result.current.navigateInteractions(1));
+    act(() => {
+      harness.result.current.navigateInteractions(1);
+    });
     expect(harness.focusInteraction).toHaveBeenCalledWith('target');
     expect(harness.selectInteraction).not.toHaveBeenCalled();
 
-    act(() => harness.result.current.navigateInteractions(-1));
+    act(() => {
+      harness.result.current.navigateInteractions(-1);
+    });
     expect(harness.focusInteraction).toHaveBeenLastCalledWith('target');
   });
 
@@ -81,18 +95,28 @@ describe('story context navigation', () => {
     expect(harness.result.current.contextReferenceCounts.stats.get('stat-1')).toBe(4);
     expect(harness.result.current.contextReferenceCounts.items.get('item-1')).toBe(2);
 
-    act(() => harness.result.current.openContextPanel());
+    act(() => {
+      harness.result.current.openContextPanel();
+    });
     expect(harness.result.current.isContextPanelOpen).toBe(true);
     expect(window.localStorage.getItem('paralleax-story-context-panel')).toBe('open');
 
-    act(() => harness.result.current.openContextSection('stats'));
+    act(() => {
+      harness.result.current.openContextSection('stats');
+    });
     expect(harness.result.current.openContextSections.stats).toBe(true);
-    act(() => harness.result.current.toggleContextSection('stats'));
+    act(() => {
+      harness.result.current.toggleContextSection('stats');
+    });
     expect(harness.result.current.openContextSections.stats).toBe(false);
-    act(() => harness.result.current.openContextSection('stats'));
+    act(() => {
+      harness.result.current.openContextSection('stats');
+    });
     expect(harness.result.current.openContextSections.stats).toBe(true);
 
-    act(() => harness.result.current.toggleContextPanel());
+    act(() => {
+      harness.result.current.toggleContextPanel();
+    });
     expect(harness.result.current.isContextPanelOpen).toBe(false);
     expect(window.localStorage.getItem('paralleax-story-context-panel')).toBe('collapsed');
   });

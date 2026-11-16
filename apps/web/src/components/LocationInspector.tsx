@@ -60,7 +60,9 @@ function LocationImageSection({
       imageUrl={location.imageUrl}
       semanticCommentCounts={semanticCommentCounts}
       onOpenSemanticComments={onOpenSemanticComments}
-      onChange={(imageUrl) => onLocalChange({ ...location, imageUrl })}
+      onChange={(imageUrl) => {
+        onLocalChange({ ...location, imageUrl });
+      }}
       onCommit={(imageUrl) => void onPatch(location.id, { imageUrl })}
     />
   );
@@ -81,7 +83,9 @@ function LocationNameSection({
       value={location.name}
       textCommentCounts={textCommentCounts}
       onOpenTextComments={onOpenTextComments}
-      onChange={(name) => onLocalChange({ ...location, name })}
+      onChange={(name) => {
+        onLocalChange({ ...location, name });
+      }}
       onCommit={(name) => onPatch(location.id, { name })}
     />
   );
@@ -109,7 +113,9 @@ function LocationCategorySection({
       suggestions={categorySuggestions}
       semanticCommentCounts={semanticCommentCounts}
       onOpenSemanticComments={onOpenSemanticComments}
-      onChange={(category) => onLocalChange({ ...location, category })}
+      onChange={(category) => {
+        onLocalChange({ ...location, category });
+      }}
       onCommit={(category) => void onPatch(location.id, { category })}
     />
   );
@@ -170,7 +176,9 @@ function LocationDescriptionSection({
       value={location.description}
       textCommentCounts={textCommentCounts}
       onOpenTextComments={onOpenTextComments}
-      onChange={(description) => onLocalChange({ ...location, description })}
+      onChange={(description) => {
+        onLocalChange({ ...location, description });
+      }}
       onCommit={(description) => void onPatch(location.id, { description })}
     />
   );

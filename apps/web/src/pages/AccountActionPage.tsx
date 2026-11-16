@@ -117,7 +117,9 @@ export function AccountActionPage({
                     autoComplete="email"
                     type="email"
                     value={email}
-                    onChange={(event) => setEmail(event.target.value)}
+                    onChange={(event) => {
+                      setEmail(event.target.value);
+                    }}
                     placeholder={t('auth.emailPlaceholder')}
                     required
                   />
@@ -132,7 +134,9 @@ export function AccountActionPage({
                       autoComplete="new-password"
                       type="password"
                       value={password}
-                      onChange={(event) => setPassword(event.target.value)}
+                      onChange={(event) => {
+                        setPassword(event.target.value);
+                      }}
                       placeholder={t('auth.newPasswordPlaceholder')}
                       minLength={8}
                       required
@@ -145,7 +149,9 @@ export function AccountActionPage({
                       autoComplete="new-password"
                       type="password"
                       value={confirmation}
-                      onChange={(event) => setConfirmation(event.target.value)}
+                      onChange={(event) => {
+                        setConfirmation(event.target.value);
+                      }}
                       placeholder={t('auth.confirmPasswordPlaceholder')}
                       required
                     />

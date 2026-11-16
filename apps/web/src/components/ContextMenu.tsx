@@ -35,7 +35,9 @@ export function ContextMenu({
         close.current();
       }
     };
-    const dismiss = () => close.current();
+    const dismiss = () => {
+      close.current();
+    };
     const escape = (event: globalThis.KeyboardEvent) => {
       if (event.key === 'Escape') {
         close.current();
@@ -67,7 +69,9 @@ export function ContextMenu({
         maxHeight: scrollable ? 'calc(100vh - 16px)' : undefined,
         overflowY: scrollable ? 'auto' : undefined,
       }}
-      onContextMenu={(event) => event.preventDefault()}
+      onContextMenu={(event) => {
+        event.preventDefault();
+      }}
       onKeyDown={(event) => {
         if (event.key === 'Escape' || event.key === 'Tab') {
           event.stopPropagation();

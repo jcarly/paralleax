@@ -68,17 +68,21 @@ export function createConditionalCommands({
   t,
 }: ConditionalCommandOptions) {
   return {
-    openConditionalFrame: () => openConditionalFrame(editor, story, interactionId, drafts),
-    confirmCondition: (condition: TriggerCondition) =>
+    openConditionalFrame: () => {
+      openConditionalFrame(editor, story, interactionId, drafts);
+    },
+    confirmCondition: (condition: TriggerCondition) => {
       confirmCondition({
         editor,
         edit: drafts.conditionalEdit,
         setEdit: drafts.setConditionalEdit,
         condition,
         t,
-      }),
-    removeConditionalCondition: (blockId: string, index: number) =>
-      removeConditionalCondition(editor, blockId, index),
+      });
+    },
+    removeConditionalCondition: (blockId: string, index: number) => {
+      removeConditionalCondition(editor, blockId, index);
+    },
   };
 }
 
@@ -201,11 +205,15 @@ export function removeConditionalCondition(
 
 export function createNarrativeTokenCommands(editor: Editor | null, drafts: RichTextEditorDrafts) {
   return {
-    addVariable: (target: StatTarget, reference: string) =>
-      addVariable(editor, drafts, target, reference),
-    addInteractionLink: (link: RichTextInteractionLinkValue) =>
-      addInteractionLink(editor, drafts, link),
-    openLinkDialog: () => openLinkDialog(editor, drafts),
+    addVariable: (target: StatTarget, reference: string) => {
+      addVariable(editor, drafts, target, reference);
+    },
+    addInteractionLink: (link: RichTextInteractionLinkValue) => {
+      addInteractionLink(editor, drafts, link);
+    },
+    openLinkDialog: () => {
+      openLinkDialog(editor, drafts);
+    },
   };
 }
 
@@ -259,8 +267,12 @@ function openLinkDialog(editor: Editor | null, drafts: RichTextEditorDrafts) {
 
 export function createMediaCommands(editor: Editor | null, t: TFunction) {
   return {
-    insertImage: () => insertImage(editor, t),
-    insertVideo: () => insertVideo(editor, t),
+    insertImage: () => {
+      insertImage(editor, t);
+    },
+    insertVideo: () => {
+      insertVideo(editor, t);
+    },
   };
 }
 

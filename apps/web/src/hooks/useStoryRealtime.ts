@@ -61,15 +61,18 @@ export function useStoryRealtime(
       }
       schedule('ready');
     });
-    source.addEventListener('story-changed', (event) =>
-      schedule('changed', storyEventRevision(event)),
-    );
+    source.addEventListener('story-changed', (event) => {
+      schedule('changed', storyEventRevision(event));
+    });
     source.addEventListener('story-deleted', deleted);
-    source.onopen = () => setLiveStoryId(storyId);
-    source.onerror = () =>
+    source.onopen = () => {
+      setLiveStoryId(storyId);
+    };
+    source.onerror = () => {
       setLiveStoryId((connectedStoryId) =>
         connectedStoryId === storyId ? undefined : connectedStoryId,
       );
+    };
 
     return () => {
       if (refreshTimer) clearTimeout(refreshTimer);

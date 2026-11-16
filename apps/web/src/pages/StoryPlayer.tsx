@@ -522,13 +522,19 @@ export function StoryPlayer({
       return;
     }
     const timeout = window.setTimeout(
-      () => setTimerNow(Date.now()),
+      () => {
+        setTimerNow(Date.now());
+      },
       Math.max(1, Math.ceil(nextExpiration) + 20),
     );
-    return () => window.clearTimeout(timeout);
+    return () => {
+      window.clearTimeout(timeout);
+    };
   }, [visibleChoices]);
   useEffect(() => {
-    const synchronizeTimer = () => setTimerNow(Date.now());
+    const synchronizeTimer = () => {
+      setTimerNow(Date.now());
+    };
     window.addEventListener('focus', synchronizeTimer);
     document.addEventListener('visibilitychange', synchronizeTimer);
     return () => {
@@ -926,7 +932,9 @@ export function StoryPlayer({
         authenticated={authenticated}
         progressStatus={progressStatus}
         savesDialogTrigger={savesDialogTrigger}
-        onOpenSaves={() => setSavesOpen(true)}
+        onOpenSaves={() => {
+          setSavesOpen(true);
+        }}
         canStepBack={journey.length > 1}
         onStepBack={stepBack}
         onRestart={restart}
@@ -936,7 +944,9 @@ export function StoryPlayer({
           readerCommentThreads.filter(({ status, deletedAt }) => status === 'open' && !deletedAt)
             .length
         }
-        onToggleComments={() => setCommentsOpen((open) => !open)}
+        onToggleComments={() => {
+          setCommentsOpen((open) => !open);
+        }}
       />
       <article
         aria-hidden={isCurrentInteractionPassingThrough || undefined}
@@ -953,8 +963,9 @@ export function StoryPlayer({
                 placeholder: interactionTitlePlaceholder(current, t),
                 value: current.title,
                 onChange: (event) => patchCurrentInteraction({ title: event.target.value }),
-                onBlur: (event) =>
-                  void saveCurrentInteraction({ title: event.currentTarget.value }),
+                onBlur: (event) => {
+                  void saveCurrentInteraction({ title: event.currentTarget.value });
+                },
               }}
             />
           ) : (
@@ -983,7 +994,9 @@ export function StoryPlayer({
                     className="character-choice-card"
                     key={character.id}
                     type="button"
-                    onClick={() => setPlayableCharacterId(character.id)}
+                    onClick={() => {
+                      setPlayableCharacterId(character.id);
+                    }}
                   >
                     {character.imageUrl ? (
                       <img src={character.imageUrl} alt="" />
@@ -1175,7 +1188,9 @@ export function StoryPlayer({
         canDeleteThread={canDeleteSelectedReaderThread}
         deletedLoading={comments.deletedLoading}
         realtimeStatus={comments.realtimeStatus}
-        onClose={() => setCommentsOpen(false)}
+        onClose={() => {
+          setCommentsOpen(false);
+        }}
         onSelect={comments.selectThread}
         onCancelDraft={comments.cancelDraft}
         onCreate={comments.create}

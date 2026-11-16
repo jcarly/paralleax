@@ -361,7 +361,9 @@ describe('story graph mapping', () => {
     expect(preview.find((node) => node.id === unrelatedId)).toBe(unrelatedBefore);
     nodes
       .filter((node) => node.type === 'interaction')
-      .forEach((node) => expect(preview.find((candidate) => candidate.id === node.id)).toBe(node));
+      .forEach((node) => {
+        expect(preview.find((candidate) => candidate.id === node.id)).toBe(node);
+      });
     expect(
       getInteractionDragTriggerPositionUpdates(previewStory, 'interaction-1', {
         x: 180,

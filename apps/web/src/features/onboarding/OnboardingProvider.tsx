@@ -131,15 +131,30 @@ function createActions(
   dispatch: Dispatch<OnboardingAction>,
 ): Omit<OnboardingContextValue, 'progress'> {
   return {
-    beginForStory: (storyId) => dispatch({ type: 'begin', storyId }),
-    openHelp: (storyId) => dispatch({ type: 'open-help', storyId }),
-    pause: () => dispatch({ type: 'pause' }),
-    restart: (storyId) => dispatch({ type: 'restart', storyId }),
-    skipCurrentStep: () => dispatch({ type: 'skip' }),
-    reportStepComplete: (storyId, step) => dispatch({ type: 'complete', storyId, step }),
-    reportStoryState: (storyId, hasScene, hasBranch) =>
-      dispatch({ type: 'story-state', storyId, hasScene, hasBranch }),
-    reportStoryDeleted: (storyId) => dispatch({ type: 'story-deleted', storyId }),
+    beginForStory: (storyId) => {
+      dispatch({ type: 'begin', storyId });
+    },
+    openHelp: (storyId) => {
+      dispatch({ type: 'open-help', storyId });
+    },
+    pause: () => {
+      dispatch({ type: 'pause' });
+    },
+    restart: (storyId) => {
+      dispatch({ type: 'restart', storyId });
+    },
+    skipCurrentStep: () => {
+      dispatch({ type: 'skip' });
+    },
+    reportStepComplete: (storyId, step) => {
+      dispatch({ type: 'complete', storyId, step });
+    },
+    reportStoryState: (storyId, hasScene, hasBranch) => {
+      dispatch({ type: 'story-state', storyId, hasScene, hasBranch });
+    },
+    reportStoryDeleted: (storyId) => {
+      dispatch({ type: 'story-deleted', storyId });
+    },
   };
 }
 
@@ -157,10 +172,9 @@ export function OnboardingProvider({
   const actions = useMemo(() => createActions(dispatch), [dispatch]);
   const value = useMemo(() => ({ ...actions, progress }), [actions, progress]);
 
-  useEffect(
-    () => writeOnboardingProgress(window.localStorage, storageKey, progress),
-    [progress, storageKey],
-  );
+  useEffect(() => {
+    writeOnboardingProgress(window.localStorage, storageKey, progress);
+  }, [progress, storageKey]);
 
   return <OnboardingContext.Provider value={value}>{children}</OnboardingContext.Provider>;
 }

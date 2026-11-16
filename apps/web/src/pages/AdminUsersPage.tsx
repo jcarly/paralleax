@@ -21,8 +21,12 @@ export function AdminUsersPage({ currentUserId }: { currentUserId?: string }) {
     api
       .listUsers()
       .then(setUsers)
-      .catch((caught: unknown) => setError(apiErrorMessage(caught, t, t('admin.loadFailed'))))
-      .finally(() => setLoading(false));
+      .catch((caught: unknown) => {
+        setError(apiErrorMessage(caught, t, t('admin.loadFailed')));
+      })
+      .finally(() => {
+        setLoading(false);
+      });
   }, [t]);
 
   const administratorCount = users.filter(({ role }) => role === 'admin').length;
@@ -110,7 +114,9 @@ export function AdminUsersPage({ currentUserId }: { currentUserId?: string }) {
                 type="search"
                 placeholder={t('admin.searchPlaceholder')}
                 value={query}
-                onChange={(event) => setQuery(event.target.value)}
+                onChange={(event) => {
+                  setQuery(event.target.value);
+                }}
               />
             </label>
             <label className="admin-role-filter form-field form-field--standard">
@@ -119,7 +125,9 @@ export function AdminUsersPage({ currentUserId }: { currentUserId?: string }) {
                 className="form-control form-control--standard"
                 aria-label={t('admin.filterRole')}
                 value={roleFilter}
-                onChange={(event) => setRoleFilter(event.target.value as RoleFilter)}
+                onChange={(event) => {
+                  setRoleFilter(event.target.value as RoleFilter);
+                }}
               >
                 <option value="all">{t('admin.allRoles')}</option>
                 <option value="user">{t('admin.usersOnly')}</option>

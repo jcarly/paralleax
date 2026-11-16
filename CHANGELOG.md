@@ -2,6 +2,10 @@
 
 ## Unreleased
 
+- Expanded ESLint quality gates for TypeScript, React, accessibility, import
+  consistency, and code size. CI now rejects unapproved growth in the historical
+  suppression baseline.
+
 - Aligned Interaction presentation across the graph, Inspector, Simulation,
   and Reader. Cards now show a label bubble, icon-marked location and cast,
   a short wrapped narrative excerpt, and compact effect indicators. Label

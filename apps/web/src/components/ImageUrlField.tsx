@@ -24,7 +24,9 @@ export function ImageUrlField({
         className="inspector-image-frame"
         title={label ?? t('inspector.imageUrl')}
         type="button"
-        onClick={() => setIsDialogOpen(true)}
+        onClick={() => {
+          setIsDialogOpen(true);
+        }}
       >
         {imageUrl ? (
           <img src={imageUrl} alt="" />
@@ -35,7 +37,9 @@ export function ImageUrlField({
       {isDialogOpen ? (
         <ImageUrlDialog
           imageUrl={imageUrl}
-          onCancel={() => setIsDialogOpen(false)}
+          onCancel={() => {
+            setIsDialogOpen(false);
+          }}
           onSave={(nextImageUrl) => {
             onChange(nextImageUrl);
             onBlur(nextImageUrl);

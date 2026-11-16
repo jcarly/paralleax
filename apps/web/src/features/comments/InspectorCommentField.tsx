@@ -100,13 +100,17 @@ function useCommentBadgeVisibility() {
     hovered,
     setHovered,
     fieldHandlers: {
-      onMouseEnter: () => setHovered(true),
+      onMouseEnter: () => {
+        setHovered(true);
+      },
       onMouseLeave: (event: MouseEvent<HTMLDivElement>) => {
         if (!isCommentBadgeTarget(event.relatedTarget)) {
           setHovered(false);
         }
       },
-      onFocus: () => setHovered(true),
+      onFocus: () => {
+        setHovered(true);
+      },
       onBlur: (event: FocusEvent<HTMLDivElement>) => {
         const target = event.relatedTarget;
         if (!event.currentTarget.contains(target) && !isCommentBadgeTarget(target)) {
@@ -157,9 +161,15 @@ export function InspectorCommentField({
           position={position}
           label={t('comments.openForField', { field: label })}
           count={count}
-          onClick={() => onOpenTextComments(field)}
-          onMouseEnter={() => visibility.setHovered(true)}
-          onMouseLeave={() => visibility.setHovered(false)}
+          onClick={() => {
+            onOpenTextComments(field);
+          }}
+          onMouseEnter={() => {
+            visibility.setHovered(true);
+          }}
+          onMouseLeave={() => {
+            visibility.setHovered(false);
+          }}
         />
       ) : null}
     </div>
@@ -198,9 +208,15 @@ export function InspectorCommentSlot({
           position={position}
           label={t(count > 0 ? 'comments.openForField' : 'comments.commentField', { field: label })}
           count={count}
-          onClick={() => onOpenSemanticComments(slot)}
-          onMouseEnter={() => visibility.setHovered(true)}
-          onMouseLeave={() => visibility.setHovered(false)}
+          onClick={() => {
+            onOpenSemanticComments(slot);
+          }}
+          onMouseEnter={() => {
+            visibility.setHovered(true);
+          }}
+          onMouseLeave={() => {
+            visibility.setHovered(false);
+          }}
         />
       ) : null}
     </div>

@@ -40,7 +40,9 @@ vi.mock('./pages/ParalleaxPrototype', () => ({
 }));
 
 describe('App', () => {
-  afterEach(() => cleanup());
+  afterEach(() => {
+    cleanup();
+  });
 
   beforeEach(() => {
     vi.clearAllMocks();

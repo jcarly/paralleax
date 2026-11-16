@@ -24,7 +24,8 @@ export function useTwoFingerCanvasPan(
     };
 
     renderer.addEventListener('touchstart', preventSingleFingerPan, { capture: true });
-    return () =>
+    return () => {
       renderer.removeEventListener('touchstart', preventSingleFingerPan, { capture: true });
+    };
   }, [canvasRef, canvasVersion]);
 }

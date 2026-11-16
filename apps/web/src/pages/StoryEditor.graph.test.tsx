@@ -66,12 +66,16 @@ describe('StoryEditor graph collaboration and layout', () => {
 
     await renderEditor(storyWithTwoInteractions());
 
-    await waitFor(() => expect(requestIdleCallback).toHaveBeenCalledOnce());
+    await waitFor(() => {
+      expect(requestIdleCallback).toHaveBeenCalledOnce();
+    });
     expect(preloadStoryGraphElk).not.toHaveBeenCalled();
 
     runIdleWork?.();
 
-    await waitFor(() => expect(preloadStoryGraphElk).toHaveBeenCalledOnce());
+    await waitFor(() => {
+      expect(preloadStoryGraphElk).toHaveBeenCalledOnce();
+    });
   });
 
   it('selects, inspects, and centers the interaction requested by the creation route', async () => {
@@ -88,11 +92,11 @@ describe('StoryEditor graph collaboration and layout', () => {
     expect(
       screen.getByTestId('flow-node-interaction-1').querySelector('.interaction-node'),
     ).toHaveClass('selected');
-    await waitFor(() =>
+    await waitFor(() => {
       expect(reactFlowFitViewMock).toHaveBeenCalledWith(
         expect.objectContaining({ nodes: [{ id: 'interaction-1' }] }),
-      ),
-    );
+      );
+    });
   });
 
   it('opens the global comment list in the inspector and navigates to a contextual thread', async () => {
@@ -192,12 +196,12 @@ describe('StoryEditor graph collaboration and layout', () => {
     await screen.findByTestId('flow-node-comment:thread-canvas');
     await user.click(screen.getByTestId('drag-node-comment:thread-canvas'));
 
-    await waitFor(() =>
+    await waitFor(() => {
       expect(api.updateCommentThreadAnchor).toHaveBeenCalledWith('story-1', 'thread-canvas', {
         kind: 'canvas',
         position: { x: 145, y: 195 },
-      }),
-    );
+      });
+    });
   });
 
   it('reports a failed canvas post-it move without keeping an unpersisted position', async () => {
@@ -408,7 +412,7 @@ describe('StoryEditor graph collaboration and layout', () => {
     await user.type(screen.getByRole('textbox', { name: 'Comment' }), 'Check the pacing.');
     await user.click(screen.getByRole('button', { name: 'Send' }));
 
-    await waitFor(() =>
+    await waitFor(() => {
       expect(api.createCommentThread).toHaveBeenCalledWith(
         'story-1',
         {
@@ -418,8 +422,8 @@ describe('StoryEditor graph collaboration and layout', () => {
           field: 'duration',
         },
         'Check the pacing.',
-      ),
-    );
+      );
+    });
     expect(screen.getByRole('button', { name: 'Open comments for Duration' })).toHaveTextContent(
       '1',
     );
@@ -763,12 +767,12 @@ describe('StoryEditor graph collaboration and layout', () => {
       }
 
       await user.click(within(menu).getByRole('menuitem', { name: 'Add child interaction' }));
-      await waitFor(() =>
+      await waitFor(() => {
         expect(api.createInteraction).toHaveBeenCalledWith('story-1', {
           parentId: 'interaction-1',
           position: expect.any(Object),
-        }),
-      );
+        });
+      });
     } finally {
       computeLayout.mockRestore();
     }
@@ -858,13 +862,15 @@ describe('StoryEditor graph collaboration and layout', () => {
       expect(organizeSelection).toBeEnabled();
       await user.click(organizeSelection);
 
-      await waitFor(() =>
+      await waitFor(() => {
         expect(computeLayout).toHaveBeenCalledWith(
           expect.anything(),
           expect.objectContaining({ scope: expect.objectContaining({ kind: 'selection' }) }),
-        ),
-      );
-      await waitFor(() => expect(api.updateStoryGraphPositions).toHaveBeenCalled());
+        );
+      });
+      await waitFor(() => {
+        expect(api.updateStoryGraphPositions).toHaveBeenCalled();
+      });
     } finally {
       computeLayout.mockRestore();
     }
@@ -896,7 +902,9 @@ describe('StoryEditor graph collaboration and layout', () => {
     let finishSave!: () => void;
     vi.mocked(api.updateStoryGraphPositions).mockReturnValueOnce(
       new Promise((resolve) => {
-        finishSave = () => resolve({ revision: 2, updatedAt: '2026-09-28T12:00:00.000Z' });
+        finishSave = () => {
+          resolve({ revision: 2, updatedAt: '2026-09-28T12:00:00.000Z' });
+        };
       }),
     );
 
@@ -911,7 +919,7 @@ describe('StoryEditor graph collaboration and layout', () => {
       expect(organize).toBeDisabled();
       fireEvent.click(organize);
 
-      await waitFor(() =>
+      await waitFor(() => {
         expect(computeLayout).toHaveBeenCalledExactlyOnceWith(
           expect.objectContaining({
             id: story.id,
@@ -920,19 +928,21 @@ describe('StoryEditor graph collaboration and layout', () => {
             ),
           }),
           { interactionSizes: expect.any(Map), scope: { kind: 'all' } },
-        ),
-      );
+        );
+      });
       expect(api.updateStoryGraphPositions).not.toHaveBeenCalled();
       expect(screen.getByTestId('flow-node-interaction-2')).toHaveAttribute('data-node-y', '270');
 
-      await act(async () => resolveLayout(expected));
+      await act(async () => {
+        resolveLayout(expected);
+      });
 
-      await waitFor(() =>
+      await waitFor(() => {
         expect(api.updateStoryGraphPositions).toHaveBeenCalledWith('story-1', {
           interactionUpdates: expected.interactionUpdates,
           triggerUpdates: expected.triggerUpdates,
-        }),
-      );
+        });
+      });
       expect(canvas).toHaveAttribute('aria-busy', 'true');
       expect(organize).toBeDisabled();
       await waitFor(() => {
@@ -954,8 +964,12 @@ describe('StoryEditor graph collaboration and layout', () => {
           expect(node).toHaveAttribute('data-node-y', String(position.y));
         }
       });
-      await act(async () => finishSave());
-      await waitFor(() => expect(canvas).toHaveAttribute('aria-busy', 'false'));
+      await act(async () => {
+        finishSave();
+      });
+      await waitFor(() => {
+        expect(canvas).toHaveAttribute('aria-busy', 'false');
+      });
       expect(organize).toBeEnabled();
       expect(api.updateStoryGraphPositions).toHaveBeenCalledTimes(1);
     } finally {
@@ -979,14 +993,20 @@ describe('StoryEditor graph collaboration and layout', () => {
       expect(await screen.findByRole('alert')).toHaveTextContent(
         'The graph could not be organized.',
       );
-      await waitFor(() => expect(canvas).toHaveAttribute('aria-busy', 'false'));
+      await waitFor(() => {
+        expect(canvas).toHaveAttribute('aria-busy', 'false');
+      });
       expect(organize).toBeEnabled();
       expect(api.updateStoryGraphPositions).not.toHaveBeenCalled();
 
       await user.click(screen.getByRole('button', { name: 'Retry' }));
 
-      await waitFor(() => expect(computeLayout).toHaveBeenCalledTimes(2));
-      await waitFor(() => expect(canvas).toHaveAttribute('aria-busy', 'false'));
+      await waitFor(() => {
+        expect(computeLayout).toHaveBeenCalledTimes(2);
+      });
+      await waitFor(() => {
+        expect(canvas).toHaveAttribute('aria-busy', 'false');
+      });
       expect(organize).toBeEnabled();
       expect(screen.queryByRole('alert')).not.toBeInTheDocument();
       expect(api.updateStoryGraphPositions).not.toHaveBeenCalled();
@@ -1019,7 +1039,7 @@ describe('StoryEditor graph collaboration and layout', () => {
       await user.click(screen.getByTestId('flow-node-interaction-2'));
       await user.click(screen.getByRole('button', { name: 'Organize selected element' }));
 
-      await waitFor(() =>
+      await waitFor(() => {
         expect(computeLayout).toHaveBeenCalledWith(
           expect.anything(),
           expect.objectContaining({
@@ -1028,14 +1048,14 @@ describe('StoryEditor graph collaboration and layout', () => {
               targets: [{ type: 'interaction', interactionId: 'interaction-2' }],
             },
           }),
-        ),
-      );
-      await waitFor(() =>
+        );
+      });
+      await waitFor(() => {
         expect(api.updateStoryGraphPositions).toHaveBeenCalledWith('story-1', {
           interactionUpdates: expected.interactionUpdates,
           triggerUpdates: expected.triggerUpdates,
-        }),
-      );
+        });
+      });
     } finally {
       computeLayout.mockRestore();
     }
@@ -1065,7 +1085,7 @@ describe('StoryEditor graph collaboration and layout', () => {
       await user.click(screen.getByTestId('flow-trigger-interaction-2-trigger-2'));
       await user.click(screen.getByRole('button', { name: 'Organize selected element' }));
 
-      await waitFor(() =>
+      await waitFor(() => {
         expect(computeLayout).toHaveBeenCalledWith(
           expect.anything(),
           expect.objectContaining({
@@ -1076,14 +1096,14 @@ describe('StoryEditor graph collaboration and layout', () => {
               ],
             },
           }),
-        ),
-      );
-      await waitFor(() =>
+        );
+      });
+      await waitFor(() => {
         expect(api.updateStoryGraphPositions).toHaveBeenCalledWith('story-1', {
           interactionUpdates: expected.interactionUpdates,
           triggerUpdates: expected.triggerUpdates,
-        }),
-      );
+        });
+      });
     } finally {
       computeLayout.mockRestore();
     }
@@ -1116,7 +1136,7 @@ describe('StoryEditor graph collaboration and layout', () => {
       await user.click(screen.getByTestId('box-select-first-branch'));
       await user.click(screen.getByRole('button', { name: 'Organize 3 selected elements' }));
 
-      await waitFor(() =>
+      await waitFor(() => {
         expect(computeLayout).toHaveBeenCalledWith(
           expect.anything(),
           expect.objectContaining({
@@ -1129,14 +1149,14 @@ describe('StoryEditor graph collaboration and layout', () => {
               ],
             },
           }),
-        ),
-      );
-      await waitFor(() =>
+        );
+      });
+      await waitFor(() => {
         expect(api.updateStoryGraphPositions).toHaveBeenCalledWith('story-1', {
           interactionUpdates: expected.interactionUpdates,
           triggerUpdates: expected.triggerUpdates,
-        }),
-      );
+        });
+      });
     } finally {
       computeLayout.mockRestore();
     }
@@ -1166,7 +1186,7 @@ describe('StoryEditor graph collaboration and layout', () => {
       await user.click(screen.getByTestId('flow-node-interaction-3'));
       await user.click(screen.getByRole('button', { name: 'Organize selected element' }));
 
-      await waitFor(() =>
+      await waitFor(() => {
         expect(computeLayout).toHaveBeenCalledWith(
           expect.anything(),
           expect.objectContaining({
@@ -1175,14 +1195,14 @@ describe('StoryEditor graph collaboration and layout', () => {
               targets: [{ type: 'interaction', interactionId: 'interaction-3' }],
             },
           }),
-        ),
-      );
-      await waitFor(() =>
+        );
+      });
+      await waitFor(() => {
         expect(api.updateStoryGraphPositions).toHaveBeenCalledWith('story-1', {
           interactionUpdates: expected.interactionUpdates,
           triggerUpdates: expected.triggerUpdates,
-        }),
-      );
+        });
+      });
     } finally {
       computeLayout.mockRestore();
     }
@@ -1354,7 +1374,9 @@ describe('StoryEditor graph collaboration and layout', () => {
 
     await user.click(screen.getByRole('button', { name: 'Delete decoration' }));
     expect(api.deleteGraphDecoration).toHaveBeenCalledWith('story-1', 'text-1');
-    await waitFor(() => expect(screen.queryByTestId('flow-node-text-1')).not.toBeInTheDocument());
+    await waitFor(() => {
+      expect(screen.queryByTestId('flow-node-text-1')).not.toBeInTheDocument();
+    });
   });
 
   it('deletes a graph decoration from its contextual actions', async () => {

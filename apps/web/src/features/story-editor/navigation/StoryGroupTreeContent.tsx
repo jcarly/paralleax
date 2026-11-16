@@ -120,8 +120,9 @@ function createTreeRowProps({
     onSelectGroup: props.onSelect,
     onSelectInteraction: props.onSelectInteraction,
     onFocusGroup: props.onFocus,
-    onMenu: (groupId: string, position: { x: number; y: number }) =>
-      navigation.setMenu({ groupId, position }),
+    onMenu: (groupId: string, position: { x: number; y: number }) => {
+      navigation.setMenu({ groupId, position });
+    },
     onRename: (groupId: string, title: string) =>
       commands.mutate(() => props.onUpdate(groupId, { title })),
     onRenameComplete: (groupId: string, restoreFocus: boolean) => {

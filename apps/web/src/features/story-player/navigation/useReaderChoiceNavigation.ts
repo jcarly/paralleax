@@ -34,8 +34,9 @@ export function useReaderChoiceNavigation(options: ReaderChoiceNavigationOptions
 
   return useCallback((interaction: Interaction, automaticTransition = false) => {
     const now = Date.now();
-    const navigate = () =>
+    const navigate = () => {
       executeReaderChoiceNavigation(optionsRef.current, interaction, automaticTransition, now);
+    };
     if (automaticTransition) {
       navigate();
     } else {

@@ -117,7 +117,9 @@ export function StoryGroupRow({
           onChange={setDraft}
           onCommit={onRename}
           onComplete={onRenameComplete}
-          onFocus={(event) => event.target.select()}
+          onFocus={(event) => {
+            event.target.select();
+          }}
         />
       ) : (
         <button

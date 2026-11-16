@@ -66,8 +66,12 @@ export function useReaderProgressPersistence({
       };
       const queued = (saveQueues.current.get(queueScope) ?? Promise.resolve()).then(operation);
       const settled = queued.then(
-        () => updateStatus(completedStatus),
-        () => updateStatus('error'),
+        () => {
+          updateStatus(completedStatus);
+        },
+        () => {
+          updateStatus('error');
+        },
       );
       saveQueues.current.set(queueScope, settled);
     },

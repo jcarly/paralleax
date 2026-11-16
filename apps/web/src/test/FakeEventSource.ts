@@ -13,7 +13,9 @@ export class FakeEventSource {
   }
 
   emit(type: string) {
-    this.listeners.get(type)?.forEach((listener) => listener());
+    this.listeners.get(type)?.forEach((listener) => {
+      listener();
+    });
   }
 
   close() {}

@@ -115,7 +115,9 @@ describe('InteractionInspector time', () => {
     await user.type(editor, 'A scene');
     await user.click(screen.getByRole('button', { name: 'Title: Start' }));
 
-    await waitFor(() => expect(onContentSaved).toHaveBeenCalledOnce());
+    await waitFor(() => {
+      expect(onContentSaved).toHaveBeenCalledOnce();
+    });
     const savedPatch = onPatch.mock.calls[0]?.[1];
     expect(savedPatch?.body).toContain('A scene');
   });
@@ -155,7 +157,9 @@ describe('InteractionInspector time', () => {
     await user.type(editor, 'A scene');
     await user.click(screen.getByRole('button', { name: 'Title: Start' }));
 
-    await waitFor(() => expect(onPatch).toHaveBeenCalled());
+    await waitFor(() => {
+      expect(onPatch).toHaveBeenCalled();
+    });
     expect(onContentSaved).not.toHaveBeenCalled();
   });
 
