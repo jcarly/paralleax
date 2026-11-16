@@ -139,19 +139,15 @@ export function voidReturn(run: () => void) {
   }
 });
 
-test('React and accessibility plugins report new JSX defects', async (t) => {
+test('React and accessibility plugins report new JSX defects', async () => {
   const file = path.resolve('apps/web/src/__quality_react_a11y_fixture__.tsx');
-  t.after(() => rmSync(file, { force: true }));
-  writeFileSync(
-    file,
-    `export function BadList({ items }: { items: string[] }) {
+  const source = `export function BadList({ items }: { items: string[] }) {
   return <div>{items.map((item) => <span>{item}</span>)}</div>;
 }
 export function BadImage() {
   return <img src="image.png" />;
-}`,
-  );
-  const [result] = await new ESLint().lintFiles([file]);
+}`;
+  const [result] = await new ESLint().lintText(source, { filePath: file });
   assert.equal(result.fatalErrorCount, 0);
   assert.ok(result.messages.some(({ ruleId }) => ruleId === '@eslint-react/no-missing-key'));
   assert.ok(result.messages.some(({ ruleId }) => ruleId === 'jsx-a11y-x/alt-text'));

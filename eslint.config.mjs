@@ -31,6 +31,7 @@ const typeAwareIgnores = [
   '**/__architecture_guard_fixture__.ts',
   '**/__architecture_baseline_fixture__.ts',
   '**/__design_system_rule_fixture__.tsx',
+  '**/__quality_react_a11y_fixture__.tsx',
   '**/__architecture_guard_fixture__.test.ts',
   '**/__eslint_fixture__.test.ts',
 ];
