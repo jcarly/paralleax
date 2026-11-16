@@ -2,6 +2,10 @@
 
 ## Unreleased
 
+- Expanded ESLint quality gates for TypeScript, React, accessibility, import
+  consistency, and code size. CI now rejects unapproved growth in the historical
+  suppression baseline.
+
 - Simplified account entry, the Story library, and settings. Sign-in and registration now
   keep the site header and direct routes, while the library removes generated
   graph art and reader-facing interaction counts. Story deletion now uses a

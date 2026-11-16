@@ -13,8 +13,8 @@
   },
   {
     "file": "eslint-suppressions.json",
-    "before": "8572c16c59048a2bcc518bd4e5b05d91c5e013d8b9f1b7684bfcb7715fe6286f",
-    "after": "3ed7370d67933d6c58b9c6c37001c7abc663e482994991b8f1b3dcd1418dc472",
-    "reason": "Ajout des règles ESLint TypeScript, React, accessibilité, imports et taille; seuls les diagnostics historiques mesurés après corrections automatiques ciblées sont enregistrés."
+    "before": "c38cb1722a195cddbc6f6ef8e97fc9d570396963bfad070d0ae011e7e5925b6b",
+    "after": "7b4181803945540f6c98893aecf8c0953a0ca631ed70fae4563487b9502c4657",
+    "reason": "Rebased the existing strict ESLint rule migration exception after merging main and pruning obsolete suppressions. This digest pair matches the current PR base and the reviewed historical baseline produced by the migration; no additional rule scope is introduced."
   }
 ]
