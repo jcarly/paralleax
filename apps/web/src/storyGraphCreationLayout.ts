@@ -1,18 +1,17 @@
 import {
   ensureStoryInteractionPositions,
-  getNextChildPosition,
-  getNextParentPosition,
-  getNextRootPosition,
   type Interaction,
   type Position,
   type Story,
   type Trigger,
 } from '@paralleax/shared';
-import { computeStoryGraphElkLayout } from './storyGraphElkLayout';
+import {
+  getPositionedStoryGraphFallbackPosition,
+  type StoryGraphClickCreation,
+} from './storyGraphCreationFallback';
 import type { StoryGraphLayoutOptions } from './storyGraphLayout';
 
-export type StoryGraphClickCreation =
-  { kind: 'root' } | { kind: 'child'; sourceId: string } | { kind: 'parent'; targetId: string };
+export type { StoryGraphClickCreation } from './storyGraphCreationFallback';
 
 const placeholderInteractionIdBase = '__paralleax_new_interaction__';
 const placeholderTriggerIdBase = '__paralleax_new_trigger__';
@@ -42,7 +41,8 @@ export async function getStoryGraphClickCreationPosition(
   if (creation.kind === 'child' && !source) return undefined;
   if (creation.kind === 'parent' && !target) return undefined;
 
-  const fallbackPosition = getFallbackPosition(positionedStory, creation, source, target);
+  const fallbackPosition = getPositionedStoryGraphFallbackPosition(positionedStory, creation);
+  if (!fallbackPosition) return undefined;
   const placeholderTrigger: Trigger = {
     id: triggerId,
     inputInteractionIds: source ? [source.id] : [],
@@ -86,6 +86,7 @@ export async function getStoryGraphClickCreationPosition(
         : []),
   ];
   try {
+    const { computeStoryGraphElkLayout } = await import('./storyGraphElkLayout');
     const layout = await computeStoryGraphElkLayout(projectedStory, {
       ...options,
       scope: { kind: 'selection', targets },
@@ -98,17 +99,6 @@ export async function getStoryGraphClickCreationPosition(
   } catch {
     return fallbackPosition;
   }
-}
-
-function getFallbackPosition(
-  story: Story,
-  creation: StoryGraphClickCreation,
-  source: Interaction | undefined,
-  target: Interaction | undefined,
-) {
-  if (creation.kind === 'child' && source) return getNextChildPosition(story, source);
-  if (creation.kind === 'parent' && target) return getNextParentPosition(story, target);
-  return getNextRootPosition(story);
 }
 
 function getUnusedId(base: string, usedIds: ReadonlySet<string>) {

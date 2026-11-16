@@ -61,7 +61,9 @@ describe('StoryEditor graph collaboration and layout', () => {
 
     await renderEditor(story, '/stories/story-1/edit?focusInteractionId=interaction-1');
 
-    expect(await screen.findByDisplayValue('Original title')).toBeInTheDocument();
+    expect(
+      await screen.findByDisplayValue('Original title', {}, { timeout: 5000 }),
+    ).toBeInTheDocument();
     expect(
       screen.getByTestId('flow-node-interaction-1').querySelector('.interaction-node'),
     ).toHaveClass('selected');
@@ -106,7 +108,9 @@ describe('StoryEditor graph collaboration and layout', () => {
     expect(commentsInspector).toContainElement(commentList);
     await user.click(within(commentList).getByRole('button', { name: /Second interaction/ }));
 
-    expect(await screen.findByDisplayValue('Second interaction')).toBeInTheDocument();
+    expect(
+      await screen.findByDisplayValue('Second interaction', {}, { timeout: 5000 }),
+    ).toBeInTheDocument();
     expect(
       screen.getByRole('complementary', { name: 'Comments for the selected element' }),
     ).toBeInTheDocument();

@@ -50,7 +50,6 @@ import {
   type Trigger,
 } from '@paralleax/shared';
 import { CharacterInspector } from '../components/CharacterInspector';
-import { InteractionInspector } from '../components/InteractionInspector';
 import { InteractionNode } from '../components/InteractionNode';
 import { ItemDefinitionInspector } from '../components/ItemDefinitionInspector';
 import { LocationInspector } from '../components/LocationInspector';
@@ -131,16 +130,17 @@ import {
   getStoryGraphSelectionTargets,
   type StoryGraphSelection,
 } from '../storyGraphSelection';
-import {
-  getStoryGraphClickCreationPosition,
-  type StoryGraphClickCreation,
-} from '../storyGraphCreationLayout';
+import type { StoryGraphClickCreation } from '../storyGraphCreationLayout';
 import { getReferencedInteractionIds, type StoryContextReference } from '../storyNavigation';
-import { computeStoryGraphElkLayout, preloadStoryGraphElk } from '../storyGraphElkLayout';
 import type { TriggerEdgeRoutes } from '../triggerEdgeRouting';
 
 const TriggerInspector = lazy(() =>
   import('../components/TriggerInspector').then((module) => ({ default: module.TriggerInspector })),
+);
+const InteractionInspector = lazy(() =>
+  import('../components/InteractionInspector').then((module) => ({
+    default: module.InteractionInspector,
+  })),
 );
 
 const nodeTypes = {
@@ -995,25 +995,33 @@ function StoryInteractionContent({ model }: { model: StoryEditorInspectorModel }
   }
   const { actions, commentSummary } = model;
   return (
-    <InteractionInspector
-      story={model.story}
-      interaction={interaction}
-      onChange={actions.setStory}
-      onPatch={actions.patchInteraction}
-      onContentSaved={(body) => {
-        if (body.replace(/<[^>]*>/g, ' ').trim()) {
-          actions.reportStepComplete(model.storyId, 'write-scene');
-        }
-      }}
-      onDelete={actions.remove}
-      onSelectInteraction={(interactionId) =>
-        actions.selectExclusive({ type: 'interaction', id: interactionId })
+    <Suspense
+      fallback={
+        <p className="hint" role="status">
+          {model.t('shell.loading')}
+        </p>
       }
-      textCommentCounts={commentSummary.selectedTextCommentCounts}
-      onOpenTextComments={actions.openTextComments}
-      semanticCommentCounts={commentSummary.selectedSemanticCommentCounts}
-      onOpenSemanticComments={actions.openSemanticComments}
-    />
+    >
+      <InteractionInspector
+        story={model.story}
+        interaction={interaction}
+        onChange={actions.setStory}
+        onPatch={actions.patchInteraction}
+        onContentSaved={(body) => {
+          if (body.replace(/<[^>]*>/g, ' ').trim()) {
+            actions.reportStepComplete(model.storyId, 'write-scene');
+          }
+        }}
+        onDelete={actions.remove}
+        onSelectInteraction={(interactionId) =>
+          actions.selectExclusive({ type: 'interaction', id: interactionId })
+        }
+        textCommentCounts={commentSummary.selectedTextCommentCounts}
+        onOpenTextComments={actions.openTextComments}
+        semanticCommentCounts={commentSummary.selectedSemanticCommentCounts}
+        onOpenSemanticComments={actions.openSemanticComments}
+      />
+    </Suspense>
   );
 }
 
@@ -2472,6 +2480,7 @@ async function runGraphOrganization(input: {
   endLocalEdit: () => void;
   saveGraphPositions: ReturnType<typeof useStoryEditorPersistence>['saveGraphPositions'];
 }) {
+  const { computeStoryGraphElkLayout } = await import('../storyGraphElkLayout');
   await waitForGraphPaint();
   const layout = await computeStoryGraphElkLayout(input.story, {
     interactionSizes: getMeasuredInteractionSizes(input.nodes),
@@ -2890,8 +2899,17 @@ function useStoryGraphCreationPosition(
   interactionSizes: ReadonlyMap<string, { width: number; height: number }>,
 ) {
   return useCallback(
-    (creation: StoryGraphClickCreation) =>
-      story ? getStoryGraphClickCreationPosition(story, creation, { interactionSizes }) : undefined,
+    async (creation: StoryGraphClickCreation) => {
+      if (!story) {
+        return undefined;
+      }
+      try {
+        const { getStoryGraphClickCreationPosition } = await import('../storyGraphCreationLayout');
+        return await getStoryGraphClickCreationPosition(story, creation, { interactionSizes });
+      } catch {
+        return undefined;
+      }
+    },
     [interactionSizes, story],
   );
 }
@@ -4551,7 +4569,11 @@ function useStoryEditorGraphPreparation(
       return;
     }
     return scheduleIdleWork(() => {
-      void preloadStoryGraphElk().catch(() => undefined);
+      void Promise.all([
+        import('../storyGraphCreationLayout'),
+        import('../storyGraphElkLayout').then(({ preloadStoryGraphElk }) => preloadStoryGraphElk()),
+      ])
+        .catch(() => undefined);
     });
   }, [loadPhase, storyId]);
 }
