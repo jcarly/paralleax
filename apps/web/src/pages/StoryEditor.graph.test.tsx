@@ -84,11 +84,9 @@ describe('StoryEditor graph collaboration and layout', () => {
     await renderEditor(story, '/stories/story-1/edit?focusInteractionId=interaction-1');
 
     const inspector = await screen.findByRole('complementary', { name: 'Inspector' });
-    await waitFor(() =>
-      expect(inspector.querySelector('.interaction-inspector-title-readout')).toHaveTextContent(
-        'Original title',
-      ),
-    );
+    expect(
+      await within(inspector).findByRole('button', { name: 'Title: Original title' }),
+    ).toBeInTheDocument();
     expect(
       screen.getByTestId('flow-node-interaction-1').querySelector('.interaction-node'),
     ).toHaveClass('selected');
