@@ -262,7 +262,9 @@ export async function mockEditorBackgroundRequests(page: Page) {
       }
 
       emit(type: string) {
-        this.listeners.get(type)?.forEach((listener) => listener());
+        this.listeners.get(type)?.forEach((listener) => {
+          listener();
+        });
       }
 
       close() {}

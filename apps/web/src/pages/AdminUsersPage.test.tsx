@@ -8,7 +8,9 @@ import { AdminUsersPage } from './AdminUsersPage';
 vi.mock('../api', () => ({ api: { listUsers: vi.fn(), updateUserRole: vi.fn() } }));
 
 describe('AdminUsersPage', () => {
-  afterEach(() => cleanup());
+  afterEach(() => {
+    cleanup();
+  });
   beforeEach(async () => {
     vi.resetAllMocks();
     await i18n.changeLanguage('en');
@@ -133,6 +135,8 @@ describe('AdminUsersPage', () => {
     expect(await screen.findByRole('alert')).toHaveTextContent(
       'The last administrator cannot be demoted',
     );
-    await waitFor(() => expect(selector).toHaveValue('admin'));
+    await waitFor(() => {
+      expect(selector).toHaveValue('admin');
+    });
   });
 });

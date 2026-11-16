@@ -139,16 +139,21 @@ function useRichTextExtensionContext(
       story: props.story,
       interactionLinkTargets: props.interactionLinkTargets ?? [],
       conditionalTextBlocks: props.conditionalTextBlocks ?? EMPTY_BLOCKS,
-      onEditVariable: (position: number, assignmentId: string, itemId?: string) =>
-        drafts.setEditingVariable({ position, assignmentId, itemId }),
-      onEditInteractionLink: (position: number, text: string, targetId: string) =>
-        drafts.setEditingLink({ position, value: { text, targetId } }),
-      onAddConditionalCondition: (blockId: string) =>
-        drafts.setConditionalEdit({ kind: 'add', blockId }),
-      onEditConditionalCondition: (blockId: string, conditionIndex: number) =>
-        drafts.setConditionalEdit({ kind: 'edit', blockId, conditionIndex }),
-      onRemoveConditionalCondition: (blockId: string, conditionIndex: number) =>
-        removeConditionalCondition(editorReference.current, blockId, conditionIndex),
+      onEditVariable: (position: number, assignmentId: string, itemId?: string) => {
+        drafts.setEditingVariable({ position, assignmentId, itemId });
+      },
+      onEditInteractionLink: (position: number, text: string, targetId: string) => {
+        drafts.setEditingLink({ position, value: { text, targetId } });
+      },
+      onAddConditionalCondition: (blockId: string) => {
+        drafts.setConditionalEdit({ kind: 'add', blockId });
+      },
+      onEditConditionalCondition: (blockId: string, conditionIndex: number) => {
+        drafts.setConditionalEdit({ kind: 'edit', blockId, conditionIndex });
+      },
+      onRemoveConditionalCondition: (blockId: string, conditionIndex: number) => {
+        removeConditionalCondition(editorReference.current, blockId, conditionIndex);
+      },
     }),
     [
       drafts,
@@ -252,7 +257,9 @@ function useRichTextEngine({
         'data-comment-field': 'body',
       },
     },
-    onCreate: ({ editor }) => editor.setEditable(!compatibilityError, false),
+    onCreate: ({ editor }) => {
+      editor.setEditable(!compatibilityError, false);
+    },
     onUpdate: ({ editor, transaction }) => {
       if (
         !compatibilityError &&
@@ -263,7 +270,9 @@ function useRichTextEngine({
         publishVisualUpdate(editor, transaction.before, latestPropsRef);
       }
     },
-    onBlur: ({ editor }) => publishBlur(editor, latestPropsRef, lastBlurHtmlRef),
+    onBlur: ({ editor }) => {
+      publishBlur(editor, latestPropsRef, lastBlurHtmlRef);
+    },
   });
 }
 

@@ -56,11 +56,15 @@ export function useStoryEditorSelection(story: Story | undefined) {
   }, []);
 
   const selectInteraction = useCallback(
-    (interactionId: string) => selectExclusive({ type: 'interaction', id: interactionId }),
+    (interactionId: string) => {
+      selectExclusive({ type: 'interaction', id: interactionId });
+    },
     [selectExclusive],
   );
 
-  const clearSelection = useCallback(() => selectExclusive(), [selectExclusive]);
+  const clearSelection = useCallback(() => {
+    selectExclusive();
+  }, [selectExclusive]);
 
   const gestureBase = useRef<StoryGraphSelection | undefined>(undefined);
   const gestureMode = useRef<'replace' | 'add' | 'remove'>('replace');

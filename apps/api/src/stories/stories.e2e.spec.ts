@@ -404,7 +404,9 @@ function createQspImportWorkerMock() {
           timestamp: new Date().toISOString(),
           createId: randomUUID,
           maxPreviewIssues: 0,
-          onIssue: (issue) => writer.writeIssue(issue),
+          onIssue: (issue) => {
+            writer.writeIssue(issue);
+          },
           onProgress: args[1],
         });
       } finally {
@@ -427,7 +429,9 @@ function createChoiceScriptImportWorkerMock() {
           ...options,
           createId: randomUUID,
           maxPreviewIssues: 0,
-          onIssue: (issue) => writer.writeIssue(issue),
+          onIssue: (issue) => {
+            writer.writeIssue(issue);
+          },
         });
       } finally {
         await writer.close();

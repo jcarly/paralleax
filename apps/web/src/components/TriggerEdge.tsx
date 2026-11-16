@@ -108,8 +108,12 @@ export function TriggerEdge({
           stroke="transparent"
           strokeWidth={18}
           pointerEvents="stroke"
-          onMouseEnter={() => setIsHovered(true)}
-          onMouseLeave={() => setIsHovered(false)}
+          onMouseEnter={() => {
+            setIsHovered(true);
+          }}
+          onMouseLeave={() => {
+            setIsHovered(false);
+          }}
         />
       ) : null}
       {data && inputInteractionId ? (
@@ -120,8 +124,12 @@ export function TriggerEdge({
             style={{ transform: `translate(-50%, -50%) translate(${labelX}px, ${labelY}px)` }}
             aria-label={t('graph.removeTriggerInput')}
             title={t('graph.removeLink')}
-            onMouseEnter={() => setIsHovered(true)}
-            onMouseLeave={() => setIsHovered(false)}
+            onMouseEnter={() => {
+              setIsHovered(true);
+            }}
+            onMouseLeave={() => {
+              setIsHovered(false);
+            }}
             onClick={(event) => {
               event.preventDefault();
               event.stopPropagation();

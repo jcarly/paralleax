@@ -143,9 +143,13 @@ export class ImportJobService implements OnModuleInit, OnModuleDestroy {
             subscriber.next(event);
           }
         },
-        complete: () => subscriber.complete(),
+        complete: () => {
+          subscriber.complete();
+        },
       });
-      return () => sub.unsubscribe();
+      return () => {
+        sub.unsubscribe();
+      };
     });
   }
 

@@ -24,7 +24,9 @@ function expectLanguageEndonyms() {
 }
 
 describe('LanguageSwitcher', () => {
-  afterEach(() => cleanup());
+  afterEach(() => {
+    cleanup();
+  });
 
   it('normalizes supported regional language codes', () => {
     expect(normalizeLanguage('fr-FR')).toBe('fr');

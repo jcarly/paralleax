@@ -111,7 +111,9 @@ function AddEffectControl({
       <button
         className="secondary interaction-add-effect"
         type="button"
-        onClick={() => setIsChoosing(true)}
+        onClick={() => {
+          setIsChoosing(true);
+        }}
       >
         {t('interactionInspector.addEffect')}
       </button>
@@ -131,7 +133,9 @@ function AddEffectControl({
           className="ghost interaction-effect-picker-cancel"
           title={t('interactionInspector.cancelAddEffect')}
           type="button"
-          onClick={() => setIsChoosing(false)}
+          onClick={() => {
+            setIsChoosing(false);
+          }}
         >
           ×
         </button>
@@ -359,7 +363,9 @@ export function InteractionInspector({
               data-comment-field="title"
               placeholder={interactionTitlePlaceholder(interaction, t)}
               value={interaction.title}
-              onChange={(event) => updateLocalInteraction({ title: event.target.value })}
+              onChange={(event) => {
+                updateLocalInteraction({ title: event.target.value });
+              }}
               onBlur={(event) => void onPatch(interaction.id, { title: event.target.value })}
             />
           </label>
@@ -405,7 +411,9 @@ export function InteractionInspector({
                 className="secondary interaction-content-edit-toggle"
                 data-comment-exclude="true"
                 type="button"
-                onClick={() => setBodyEditor({ interactionId: interaction.id, editing: true })}
+                onClick={() => {
+                  setBodyEditor({ interactionId: interaction.id, editing: true });
+                }}
               >
                 {t('richText.addContent')}
               </button>
@@ -578,11 +586,11 @@ export function InteractionInspector({
                           aria-label={t('interactionInspector.deleteStatEffect')}
                           className="ghost danger interaction-effect-remove"
                           type="button"
-                          onClick={() =>
+                          onClick={() => {
                             saveStatEffects(
                               statEffects.filter((_, candidateIndex) => candidateIndex !== index),
-                            )
-                          }
+                            );
+                          }}
                         >
                           x
                         </button>

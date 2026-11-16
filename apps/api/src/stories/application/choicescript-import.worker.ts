@@ -32,7 +32,9 @@ void (async () => {
         timestamp: input.timestamp,
         createId: randomUUID,
         maxPreviewIssues: 0,
-        onIssue: (issue) => writer.writeIssue(issue),
+        onIssue: (issue) => {
+          writer.writeIssue(issue);
+        },
       });
     } finally {
       await writer.close();

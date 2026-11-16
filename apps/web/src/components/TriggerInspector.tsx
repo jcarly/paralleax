@@ -124,11 +124,17 @@ export function TriggerInspector({
                     ref={isEditing ? activeConditionRef : undefined}
                     onBlur={
                       isEditing
-                        ? (event) => collapseWhenFocusLeaves(event, conditionKey)
+                        ? (event) => {
+                            collapseWhenFocusLeaves(event, conditionKey);
+                          }
                         : undefined
                     }
                     onKeyUp={
-                      isEditing ? (event) => collapseOnEnter(event, conditionKey) : undefined
+                      isEditing
+                        ? (event) => {
+                            collapseOnEnter(event, conditionKey);
+                          }
+                        : undefined
                     }
                   >
                     {index > 0 ? (
@@ -157,7 +163,9 @@ export function TriggerInspector({
                           className="condition-summary"
                           data-testid="condition-summary"
                           type="button"
-                          onClick={() => setEditingConditionKey(conditionKey)}
+                          onClick={() => {
+                            setEditingConditionKey(conditionKey);
+                          }}
                         >
                           {description}
                         </button>

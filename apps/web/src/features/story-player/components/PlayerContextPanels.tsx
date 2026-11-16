@@ -101,7 +101,9 @@ export function PlayerContextPanels({
                 <input
                   type="checkbox"
                   checked={forceUnavailableOptions}
-                  onChange={(event) => onForceUnavailableOptionsChange(event.target.checked)}
+                  onChange={(event) => {
+                    onForceUnavailableOptionsChange(event.target.checked);
+                  }}
                 />
                 <span>
                   <b>{t('player.forceUnavailable')}</b>

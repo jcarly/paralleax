@@ -64,9 +64,9 @@ function AssignmentRow({
           void api
             .updateStatAssignment(storyId, assignment.id, { initialValue })
             .then(onStory)
-            .catch((caught: unknown) =>
-              onError(apiErrorMessage(caught, t, t('attributes.operationFailed'))),
-            )
+            .catch((caught: unknown) => {
+              onError(apiErrorMessage(caught, t, t('attributes.operationFailed')));
+            })
         }
       />
       <button
@@ -77,9 +77,9 @@ function AssignmentRow({
           void api
             .deleteStatAssignment(storyId, assignment.id)
             .then(onStory)
-            .catch((caught: unknown) =>
-              onError(apiErrorMessage(caught, t, t('attributes.operationFailed'))),
-            )
+            .catch((caught: unknown) => {
+              onError(apiErrorMessage(caught, t, t('attributes.operationFailed')));
+            })
         }
       >
         x
@@ -105,9 +105,9 @@ function CreateDefinitionForm({
       className="attribute-definition-create"
       onSubmit={(event) => {
         event.preventDefault();
-        void onCreate({ name, valueType }).catch((caught: unknown) =>
-          onError(apiErrorMessage(caught, t, t('attributes.operationFailed'))),
-        );
+        void onCreate({ name, valueType }).catch((caught: unknown) => {
+          onError(apiErrorMessage(caught, t, t('attributes.operationFailed')));
+        });
       }}
     >
       <label className="form-field form-field--compact">
@@ -116,7 +116,9 @@ function CreateDefinitionForm({
           className="form-control form-control--compact"
           required
           value={name}
-          onChange={(event) => setName(event.target.value)}
+          onChange={(event) => {
+            setName(event.target.value);
+          }}
         />
       </label>
       <label className="form-field form-field--compact">
@@ -124,7 +126,9 @@ function CreateDefinitionForm({
         <select
           className="form-control form-control--compact"
           value={valueType}
-          onChange={(event) => setValueType(event.target.value as typeof valueType)}
+          onChange={(event) => {
+            setValueType(event.target.value as typeof valueType);
+          }}
         >
           <option value="number">{t('attributes.type.number')}</option>
           <option value="boolean">{t('attributes.type.boolean')}</option>
@@ -266,7 +270,9 @@ function StatDefinitionEditor({
       >
         <ImageUrlField
           imageUrl={definition.imageUrl}
-          onChange={(imageUrl) => onChange({ ...definition, imageUrl })}
+          onChange={(imageUrl) => {
+            onChange({ ...definition, imageUrl });
+          }}
           onBlur={(imageUrl) => void onPatch(definition.id, { imageUrl })}
         />
       </InspectorCommentSlot>
@@ -282,7 +288,9 @@ function StatDefinitionEditor({
           <EntityNameInput
             data-comment-field="name"
             value={definition.name}
-            onChange={(name) => onChange({ ...definition, name })}
+            onChange={(name) => {
+              onChange({ ...definition, name });
+            }}
             onCommit={(name) => onPatch(definition.id, { name })}
           />
         </label>
@@ -296,7 +304,9 @@ function StatDefinitionEditor({
         <CategoryField
           category={definition.category}
           suggestions={categorySuggestions}
-          onChange={(category) => onChange({ ...definition, category })}
+          onChange={(category) => {
+            onChange({ ...definition, category });
+          }}
           onBlur={(category) => void onPatch(definition.id, { category })}
         />
       </InspectorCommentSlot>
@@ -329,9 +339,9 @@ function StatDefinitionEditor({
               step="any"
               type="number"
               value={definition.changePerHour ?? 0}
-              onChange={(event) =>
-                onChange({ ...definition, changePerHour: Number(event.target.value) })
-              }
+              onChange={(event) => {
+                onChange({ ...definition, changePerHour: Number(event.target.value) });
+              }}
               onBlur={(event) =>
                 void onPatch(definition.id, { changePerHour: Number(event.target.value) })
               }
@@ -373,7 +383,9 @@ function StatDefinitionEditor({
               <select
                 className="form-control form-control--compact"
                 value={ownerKey}
-                onChange={(event) => setOwnerKey(event.target.value)}
+                onChange={(event) => {
+                  setOwnerKey(event.target.value);
+                }}
               >
                 {availableOwners.map((owner) => {
                   const key = `${owner.ownerType}:${owner.ownerId ?? ''}`;
@@ -406,9 +418,9 @@ function StatDefinitionEditor({
                     initialValue,
                   })
                   .then(onStory)
-                  .catch((caught: unknown) =>
-                    onError(apiErrorMessage(caught, t, t('attributes.operationFailed'))),
-                  )
+                  .catch((caught: unknown) => {
+                    onError(apiErrorMessage(caught, t, t('attributes.operationFailed')));
+                  })
               }
             >
               {t('attributes.assign')}
@@ -427,9 +439,9 @@ function StatDefinitionEditor({
               onStory(next);
               onClose();
             })
-            .catch((caught: unknown) =>
-              onError(apiErrorMessage(caught, t, t('attributes.operationFailed'))),
-            );
+            .catch((caught: unknown) => {
+              onError(apiErrorMessage(caught, t, t('attributes.operationFailed')));
+            });
         }}
       >
         {t('attributes.deleteDefinition')}

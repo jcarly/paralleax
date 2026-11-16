@@ -87,7 +87,9 @@ export function FieldHelpTooltip({
 
   useEffect(() => {
     if (!open) return;
-    const reposition = () => updatePosition();
+    const reposition = () => {
+      updatePosition();
+    };
     window.addEventListener('resize', reposition);
     window.addEventListener('scroll', reposition, true);
     return () => {

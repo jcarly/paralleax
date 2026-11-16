@@ -318,8 +318,12 @@ function useGroupDragExpansion(
     if (!groupId) {
       return;
     }
-    const timer = window.setTimeout(() => expandGroup(groupId), 650);
-    return () => window.clearTimeout(timer);
+    const timer = window.setTimeout(() => {
+      expandGroup(groupId);
+    }, 650);
+    return () => {
+      window.clearTimeout(timer);
+    };
   }, [activeId, expandGroup, groups, target]);
 }
 

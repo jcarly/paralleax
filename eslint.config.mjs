@@ -1,4 +1,6 @@
 import js from '@eslint/js';
+import eslintReact from '@eslint-react/eslint-plugin';
+import jsxA11y from 'eslint-plugin-jsx-a11y-x';
 import reactHooks from 'eslint-plugin-react-hooks';
 import reactRefresh from 'eslint-plugin-react-refresh';
 import sonarjs from 'eslint-plugin-sonarjs';
@@ -34,6 +36,11 @@ const typeAwareIgnores = [
 ];
 
 const typeAwareRules = {
+  '@typescript-eslint/no-unnecessary-condition': 'error',
+  '@typescript-eslint/strict-boolean-expressions': 'error',
+  '@typescript-eslint/prefer-nullish-coalescing': 'error',
+  '@typescript-eslint/prefer-optional-chain': 'error',
+  '@typescript-eslint/no-confusing-void-expression': 'error',
   '@typescript-eslint/no-floating-promises': 'error',
   '@typescript-eslint/no-misused-promises': 'error',
   '@typescript-eslint/no-unnecessary-type-assertion': 'error',
@@ -56,6 +63,42 @@ const typeAwareRules = {
     { considerDefaultExhaustiveForUnions: false },
   ],
 };
+
+function enforceErrorRules(rules) {
+  return Object.fromEntries(
+    Object.entries(rules).map(([rule, setting]) => {
+      if (setting === 'warn' || setting === 1) {
+        return [rule, 'error'];
+      }
+      if (Array.isArray(setting) && (setting[0] === 'warn' || setting[0] === 1)) {
+        return [rule, ['error', ...setting.slice(1)]];
+      }
+      return [rule, setting];
+    }),
+  );
+}
+
+const reactRules = enforceErrorRules({
+  ...eslintReact.configs['recommended-typescript'].rules,
+  // Keep the existing React Hooks plugin as the single source for these checks.
+  '@eslint-react/error-boundaries': 'off',
+  '@eslint-react/exhaustive-deps': 'off',
+  '@eslint-react/purity': 'off',
+  '@eslint-react/rules-of-hooks': 'off',
+  '@eslint-react/set-state-in-effect': 'off',
+  '@eslint-react/set-state-in-render': 'off',
+  '@eslint-react/static-components': 'off',
+  '@eslint-react/unsupported-syntax': 'off',
+  '@eslint-react/use-memo': 'off',
+  // Naming conventions and server-component rules are outside the project's concerns.
+  '@eslint-react/naming-convention-context-name': 'off',
+  '@eslint-react/naming-convention-id-name': 'off',
+  '@eslint-react/naming-convention-ref-name': 'off',
+  '@eslint-react/no-unnecessary-use-prefix': 'off',
+  '@eslint-react/rsc-function-definition': 'off',
+  '@eslint-react/no-leaked-conditional-rendering': 'error',
+  '@eslint-react/no-unstable-context-value': 'error',
+});
 
 function typeAwareWorkspaceConfig(files, project) {
   return {
@@ -89,6 +132,32 @@ export default tseslint.config(
   },
   js.configs.recommended,
   ...tseslint.configs.recommended,
+  {
+    files: ['**/*.{js,cjs,mjs,jsx,ts,tsx}'],
+    rules: {
+      'max-lines': ['error', { max: 400, skipBlankLines: true, skipComments: true }],
+      'no-duplicate-imports': 'error',
+    },
+  },
+  {
+    files: [
+      '**/*.{test,spec}.{js,cjs,mjs,jsx,ts,tsx}',
+      '**/{test,tests,__tests__}/**/*.{js,cjs,mjs,jsx,ts,tsx}',
+    ],
+    rules: {
+      'max-lines': ['error', { max: 600, skipBlankLines: true, skipComments: true }],
+    },
+  },
+  {
+    ...eslintReact.configs['recommended-typescript'],
+    files: ['apps/web/**/*.{jsx,tsx}'],
+    rules: reactRules,
+  },
+  {
+    ...jsxA11y.configs.recommended,
+    files: ['apps/web/**/*.{jsx,tsx}'],
+    rules: enforceErrorRules(jsxA11y.configs.recommended.rules),
+  },
   {
     files: ['apps/web/src/**/*.{ts,tsx}', 'apps/web/tests/**/*.ts'],
     languageOptions: {

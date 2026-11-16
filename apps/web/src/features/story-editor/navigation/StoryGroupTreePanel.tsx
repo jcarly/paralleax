@@ -27,7 +27,9 @@ export function StoryGroupTreePanel(props: StoryGroupsPanelProps) {
     updateGroup: props.onUpdate,
     mutate: commands.mutate,
     expandGroup: commands.expandGroup,
-    closeMenu: () => navigation.setMenu(undefined),
+    closeMenu: () => {
+      navigation.setMenu(undefined);
+    },
   });
 
   return (
@@ -105,17 +107,27 @@ function StoryGroupMenuController({
       siblingGroups={navigation.tree.children.get(group?.parentGroupId) ?? []}
       interactionIds={interactionIds}
       props={props}
-      onClose={() => navigation.setMenu(undefined)}
-      onRename={(groupId) => props.onEditingChange(groupId)}
+      onClose={() => {
+        navigation.setMenu(undefined);
+      }}
+      onRename={(groupId) => {
+        props.onEditingChange(groupId);
+      }}
       onCreateChild={(groupId) => {
         void commands.mutate(() => props.onCreate(t('editor.groups.newGroup'), [], groupId));
       }}
-      onAddSelection={(target) => addSelectionToGroup(target, props, commands)}
-      onRemoveSelection={(target) => removeSelectionFromGroup(target, props, commands)}
+      onAddSelection={(target) => {
+        addSelectionToGroup(target, props, commands);
+      }}
+      onRemoveSelection={(target) => {
+        removeSelectionFromGroup(target, props, commands);
+      }}
       onSelectInteractions={props.onSelectInteractions}
       onFocus={props.onFocus}
       onMove={commands.moveGroup}
-      onMoveToRoot={(groupId) => moveGroupToRoot(groupId, props, commands)}
+      onMoveToRoot={(groupId) => {
+        moveGroupToRoot(groupId, props, commands);
+      }}
       onDelete={(groupId) => {
         void commands.mutate(() => props.onDelete(groupId));
       }}

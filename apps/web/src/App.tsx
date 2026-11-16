@@ -80,7 +80,9 @@ export function App() {
     api
       .me()
       .then(setUser)
-      .catch(() => setUser(null));
+      .catch(() => {
+        setUser(null);
+      });
   }, [isPrototype]);
 
   useEffect(() => {
@@ -90,7 +92,9 @@ export function App() {
       setUser(null);
     };
     window.addEventListener('paralleax:session-expired', expireSession);
-    return () => window.removeEventListener('paralleax:session-expired', expireSession);
+    return () => {
+      window.removeEventListener('paralleax:session-expired', expireSession);
+    };
   }, [isPrototype]);
 
   if (isPrototype)
@@ -171,14 +175,20 @@ export function App() {
                 className="product-user"
                 type="button"
                 aria-label={`${user.displayName.slice(0, 2).toUpperCase()} ${user.displayName}: ${t('shell.account')}`}
-                onClick={() => setAccountOpen(true)}
+                onClick={() => {
+                  setAccountOpen(true);
+                }}
               >
                 <span aria-hidden="true">{user.displayName.slice(0, 2).toUpperCase()}</span>{' '}
                 <span>{user.displayName}</span>
               </button>
               <button
                 className="product-signout"
-                onClick={() => void api.logout().finally(() => setUser(null))}
+                onClick={() =>
+                  void api.logout().finally(() => {
+                    setUser(null);
+                  })
+                }
               >
                 {t('shell.signOut')}
               </button>
@@ -254,7 +264,13 @@ export function App() {
         </Suspense>
         {user && accountOpen ? (
           <Suspense fallback={null}>
-            <AccountDialog user={user} onClose={() => setAccountOpen(false)} onUpdated={setUser} />
+            <AccountDialog
+              user={user}
+              onClose={() => {
+                setAccountOpen(false);
+              }}
+              onUpdated={setUser}
+            />
           </Suspense>
         ) : null}
       </div>

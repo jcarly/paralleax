@@ -9,7 +9,9 @@ function EditorRoute() {
 }
 
 describe('StoryAccessPage', () => {
-  afterEach(() => cleanup());
+  afterEach(() => {
+    cleanup();
+  });
 
   it('keeps legacy access URLs compatible by opening the editor access settings', async () => {
     render(
