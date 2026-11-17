@@ -40,12 +40,12 @@
   },
   "devDependencies": {
     "@axe-core/playwright": "^4.14.0",
-    "@playwright/test": "^1.64.1",
-    "@sentry/vite-plugin": "^11.10.0",
+    "@playwright/test": "^1.65.0",
+    "@sentry/vite-plugin": "^11.12.0",
     "@testing-library/dom": "^10.4.2",
     "@testing-library/jest-dom": "^7.0.1",
     "@testing-library/react": "^16.3.3",
-    "@testing-library/user-event": "^14.6.8",
+    "@testing-library/user-event": "^14.6.9",
     "@types/react": "^19.3.0",
     "@types/react-dom": "^19.3.0",
     "@vitejs/plugin-react": "^4.7.0",
@@ -53,7 +53,7 @@
     "jsdom": "^29.1.1",
     "terser": "^5.51.2",
     "typescript": "^5.9.3",
-    "vite": "^8.3.5",
+    "vite": "^8.3.7",
     "vitest": "^5.0.0"
   }
 }
