@@ -130,7 +130,7 @@ describe('InteractionInspector rich text preview', () => {
       />,
     );
 
-    const preview = screen.getByRole('button', { name: /Content/ });
+    const preview = screen.getByRole('button', { name: `${text} Select to edit` });
     expect(preview.querySelectorAll('button')).toHaveLength(0);
 
     await user.click(within(preview).getByText(text));

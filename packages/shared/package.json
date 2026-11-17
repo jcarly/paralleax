@@ -14,8 +14,8 @@
   "scripts": {
     "build": "tsc -p tsconfig.json",
     "typecheck": "tsc -p tsconfig.json --noEmit",
-    "test": "vitest run",
-    "coverage": "vitest run --coverage"
+    "test": "vitest run --configLoader runner",
+    "coverage": "vitest run --coverage --configLoader runner"
   },
   "devDependencies": {
     "@vitest/coverage-v8": "^5.1.0",

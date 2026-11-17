@@ -101,6 +101,7 @@ export function LanguageSwitcher({ className = '' }: { className?: string }) {
         ref={triggerRef}
         className="language-switcher-toggle"
         type="button"
+        aria-label={`${language} ${t('language.label')}`}
         aria-expanded={isOpen}
         aria-controls={optionsId}
         onClick={() => {
@@ -108,7 +109,6 @@ export function LanguageSwitcher({ className = '' }: { className?: string }) {
         }}
       >
         <span>{language}</span>
-        <span className="sr-only">{t('language.label')}</span>
         <span aria-hidden="true" className="language-switcher-chevron" />
       </button>
       <LanguageOptions

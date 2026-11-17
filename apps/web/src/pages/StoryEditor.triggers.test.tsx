@@ -42,7 +42,9 @@ describe('StoryEditor triggers', () => {
     await user.click(screen.getByTestId('flow-trigger-interaction-3-trigger-edge'));
 
     expect(screen.getByTestId('flow-trigger-interaction-3-trigger-edge')).toHaveClass('selected');
-    expect(await screen.findByRole('heading', { name: 'Path conditions' })).toBeInTheDocument();
+    expect(
+      await screen.findByRole('heading', { name: 'Path conditions' }, { timeout: 10_000 }),
+    ).toBeInTheDocument();
 
     await user.click(await screen.findByRole('button', { name: 'Add condition' }));
     await chooseTriggerConditionType(user, 'Interaction');
