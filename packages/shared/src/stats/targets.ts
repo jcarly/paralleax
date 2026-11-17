@@ -120,7 +120,9 @@ export function resolveStatInterpolationTarget(
   expression: string,
 ): StatTarget | undefined {
   const parts = expression.split('.').map(normalizeReferencePart);
-  if (parts.length !== 2 || parts.some((part) => part.length === 0)) return undefined;
+  if (parts.length !== 2 || parts.some((part) => part.length === 0)) {
+    return undefined;
+  }
   const [ownerReference, statReference] = parts;
   const matches = getStatTargets(story).filter(
     (target) =>
@@ -137,7 +139,9 @@ function matchesOwnerReference(story: Story, target: StatTarget, reference: stri
   if (target.ownerType === 'story') {
     return reference === 'story' || reference === normalizeReferencePart(story.id);
   }
-  if (target.itemId) return reference === normalizeReferencePart(target.itemId);
+  if (target.itemId) {
+    return reference === normalizeReferencePart(target.itemId);
+  }
   return [target.ownerId, target.ownerName].some(
     (candidate) => candidate !== undefined && normalizeReferencePart(candidate) === reference,
   );

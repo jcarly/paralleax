@@ -120,7 +120,9 @@ export async function computeStoryGraphElkLayout(
       });
 
       for (const inputId of group.inputInteractionIds) {
-        if (!knownInteractionIds.has(inputId)) continue;
+        if (!knownInteractionIds.has(inputId)) {
+          continue;
+        }
 
         edges.push({
           id: `${triggerNodeId}-${inputId}`,
@@ -232,7 +234,9 @@ export async function computeStoryGraphElkLayout(
     }
 
     const vertex = verticesByKey.get(child.id);
-    if (!vertex) continue;
+    if (!vertex) {
+      continue;
+    }
 
     elkPositions.set(vertex.key, {
       x: child.x,
@@ -311,7 +315,9 @@ export async function computeStoryGraphElkLayout(
 }
 
 function isElkStackOverflow(error: unknown): boolean {
-  if (!(error instanceof Error)) return false;
+  if (!(error instanceof Error)) {
+    return false;
+  }
 
   return (
     (error instanceof RangeError || error.name === 'RangeError') &&

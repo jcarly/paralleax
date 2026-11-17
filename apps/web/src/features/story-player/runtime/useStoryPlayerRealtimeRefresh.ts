@@ -34,9 +34,13 @@ export function useStoryPlayerRealtimeRefresh({
   const realtimeRefresh = useRef<RefreshCallback>(() => {});
 
   const flushPendingRealtimeRefresh = useCallback(() => {
-    if (hasActiveMutations() || simulationEditDepth.current > 0) return;
+    if (hasActiveMutations() || simulationEditDepth.current > 0) {
+      return;
+    }
     const pending = pendingRealtimeInvalidation.current;
-    if (!pending) return;
+    if (!pending) {
+      return;
+    }
     pendingRealtimeInvalidation.current = undefined;
     realtimeRefresh.current(pending);
   }, [hasActiveMutations]);
@@ -58,7 +62,9 @@ export function useStoryPlayerRealtimeRefresh({
         .then((bootstrap) => loadStoryRuntimeContext(storyId, bootstrap))
         .then((runtimeStory) => loadLatestRuntimeSliceForSession(runtimeStory, getCurrentSession))
         .then((nextStory) => {
-          if (attempt !== realtimeLoadAttempt.current) return;
+          if (attempt !== realtimeLoadAttempt.current) {
+            return;
+          }
           if (navigationVersion !== getNavigationVersion()) {
             realtimeRefresh.current(invalidation);
             return;
@@ -74,7 +80,9 @@ export function useStoryPlayerRealtimeRefresh({
           applyReloadedStory(nextStory);
         })
         .catch((caught: unknown) => {
-          if (attempt !== realtimeLoadAttempt.current) return;
+          if (attempt !== realtimeLoadAttempt.current) {
+            return;
+          }
           onRefreshFailure(caught, invalidation);
         });
     },
@@ -102,7 +110,9 @@ export function useStoryPlayerRealtimeRefresh({
   }, [flushPendingRealtimeRefresh]);
 
   useEffect(() => {
-    if (mutationStatus !== 'saving') flushPendingRealtimeRefresh();
+    if (mutationStatus !== 'saving') {
+      flushPendingRealtimeRefresh();
+    }
   }, [flushPendingRealtimeRefresh, mutationStatus]);
 
   return { refreshFromRealtime, beginSimulationEdit, endSimulationEdit };

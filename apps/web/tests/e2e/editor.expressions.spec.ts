@@ -20,6 +20,7 @@ test('saves an expression, retains invalid drafts and restores the saved express
   });
   await page.goto('/stories/story-1/edit');
   await page.getByTestId('interaction-node').filter({ hasText: 'Original title' }).click();
+  await page.locator('.interaction-effect-editor > summary').first().click();
   await page.getByRole('button', { name: 'Use expression', exact: true }).click();
   await expect.poll(() => writes).toBe(1);
   const field = page.getByLabel('Variable effect expression');
@@ -38,5 +39,6 @@ test('saves an expression, retains invalid drafts and restores the saved express
   await expect(field).toHaveAttribute('aria-invalid', 'false');
   await page.reload();
   await page.getByTestId('interaction-node').filter({ hasText: 'Original title' }).click();
+  await page.locator('.interaction-effect-editor > summary').first().click();
   await expect(page.getByLabel('Variable effect expression')).toHaveValue('(@{score} + 2) * 3');
 });

@@ -169,7 +169,9 @@ function connect(source: string, target: string): Connection {
 
 function mouseEvent(clientX: number, clientY: number, target?: Element) {
   const event = new MouseEvent('mouseup', { clientX, clientY });
-  if (target) Object.defineProperty(event, 'target', { value: target });
+  if (target) {
+    Object.defineProperty(event, 'target', { value: target });
+  }
   return event;
 }
 

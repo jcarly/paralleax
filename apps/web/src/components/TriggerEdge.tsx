@@ -81,7 +81,9 @@ export function TriggerEdge({
 
     for (const segment of segments) {
       if (travelled + segment.length >= midpoint) {
-        if (segment.length === 0) return segment.start;
+        if (segment.length === 0) {
+          return segment.start;
+        }
 
         const ratio = (midpoint - travelled) / segment.length;
 

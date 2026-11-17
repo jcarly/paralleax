@@ -818,7 +818,9 @@ end
         format: 'text',
         content: `# fuzz\n${lines.join('\n')}\n--- fuzz ---`,
       });
-      if (!result.story) continue;
+      if (!result.story) {
+        continue;
+      }
 
       const interactionIds = new Set(result.story.interactions.map(({ id }) => id));
       expect(interactionIds.size).toBe(result.story.interactions.length);

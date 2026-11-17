@@ -110,7 +110,9 @@ export function PrototypeAuthPage({
 
   function submit(event: FormEvent) {
     event.preventDefault();
-    if (canSubmit) onNavigate(prototypeRoutes.stories);
+    if (canSubmit) {
+      onNavigate(prototypeRoutes.stories);
+    }
   }
 
   return (
@@ -343,7 +345,9 @@ export function PrototypeStoryList({ onNavigate }: PrototypePageProps) {
       if (filter === 'recent' && !['12 minutes ago', 'Yesterday'].includes(story.updated)) {
         return false;
       }
-      if (filter === 'empty' && story.interactions !== 0) return false;
+      if (filter === 'empty' && story.interactions !== 0) {
+        return false;
+      }
       return `${story.title} ${story.description}`.toLocaleLowerCase().includes(normalizedQuery);
     });
     return filtered.sort((left, right) =>
@@ -354,7 +358,9 @@ export function PrototypeStoryList({ onNavigate }: PrototypePageProps) {
   function createStory(event: FormEvent) {
     event.preventDefault();
     const title = newTitle.trim();
-    if (!title) return;
+    if (!title) {
+      return;
+    }
     setStories((current) => [
       {
         id: Math.max(...current.map(({ id }) => id), 0) + 1,

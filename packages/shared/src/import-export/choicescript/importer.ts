@@ -28,10 +28,14 @@ export function importChoiceScript(
 
   const orderedScenes = orderScenes(scenes, report);
   const declarations = collectChoiceScriptVariableDeclarations(orderedScenes, report);
-  if (hasChoiceScriptImportErrors(report)) return { report };
+  if (hasChoiceScriptImportErrors(report)) {
+    return { report };
+  }
   const finishSceneNames = unique([orderedScenes[0].name, ...orderedScenes[0].sceneList]);
   const builder = new ChoiceScriptGraphBuilder(finishSceneNames, report);
-  for (const scene of orderedScenes) builder.compileScene(scene);
+  for (const scene of orderedScenes) {
+    builder.compileScene(scene);
+  }
   const graph = builder.finish();
   if (hasChoiceScriptImportErrors(report) || graph.nodes.length === 0) {
     if (graph.nodes.length === 0) {
@@ -59,7 +63,11 @@ function orderScenes(scenes: ParsedScene[], report: ChoiceScriptImportReport): P
     });
   }
   const orderedNames = unique([startup.name, ...startup.sceneList]);
-  for (const scene of scenes) if (!orderedNames.includes(scene.name)) orderedNames.push(scene.name);
+  for (const scene of scenes) {
+    if (!orderedNames.includes(scene.name)) {
+      orderedNames.push(scene.name);
+    }
+  }
   for (const sceneName of startup.sceneList) {
     if (!byName.has(sceneName)) {
       addChoiceScriptImportIssue(report, {

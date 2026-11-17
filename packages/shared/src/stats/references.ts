@@ -8,7 +8,9 @@ export function removeStatConditionsReferencing(
   itemIds: ReadonlySet<string> = new Set(),
 ): TriggerCondition[] {
   return conditions.filter((condition) => {
-    if (!('statId' in condition)) return true;
+    if (!('statId' in condition)) {
+      return true;
+    }
     return (
       !assignmentIds.has(condition.statId) &&
       !(condition.itemId && itemIds.has(condition.itemId)) &&
@@ -35,7 +37,9 @@ export function cleanStatConditionalTextReferences(
   const removed = new Set<string>();
   const conditionalTextBlocks = interaction.conditionalTextBlocks?.flatMap((block) => {
     const conditions = removeStatConditionsReferencing(block.conditions, assignmentIds, itemIds);
-    if (conditions.length) return [{ ...block, conditions }];
+    if (conditions.length) {
+      return [{ ...block, conditions }];
+    }
     removed.add(
       block.id
         .replace(/&/g, '&amp;')

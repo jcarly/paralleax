@@ -35,6 +35,12 @@
   padding: 1rem 1.1rem;
   border-bottom: 1px solid var(--color-border);
 }
+.comments-panel-header-actions {
+  display: flex;
+  flex: none;
+  align-items: center;
+  gap: 0.35rem;
+}
 .comments-panel > header span {
   color: var(--color-trigger-strong);
   font-size: 0.68rem;
@@ -235,6 +241,11 @@
 .editor-layout.with-navigation .contextual-comments-rail,
 .editor-layout.with-navigation-collapsed .contextual-comments-rail {
   grid-column: 2;
+}
+.editor-layout.is-inspector-maximized.with-navigation .contextual-comments-rail,
+.editor-layout.is-inspector-maximized.with-navigation-collapsed .contextual-comments-rail {
+  grid-column: 2 / 4;
+  z-index: 6;
 }
 .contextual-comments-header {
   display: flex;

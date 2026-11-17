@@ -20,7 +20,9 @@ describe('request context', () => {
       statusCode: 200,
       setHeader: jest.fn(),
       on: jest.fn((event: string, callback: () => void) => {
-        if (event === 'finish') finish = callback;
+        if (event === 'finish') {
+          finish = callback;
+        }
       }),
     } as unknown as Response;
     const log = jest.spyOn(Logger.prototype, 'log').mockImplementation();

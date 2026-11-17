@@ -58,7 +58,9 @@ export function sanitizeRichTextForDisplay(value: string): string {
   ]);
   template.content.querySelectorAll('iframe').forEach((iframe) => {
     try {
-      if (!allowedIframeHosts.has(new URL(iframe.src).hostname)) iframe.remove();
+      if (!allowedIframeHosts.has(new URL(iframe.src).hostname)) {
+        iframe.remove();
+      }
     } catch {
       iframe.remove();
     }

@@ -92,7 +92,9 @@ export function useStoryEditorSelection(story: Story | undefined) {
 
   const handleGraphSelectionChange = useCallback(
     ({ nodes }: OnSelectionChangeParams<StoryFlowNode>) => {
-      if (!graphSelectionGesture.current) return;
+      if (!graphSelectionGesture.current) {
+        return;
+      }
       graphSelectionCandidate.current = createStoryGraphSelection(nodes);
     },
     [],
@@ -103,8 +105,9 @@ export function useStoryEditorSelection(story: Story | undefined) {
     const candidate = graphSelectionCandidate.current;
     const base = gestureBase.current;
     const mode = gestureMode.current;
-    if (mode === 'replace' || !base) setGraphSelection(mode === 'remove' ? base : candidate);
-    else {
+    if (mode === 'replace' || !base) {
+      setGraphSelection(mode === 'remove' ? base : candidate);
+    } else {
       const ids = new Set(candidate?.interactionIds ?? []);
       const triggers = new Set(candidate?.triggers.map(({ nodeId }) => nodeId) ?? []);
       const next = {

@@ -68,7 +68,11 @@ export function autosaveId(mode: ReaderAutosaveMode): string {
 }
 
 export function readerSaveKind(id: string): ReaderSaveKind {
-  if (id === READER_AUTOSAVE_ID) return 'reader-autosave';
-  if (id === SIMULATION_AUTOSAVE_ID) return 'simulation-autosave';
+  if (id === READER_AUTOSAVE_ID) {
+    return 'reader-autosave';
+  }
+  if (id === SIMULATION_AUTOSAVE_ID) {
+    return 'simulation-autosave';
+  }
   return 'manual';
 }

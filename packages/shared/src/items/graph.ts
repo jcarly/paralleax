@@ -48,10 +48,15 @@ export function groupItemInstancesByParent(
 ): Map<string, ItemInstance[]> {
   const childrenByParent = new Map<string, ItemInstance[]>();
   for (const item of items) {
-    if (!item.parentItemId) continue;
+    if (!item.parentItemId) {
+      continue;
+    }
     const siblings = childrenByParent.get(item.parentItemId);
-    if (siblings) siblings.push(item);
-    else childrenByParent.set(item.parentItemId, [item]);
+    if (siblings) {
+      siblings.push(item);
+    } else {
+      childrenByParent.set(item.parentItemId, [item]);
+    }
   }
   return childrenByParent;
 }
@@ -63,7 +68,9 @@ export function getItemDescendantIds(items: readonly ItemInstance[], itemId: str
   const pending = [...(childrenByParent.get(itemId) ?? [])];
   while (pending.length > 0) {
     const child = pending.pop();
-    if (!child || visited.has(child.id)) continue;
+    if (!child || visited.has(child.id)) {
+      continue;
+    }
     visited.add(child.id);
     descendants.add(child.id);
     pending.push(...(childrenByParent.get(child.id) ?? []));
@@ -91,7 +98,9 @@ export function getStructurallyPlacedItemInstances(story: Story): StoryItemEntry
     const pending = items.filter((item) => !item.parentItemId);
     while (pending.length > 0) {
       const item = pending.pop();
-      if (!item || reachableIds.has(item.id)) continue;
+      if (!item || reachableIds.has(item.id)) {
+        continue;
+      }
       reachableIds.add(item.id);
       pending.push(...(childrenByParent.get(item.id) ?? []));
     }
@@ -109,13 +118,17 @@ export function moveItemInstanceInStory(
 ): MoveItemInstanceResult {
   const entries = getStoryItemEntries(story);
   const moving = entries.find(({ item }) => item.id === itemId);
-  if (!moving) return { ok: false, error: 'item-not-found' };
+  if (!moving) {
+    return { ok: false, error: 'item-not-found' };
+  }
 
   const targetCount =
     Number(Boolean(placement.characterId)) +
     Number(Boolean(placement.locationId)) +
     Number(Boolean(placement.parentItemId));
-  if (targetCount !== 1) return { ok: false, error: 'invalid-target-count' };
+  if (targetCount !== 1) {
+    return { ok: false, error: 'invalid-target-count' };
+  }
 
   const subtreeIds = new Set([
     itemId,
@@ -127,10 +140,16 @@ export function moveItemInstanceInStory(
 
   let targetOwner: Pick<StoryItemEntry, 'ownerType' | 'ownerId'>;
   if (placement.parentItemId) {
-    if (!placement.relationshipType) return { ok: false, error: 'relationship-required' };
-    if (subtreeIds.has(placement.parentItemId)) return { ok: false, error: 'cycle' };
+    if (!placement.relationshipType) {
+      return { ok: false, error: 'relationship-required' };
+    }
+    if (subtreeIds.has(placement.parentItemId)) {
+      return { ok: false, error: 'cycle' };
+    }
     const parent = entries.find(({ item }) => item.id === placement.parentItemId);
-    if (!parent) return { ok: false, error: 'parent-not-found' };
+    if (!parent) {
+      return { ok: false, error: 'parent-not-found' };
+    }
     targetOwner = parent;
   } else {
     if (placement.relationshipType || placement.slotKey) {
@@ -138,11 +157,15 @@ export function moveItemInstanceInStory(
     }
     if (placement.characterId) {
       const character = story.characters?.find(({ id }) => id === placement.characterId);
-      if (!character) return { ok: false, error: 'character-not-found' };
+      if (!character) {
+        return { ok: false, error: 'character-not-found' };
+      }
       targetOwner = { ownerType: 'character', ownerId: character.id };
     } else {
       const location = story.locations?.find(({ id }) => id === placement.locationId);
-      if (!location) return { ok: false, error: 'location-not-found' };
+      if (!location) {
+        return { ok: false, error: 'location-not-found' };
+      }
       targetOwner = { ownerType: 'location', ownerId: location.id };
     }
   }
@@ -197,7 +220,10 @@ function applyItemPlacement(item: ItemInstance, placement: MoveItemInstanceInput
     parentItemId: placement.parentItemId,
     relationshipType: placement.relationshipType,
   };
-  if (placement.slotKey) nested.slotKey = placement.slotKey;
-  else delete nested.slotKey;
+  if (placement.slotKey) {
+    nested.slotKey = placement.slotKey;
+  } else {
+    delete nested.slotKey;
+  }
   return nested;
 }

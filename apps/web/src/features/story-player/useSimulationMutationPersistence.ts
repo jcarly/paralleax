@@ -56,7 +56,9 @@ export function useSimulationMutationPersistence({
         }
       } finally {
         activeCountRef.current = Math.max(0, activeCountRef.current - 1);
-        if (activeCountRef.current === 0) setStatus(latestOutcomeRef.current);
+        if (activeCountRef.current === 0) {
+          setStatus(latestOutcomeRef.current);
+        }
       }
     },
     [fallbackError, t],

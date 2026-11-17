@@ -663,8 +663,11 @@ JavaScript uses Terser minification to stay within the entry and route budgets. 
 initial JavaScript and stylesheet budgets are 150 KiB and 24 KiB; incremental
 Story Editor and Story Player assets are limited to 146 KiB and 95 KiB. The
 editor budget includes 1 KiB of release-build headroom for metadata-dependent
-bundle changes; the cap remains enforced. The contract also fails if either route stops being a dynamic entry or becomes a
-static dependency of the application entry.
+bundle changes; the cap remains enforced. The editor preloads its click-creation
+helper and ELK adapter during the existing idle preparation; create and organize
+actions also load them on demand. The interaction inspector loads when an
+interaction is selected. The contract also fails if either route stops being a
+dynamic entry or becomes a static dependency of the application entry.
 
 ## Automated Architecture Checks
 
@@ -923,7 +926,10 @@ split deliberately:
 - `storyGraphCreationLayout.ts` projects a temporary interaction and its linked
   trigger, then asks the scoped layout for their creation position. Click-based
   root, child, parent, and Simulation Mode option creation use this projection;
-  connection drops keep their explicit pointer-derived position.
+  the editor preloads it during idle preparation and requests it on demand, and
+  it retains its deterministic fallback if the ELK adapter or layout fails. If
+  the deferred helper cannot load, creation actions use their shared placement
+  defaults. Connection drops keep their explicit pointer-derived position.
 - `storyConnection.ts` validates whether a graph connection can become a
   Trigger input. Shared validation rejects a directed source → target pair
   already owned by another Trigger, and the API repeats the check inside the
@@ -1121,7 +1127,10 @@ the reply without closing its context. The global list is nested in the standard
 inspector pane, while explicit grid areas keep navigation, canvas, and inspector
 ordering stable. At the narrow breakpoint, navigation and inspector panes overlay
 a single full-width canvas column, including every contextual-comment layout
-variant. The global list is one inspector mode rather than a competing panel:
+variant. The Inspector width is transient editor state: its vertical separator
+supports pointer dragging and keyboard resizing, and maximize spans the graph
+area while leaving the navigation column available. The global list is one
+inspector mode rather than a competing panel:
 the shared editor selection entry points close it before projecting an element
 inspector. Moving a canvas post-it calls the existing
 thread-anchor update and reprojects its returned position; a failed mutation

@@ -24,7 +24,9 @@ export function groupImportedTriggerRoutes<TCondition>(
       groupsBySource.get(route.inputInteractionId) ?? new Map<string, TCondition[]>();
     for (const conditions of route.conditionGroups.length > 0 ? route.conditionGroups : [[]]) {
       const signature = JSON.stringify(conditions);
-      if (!sourceGroups.has(signature)) sourceGroups.set(signature, conditions);
+      if (!sourceGroups.has(signature)) {
+        sourceGroups.set(signature, conditions);
+      }
     }
     groupsBySource.set(route.inputInteractionId, sourceGroups);
   }

@@ -266,8 +266,11 @@ details. They should stay covered by tests as the editor grows.
   representing the relationship.
 - Editing a root trigger should happen from a visible root trigger marker rather
   than from the interaction content inspector.
-- Interaction input and output lists should not be duplicated in the inspector
-  when the graph already represents them.
+- The Interaction Inspector may show a derived outgoing-options list for
+  navigation and canonical child creation. It contains one row per unique
+  destination Interaction in Story order, even when separate Triggers reach
+  that destination. Trigger inputs, conditions, and route editing remain on the
+  graph and Trigger inspector.
 - When connecting interactions, the graph target must make the author's intent
   explicit: the input `+` creates a new trigger and an existing Trigger marker
   adds the source to that Trigger.

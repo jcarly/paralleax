@@ -33,7 +33,9 @@ export async function loadStoryRuntimeContext(
     bootstrap.contextCounts.itemDefinitions,
     bootstrap.contextCounts.itemInstances,
   );
-  if (contextCount === 0) return createStoryLoadingProjection(bootstrap);
+  if (contextCount === 0) {
+    return createStoryLoadingProjection(bootstrap);
+  }
   let page = 1;
   while (true) {
     const result = await api.getStoryRuntimeContextPage(storyId, page);
@@ -45,7 +47,9 @@ export async function loadStoryRuntimeContext(
         `runtime context page ${result.page} has inconsistent continuation metadata.`,
       );
     }
-    if (!result.hasMore) break;
+    if (!result.hasMore) {
+      break;
+    }
     page += 1;
   }
   for (const key of [
@@ -97,7 +101,9 @@ export async function loadStoryRuntimeSlice(
       pageSize: STORY_EDITOR_PAGE_SIZE,
     });
     assertStoryProjectionPage(story.revision, page, result);
-    if (totalOptionCount === undefined) totalOptionCount = result.totalOptionCount;
+    if (totalOptionCount === undefined) {
+      totalOptionCount = result.totalOptionCount;
+    }
     if (result.totalOptionCount !== totalOptionCount) {
       throw new StoryProjectionIntegrityError(
         'runtime option pages disagree about their total count.',
@@ -118,7 +124,9 @@ export async function loadStoryRuntimeSlice(
         `runtime option page ${result.page} has inconsistent continuation metadata.`,
       );
     }
-    if (!result.hasMore) break;
+    if (!result.hasMore) {
+      break;
+    }
     page += 1;
   }
 
@@ -165,7 +173,9 @@ function mergeRuntimeSlice(
       interactions.set(reference.id, interactionReference);
     }
   }
-  for (const interaction of result.interactions) interactions.set(interaction.id, interaction);
+  for (const interaction of result.interactions) {
+    interactions.set(interaction.id, interaction);
+  }
 }
 
 function isRuntimeReference(interaction: Interaction): boolean {

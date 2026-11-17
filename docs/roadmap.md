@@ -90,6 +90,11 @@ Lot C remains observation-led. This short preparation does not replace guided
 sessions as the main source of UX validation or make cosmetic proposals release
 gates.
 
+**Priority decision, 2026-11-10:** advance the requested editor-header icon and
+sync-status refinement ahead of the author sessions as a narrow, directly
+specified usability adjustment. This does not replace the later session-led UX
+selection in task 6 or commit to a broader editor-menu redesign.
+
 1. **Prepare the alpha session brief.** Reuse the private-alpha runbook to state
    the hypotheses, representative author tasks, project-data boundary, and a
    lightweight observation record for first-time, narrative-tool-experienced,

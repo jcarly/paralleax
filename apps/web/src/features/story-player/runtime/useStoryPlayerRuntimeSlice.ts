@@ -47,22 +47,30 @@ export function useStoryPlayerRuntimeSlice({
       setRuntimeSliceKey(
         runtimeStateKey(loadedStory, loadedCurrentInteractionId, loadedJourneyInteractionIds),
       );
-      if (clearFailure) setRuntimeOptionsFailure(undefined);
+      if (clearFailure) {
+        setRuntimeOptionsFailure(undefined);
+      }
     },
     [],
   );
 
   useEffect(() => {
-    if (!story || !routeLoaded || runtimeSliceMatchesRequest) return;
+    if (!story || !routeLoaded || runtimeSliceMatchesRequest) {
+      return;
+    }
     let cancelled = false;
     void loadStoryRuntimeSlice(story, currentInteractionId, journeyInteractionIds)
       .then((nextStory) => {
-        if (cancelled) return;
+        if (cancelled) {
+          return;
+        }
         setStory(nextStory);
         markRuntimeSliceLoaded(nextStory, currentInteractionId, journeyInteractionIds);
       })
       .catch((caught: unknown) => {
-        if (cancelled || recoverFromStoryAccessError(caught)) return;
+        if (cancelled || recoverFromStoryAccessError(caught)) {
+          return;
+        }
         setRuntimeOptionsFailure({
           key: requestedRuntimeSliceKey,
           message: apiErrorMessage(caught, t, t('player.loadFailed')),

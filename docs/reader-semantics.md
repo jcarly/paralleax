@@ -3,6 +3,16 @@
 This page defines the MVP reader behavior implemented by `getAvailableInteractions`.
 It is the behavioral contract for executing a story outside the editor.
 
+## Interaction Presentation
+
+The Reader presents the current Interaction's option label (`Interaction.title`)
+in a compact bubble above its location and present characters, followed by the
+narrative content. Pictograms replace visible category labels while location,
+character, and story-time values remain available. The label is not a separate
+story heading. Effects remain hidden in the Reader. Available next Interactions
+remain below the current content. The Simulation uses the same label, context,
+story-time, and narrative order while showing effects and author diagnostics.
+
 ## Function Shape
 
 The shared reader function evaluates a story from the current interaction and the

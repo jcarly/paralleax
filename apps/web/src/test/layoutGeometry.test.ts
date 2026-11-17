@@ -21,7 +21,9 @@ function subdividePath(path: LayoutEdgePath, subdivisions: number): LayoutEdgePa
     ...path,
     points: path.points.flatMap((point, index) => {
       const next = path.points[index + 1];
-      if (!next) return [point];
+      if (!next) {
+        return [point];
+      }
       return Array.from({ length: subdivisions }, (_, part) => ({
         x: point.x + ((next.x - point.x) * part) / subdivisions,
         y: point.y + ((next.y - point.y) * part) / subdivisions,

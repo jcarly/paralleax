@@ -12,7 +12,9 @@ export class StoryHistoryService {
 
   async get(storyId: string, userId: string): Promise<StoryHistory> {
     const history = await this.repository.getHistory(storyId, userId);
-    if (!history) throw new NotFoundException('Story not found');
+    if (!history) {
+      throw new NotFoundException('Story not found');
+    }
     return history;
   }
 
@@ -30,7 +32,9 @@ export class StoryHistoryService {
     action: 'undo' | 'redo',
   ): Promise<StoryHistoryMutationResult> {
     const result = await this.repository.revertHistory(storyId, userId, action);
-    if (!result) throw new NotFoundException('Story not found');
+    if (!result) {
+      throw new NotFoundException('Story not found');
+    }
     if (result.kind === 'unavailable') {
       throw new ConflictException(`There is no Story change to ${action}.`);
     }

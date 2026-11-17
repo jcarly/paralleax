@@ -245,10 +245,10 @@ function useRichTextEngine({
   lastBlurHtmlRef: { current: string | undefined };
   t: ReturnType<typeof useTranslation>['t'];
 }) {
-  return useEditor({
+  const editor = useEditor({
     extensions,
     content: props.value,
-    autofocus: props.autoFocus ? 'end' : false,
+    autofocus: false,
     immediatelyRender: false,
     shouldRerenderOnTransaction: true,
     editorProps: {
@@ -257,23 +257,33 @@ function useRichTextEngine({
         'data-comment-field': 'body',
       },
     },
-    onCreate: ({ editor }) => {
-      editor.setEditable(!compatibilityError, false);
+    onCreate: ({ editor: activeEditor }) => {
+      activeEditor.setEditable(!compatibilityError, false);
     },
-    onUpdate: ({ editor, transaction }) => {
+    onUpdate: ({ editor: activeEditor, transaction }) => {
       if (
         !compatibilityError &&
         !transaction.getMeta('richTextExternalBlocks') &&
         transaction.getMeta('addToHistory') !== false &&
         !transaction.getMeta('preventUpdate')
       ) {
-        publishVisualUpdate(editor, transaction.before, latestPropsRef);
+        publishVisualUpdate(activeEditor, transaction.before, latestPropsRef);
       }
     },
-    onBlur: ({ editor }) => {
-      publishBlur(editor, latestPropsRef, lastBlurHtmlRef);
+    onBlur: ({ editor: activeEditor }) => {
+      publishBlur(activeEditor, latestPropsRef, lastBlurHtmlRef);
     },
   });
+  useFocusRichTextEditor(editor, props.focusOnMount);
+  return editor;
+}
+
+function useFocusRichTextEditor(editor: Editor | null, focusOnMount: boolean | undefined) {
+  useEffect(() => {
+    if (focusOnMount && editor) {
+      editor.commands.focus('end');
+    }
+  }, [editor, focusOnMount]);
 }
 
 function useSyncCanonicalContent(

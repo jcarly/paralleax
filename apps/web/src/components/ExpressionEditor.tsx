@@ -55,7 +55,9 @@ export function ExpressionEditor({
           onChange(event.target.value);
         }}
         onBlur={(event) => {
-          if (isValidExpression(event.target.value)) onBlur?.(event.target.value);
+          if (isValidExpression(event.target.value)) {
+            onBlur?.(event.target.value);
+          }
         }}
       />
       <button
@@ -77,7 +79,9 @@ export function ExpressionEditor({
               : reference;
             setDraft(nextValue);
             onChange(nextValue);
-            if (isValidExpression(nextValue)) onBlur?.(nextValue);
+            if (isValidExpression(nextValue)) {
+              onBlur?.(nextValue);
+            }
             setPickerOpen(false);
           }}
         />

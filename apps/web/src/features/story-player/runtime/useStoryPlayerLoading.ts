@@ -47,7 +47,9 @@ export function useStoryPlayerLoading({
       requestedStartInteractionId,
     })
       .then((result) => {
-        if (cancelled) return;
+        if (cancelled) {
+          return;
+        }
         onLoaded(
           result,
           () => {
@@ -57,7 +59,9 @@ export function useStoryPlayerLoading({
         );
       })
       .catch((caught: unknown) => {
-        if (cancelled || recoverFromStoryAccessError(caught)) return;
+        if (cancelled || recoverFromStoryAccessError(caught)) {
+          return;
+        }
         setLoadError({
           key: loadKey,
           message: apiErrorMessage(caught, t, t('player.loadFailed')),

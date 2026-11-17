@@ -12,7 +12,12 @@ test('keeps catalogue effect fields visually aligned with the interaction inspec
   await prepareEditorPage(page, currentStory);
   await page.goto('/stories/story-1/edit');
   await page.getByTestId('interaction-node').filter({ hasText: 'Original title' }).click();
-  const inspectorCard = page.locator('.inspector .interaction-effect-card');
+  const inspector = page.getByRole('complementary', { name: 'Inspector' });
+  await expect(inspector).toBeVisible();
+  const effectEditor = inspector.locator('.interaction-effect-editor').first();
+  await expect(effectEditor).toBeVisible();
+  await effectEditor.locator('summary').click();
+  const inspectorCard = inspector.locator('.interaction-effect-card');
   await expect(inspectorCard).toBeVisible();
 
   const inspectorPresentation = await readEffectFieldPresentation(inspectorCard);
@@ -163,8 +168,9 @@ async function readEffectFieldPresentation(card: Locator) {
     const label = element.querySelector('.interaction-effect-fields label');
     const input = element.querySelector('.interaction-effect-fields input[type="number"]');
     const select = element.querySelector('.interaction-effect-fields select');
-    if (!label || !input || !select)
+    if (!label || !input || !select) {
       throw new Error('Expected effect label, number input, and select');
+    }
 
     const capture = (field: HTMLElement) => {
       const style = getComputedStyle(field);

@@ -30,6 +30,9 @@
   padding: 0;
   list-style: none;
 }
+.context-entity-list--without-category {
+  margin-top: 0;
+}
 .context-entity-row {
   display: grid;
   grid-template-columns: minmax(0, 1fr) auto;

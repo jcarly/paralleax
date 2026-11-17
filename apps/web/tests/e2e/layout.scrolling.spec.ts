@@ -45,6 +45,10 @@ test.describe('Constrained overlays and editor panels', () => {
     await mockStory(page, current);
 
     await page.goto('/stories/story-1/edit');
+    await page
+      .getByRole('navigation', { name: 'Story context' })
+      .getByRole('button', { name: /Locations/ })
+      .click();
 
     const panel = page.locator('.location-panel-content');
     await expect(panel).toBeVisible();
@@ -88,6 +92,10 @@ test.describe('Constrained overlays and editor panels', () => {
       const canvas = page.locator('.canvas');
       const viewport = page.locator('.react-flow__viewport');
       await expect(content).toBeVisible();
+      await expect(inspector.locator('.interaction-inspector')).toBeVisible();
+      await expect(inspector.locator('.interaction-content-preview')).toContainText(
+        'Inspector paragraph 30.',
+      );
       const inspectorBox = (await inspector.boundingBox())!;
       const toggleBefore = (await toggle.boundingBox())!;
       const canvasBefore = await canvas.boundingBox();

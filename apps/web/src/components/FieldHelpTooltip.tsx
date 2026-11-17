@@ -32,7 +32,9 @@ export function FieldHelpTooltip({
 
   function updatePosition() {
     const trigger = triggerRef.current;
-    if (!trigger) return;
+    if (!trigger) {
+      return;
+    }
     const bounds = trigger.getBoundingClientRect();
     const gutter = 12;
     const tooltipWidth = tooltipRef.current?.offsetWidth ?? 288;
@@ -56,7 +58,9 @@ export function FieldHelpTooltip({
   }
 
   function scheduleTooltipClose() {
-    if (closeTimerRef.current !== undefined) window.clearTimeout(closeTimerRef.current);
+    if (closeTimerRef.current !== undefined) {
+      window.clearTimeout(closeTimerRef.current);
+    }
     closeTimerRef.current = window.setTimeout(() => {
       closeTimerRef.current = undefined;
       const shouldStayOpen =
@@ -67,7 +71,9 @@ export function FieldHelpTooltip({
   }
 
   function dismissTooltip(event: ReactKeyboardEvent<HTMLButtonElement>) {
-    if (event.key !== 'Escape' || !open) return;
+    if (event.key !== 'Escape' || !open) {
+      return;
+    }
     event.preventDefault();
     event.stopPropagation();
     if (closeTimerRef.current !== undefined) {
@@ -80,13 +86,17 @@ export function FieldHelpTooltip({
 
   useEffect(
     () => () => {
-      if (closeTimerRef.current !== undefined) window.clearTimeout(closeTimerRef.current);
+      if (closeTimerRef.current !== undefined) {
+        window.clearTimeout(closeTimerRef.current);
+      }
     },
     [],
   );
 
   useEffect(() => {
-    if (!open) return;
+    if (!open) {
+      return;
+    }
     const reposition = () => {
       updatePosition();
     };
@@ -99,7 +109,9 @@ export function FieldHelpTooltip({
   }, [open]);
 
   useLayoutEffect(() => {
-    if (open) updatePosition();
+    if (open) {
+      updatePosition();
+    }
   }, [open]);
 
   return (

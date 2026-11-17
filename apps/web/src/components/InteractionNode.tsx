@@ -1,6 +1,8 @@
 import type { KeyboardEvent, MouseEvent } from 'react';
 import { Handle, Position, type Node, type NodeProps } from '@xyflow/react';
 import { useTranslation } from 'react-i18next';
+import { InteractionContext } from '../features/story/InteractionContext';
+import { InteractionLabel } from '../features/story/InteractionLabel';
 export interface InteractionNodeData extends Record<string, unknown> {
   title: string;
   body: string;
@@ -9,6 +11,8 @@ export interface InteractionNodeData extends Record<string, unknown> {
   dimmed?: boolean;
   location?: { id: string; name: string };
   characters?: Array<{ id: string; name: string; imageUrl?: string }>;
+  statEffectCount?: number;
+  itemEffectCount?: number;
   rootTriggerId?: string;
   onboardingBranchAdd?: boolean;
   rootTriggerSelected?: boolean;
@@ -23,29 +27,20 @@ export interface InteractionNodeData extends Record<string, unknown> {
 const routingHandles = [Position.Top, Position.Right, Position.Bottom, Position.Left];
 type NodeActionEvent = Pick<MouseEvent<HTMLDivElement>, 'preventDefault' | 'stopPropagation'>;
 
-function getInitials(name: string) {
-  return name
-    .split(/\s+/)
-    .filter(Boolean)
-    .slice(0, 2)
-    .map((part) => part[0])
-    .join('')
-    .toLocaleUpperCase();
-}
-
 export function InteractionNode({ id, data }: NodeProps<Node<InteractionNodeData>>) {
   const { t } = useTranslation();
   const d = data;
   const rootTriggerId = d.rootTriggerId;
-  const title = d.title.trim()
-    ? d.title
-    : t(
-        rootTriggerId
-          ? 'interactionInspector.startTitlePlaceholder'
-          : 'interactionInspector.newTitlePlaceholder',
-      );
+  const fallbackTitle = t(
+    rootTriggerId !== undefined && rootTriggerId.length > 0
+      ? 'interactionInspector.startTitlePlaceholder'
+      : 'interactionInspector.newTitlePlaceholder',
+  );
+  const authoredTitle = d.title.trim();
+  const title =
+    authoredTitle || (rootTriggerId !== undefined && rootTriggerId.length > 0 ? fallbackTitle : '');
+  const commentEntityTitle = authoredTitle || fallbackTitle;
   const characters = d.characters ?? [];
-  const visibleCharacters = characters.slice(0, 3);
   const createParent = (event: NodeActionEvent) => {
     event.preventDefault();
     event.stopPropagation();
@@ -57,26 +52,30 @@ export function InteractionNode({ id, data }: NodeProps<Node<InteractionNodeData
     d.onCreateChild?.(id);
   };
   const selectRootTrigger = (event: MouseEvent<HTMLButtonElement>) => {
-    if (!rootTriggerId) return;
+    if (rootTriggerId === undefined || rootTriggerId.length === 0) {
+      return;
+    }
     event.preventDefault();
     event.stopPropagation();
     d.onSelectRootTrigger?.(id, rootTriggerId);
   };
   const triggerKeyboardAction =
     (callback: (event: NodeActionEvent) => void) => (event: KeyboardEvent<HTMLDivElement>) => {
-      if (event.key !== 'Enter' && event.key !== ' ') return;
+      if (event.key !== 'Enter' && event.key !== ' ') {
+        return;
+      }
       callback(event);
     };
 
   return (
     <div
-      className={`interaction-node ${d.selected ? 'selected' : ''} ${d.dimmed ? 'dimmed' : ''}`}
+      className={`interaction-node ${d.selected ? 'selected' : ''} ${d.dimmed === true ? 'dimmed' : ''}`}
       data-onboarding-target="interaction"
       data-testid="interaction-node"
     >
-      {rootTriggerId ? (
+      {rootTriggerId !== undefined && rootTriggerId.length > 0 ? (
         <button
-          className={`root-trigger-marker nodrag nopan ${d.rootTriggerSelected ? 'selected' : ''}`}
+          className={`root-trigger-marker nodrag nopan ${d.rootTriggerSelected === true ? 'selected' : ''}`}
           type="button"
           data-trigger-drop-target="true"
           data-interaction-id={id}
@@ -86,7 +85,9 @@ export function InteractionNode({ id, data }: NodeProps<Node<InteractionNodeData
           onClick={selectRootTrigger}
         />
       ) : null}
-      {rootTriggerId && d.rootTriggerCommentCount ? (
+      {rootTriggerId !== undefined &&
+      rootTriggerId.length > 0 &&
+      (d.rootTriggerCommentCount ?? 0) > 0 ? (
         <button
           className="root-trigger-comment-badge nodrag nopan"
           type="button"
@@ -101,11 +102,14 @@ export function InteractionNode({ id, data }: NodeProps<Node<InteractionNodeData
           {d.rootTriggerCommentCount}
         </button>
       ) : null}
-      {d.commentCount ? (
+      {(d.commentCount ?? 0) > 0 ? (
         <button
           className="node-comment-badge nodrag nopan"
           type="button"
-          aria-label={t('comments.openForEntity', { count: d.commentCount, entity: title })}
+          aria-label={t('comments.openForEntity', {
+            count: d.commentCount,
+            entity: commentEntityTitle,
+          })}
           onClick={(event) => {
             event.preventDefault();
             event.stopPropagation();
@@ -142,63 +146,62 @@ export function InteractionNode({ id, data }: NodeProps<Node<InteractionNodeData
           isConnectable={false}
         />
       ))}
-      <strong>
-        {title}
-        {d.occurrenceCount ? (
-          <span
-            className="interaction-occurrence-count"
-            aria-label={t('graph.occurrences', { count: d.occurrenceCount })}
-          >
-            {d.occurrenceCount}
-          </span>
-        ) : null}
-      </strong>
+      {title ? (
+        <InteractionLabel
+          label={title}
+          className="interaction-node-label"
+          leadingIcon="→"
+          suffix={
+            (d.occurrenceCount ?? 0) > 0 ? (
+              <span
+                className="interaction-occurrence-count"
+                aria-label={t('graph.occurrences', { count: d.occurrenceCount })}
+              >
+                {d.occurrenceCount}
+              </span>
+            ) : null
+          }
+        />
+      ) : null}
+      {d.location || characters.length > 0 ? (
+        <InteractionContext location={d.location} characters={characters} variant="graph" />
+      ) : null}
       <span className="interaction-excerpt">
         {d.body
           .replace(/<[^>]*>/g, ' ')
           .replace(/\s+/g, ' ')
           .trim()}
       </span>
-      {d.location || characters.length > 0 ? (
-        <div className="interaction-node-context">
-          {d.location ? (
-            <span className="interaction-node-location" title={d.location.name}>
-              <span aria-hidden="true">⌖</span>
-              {d.location.name}
-            </span>
-          ) : null}
-          {characters.length > 0 ? (
+      {(d.statEffectCount ?? 0) > 0 || (d.itemEffectCount ?? 0) > 0 ? (
+        <div
+          className="interaction-node-effects"
+          role="group"
+          aria-label={t('interactionInspector.effects')}
+        >
+          {(d.statEffectCount ?? 0) > 0 ? (
             <div
-              className="interaction-node-characters"
-              aria-label={t('graph.charactersPresent', {
-                names: characters.map(({ name }) => name).join(', '),
-              })}
+              className="interaction-node-effect"
+              role="img"
+              aria-label={`${t('interactionInspector.statEffects')}: ${d.statEffectCount}`}
+              title={t('interactionInspector.statEffects')}
             >
-              {visibleCharacters.map((character) => (
-                <span
-                  className="interaction-node-character"
-                  title={character.name}
-                  aria-hidden="true"
-                  key={character.id}
-                >
-                  {character.imageUrl ? (
-                    <img src={character.imageUrl} alt="" />
-                  ) : (
-                    getInitials(character.name)
-                  )}
-                </span>
-              ))}
-              {characters.length > visibleCharacters.length ? (
-                <span
-                  className="interaction-node-character interaction-node-character-overflow"
-                  title={t('graph.moreCharacters', {
-                    count: characters.length - visibleCharacters.length,
-                  })}
-                  aria-hidden="true"
-                >
-                  +{characters.length - visibleCharacters.length}
-                </span>
-              ) : null}
+              <i className="interaction-node-effect-icon" aria-hidden="true">
+                Δ
+              </i>
+              {d.statEffectCount}
+            </div>
+          ) : null}
+          {(d.itemEffectCount ?? 0) > 0 ? (
+            <div
+              className="interaction-node-effect"
+              role="img"
+              aria-label={`${t('interactionInspector.itemEffects')}: ${d.itemEffectCount}`}
+              title={t('interactionInspector.itemEffects')}
+            >
+              <i className="interaction-node-effect-icon" aria-hidden="true">
+                ◇
+              </i>
+              {d.itemEffectCount}
             </div>
           ) : null}
         </div>
@@ -209,7 +212,7 @@ export function InteractionNode({ id, data }: NodeProps<Node<InteractionNodeData
           id="interaction-output"
           position={Position.Bottom}
           className="node-create node-create-child nodrag nopan"
-          data-onboarding-target={d.onboardingBranchAdd ? 'branch-add' : undefined}
+          data-onboarding-target={d.onboardingBranchAdd === true ? 'branch-add' : undefined}
           role="button"
           tabIndex={0}
           aria-label={t('graph.createChild')}

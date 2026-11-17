@@ -104,7 +104,9 @@ export function getUnavailableReason(
       });
     }
   }
-  if (failures.length === 0) return undefined;
+  if (failures.length === 0) {
+    return undefined;
+  }
 
   const firstFailure = failures[0].condition;
   if ('locationId' in firstFailure) {

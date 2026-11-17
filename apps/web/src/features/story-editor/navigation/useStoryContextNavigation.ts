@@ -157,7 +157,9 @@ export function useStoryContextNavigation({
 
   const navigateInteractions = useCallback(
     (direction: -1 | 1) => {
-      if (navigationInteractionIds.length === 0) return;
+      if (navigationInteractionIds.length === 0) {
+        return;
+      }
       const nextIndex =
         currentNavigationIndex < 0
           ? direction > 0
@@ -166,8 +168,11 @@ export function useStoryContextNavigation({
           : (currentNavigationIndex + direction + navigationInteractionIds.length) %
             navigationInteractionIds.length;
       const interactionId = navigationInteractionIds[nextIndex];
-      if (normalizedSearchQuery) selectInteraction(interactionId);
-      else focusInteraction(interactionId);
+      if (normalizedSearchQuery) {
+        selectInteraction(interactionId);
+      } else {
+        focusInteraction(interactionId);
+      }
       window.requestAnimationFrame(() => {
         void flowInstanceRef.current?.fitView({
           nodes: [{ id: interactionId }],

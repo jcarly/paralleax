@@ -350,7 +350,9 @@ function StatConditionFields({
         onChange={(event) => {
           if (event.target.value === 'stat') {
             const target = initialComparisonTarget;
-            if (!target) return;
+            if (!target) {
+              return;
+            }
             onChange({
               statId: condition.statId,
               ...(condition.itemId ? { itemId: condition.itemId } : {}),
@@ -392,7 +394,9 @@ function StatConditionFields({
             const target = comparisonTargets.find(
               (candidate) => statTargetId(candidate) === event.target.value,
             );
-            if (!target) return;
+            if (!target) {
+              return;
+            }
             onChange({
               statId: condition.statId,
               ...(condition.itemId ? { itemId: condition.itemId } : {}),

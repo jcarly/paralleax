@@ -12,7 +12,9 @@ export function FeedbackButton() {
   const [opening, setOpening] = useState(false);
   const [unavailable, setUnavailable] = useState(false);
 
-  if (!formbricksFeedbackClient.isConfigured) return null;
+  if (!formbricksFeedbackClient.isConfigured) {
+    return null;
+  }
 
   return (
     <button

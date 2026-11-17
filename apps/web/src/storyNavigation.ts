@@ -14,7 +14,9 @@ export type StoryContextReference =
 
 export function countInteractionTextOccurrences(interaction: Interaction, query: string): number {
   const normalizedQuery = query.trim().toLocaleLowerCase();
-  if (!normalizedQuery) return 0;
+  if (!normalizedQuery) {
+    return 0;
+  }
 
   const searchableText =
     `${interaction.title} ${interaction.body.replace(/<[^>]*>/g, ' ')}`.toLocaleLowerCase();
@@ -43,7 +45,9 @@ export function getReferencedInteractionIds(
   story: Story | undefined,
   reference: StoryContextReference | undefined,
 ): string[] {
-  if (!story || !reference) return [];
+  if (!story || !reference) {
+    return [];
+  }
 
   const characterStatIds = new Set(
     (story.characters ?? []).flatMap((character) => {

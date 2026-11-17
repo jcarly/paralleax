@@ -5,7 +5,9 @@ export function temporalConditionMatches(
   condition: TemporalCondition,
   currentDateTime: string,
 ): boolean {
-  if (!isStoryDateTime(currentDateTime)) return false;
+  if (!isStoryDateTime(currentDateTime)) {
+    return false;
+  }
   const currentDate = currentDateTime.slice(0, 10);
   const currentTime = currentDateTime.slice(11);
   const calendar = [
@@ -14,10 +16,14 @@ export function temporalConditionMatches(
       ({ startDate, endDate }) => currentDate >= startDate && currentDate <= endDate,
     ),
   ];
-  if (calendar.length > 0 && !calendar.some(Boolean)) return false;
+  if (calendar.length > 0 && !calendar.some(Boolean)) {
+    return false;
+  }
 
   const weekdays = condition.temporal.weekdays ?? [];
-  if (weekdays.length > 0 && !weekdays.includes(getStoryWeekday(currentDateTime))) return false;
+  if (weekdays.length > 0 && !weekdays.includes(getStoryWeekday(currentDateTime))) {
+    return false;
+  }
 
   const slots = condition.temporal.timeSlots ?? [];
   return (

@@ -76,7 +76,9 @@ export function App() {
   const [accountOpen, setAccountOpen] = useState(false);
 
   useEffect(() => {
-    if (isPrototype) return;
+    if (isPrototype) {
+      return;
+    }
     api
       .me()
       .then(setUser)
@@ -86,7 +88,9 @@ export function App() {
   }, [isPrototype]);
 
   useEffect(() => {
-    if (isPrototype) return;
+    if (isPrototype) {
+      return;
+    }
     const expireSession = () => {
       setSessionExpired(true);
       setUser(null);
@@ -97,19 +101,22 @@ export function App() {
     };
   }, [isPrototype]);
 
-  if (isPrototype)
+  if (isPrototype) {
     return (
       <Suspense fallback={<main className="page">{t('shell.loadingWorkspace')}</main>}>
         <ParalleaxPrototype />
       </Suspense>
     );
-  if (user === undefined) return <main className="page">{t('shell.loading')}</main>;
+  }
+  if (user === undefined) {
+    return <main className="page">{t('shell.loading')}</main>;
+  }
   const currentDestination = `${location.pathname}${location.search}${location.hash}`;
   const returnTo = safeReturnTo(new URLSearchParams(location.search).get('returnTo'));
   const isAuthenticationRoute = location.pathname === '/login' || location.pathname === '/register';
   const accountAction = accountActionForPath(location.pathname);
 
-  if (accountAction)
+  if (accountAction) {
     return (
       <Suspense fallback={<main className="page">{t('shell.loadingWorkspace')}</main>}>
         <AccountActionPage
@@ -125,6 +132,7 @@ export function App() {
         />
       </Suspense>
     );
+  }
 
   const authenticationReturnTo = isAuthenticationRoute ? returnTo : currentDestination;
   const signInPath = authenticationPath('login', authenticationReturnTo);
@@ -290,8 +298,14 @@ function OnboardingStoryList({ user }: { user: AuthUser | null }) {
 }
 
 function accountActionForPath(pathname: string): AccountAction | undefined {
-  if (pathname === '/verify-email') return 'verify-email';
-  if (pathname === '/reset-password') return 'reset-password';
-  if (pathname === '/forgot-password') return 'request-password-reset';
+  if (pathname === '/verify-email') {
+    return 'verify-email';
+  }
+  if (pathname === '/reset-password') {
+    return 'reset-password';
+  }
+  if (pathname === '/forgot-password') {
+    return 'request-password-reset';
+  }
   return undefined;
 }

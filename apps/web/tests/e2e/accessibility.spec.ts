@@ -73,7 +73,9 @@ test.describe('automated accessibility', () => {
     const nodeCount = await nodes.count();
     let deleteRequests = 0;
     page.on('request', (request) => {
-      if (request.method() === 'DELETE') deleteRequests += 1;
+      if (request.method() === 'DELETE') {
+        deleteRequests += 1;
+      }
     });
 
     await expectNoWcagViolations(page);
@@ -113,7 +115,7 @@ test.describe('automated accessibility', () => {
     await page.goto('/stories/story-1/play');
     const sceneTitle = page.getByRole('heading', { name: 'Original title' });
     await expect(sceneTitle).toBeAttached();
-    await expect(sceneTitle).toHaveClass(/sr-only/);
+    await expect(sceneTitle).toBeVisible();
     await expect(page.locator('.story-body')).toContainText('Original content');
 
     await expectNoWcagViolations(page);
@@ -132,7 +134,9 @@ test.describe('automated accessibility', () => {
     await page.keyboard.press('Tab');
     await expect(page.getByRole('button', { name: 'Close saves' })).toBeFocused();
     const accountBox = await page.locator('.product-user').boundingBox();
-    if (!accountBox) throw new Error('The account control must be present behind the backdrop.');
+    if (!accountBox) {
+      throw new Error('The account control must be present behind the backdrop.');
+    }
     await page.mouse.click(
       accountBox.x + accountBox.width / 2,
       accountBox.y + accountBox.height / 2,
@@ -183,5 +187,7 @@ async function expectNoWcagViolations(page: Page) {
     )
     .join('\n');
 
-  if (results.violations.length > 0) throw new Error(summary);
+  if (results.violations.length > 0) {
+    throw new Error(summary);
+  }
 }

@@ -53,7 +53,9 @@ export function useStoryHistory({
       return;
     }
     const revisionKey = `${story.id}:${story.revision ?? 'legacy'}`;
-    if (loadedRevisionRef.current === revisionKey) return;
+    if (loadedRevisionRef.current === revisionKey) {
+      return;
+    }
     if (story.revision !== undefined && localRevisionsRef.current.delete(story.revision)) {
       loadedRevisionRef.current = revisionKey;
       return;
@@ -74,7 +76,9 @@ export function useStoryHistory({
         }
       })
       .catch(() => {
-        if (attempt === loadAttemptRef.current) setHistory(emptyHistory);
+        if (attempt === loadAttemptRef.current) {
+          setHistory(emptyHistory);
+        }
       });
     return () => {
       loadAttemptRef.current += 1;
@@ -90,7 +94,9 @@ export function useStoryHistory({
   const markLocalChange = useCallback(
     (revision?: number, graphHistoryChange?: OptimisticGraphHistoryChange) => {
       localChangeVersionRef.current += 1;
-      if (revision !== undefined) localRevisionsRef.current.add(revision);
+      if (revision !== undefined) {
+        localRevisionsRef.current.add(revision);
+      }
       if (revision !== undefined && graphHistoryChange) {
         optimisticUndoRef.current = [
           ...optimisticUndoRef.current.filter((entry) => entry.revision !== revision),
@@ -108,26 +114,36 @@ export function useStoryHistory({
   );
 
   const refreshHistory = useCallback(async () => {
-    if (story?.capabilities?.canEdit !== true || story.id !== storyId) return;
+    if (story?.capabilities?.canEdit !== true || story.id !== storyId) {
+      return;
+    }
     const attempt = ++loadAttemptRef.current;
     try {
       const next = await api.getStoryHistory(storyId);
-      if (attempt !== loadAttemptRef.current) return;
+      if (attempt !== loadAttemptRef.current) {
+        return;
+      }
       loadedRevisionRef.current = `${story.id}:${story.revision ?? 'legacy'}`;
       setHistory(next);
     } catch {
-      if (attempt === loadAttemptRef.current) setHistory(emptyHistory);
+      if (attempt === loadAttemptRef.current) {
+        setHistory(emptyHistory);
+      }
     }
   }, [story, storyId]);
 
   const apply = useCallback(
     async (action: 'undo' | 'redo') => {
-      if (busy) return;
+      if (busy) {
+        return;
+      }
       setBusy(true);
       const sourceStack = action === 'undo' ? optimisticUndoRef.current : optimisticRedoRef.current;
       const optimisticChange = sourceStack.at(-1);
       const optimisticPatch = optimisticChange?.[action];
-      if (optimisticPatch) applyGraphPositions(optimisticPatch);
+      if (optimisticPatch) {
+        applyGraphPositions(optimisticPatch);
+      }
       try {
         const result = await trackSave(() =>
           action === 'undo' ? api.undoStoryChange(storyId) : api.redoStoryChange(storyId),

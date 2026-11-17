@@ -105,54 +105,91 @@ function uploadBinary<T>(
   signal?: AbortSignal,
 ): Promise<T> {
   return new Promise((resolve, reject) => {
-    const xhr = new XMLHttpRequest();
-    const abort = () => {
-      xhr.abort();
-    };
-    const cleanup = () => signal?.removeEventListener('abort', abort);
-    const rejectCancelled = () => {
-      cleanup();
-      reject(new ApiError('The request was cancelled', 0, 'REQUEST_CANCELLED'));
-    };
-    xhr.open('POST', `/api${path}`);
-    xhr.setRequestHeader('Content-Type', 'application/octet-stream');
-    xhr.upload.onprogress = (event) => {
-      if (!event.lengthComputable || event.total <= 0) return;
-      onUploadProgress?.(Math.min(100, Math.round((event.loaded / event.total) * 100)));
-    };
-    xhr.upload.onload = () => onUploadProgress?.(100);
-    xhr.onload = () => {
-      if (xhr.status < 200 || xhr.status >= 300) {
-        cleanup();
-        reject(apiError(path, xhr.status, xhr.responseText));
-        return;
-      }
-      try {
-        cleanup();
-        resolve(xhr.status === 204 ? (undefined as T) : (JSON.parse(xhr.responseText) as T));
-      } catch {
-        cleanup();
-        reject(
-          new ApiError(
-            'The server returned an invalid JSON response',
-            xhr.status,
-            'INVALID_SERVER_RESPONSE',
-          ),
-        );
-      }
-    };
-    xhr.onerror = () => {
-      cleanup();
-      reject(new ApiError('The server could not be reached', 0, 'NETWORK_UNAVAILABLE'));
-    };
-    xhr.onabort = rejectCancelled;
-    if (signal?.aborted) {
-      rejectCancelled();
+    const xhr = createBinaryUploadRequest({
+      path,
+      onUploadProgress,
+      signal,
+      resolve,
+      reject,
+    });
+    xhr?.send(content);
+  });
+}
+
+interface BinaryUploadRequestContext<T> {
+  path: string;
+  onUploadProgress: ((percentage: number) => void) | undefined;
+  signal: AbortSignal | undefined;
+  resolve: (value: T | PromiseLike<T>) => void;
+  reject: (reason?: unknown) => void;
+}
+
+interface BinaryUploadResponseContext<T> {
+  path: string;
+  xhr: XMLHttpRequest;
+  cleanup: () => void;
+  resolve: (value: T | PromiseLike<T>) => void;
+  reject: (reason?: unknown) => void;
+}
+
+function createBinaryUploadRequest<T>(context: BinaryUploadRequestContext<T>) {
+  const { path, onUploadProgress, signal, resolve, reject } = context;
+  const xhr = new XMLHttpRequest();
+  const abort = () => {
+    xhr.abort();
+  };
+  const cleanup = () => signal?.removeEventListener('abort', abort);
+  const rejectCancelled = () => {
+    cleanup();
+    reject(new ApiError('The request was cancelled', 0, 'REQUEST_CANCELLED'));
+  };
+
+  xhr.open('POST', `/api${path}`);
+  xhr.setRequestHeader('Content-Type', 'application/octet-stream');
+  xhr.upload.onprogress = (event) => {
+    if (!event.lengthComputable || event.total <= 0) {
       return;
     }
-    signal?.addEventListener('abort', abort, { once: true });
-    xhr.send(content);
-  });
+    onUploadProgress?.(Math.min(100, Math.round((event.loaded / event.total) * 100)));
+  };
+  xhr.upload.onload = () => onUploadProgress?.(100);
+  xhr.onload = () => {
+    handleBinaryUploadResponse({ path, xhr, cleanup, resolve, reject });
+  };
+  xhr.onerror = () => {
+    cleanup();
+    reject(new ApiError('The server could not be reached', 0, 'NETWORK_UNAVAILABLE'));
+  };
+  xhr.onabort = rejectCancelled;
+
+  if (signal?.aborted) {
+    rejectCancelled();
+    return undefined;
+  }
+  signal?.addEventListener('abort', abort, { once: true });
+  return xhr;
+}
+
+function handleBinaryUploadResponse<T>(context: BinaryUploadResponseContext<T>) {
+  const { path, xhr, cleanup, resolve, reject } = context;
+  if (xhr.status < 200 || xhr.status >= 300) {
+    cleanup();
+    reject(apiError(path, xhr.status, xhr.responseText));
+    return;
+  }
+  try {
+    cleanup();
+    resolve(xhr.status === 204 ? (undefined as T) : (JSON.parse(xhr.responseText) as T));
+  } catch {
+    cleanup();
+    reject(
+      new ApiError(
+        'The server returned an invalid JSON response',
+        xhr.status,
+        'INVALID_SERVER_RESPONSE',
+      ),
+    );
+  }
 }
 
 function apiError(path: string, status: number, body: string) {
@@ -170,8 +207,11 @@ function apiError(path: string, status: number, body: string) {
       requestId?: string;
       details?: unknown;
     };
-    if (Array.isArray(error.message)) message = error.message.join(', ');
-    else if (error.message) message = error.message;
+    if (Array.isArray(error.message)) {
+      message = error.message.join(', ');
+    } else if (error.message) {
+      message = error.message;
+    }
     code = error.code;
     requestId = error.requestId;
     details = error.details;
@@ -198,7 +238,9 @@ function storyListPath(path: string, options: Partial<StoryListOptions>): string
     sort: options.sort ?? 'updated',
   });
   const query = options.query?.trim();
-  if (query) search.set('query', query);
+  if (query) {
+    search.set('query', query);
+  }
   return `${path}?${search.toString()}`;
 }
 

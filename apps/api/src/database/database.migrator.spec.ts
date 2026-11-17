@@ -58,7 +58,9 @@ describe('DatabaseMigrator', () => {
   it('rolls back and releases the client when a migration fails', async () => {
     const error = new Error('migration failed');
     mockQuery.mockImplementation((sql: string) => {
-      if (sql === databaseMigrations[0].sql) return Promise.reject(error);
+      if (sql === databaseMigrations[0].sql) {
+        return Promise.reject(error);
+      }
       return Promise.resolve({ rows: [], rowCount: 0 });
     });
 

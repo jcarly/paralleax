@@ -44,7 +44,9 @@ describe('authored groups', () => {
       expect(undo.story.groups).toEqual(before.groups);
       const redo = applyStoryChangeDelta(undo.story, delta, 'forward');
       expect(redo.applied).toBe(true);
-      if (redo.applied) expect(redo.story.groups).toEqual(after.groups);
+      if (redo.applied) {
+        expect(redo.story.groups).toEqual(after.groups);
+      }
     }
     const nested = moveStoryGroup(after, 'leaf', 'root', 'child');
     expect(
@@ -102,7 +104,9 @@ describe('authored groups', () => {
     const delta = createStoryChangeDelta(original, updated)!;
     const reversed = applyStoryChangeDelta(updated, delta, 'backward');
     expect(reversed.applied).toBe(true);
-    if (reversed.applied) expect(reversed.story.groups).toEqual(original.groups);
+    if (reversed.applied) {
+      expect(reversed.story.groups).toEqual(original.groups);
+    }
     const later = fixture();
     later.groups![0].interactionIds = [];
     const removal = createStoryChangeDelta(original, later)!;

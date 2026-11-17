@@ -10,6 +10,13 @@ editing.
 The main surface should stay close to a reader experience rather than keeping
 the full canvas visible by default.
 
+Simulation and Reader share the same current-Interaction presentation order:
+option label, location and cast, narrative content, then any view-specific
+effects. Simulation shows current effects and author diagnostics; Reader hides
+effects and author-only tools. Both keep next choices below the current
+Interaction content. Unavailable conditional text stays visible with its
+diagnostic in Simulation, while Reader continues to hide it.
+
 Edition and simulation should feel like two states of the same workspace, not
 two different applications. Switching to simulation can change the central
 surface while keeping the surrounding navigation and inspector mental model

@@ -20,12 +20,18 @@ export function collectStaticBundleAssets(manifest, entryKey) {
 
   while (pending.length > 0) {
     const chunkKey = pending.pop();
-    if (chunkKeys.has(chunkKey)) continue;
+    if (chunkKeys.has(chunkKey)) {
+      continue;
+    }
     const chunk = manifest[chunkKey];
     assert.ok(chunk, 'Bundle manifest references missing chunk "' + chunkKey + '".');
     chunkKeys.add(chunkKey);
-    if (isMeasuredAsset(chunk.file)) assets.add(chunk.file);
-    for (const stylesheet of chunk.css ?? []) assets.add(stylesheet);
+    if (isMeasuredAsset(chunk.file)) {
+      assets.add(chunk.file);
+    }
+    for (const stylesheet of chunk.css ?? []) {
+      assets.add(stylesheet);
+    }
     pending.push(...(chunk.imports ?? []));
   }
 
@@ -124,7 +130,9 @@ function findSourceChunkKey(manifest, source) {
   const direct = Object.entries(manifest).find(
     ([key, chunk]) => chunk.src === source || key === source,
   );
-  if (direct) return direct[0];
+  if (direct) {
+    return direct[0];
+  }
   // Rollup can retain a named dynamic route without a source facade when its
   // dependencies are shared with a lazily loaded feature. Keep measuring that
   // actual route graph, including every static dependency, under the same budget.
@@ -158,7 +166,9 @@ function difference(assets, excluded) {
 function sumCompressedBytes(assets, compressedAssetBytes, include = () => true) {
   let total = 0;
   for (const asset of assets) {
-    if (!include(asset)) continue;
+    if (!include(asset)) {
+      continue;
+    }
     const bytes =
       compressedAssetBytes instanceof Map
         ? compressedAssetBytes.get(asset)

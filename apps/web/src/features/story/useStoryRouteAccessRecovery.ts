@@ -10,7 +10,9 @@ export function useStoryRouteAccessRecovery(storyId: string) {
 
   const recoverFromStoryAccessError = useCallback(
     (caught: unknown): boolean => {
-      if (!isStoryRouteInaccessibleError(caught)) return false;
+      if (!isStoryRouteInaccessibleError(caught)) {
+        return false;
+      }
       markStoryInaccessible();
       return true;
     },

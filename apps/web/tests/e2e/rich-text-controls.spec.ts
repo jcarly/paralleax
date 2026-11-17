@@ -1,5 +1,6 @@
 import { expect, test, type Locator, type Page } from '@playwright/test';
 import {
+  openInteractionBodyEditor,
   mockRuntimeStory,
   prepareEditorPage,
   storyWithConditionCandidate,
@@ -67,7 +68,7 @@ test('keeps rich-text removal controls styled without graph CSS in Simulation an
 
   await page.goto('/stories/story-1/edit');
   await page.getByTestId('interaction-node').filter({ hasText: 'Original title' }).click();
-  const editorContent = page.getByRole('textbox', { name: 'Content' });
+  const editorContent = await openInteractionBodyEditor(page);
   await editorContent.focus();
   const editorLinkRemove = editorContent.locator('.rich-text-token-remove');
   const editorConditionRemove = editorContent.locator('.rich-text-condition-remove');
@@ -88,7 +89,7 @@ test('shows a distinct active state for formatting toolbar buttons', async ({ pa
   await page.goto('/stories/story-1/edit');
   await page.getByTestId('interaction-node').filter({ hasText: 'Original title' }).click();
 
-  const content = page.getByRole('textbox', { name: 'Content' });
+  const content = await openInteractionBodyEditor(page);
   await content.evaluate((element) => {
     const text = element.querySelector('p')?.firstChild;
     if (!text) {

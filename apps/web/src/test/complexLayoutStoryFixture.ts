@@ -111,7 +111,7 @@ export function createComplexLayoutStoryFixture(): Story {
       ...(sources.length > 0 ? { position: scrambledPosition(triggerIndex + 7) } : {}),
     };
     triggerIndex += 1;
-    story.interactions[target]!.triggers.push(trigger);
+    story.interactions[target].triggers.push(trigger);
     return trigger;
   };
 
@@ -136,14 +136,14 @@ export function createComplexLayoutStoryFixture(): Story {
     addTrigger(target, [source], `trigger-skip-${source}-${target}`);
   }
   for (const path of cycles) {
-    const source = path[path.length - 2]!;
-    const target = path[0]!;
+    const source = path[path.length - 2];
+    const target = path[0];
     addTrigger(target, [source], `trigger-return-${source}-${target}`);
   }
   addTrigger(72, [72], complexLayoutStoryMotifs.selfLoop.triggerId);
   const alternative = addTrigger(14, [12], 'trigger-14-alternative');
   alternative.appearanceProbability = 65;
-  alternative.conditionGroups![0]!.conditions.push({
+  alternative.conditionGroups![0].conditions.push({
     interactionId: interactionId(5),
     hasBeenVisited: true,
   });

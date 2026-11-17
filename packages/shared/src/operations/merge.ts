@@ -40,7 +40,9 @@ export function mergeServerStory(
             (inputId) => !options.deletedTriggerInputKeys?.has(`${trigger.id}:${inputId}`),
           ),
         }));
-      if (!currentItem) return { ...item, triggers };
+      if (!currentItem) {
+        return { ...item, triggers };
+      }
       const patch = item.id === edited?.interactionId ? edited.patch : undefined;
 
       return {

@@ -146,7 +146,9 @@ async function loadConsistentStoryEditorProjection(
       ...story,
       interactions: story.interactions.map((interaction) => {
         const next = interactionContent.get(interaction.id);
-        if (!next) return interaction;
+        if (!next) {
+          return interaction;
+        }
         return {
           ...interaction,
           body: next.body,
@@ -187,7 +189,9 @@ async function loadConsistentStoryEditorProjection(
         ...interaction,
         triggers: interaction.triggers.map((trigger) => {
           const next = triggerContent.get(trigger.id);
-          if (!next) return trigger;
+          if (!next) {
+            return trigger;
+          }
           return {
             ...trigger,
             conditionGroups: next.conditionGroups,
@@ -210,7 +214,9 @@ async function loadContext(
 ): Promise<StoryContextAccumulator> {
   const context = createStoryContextAccumulator();
   const totalCount = Math.max(...Object.values(bootstrap.contextCounts));
-  if (totalCount === 0) return context;
+  if (totalCount === 0) {
+    return context;
+  }
   await readPages(
     (page) => api.getStoryEditorContextPage(storyId, page),
     bootstrap,
@@ -267,6 +273,8 @@ function assertContextCounts(
 
 function groupBy<T>(items: readonly T[], keyOf: (item: T) => string): Map<string, T[]> {
   const grouped = new Map<string, T[]>();
-  for (const item of items) grouped.set(keyOf(item), [...(grouped.get(keyOf(item)) ?? []), item]);
+  for (const item of items) {
+    grouped.set(keyOf(item), [...(grouped.get(keyOf(item)) ?? []), item]);
+  }
   return grouped;
 }

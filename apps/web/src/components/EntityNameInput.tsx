@@ -26,7 +26,9 @@ export function EntityNameInput({
   async function commit(input: HTMLInputElement) {
     const restoreFocus = enterPressed.current;
     enterPressed.current = false;
-    if (cancelled.current || saving.current) return;
+    if (cancelled.current || saving.current) {
+      return;
+    }
     const name = input.value.trim();
     if (!name) {
       setError(t('rename.empty'));
@@ -42,7 +44,9 @@ export function EntityNameInput({
     setPending(true);
     try {
       const result = await onCommit(name);
-      if (result === false) throw new Error('Save failed');
+      if (result === false) {
+        throw new Error('Save failed');
+      }
       onChange(name);
       original.current = name;
       sessionActive.current = false;
@@ -67,7 +71,9 @@ export function EntityNameInput({
         aria-invalid={error ? true : undefined}
         aria-describedby={error ? errorId : inputProps['aria-describedby']}
         onFocus={(event) => {
-          if (!sessionActive.current) original.current = value;
+          if (!sessionActive.current) {
+            original.current = value;
+          }
           sessionActive.current = true;
           cancelled.current = false;
           inputProps.onFocus?.(event);
@@ -81,8 +87,12 @@ export function EntityNameInput({
         }}
         onKeyDown={(event) => {
           inputProps.onKeyDown?.(event);
-          if (saving.current) return;
-          if (event.defaultPrevented || event.nativeEvent.isComposing) return;
+          if (saving.current) {
+            return;
+          }
+          if (event.defaultPrevented || event.nativeEvent.isComposing) {
+            return;
+          }
           if (event.key === 'Escape') {
             event.preventDefault();
             event.stopPropagation();

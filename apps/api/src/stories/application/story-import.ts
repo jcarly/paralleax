@@ -221,7 +221,9 @@ export class StoryImportService {
     abortSignal?: AbortSignal,
     onSaving?: () => void,
   ) {
-    if (abortSignal?.aborted) this.jobs.cancel(importId);
+    if (abortSignal?.aborted) {
+      this.jobs.cancel(importId);
+    }
     if (this.jobs.isCancelled(importId)) {
       return this.finishCancelledImport(importId);
     }
@@ -253,7 +255,9 @@ export class StoryImportService {
       this.jobs.complete(importId);
       return { status: 'confirmation_required' as const, importId, report };
     }
-    if (abortSignal?.aborted) this.jobs.cancel(importId);
+    if (abortSignal?.aborted) {
+      this.jobs.cancel(importId);
+    }
     if (this.jobs.isCancelled(importId)) {
       return this.finishCancelledImport(importId);
     }
@@ -272,7 +276,9 @@ export class StoryImportService {
     } catch (caught) {
       this.jobs.update(importId, { status: 'failed', phase: 'finalizing' });
       this.jobs.complete(importId);
-      if (caught instanceof UnprocessableEntityException) throw caught;
+      if (caught instanceof UnprocessableEntityException) {
+        throw caught;
+      }
       throw new InternalServerErrorException(
         apiErrorResponse(
           'STORY_IMPORT_SAVE_FAILED',
@@ -378,7 +384,9 @@ function importOptions() {
 }
 
 function qspFormatForFileName(name: string): QspImportSource['format'] {
-  if (/\.(?:qsp|gam)$/i.test(name)) return 'binary';
+  if (/\.(?:qsp|gam)$/i.test(name)) {
+    return 'binary';
+  }
   return /\.qsrc$/i.test(name) ? 'locations' : 'text';
 }
 
@@ -406,8 +414,12 @@ function decodeQspLocationBundle(content: string) {
 }
 
 function qspSourceSize(source: QspImportSource) {
-  if (source.format === 'binary') return source.content.byteLength;
-  if (source.format === 'text') return Buffer.byteLength(source.content, 'utf8');
+  if (source.format === 'binary') {
+    return source.content.byteLength;
+  }
+  if (source.format === 'text') {
+    return Buffer.byteLength(source.content, 'utf8');
+  }
   return source.content.reduce((total, file) => total + Buffer.byteLength(file.content, 'utf8'), 0);
 }
 

@@ -30,7 +30,9 @@ export function AccountDialog({
 
   async function submit(event: FormEvent) {
     event.preventDefault();
-    if (!valid || pending) return;
+    if (!valid || pending) {
+      return;
+    }
     try {
       setPending(true);
       setError('');
@@ -45,7 +47,9 @@ export function AccountDialog({
 
   async function changePassword(event: FormEvent) {
     event.preventDefault();
-    if (currentPassword.length < 1 || newPassword.length < 8 || securityPending) return;
+    if (currentPassword.length < 1 || newPassword.length < 8 || securityPending) {
+      return;
+    }
     try {
       setSecurityPending(true);
       setSecurityError('');
@@ -62,7 +66,9 @@ export function AccountDialog({
   }
 
   async function revokeOtherSessions() {
-    if (securityPending) return;
+    if (securityPending) {
+      return;
+    }
     try {
       setSecurityPending(true);
       setSecurityError('');

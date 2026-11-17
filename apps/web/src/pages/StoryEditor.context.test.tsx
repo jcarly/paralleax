@@ -292,6 +292,13 @@ describe('StoryEditor story context', () => {
 
     await renderEditor(locatedStory);
     await user.click(screen.getByTestId('flow-node-interaction-1'));
+    await user.click(
+      await screen.findByRole(
+        'button',
+        { name: 'Location: No location change' },
+        { timeout: 5_000 },
+      ),
+    );
     await user.selectOptions(screen.getByLabelText('Location'), 'location-1');
     expect(api.updateInteraction).toHaveBeenCalledWith('story-1', 'interaction-1', {
       locationId: 'location-1',
@@ -353,6 +360,13 @@ describe('StoryEditor story context', () => {
     expect(await screen.findByRole('button', { name: 'Mira' })).toBeInTheDocument();
 
     await user.click(screen.getByTestId('flow-node-interaction-1'));
+    await user.click(
+      await screen.findByRole(
+        'button',
+        { name: 'Characters present: No characters yet.' },
+        { timeout: 5_000 },
+      ),
+    );
     const assignedStory = cloneStory();
     assignedStory.characters = [{ id: 'character-1', name: 'Mira', description: '' }];
     assignedStory.interactions[0].characterIds = ['character-1'];
@@ -830,6 +844,12 @@ describe('StoryEditor story context', () => {
     expect(within(interactionCard).getByText('Harbor')).toBeInTheDocument();
     expect(
       within(interactionCard).getByLabelText('Characters present: Mira Vale'),
+    ).toBeInTheDocument();
+    expect(
+      interactionCard.querySelector('[data-interaction-metadata-icon="location"]'),
+    ).toBeInTheDocument();
+    expect(
+      interactionCard.querySelector('[data-interaction-metadata-icon="characters"]'),
     ).toBeInTheDocument();
   });
 
