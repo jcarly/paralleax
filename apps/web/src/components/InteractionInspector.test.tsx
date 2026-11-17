@@ -466,7 +466,7 @@ describe('InteractionInspector time', () => {
       />,
     );
 
-    fireEvent.click(screen.getByRole('button', { name: 'Duration: 15 minutes' }));
+    fireEvent.click(screen.getByRole('button', { name: 'Duration: 15 min' }));
     const duration = screen.getByLabelText('Duration (minutes)');
     fireEvent.change(duration, { target: { value: '42.8' } });
     fireEvent.blur(duration, { target: { value: '42.8' } });

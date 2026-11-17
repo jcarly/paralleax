@@ -511,310 +511,316 @@ function InteractionInspectorView({
 
   return (
     <div className="interaction-inspector">
-      <section className="interaction-inspector-content">
-        <InspectorCommentField
-          field="title"
-          label={t('interactionInspector.title')}
-          textCommentCounts={textCommentCounts}
-          onOpenTextComments={onOpenTextComments}
+      <div className="interaction-inspector-presentation">
+        <section className="interaction-inspector-content">
+          <InspectorCommentField
+            field="title"
+            label={t('interactionInspector.title')}
+            textCommentCounts={textCommentCounts}
+            onOpenTextComments={onOpenTextComments}
+          >
+            <InteractionLabel
+              label={interactionTitleForDisplay(interaction, t)}
+              className="interaction-inspector-title-bubble"
+              leadingIcon="→"
+              dataCommentField="title"
+              ariaLabel={`${t('interactionInspector.title')}: ${interactionTitleForDisplay(interaction, t)}`}
+              onActivate={() => {
+                setEditingTitle(true);
+              }}
+              editable={
+                editingTitle
+                  ? {
+                      className: 'interaction-inspector-title-input',
+                      'aria-label': t('interactionInspector.title'),
+                      placeholder: interactionTitlePlaceholder(interaction, t),
+                      value: interaction.title,
+                      onChange: (event) => {
+                        updateLocalInteraction({ title: event.target.value });
+                      },
+                      onBlur: (event) => {
+                        void onPatch(interaction.id, { title: event.currentTarget.value });
+                        setEditingTitle(false);
+                      },
+                      onKeyDown: (event) => {
+                        if (event.key === 'Enter') {
+                          event.currentTarget.blur();
+                        }
+                      },
+                    }
+                  : undefined
+              }
+            />
+          </InspectorCommentField>
+        </section>
+        <InspectorCommentSlot
+          slot={{ kind: 'section', section: 'contextAndTiming' }}
+          label={t('interactionInspector.contextAndTiming')}
+          semanticCommentCounts={semanticCommentCounts}
+          onOpenSemanticComments={onOpenSemanticComments}
         >
-          <InteractionLabel
-            label={interactionTitleForDisplay(interaction, t)}
-            className="interaction-inspector-title-bubble"
-            leadingIcon="→"
-            dataCommentField="title"
-            ariaLabel={`${t('interactionInspector.title')}: ${interactionTitleForDisplay(interaction, t)}`}
-            onActivate={() => {
-              setEditingTitle(true);
-            }}
-            editable={
-              editingTitle
-                ? {
-                    className: 'interaction-inspector-title-input',
-                    'aria-label': t('interactionInspector.title'),
-                    placeholder: interactionTitlePlaceholder(interaction, t),
-                    value: interaction.title,
-                    onChange: (event) => {
-                      updateLocalInteraction({ title: event.target.value });
-                    },
-                    onBlur: (event) => {
-                      void onPatch(interaction.id, { title: event.currentTarget.value });
-                      setEditingTitle(false);
-                    },
-                    onKeyDown: (event) => {
-                      if (event.key === 'Enter') {
-                        event.currentTarget.blur();
-                      }
-                    },
-                  }
-                : undefined
-            }
-          />
-        </InspectorCommentField>
-      </section>
-      <InspectorCommentSlot
-        slot={{ kind: 'section', section: 'contextAndTiming' }}
-        label={t('interactionInspector.contextAndTiming')}
-        semanticCommentCounts={semanticCommentCounts}
-        onOpenSemanticComments={onOpenSemanticComments}
-      >
-        <section className="interaction-inspector-context">
-          <InspectorCommentSlot
-            slot={{ kind: 'field', field: 'location' }}
-            label={t('interactionInspector.location')}
-            semanticCommentCounts={semanticCommentCounts}
-            onOpenSemanticComments={onOpenSemanticComments}
-          >
-            {editingLocation ? (
-              <label className="form-field form-field--compact">
-                {t('interactionInspector.location')}
-                <select
-                  className="form-control form-control--compact"
-                  ref={locationSelectRef}
-                  value={interaction.locationId ?? ''}
-                  onChange={(event) => {
-                    const locationId = event.target.value || null;
-                    updateLocalInteraction({ locationId });
-                    void onPatch(interaction.id, { locationId });
-                    setEditingLocation(false);
-                  }}
-                  onBlur={() => {
-                    setEditingLocation(false);
-                  }}
-                >
-                  <option value="">{t('interactionInspector.noLocationChange')}</option>
-                  {(story.locations ?? []).map((candidate) => (
-                    <option key={candidate.id} value={candidate.id}>
-                      {candidate.name}
-                    </option>
-                  ))}
-                </select>
-              </label>
-            ) : (
-              <FieldHelpTooltip
-                className={`interaction-metadata-control${location ? ' has-value' : ' is-empty'}`}
-                label={`${t('interactionInspector.location')}: ${locationSummary}`}
-                help={locationTooltip}
-                onClick={() => {
-                  setEditingLocation(true);
-                }}
-              >
-                {location ? (
-                  <ContextThumbnail
-                    className="interaction-metadata-avatar"
-                    imageUrl={location.imageUrl}
-                    fallback={getInitials(location.name)}
-                  />
-                ) : (
-                  <InteractionMetadataIcon kind="location" />
-                )}
-              </FieldHelpTooltip>
-            )}
-          </InspectorCommentSlot>
-          <InspectorCommentSlot
-            slot={{ kind: 'field', field: 'characters' }}
-            label={t('interactionInspector.charactersPresent')}
-            semanticCommentCounts={semanticCommentCounts}
-            onOpenSemanticComments={onOpenSemanticComments}
-          >
-            {editingCharacters ? (
-              <fieldset className="character-presence-fieldset">
-                <legend>{t('interactionInspector.charactersPresent')}</legend>
-                {characters.length === 0 ? (
-                  <p className="hint">{t('interactionInspector.noCharacters')}</p>
-                ) : (
-                  characters.map((character) => (
-                    <label className="character-presence-option" key={character.id}>
-                      <input
-                        checked={(interaction.characterIds ?? []).includes(character.id)}
-                        type="checkbox"
-                        onChange={(event) => {
-                          const characterIds = event.target.checked
-                            ? [...(interaction.characterIds ?? []), character.id]
-                            : (interaction.characterIds ?? []).filter((id) => id !== character.id);
-                          updateLocalInteraction({ characterIds });
-                          void onPatch(interaction.id, { characterIds });
-                        }}
-                      />
-                      {character.imageUrl ? (
-                        <img
-                          className="character-presence-avatar"
-                          src={character.imageUrl}
-                          alt=""
-                        />
-                      ) : (
-                        <span className="character-presence-avatar" aria-hidden="true">
-                          {getInitials(character.name)}
-                        </span>
-                      )}
-                      <span>{character.name}</span>
-                    </label>
-                  ))
-                )}
-                <button
-                  className="ghost"
-                  type="button"
-                  onClick={() => {
-                    setEditingCharacters(false);
-                  }}
-                >
-                  {t('interactionInspector.doneEditing')}
-                </button>
-              </fieldset>
-            ) : (
-              <FieldHelpTooltip
-                className={`interaction-metadata-control${presentCharacters.length ? ' has-value' : ' is-empty'}`}
-                label={`${t('interactionInspector.charactersPresent')}: ${characterSummary}`}
-                help={characterTooltip}
-                onClick={() => {
-                  setEditingCharacters(true);
-                }}
-              >
-                {presentCharacters.length > 0 ? (
-                  <span aria-hidden="true" className="interaction-metadata-avatar-stack">
-                    {visibleCharacters.map((character) => (
-                      <ContextThumbnail
-                        key={character.id}
-                        className="interaction-metadata-avatar"
-                        imageUrl={character.imageUrl}
-                        fallback={getInitials(character.name)}
-                      />
-                    ))}
-                    {presentCharacters.length > visibleCharacters.length ? (
-                      <span className="interaction-metadata-avatar-overflow">
-                        +{presentCharacters.length - visibleCharacters.length}
-                      </span>
-                    ) : null}
-                  </span>
-                ) : (
-                  <InteractionMetadataIcon kind="characters" />
-                )}
-              </FieldHelpTooltip>
-            )}
-          </InspectorCommentSlot>
-          <InspectorCommentSlot
-            slot={{ kind: 'field', field: 'duration' }}
-            label={t('interactionInspector.duration')}
-            semanticCommentCounts={semanticCommentCounts}
-            onOpenSemanticComments={onOpenSemanticComments}
-          >
-            {editingDuration ? (
-              <div className="form-field form-field--compact">
-                <div className="field-label-with-help">
-                  <span>{t('interactionInspector.duration')}</span>
-                  <FieldHelpTooltip
-                    label={t('interactionInspector.duration')}
-                    help={t('interactionInspector.durationHelp')}
-                  />
-                </div>
-                <span className="interaction-duration-input form-control-group form-control-group--compact">
-                  <input
+          <section className="interaction-inspector-context">
+            <InspectorCommentSlot
+              slot={{ kind: 'field', field: 'location' }}
+              label={t('interactionInspector.location')}
+              semanticCommentCounts={semanticCommentCounts}
+              onOpenSemanticComments={onOpenSemanticComments}
+            >
+              {editingLocation ? (
+                <label className="form-field form-field--compact">
+                  {t('interactionInspector.location')}
+                  <select
                     className="form-control form-control--compact"
-                    aria-label={t('interactionInspector.durationMinutes')}
-                    ref={durationInputRef}
-                    min="0"
-                    step="1"
-                    type="number"
-                    value={interaction.durationMinutes ?? 0}
+                    ref={locationSelectRef}
+                    value={interaction.locationId ?? ''}
                     onChange={(event) => {
-                      const durationMinutes = Math.max(
-                        0,
-                        Math.trunc(Number(event.target.value) || 0),
-                      );
-                      updateLocalInteraction({ durationMinutes });
+                      const locationId = event.target.value || null;
+                      updateLocalInteraction({ locationId });
+                      void onPatch(interaction.id, { locationId });
+                      setEditingLocation(false);
                     }}
-                    onBlur={(event) => {
-                      const durationMinutes = Math.max(
-                        0,
-                        Math.trunc(Number(event.target.value) || 0),
-                      );
-                      void onPatch(interaction.id, { durationMinutes });
-                      setEditingDuration(false);
+                    onBlur={() => {
+                      setEditingLocation(false);
                     }}
-                  />
-                  <small className="form-control-suffix">{t('interactionInspector.minutes')}</small>
-                </span>
+                  >
+                    <option value="">{t('interactionInspector.noLocationChange')}</option>
+                    {(story.locations ?? []).map((candidate) => (
+                      <option key={candidate.id} value={candidate.id}>
+                        {candidate.name}
+                      </option>
+                    ))}
+                  </select>
+                </label>
+              ) : (
+                <FieldHelpTooltip
+                  className={`interaction-metadata-control${location ? ' has-value' : ' is-empty'}`}
+                  label={`${t('interactionInspector.location')}: ${locationSummary}`}
+                  help={locationTooltip}
+                  onClick={() => {
+                    setEditingLocation(true);
+                  }}
+                >
+                  {location ? (
+                    <ContextThumbnail
+                      className="interaction-metadata-avatar"
+                      imageUrl={location.imageUrl}
+                      fallback={getInitials(location.name)}
+                    />
+                  ) : (
+                    <InteractionMetadataIcon kind="location" />
+                  )}
+                </FieldHelpTooltip>
+              )}
+            </InspectorCommentSlot>
+            <InspectorCommentSlot
+              slot={{ kind: 'field', field: 'characters' }}
+              label={t('interactionInspector.charactersPresent')}
+              semanticCommentCounts={semanticCommentCounts}
+              onOpenSemanticComments={onOpenSemanticComments}
+            >
+              {editingCharacters ? (
+                <fieldset className="character-presence-fieldset">
+                  <legend>{t('interactionInspector.charactersPresent')}</legend>
+                  {characters.length === 0 ? (
+                    <p className="hint">{t('interactionInspector.noCharacters')}</p>
+                  ) : (
+                    characters.map((character) => (
+                      <label className="character-presence-option" key={character.id}>
+                        <input
+                          checked={(interaction.characterIds ?? []).includes(character.id)}
+                          type="checkbox"
+                          onChange={(event) => {
+                            const characterIds = event.target.checked
+                              ? [...(interaction.characterIds ?? []), character.id]
+                              : (interaction.characterIds ?? []).filter(
+                                  (id) => id !== character.id,
+                                );
+                            updateLocalInteraction({ characterIds });
+                            void onPatch(interaction.id, { characterIds });
+                          }}
+                        />
+                        {character.imageUrl ? (
+                          <img
+                            className="character-presence-avatar"
+                            src={character.imageUrl}
+                            alt=""
+                          />
+                        ) : (
+                          <span className="character-presence-avatar" aria-hidden="true">
+                            {getInitials(character.name)}
+                          </span>
+                        )}
+                        <span>{character.name}</span>
+                      </label>
+                    ))
+                  )}
+                  <button
+                    className="ghost"
+                    type="button"
+                    onClick={() => {
+                      setEditingCharacters(false);
+                    }}
+                  >
+                    {t('interactionInspector.doneEditing')}
+                  </button>
+                </fieldset>
+              ) : (
+                <FieldHelpTooltip
+                  className={`interaction-metadata-control${presentCharacters.length ? ' has-value' : ' is-empty'}`}
+                  label={`${t('interactionInspector.charactersPresent')}: ${characterSummary}`}
+                  help={characterTooltip}
+                  onClick={() => {
+                    setEditingCharacters(true);
+                  }}
+                >
+                  {presentCharacters.length > 0 ? (
+                    <span aria-hidden="true" className="interaction-metadata-avatar-stack">
+                      {visibleCharacters.map((character) => (
+                        <ContextThumbnail
+                          key={character.id}
+                          className="interaction-metadata-avatar"
+                          imageUrl={character.imageUrl}
+                          fallback={getInitials(character.name)}
+                        />
+                      ))}
+                      {presentCharacters.length > visibleCharacters.length ? (
+                        <span className="interaction-metadata-avatar-overflow">
+                          +{presentCharacters.length - visibleCharacters.length}
+                        </span>
+                      ) : null}
+                    </span>
+                  ) : (
+                    <InteractionMetadataIcon kind="characters" />
+                  )}
+                </FieldHelpTooltip>
+              )}
+            </InspectorCommentSlot>
+            <InspectorCommentSlot
+              slot={{ kind: 'field', field: 'duration' }}
+              label={t('interactionInspector.duration')}
+              semanticCommentCounts={semanticCommentCounts}
+              onOpenSemanticComments={onOpenSemanticComments}
+            >
+              {editingDuration ? (
+                <div className="form-field form-field--compact">
+                  <div className="field-label-with-help">
+                    <span>{t('interactionInspector.duration')}</span>
+                    <FieldHelpTooltip
+                      label={t('interactionInspector.duration')}
+                      help={t('interactionInspector.durationHelp')}
+                    />
+                  </div>
+                  <span className="interaction-duration-input form-control-group form-control-group--compact">
+                    <input
+                      className="form-control form-control--compact"
+                      aria-label={t('interactionInspector.durationMinutes')}
+                      ref={durationInputRef}
+                      min="0"
+                      step="1"
+                      type="number"
+                      value={interaction.durationMinutes ?? 0}
+                      onChange={(event) => {
+                        const durationMinutes = Math.max(
+                          0,
+                          Math.trunc(Number(event.target.value) || 0),
+                        );
+                        updateLocalInteraction({ durationMinutes });
+                      }}
+                      onBlur={(event) => {
+                        const durationMinutes = Math.max(
+                          0,
+                          Math.trunc(Number(event.target.value) || 0),
+                        );
+                        void onPatch(interaction.id, { durationMinutes });
+                        setEditingDuration(false);
+                      }}
+                    />
+                    <small className="form-control-suffix">
+                      {t('interactionInspector.minutes')}
+                    </small>
+                  </span>
+                </div>
+              ) : (
+                <FieldHelpTooltip
+                  className={`interaction-metadata-control${hasDuration ? ' has-value' : ' is-empty'}`}
+                  label={`${t('interactionInspector.duration')}: ${durationSummary}`}
+                  help={durationTooltip}
+                  onClick={() => {
+                    setEditingDuration(true);
+                  }}
+                >
+                  <InteractionMetadataIcon kind="time" />
+                  {hasDuration ? (
+                    <span className="interaction-metadata-duration-value">{durationSummary}</span>
+                  ) : null}
+                </FieldHelpTooltip>
+              )}
+            </InspectorCommentSlot>
+          </section>
+        </InspectorCommentSlot>
+        <section className="interaction-inspector-content">
+          <InspectorCommentField
+            field="body"
+            label={t('richText.content')}
+            textCommentCounts={textCommentCounts}
+            onOpenTextComments={onOpenTextComments}
+          >
+            {bodyEditor.editing ? (
+              <div onBlurCapture={handleBodyRegionBlur}>
+                <RichTextEditor
+                  focusOnMount={bodyEditor.editing}
+                  interactionId={interaction.id}
+                  story={story}
+                  value={interaction.body}
+                  onChange={(body) => {
+                    bodyDraftRef.current = { interactionId: interaction.id, body };
+                  }}
+                  onBlur={handleBodyBlur}
+                  revealToolbarOnFocus
+                  interactionLinkTargets={interactionLinkTargets}
+                  conditionalTextBlocks={interaction.conditionalTextBlocks}
+                  onConditionalTextChange={(body, conditionalTextBlocks) => {
+                    bodyDraftRef.current = undefined;
+                    updateLocalInteraction({ body, conditionalTextBlocks });
+                    void onPatch(interaction.id, { body, conditionalTextBlocks }).then((saved) => {
+                      if (saved !== false) {
+                        onContentSaved?.(body);
+                      }
+                    });
+                  }}
+                />
+              </div>
+            ) : hasAuthoredRichTextContent(interaction.body) ? (
+              <div
+                aria-label={`${t('richText.content')}. ${t('interactionInspector.editValueHelp')}`}
+                className="interaction-content-preview"
+                onBlurCapture={handleBodyRegionBlur}
+                role="button"
+                tabIndex={0}
+                onClick={startBodyEditing}
+                onKeyDown={handleBodyPreviewKeyDown}
+              >
+                <RichTextContent
+                  className="story-body"
+                  html={interaction.body}
+                  interactionLinksInteractive={false}
+                />
               </div>
             ) : (
-              <FieldHelpTooltip
-                className={`interaction-metadata-control${hasDuration ? ' has-value' : ' is-empty'}`}
-                label={`${t('interactionInspector.duration')}: ${durationSummary}`}
-                help={durationTooltip}
-                onClick={() => {
-                  setEditingDuration(true);
-                }}
-              >
-                <InteractionMetadataIcon kind="time" />
-                {hasDuration ? (
-                  <span className="interaction-metadata-duration-value">{durationSummary}</span>
-                ) : null}
-              </FieldHelpTooltip>
+              <div className="interaction-content-empty">
+                <button
+                  className="secondary interaction-content-edit-toggle"
+                  data-comment-exclude="true"
+                  type="button"
+                  onClick={startBodyEditing}
+                >
+                  {t('richText.addContent')}
+                </button>
+              </div>
             )}
-          </InspectorCommentSlot>
+          </InspectorCommentField>
         </section>
-      </InspectorCommentSlot>
-      <section className="interaction-inspector-content">
-        <InspectorCommentField
-          field="body"
-          label={t('richText.content')}
-          textCommentCounts={textCommentCounts}
-          onOpenTextComments={onOpenTextComments}
-        >
-          {bodyEditor.editing ? (
-            <div onBlurCapture={handleBodyRegionBlur}>
-              <RichTextEditor
-                focusOnMount={bodyEditor.editing}
-                interactionId={interaction.id}
-                story={story}
-                value={interaction.body}
-                onChange={(body) => {
-                  bodyDraftRef.current = { interactionId: interaction.id, body };
-                }}
-                onBlur={handleBodyBlur}
-                revealToolbarOnFocus
-                interactionLinkTargets={interactionLinkTargets}
-                conditionalTextBlocks={interaction.conditionalTextBlocks}
-                onConditionalTextChange={(body, conditionalTextBlocks) => {
-                  bodyDraftRef.current = undefined;
-                  updateLocalInteraction({ body, conditionalTextBlocks });
-                  void onPatch(interaction.id, { body, conditionalTextBlocks }).then((saved) => {
-                    if (saved !== false) {
-                      onContentSaved?.(body);
-                    }
-                  });
-                }}
-              />
-            </div>
-          ) : hasAuthoredRichTextContent(interaction.body) ? (
-            <div
-              aria-label={`${t('richText.content')}. ${t('interactionInspector.editValueHelp')}`}
-              className="interaction-content-preview"
-              onBlurCapture={handleBodyRegionBlur}
-              role="button"
-              tabIndex={0}
-              onClick={startBodyEditing}
-              onKeyDown={handleBodyPreviewKeyDown}
-            >
-              <RichTextContent
-                className="story-body"
-                html={interaction.body}
-                interactionLinksInteractive={false}
-              />
-            </div>
-          ) : (
-            <div className="interaction-content-empty">
-              <button
-                className="secondary interaction-content-edit-toggle"
-                data-comment-exclude="true"
-                type="button"
-                onClick={startBodyEditing}
-              >
-                {t('richText.addContent')}
-              </button>
-            </div>
-          )}
-        </InspectorCommentField>
-      </section>
+      </div>
       <InspectorCommentSlot
         slot={{ kind: 'section', section: 'effects' }}
         label={t('interactionInspector.effects')}

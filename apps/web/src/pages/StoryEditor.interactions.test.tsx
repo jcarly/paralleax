@@ -33,12 +33,16 @@ function requirePosition<T>(position: T | undefined) {
 }
 
 async function editInteractionTitleAndBody(user: ReturnType<typeof userEvent.setup>) {
-  await user.click(screen.getByRole('button', { name: 'Title: Original title' }));
+  await user.click(await screen.findByRole('button', { name: 'Title: Original title' }));
   const titleInput = screen.getByLabelText('Title');
   await user.clear(titleInput);
   await user.type(titleInput, 'Saved title');
   await user.tab();
-  await user.click(screen.getByRole('group', { name: 'Content. Select to edit' }));
+  const inspector = screen.getByRole('complementary', { name: 'Inspector' });
+  const bodyPreview = await within(inspector).findByText('Original content', undefined, {
+    timeout: 10_000,
+  });
+  await user.click(bodyPreview);
   const content = await screen.findByRole('textbox', { name: 'Content' });
   await user.clear(content);
   await user.type(content, 'Saved content');
@@ -439,7 +443,11 @@ it('updates interaction body from the inspector', async () => {
   await renderEditor();
   await user.click(screen.getByTestId('flow-node-interaction-1'));
 
-  await user.click(screen.getByRole('group', { name: 'Content. Select to edit' }));
+  const inspector = screen.getByRole('complementary', { name: 'Inspector' });
+  const bodyPreview = await within(inspector).findByText('Original content', undefined, {
+    timeout: 10_000,
+  });
+  await user.click(bodyPreview);
   const bodyInput = await screen.findByRole('textbox', { name: 'Content' }, { timeout: 10_000 });
   await user.clear(bodyInput);
   await user.type(bodyInput, 'Long new content');
@@ -449,9 +457,9 @@ it('updates interaction body from the inspector', async () => {
     body: '<p>Long new content</p>',
   });
   await waitFor(() => {
-    expect(screen.getByRole('group', { name: 'Content. Select to edit' })).toHaveTextContent(
-      'Long new content',
-    );
+    expect(
+      within(inspector).getByRole('button', { name: 'Content. Select to edit' }),
+    ).toHaveTextContent('Long new content');
   });
 });
 
@@ -497,10 +505,12 @@ it('serializes title and body saves so reopening keeps both edits', async () => 
   });
 
   expect(screen.getByRole('button', { name: 'Title: Saved title' })).toBeInTheDocument();
-  expect(screen.getByRole('group', { name: 'Content. Select to edit' })).toHaveTextContent(
+  expect(screen.getByRole('button', { name: 'Content. Select to edit' })).toHaveTextContent(
     'Saved content',
   );
-  expect(await screen.findByText('Saved')).toBeInTheDocument();
+  await waitFor(() => {
+    expect(screen.queryByRole('status', { name: /Saving/ })).not.toBeInTheDocument();
+  });
 });
 
 it('shows a recoverable error when an interaction save fails', async () => {

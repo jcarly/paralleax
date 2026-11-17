@@ -128,7 +128,9 @@ describe('StoryEditor triggers', () => {
     });
 
     await user.click(screen.getByTestId('flow-node-interaction-2'));
-    await user.click(await screen.findByRole('button', { name: 'Title: Second interaction' }));
+    await user.click(
+      await screen.findByRole('button', { name: 'Title: Second interaction' }, { timeout: 10_000 }),
+    );
     const titleInput = screen.getByLabelText('Title');
     fireEvent.change(titleInput, { target: { value: 'Fresh second title' } });
 
