@@ -1,4 +1,10 @@
-import type { InputHTMLAttributes, KeyboardEvent, ReactNode } from 'react';
+import {
+  useEffect,
+  useRef,
+  type InputHTMLAttributes,
+  type KeyboardEvent,
+  type ReactNode,
+} from 'react';
 
 interface InteractionLabelProps {
   label: string;
@@ -68,13 +74,23 @@ function InteractiveInteractionLabel({
   dataCommentField,
   ariaLabel,
 }: InteractiveInteractionLabelProps) {
+  const inputRef = useRef<HTMLInputElement | null>(null);
+  const isEditing = editable !== undefined;
+  useEffect(() => {
+    if (isEditing) {
+      inputRef.current?.focus();
+    }
+  }, [isEditing]);
+
   return (
     <div
       className={classes}
       aria-label={editable ? undefined : ariaLabel}
       data-comment-field={dataCommentField}
       onClick={onActivate}
-      onKeyDown={(event) => handleInteractionLabelKeyDown(event, onActivate, editable)}
+      onKeyDown={(event) => {
+        handleInteractionLabelKeyDown(event, onActivate, editable);
+      }}
       role={editable ? undefined : 'button'}
       tabIndex={editable ? undefined : 0}
     >
@@ -82,6 +98,7 @@ function InteractiveInteractionLabel({
       {editable ? (
         <input
           {...editable}
+          ref={inputRef}
           className={`form-control form-control--compact interaction-label-bubble-editable ${
             editable.className ?? ''
           }`.trim()}
@@ -136,7 +153,7 @@ function InteractionLabelContents({
 }
 
 function InteractionLabelLeadingIcon({ leadingIcon }: { leadingIcon?: string }) {
-  if (!leadingIcon) {
+  if (leadingIcon === undefined || leadingIcon.length === 0) {
     return null;
   }
   return (

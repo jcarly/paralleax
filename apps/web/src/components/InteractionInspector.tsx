@@ -7,7 +7,7 @@ import {
   type StatValue,
   type Story,
 } from '@paralleax/shared';
-import { useId, useRef, useState, type FocusEvent, type KeyboardEvent } from 'react';
+import { useEffect, useId, useRef, useState, type FocusEvent, type KeyboardEvent } from 'react';
 import { useTranslation } from 'react-i18next';
 import { getStatTargets, type StatTarget } from '../storyStats';
 import { InteractionEffectCard } from './InteractionEffectCard';
@@ -155,20 +155,17 @@ function AddEffectControl({
           const unavailableReason = unavailableReasons[type];
           const tooltipId = `${tooltipIdPrefix}-${type}`;
           return (
-            <div
-              aria-describedby={unavailableReason ? tooltipId : undefined}
-              className="interaction-effect-type-option"
-              key={type}
-              tabIndex={unavailableReason ? 0 : undefined}
-              title={unavailableReason}
-            >
+            <div className="interaction-effect-type-option" key={type}>
               <button
-                aria-describedby={unavailableReason ? tooltipId : undefined}
+                aria-describedby={unavailableReason === undefined ? undefined : tooltipId}
+                aria-disabled={unavailableReason !== undefined}
                 className="secondary"
-                disabled={Boolean(unavailableReason)}
                 title={unavailableReason}
                 type="button"
                 onClick={() => {
+                  if (unavailableReason !== undefined) {
+                    return;
+                  }
                   onAdd(type);
                   setIsChoosing(false);
                 }}
@@ -346,7 +343,19 @@ function InteractionInspectorView({
   const [editingLocation, setEditingLocation] = useState(false);
   const [editingCharacters, setEditingCharacters] = useState(false);
   const [editingDuration, setEditingDuration] = useState(false);
+  const locationSelectRef = useRef<HTMLSelectElement | null>(null);
+  const durationInputRef = useRef<HTMLInputElement | null>(null);
   const bodyDraftRef = useRef<{ interactionId: string; body: string } | undefined>(undefined);
+  useEffect(() => {
+    if (editingLocation) {
+      locationSelectRef.current?.focus();
+    }
+  }, [editingLocation]);
+  useEffect(() => {
+    if (editingDuration) {
+      durationInputRef.current?.focus();
+    }
+  }, [editingDuration]);
   const characters = story.characters ?? [];
   const interactionLinkTargets = story.interactions.filter(
     (candidate) => candidate.id !== interaction.id,
@@ -515,16 +524,19 @@ function InteractionInspectorView({
             leadingIcon="→"
             dataCommentField="title"
             ariaLabel={`${t('interactionInspector.title')}: ${interactionTitleForDisplay(interaction, t)}`}
-            onActivate={() => setEditingTitle(true)}
+            onActivate={() => {
+              setEditingTitle(true);
+            }}
             editable={
               editingTitle
                 ? {
-                    autoFocus: true,
                     className: 'interaction-inspector-title-input',
                     'aria-label': t('interactionInspector.title'),
                     placeholder: interactionTitlePlaceholder(interaction, t),
                     value: interaction.title,
-                    onChange: (event) => updateLocalInteraction({ title: event.target.value }),
+                    onChange: (event) => {
+                      updateLocalInteraction({ title: event.target.value });
+                    },
                     onBlur: (event) => {
                       void onPatch(interaction.id, { title: event.currentTarget.value });
                       setEditingTitle(false);
@@ -557,8 +569,8 @@ function InteractionInspectorView({
               <label className="form-field form-field--compact">
                 {t('interactionInspector.location')}
                 <select
-                  autoFocus
                   className="form-control form-control--compact"
+                  ref={locationSelectRef}
                   value={interaction.locationId ?? ''}
                   onChange={(event) => {
                     const locationId = event.target.value || null;
@@ -566,7 +578,9 @@ function InteractionInspectorView({
                     void onPatch(interaction.id, { locationId });
                     setEditingLocation(false);
                   }}
-                  onBlur={() => setEditingLocation(false)}
+                  onBlur={() => {
+                    setEditingLocation(false);
+                  }}
                 >
                   <option value="">{t('interactionInspector.noLocationChange')}</option>
                   {(story.locations ?? []).map((candidate) => (
@@ -581,7 +595,9 @@ function InteractionInspectorView({
                 className={`interaction-metadata-control${location ? ' has-value' : ' is-empty'}`}
                 label={`${t('interactionInspector.location')}: ${locationSummary}`}
                 help={locationTooltip}
-                onClick={() => setEditingLocation(true)}
+                onClick={() => {
+                  setEditingLocation(true);
+                }}
               >
                 {location ? (
                   <ContextThumbnail
@@ -635,7 +651,13 @@ function InteractionInspectorView({
                     </label>
                   ))
                 )}
-                <button className="ghost" type="button" onClick={() => setEditingCharacters(false)}>
+                <button
+                  className="ghost"
+                  type="button"
+                  onClick={() => {
+                    setEditingCharacters(false);
+                  }}
+                >
                   {t('interactionInspector.doneEditing')}
                 </button>
               </fieldset>
@@ -644,7 +666,9 @@ function InteractionInspectorView({
                 className={`interaction-metadata-control${presentCharacters.length ? ' has-value' : ' is-empty'}`}
                 label={`${t('interactionInspector.charactersPresent')}: ${characterSummary}`}
                 help={characterTooltip}
-                onClick={() => setEditingCharacters(true)}
+                onClick={() => {
+                  setEditingCharacters(true);
+                }}
               >
                 {presentCharacters.length > 0 ? (
                   <span aria-hidden="true" className="interaction-metadata-avatar-stack">
@@ -685,9 +709,9 @@ function InteractionInspectorView({
                 </div>
                 <span className="interaction-duration-input form-control-group form-control-group--compact">
                   <input
-                    autoFocus
                     className="form-control form-control--compact"
                     aria-label={t('interactionInspector.durationMinutes')}
+                    ref={durationInputRef}
                     min="0"
                     step="1"
                     type="number"
@@ -716,7 +740,9 @@ function InteractionInspectorView({
                 className={`interaction-metadata-control${hasDuration ? ' has-value' : ' is-empty'}`}
                 label={`${t('interactionInspector.duration')}: ${durationSummary}`}
                 help={durationTooltip}
-                onClick={() => setEditingDuration(true)}
+                onClick={() => {
+                  setEditingDuration(true);
+                }}
               >
                 <InteractionMetadataIcon kind="time" />
                 {hasDuration ? (
@@ -737,7 +763,7 @@ function InteractionInspectorView({
           {bodyEditor.editing ? (
             <div onBlurCapture={handleBodyRegionBlur}>
               <RichTextEditor
-                autoFocus={bodyEditor.editing}
+                focusOnMount={bodyEditor.editing}
                 interactionId={interaction.id}
                 story={story}
                 value={interaction.body}
@@ -757,7 +783,6 @@ function InteractionInspectorView({
                     }
                   });
                 }}
-                onConditionalTargetClick={onSelectInteraction}
               />
             </div>
           ) : hasAuthoredRichTextContent(interaction.body) ? (
@@ -765,25 +790,15 @@ function InteractionInspectorView({
               aria-label={`${t('richText.content')}. ${t('interactionInspector.editValueHelp')}`}
               className="interaction-content-preview"
               onBlurCapture={handleBodyRegionBlur}
-              onClick={(event) => {
-                if (
-                  event.target instanceof Element &&
-                  event.target.closest(
-                    'button[data-interaction-link-target], button[data-conditional-text-link]',
-                  )
-                ) {
-                  return;
-                }
-                startBodyEditing();
-              }}
-              onKeyDown={handleBodyPreviewKeyDown}
-              role="group"
+              role="button"
               tabIndex={0}
+              onClick={startBodyEditing}
+              onKeyDown={handleBodyPreviewKeyDown}
             >
               <RichTextContent
                 className="story-body"
                 html={interaction.body}
-                onInteractionLinkClick={(interactionId) => onSelectInteraction?.(interactionId)}
+                interactionLinksInteractive={false}
               />
             </div>
           ) : (

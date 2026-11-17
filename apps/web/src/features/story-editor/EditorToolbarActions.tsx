@@ -41,7 +41,7 @@ function ToolbarStatusActions({
 }: EditorToolbarActionsProps) {
   return (
     <>
-      {loadLabel ? (
+      {loadLabel !== undefined && loadLabel.length > 0 ? (
         <span className="save-status saving" role="status" aria-live="polite">
           {loadLabel}
         </span>
@@ -103,7 +103,6 @@ function SyncIndicator({
       aria-live="polite"
       data-tooltip={syncLabel}
       title={syncLabel}
-      tabIndex={0}
     >
       <CanvasActionIcon name={getSyncIcon(saveStatus, realtimeStatus)} />
     </span>

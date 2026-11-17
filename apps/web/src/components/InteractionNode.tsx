@@ -32,12 +32,13 @@ export function InteractionNode({ id, data }: NodeProps<Node<InteractionNodeData
   const d = data;
   const rootTriggerId = d.rootTriggerId;
   const fallbackTitle = t(
-    rootTriggerId
+    rootTriggerId !== undefined && rootTriggerId.length > 0
       ? 'interactionInspector.startTitlePlaceholder'
       : 'interactionInspector.newTitlePlaceholder',
   );
   const authoredTitle = d.title.trim();
-  const title = authoredTitle || (rootTriggerId ? fallbackTitle : '');
+  const title =
+    authoredTitle || (rootTriggerId !== undefined && rootTriggerId.length > 0 ? fallbackTitle : '');
   const commentEntityTitle = authoredTitle || fallbackTitle;
   const characters = d.characters ?? [];
   const createParent = (event: NodeActionEvent) => {
@@ -51,7 +52,7 @@ export function InteractionNode({ id, data }: NodeProps<Node<InteractionNodeData
     d.onCreateChild?.(id);
   };
   const selectRootTrigger = (event: MouseEvent<HTMLButtonElement>) => {
-    if (!rootTriggerId) {
+    if (rootTriggerId === undefined || rootTriggerId.length === 0) {
       return;
     }
     event.preventDefault();
@@ -68,13 +69,13 @@ export function InteractionNode({ id, data }: NodeProps<Node<InteractionNodeData
 
   return (
     <div
-      className={`interaction-node ${d.selected ? 'selected' : ''} ${d.dimmed ? 'dimmed' : ''}`}
+      className={`interaction-node ${d.selected ? 'selected' : ''} ${d.dimmed === true ? 'dimmed' : ''}`}
       data-onboarding-target="interaction"
       data-testid="interaction-node"
     >
-      {rootTriggerId ? (
+      {rootTriggerId !== undefined && rootTriggerId.length > 0 ? (
         <button
-          className={`root-trigger-marker nodrag nopan ${d.rootTriggerSelected ? 'selected' : ''}`}
+          className={`root-trigger-marker nodrag nopan ${d.rootTriggerSelected === true ? 'selected' : ''}`}
           type="button"
           data-trigger-drop-target="true"
           data-interaction-id={id}
@@ -84,7 +85,9 @@ export function InteractionNode({ id, data }: NodeProps<Node<InteractionNodeData
           onClick={selectRootTrigger}
         />
       ) : null}
-      {rootTriggerId && d.rootTriggerCommentCount ? (
+      {rootTriggerId !== undefined &&
+      rootTriggerId.length > 0 &&
+      (d.rootTriggerCommentCount ?? 0) > 0 ? (
         <button
           className="root-trigger-comment-badge nodrag nopan"
           type="button"
@@ -99,7 +102,7 @@ export function InteractionNode({ id, data }: NodeProps<Node<InteractionNodeData
           {d.rootTriggerCommentCount}
         </button>
       ) : null}
-      {d.commentCount ? (
+      {(d.commentCount ?? 0) > 0 ? (
         <button
           className="node-comment-badge nodrag nopan"
           type="button"
@@ -149,7 +152,7 @@ export function InteractionNode({ id, data }: NodeProps<Node<InteractionNodeData
           className="interaction-node-label"
           leadingIcon="→"
           suffix={
-            d.occurrenceCount ? (
+            (d.occurrenceCount ?? 0) > 0 ? (
               <span
                 className="interaction-occurrence-count"
                 aria-label={t('graph.occurrences', { count: d.occurrenceCount })}
@@ -169,13 +172,13 @@ export function InteractionNode({ id, data }: NodeProps<Node<InteractionNodeData
           .replace(/\s+/g, ' ')
           .trim()}
       </span>
-      {d.statEffectCount || d.itemEffectCount ? (
+      {(d.statEffectCount ?? 0) > 0 || (d.itemEffectCount ?? 0) > 0 ? (
         <div
           className="interaction-node-effects"
           role="group"
           aria-label={t('interactionInspector.effects')}
         >
-          {d.statEffectCount ? (
+          {(d.statEffectCount ?? 0) > 0 ? (
             <div
               className="interaction-node-effect"
               role="img"
@@ -188,7 +191,7 @@ export function InteractionNode({ id, data }: NodeProps<Node<InteractionNodeData
               {d.statEffectCount}
             </div>
           ) : null}
-          {d.itemEffectCount ? (
+          {(d.itemEffectCount ?? 0) > 0 ? (
             <div
               className="interaction-node-effect"
               role="img"
@@ -209,7 +212,7 @@ export function InteractionNode({ id, data }: NodeProps<Node<InteractionNodeData
           id="interaction-output"
           position={Position.Bottom}
           className="node-create node-create-child nodrag nopan"
-          data-onboarding-target={d.onboardingBranchAdd ? 'branch-add' : undefined}
+          data-onboarding-target={d.onboardingBranchAdd === true ? 'branch-add' : undefined}
           role="button"
           tabIndex={0}
           aria-label={t('graph.createChild')}

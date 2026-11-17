@@ -68,7 +68,9 @@ function LanguageOptions({ id, language, label, open, onSelect }: LanguageOption
             name={`interface-language-${id}`}
             value={supportedLanguage}
             checked={language === supportedLanguage}
-            onChange={() => onSelect(supportedLanguage)}
+            onChange={() => {
+              onSelect(supportedLanguage);
+            }}
           />
           <span className="language-switcher-option-code">{supportedLanguage}</span>{' '}
           <span lang={supportedLanguage}>{languageEndonyms[supportedLanguage]}</span>
@@ -102,7 +104,9 @@ export function LanguageSwitcher({ className = '' }: { className?: string }) {
         aria-label={`${t('language.label')} (${language})`}
         aria-expanded={isOpen}
         aria-controls={optionsId}
-        onClick={() => setIsOpen((open) => !open)}
+        onClick={() => {
+          setIsOpen((open) => !open);
+        }}
       >
         <span>{language}</span>
         <span aria-hidden="true">⌄</span>

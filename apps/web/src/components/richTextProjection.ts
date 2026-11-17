@@ -19,6 +19,7 @@ export function renderReaderRichText(
   unavailableMessage: string,
   statValues: Readonly<Record<string, StatValue>> | undefined,
   itemStatValues: Readonly<Record<string, Readonly<Record<string, StatValue>>>> | undefined,
+  interactionLinksInteractive = true,
 ) {
   const sanitized = sanitizeRichTextForDisplay(html);
   const template = document.createElement('template');
@@ -68,6 +69,13 @@ export function renderReaderRichText(
   template.content
     .querySelectorAll<HTMLButtonElement>('button[data-conditional-text-link]')
     .forEach((link) => {
+      if (!interactionLinksInteractive) {
+        const preview = document.createElement('span');
+        preview.className = 'interaction-link';
+        preview.append(...Array.from(link.childNodes));
+        link.replaceWith(preview);
+        return;
+      }
       const targetId = link.dataset.conditionalTextLink ?? '';
       const state = conditionalTextState?.[targetId];
       if (conditionalTextState && !state?.available) {
@@ -80,6 +88,13 @@ export function renderReaderRichText(
     .forEach((marker) => {
       const targetId = marker.dataset.interactionLinkTarget ?? '';
       const state = conditionalTextState?.[targetId];
+      if (!interactionLinksInteractive) {
+        const preview = document.createElement('span');
+        preview.className = 'interaction-link';
+        preview.textContent = marker.textContent;
+        marker.replaceWith(preview);
+        return;
+      }
       const link = document.createElement('button');
       link.type = 'button';
       link.className = 'interaction-link';

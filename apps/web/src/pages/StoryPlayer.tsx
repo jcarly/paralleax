@@ -962,7 +962,9 @@ export function StoryPlayer({
                 'aria-label': t('player.currentInteractionTitle'),
                 placeholder: interactionTitlePlaceholder(current, t),
                 value: current.title,
-                onChange: (event) => patchCurrentInteraction({ title: event.target.value }),
+                onChange: (event) => {
+                  patchCurrentInteraction({ title: event.target.value });
+                },
                 onBlur: (event) => {
                   void saveCurrentInteraction({ title: event.currentTarget.value });
                 },
@@ -1021,7 +1023,7 @@ export function StoryPlayer({
                         interactionId={current.id}
                         story={story}
                         value={current.body}
-                        autoFocus
+                        focusOnMount
                         revealToolbarOnFocus
                         onChange={(body) => {
                           bodyDraftRef.current = { interactionId: current.id, body };

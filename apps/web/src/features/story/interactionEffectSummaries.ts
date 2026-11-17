@@ -80,10 +80,10 @@ function findCharacterName(story: Story, characterId?: string) {
 }
 
 function findItemIdentifier(story: Story, effect: NonNullable<Interaction['itemEffects']>[number]) {
-  if (effect.itemDefinitionId) {
+  if (effect.itemDefinitionId !== undefined && effect.itemDefinitionId.length > 0) {
     return effect.itemDefinitionId;
   }
-  if (effect.itemId) {
+  if (effect.itemId !== undefined && effect.itemId.length > 0) {
     return getItemDefinitionIdForInstance(story, effect.itemId) ?? effect.itemId;
   }
   return undefined;

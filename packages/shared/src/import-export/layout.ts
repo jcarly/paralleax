@@ -13,6 +13,32 @@ export function layoutImportedGraph(
   nodes: readonly ImportedGraphNode[],
   edges: readonly ImportedGraphEdge[],
 ) {
+  const depth = getNodeDepths(nodes, edges);
+  const layers = new Map<number, string[]>();
+  for (const node of nodes) {
+    const layer = depth.get(node.key) ?? 0;
+    const keys = layers.get(layer);
+    if (keys) {
+      keys.push(node.key);
+    } else {
+      layers.set(layer, [node.key]);
+    }
+  }
+  const result = new Map<string, { x: number; y: number }>();
+  let visualRow = 0;
+  for (const [, keys] of [...layers].sort(([left], [right]) => left - right)) {
+    keys.forEach((key, index) =>
+      result.set(key, {
+        x: 80 + (index % MAX_IMPORTED_NODES_PER_ROW) * 320,
+        y: 120 + (visualRow + Math.floor(index / MAX_IMPORTED_NODES_PER_ROW)) * 220,
+      }),
+    );
+    visualRow += Math.ceil(keys.length / MAX_IMPORTED_NODES_PER_ROW);
+  }
+  return result;
+}
+
+function getNodeDepths(nodes: readonly ImportedGraphNode[], edges: readonly ImportedGraphEdge[]) {
   const indegree = new Map(nodes.map(({ key }) => [key, 0]));
   const outgoing = new Map(nodes.map(({ key }) => [key, [] as string[]]));
   for (const edge of edges) {
@@ -43,26 +69,5 @@ export function layoutImportedGraph(
       depth.set(node.key, fallbackDepth + 1);
     }
   }
-  const layers = new Map<number, string[]>();
-  for (const node of nodes) {
-    const layer = depth.get(node.key) ?? 0;
-    const keys = layers.get(layer);
-    if (keys) {
-      keys.push(node.key);
-    } else {
-      layers.set(layer, [node.key]);
-    }
-  }
-  const result = new Map<string, { x: number; y: number }>();
-  let visualRow = 0;
-  for (const [, keys] of [...layers].sort(([left], [right]) => left - right)) {
-    keys.forEach((key, index) =>
-      result.set(key, {
-        x: 80 + (index % MAX_IMPORTED_NODES_PER_ROW) * 320,
-        y: 120 + (visualRow + Math.floor(index / MAX_IMPORTED_NODES_PER_ROW)) * 220,
-      }),
-    );
-    visualRow += Math.ceil(keys.length / MAX_IMPORTED_NODES_PER_ROW);
-  }
-  return result;
+  return depth;
 }

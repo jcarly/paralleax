@@ -6,7 +6,7 @@ export type RichTextEditorProps = {
   value: string;
   onChange: (html: string) => void;
   onBlur: (html: string) => void;
-  autoFocus?: boolean;
+  focusOnMount?: boolean;
   revealToolbarOnFocus?: boolean;
   ariaLabel?: string;
   story?: Story;

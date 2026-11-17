@@ -830,12 +830,6 @@
 .comments-toolbar-button {
   gap: 0.4rem;
 }
-.editor-toolbar-actions .comments-toolbar-button small {
-  position: absolute;
-  top: -0.25rem;
-  right: -0.25rem;
-  z-index: 1;
-}
 .comments-toolbar-button small {
   display: inline-grid;
   min-width: 1.25rem;
@@ -845,6 +839,12 @@
   background: var(--color-trigger);
   color: var(--color-text);
   font-size: 0.68rem;
+}
+.editor-toolbar-actions .comments-toolbar-button small {
+  position: absolute;
+  top: -0.25rem;
+  right: -0.25rem;
+  z-index: 1;
 }
 .comments-toolbar-button.active {
   border-color: var(--color-trigger);

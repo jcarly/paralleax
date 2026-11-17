@@ -830,9 +830,12 @@
 }
 
 .new-story-dialog {
+  position: static;
+  inset: auto;
   width: min(100%, 430px);
   max-height: calc(100vh - 3rem);
   max-height: calc(100dvh - 3rem);
+  margin: 0;
   padding: 2rem;
   overflow-y: auto;
   overscroll-behavior: contain;

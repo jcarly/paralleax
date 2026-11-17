@@ -13,7 +13,7 @@ function CharacterAvatar({ character }: { character: Pick<Character, 'name' | 'i
 
   return (
     <span className="interaction-context-avatar" title={character.name} aria-hidden="true">
-      {character.imageUrl ? (
+      {character.imageUrl !== undefined && character.imageUrl.length > 0 ? (
         <img className="interaction-context-avatar-image" src={character.imageUrl} alt="" />
       ) : (
         initials

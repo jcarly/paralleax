@@ -57,7 +57,7 @@ function moveResize(
   bounds: ResizeBounds,
 ): number | undefined {
   const session = resizeSession.current;
-  if (!session || session.pointerId !== event.pointerId) {
+  if (session?.pointerId !== event.pointerId) {
     return undefined;
   }
   const width = Math.max(
@@ -120,10 +120,10 @@ function resizeFromKeyboard(
   bounds: ResizeBounds,
 ) {
   const step = event.shiftKey ? 48 : 16;
-  if (event.key === 'ArrowLeft') {
+  if (event.key === 'ArrowRight') {
     event.preventDefault();
     resizeTo(value + step, bounds);
-  } else if (event.key === 'ArrowRight') {
+  } else if (event.key === 'ArrowLeft') {
     event.preventDefault();
     resizeTo(value - step, bounds);
   } else if (event.key === 'Home') {
@@ -147,36 +147,42 @@ export function InspectorResizeHandle({
   const resizeSession = useRef<ResizeSession | undefined>(undefined);
   const [previewValue, setPreviewValue] = useState<number | undefined>(undefined);
   const bounds = { minimum, maximum, onResize, onResizePreview };
+  const resetPreviewValue = () => {
+    setPreviewValue(undefined);
+  };
 
   return (
     <div
       className="inspector-resize-handle"
-      role="separator"
+      role="slider"
       aria-label={label}
-      title={label}
       aria-controls={controls}
-      aria-orientation="vertical"
+      aria-orientation="horizontal"
       aria-valuemin={minimum}
       aria-valuemax={maximum}
       aria-valuenow={Math.round(previewValue ?? value)}
       tabIndex={0}
-      onPointerDown={(event) => beginResize(event, resizeSession, value)}
+      onPointerDown={(event) => {
+        beginResize(event, resizeSession, value);
+      }}
       onPointerMove={(event) => {
         const width = moveResize(event, resizeSession, bounds);
         if (width !== undefined) {
           setPreviewValue(width);
         }
       }}
-      onPointerUp={(event) =>
-        finishPointerResize(event, resizeSession, onResize, () => setPreviewValue(undefined))
-      }
-      onPointerCancel={(event) =>
-        finishPointerResize(event, resizeSession, onResize, () => setPreviewValue(undefined))
-      }
-      onLostPointerCapture={() =>
-        finishLostPointerResize(resizeSession, onResize, () => setPreviewValue(undefined))
-      }
-      onKeyDown={(event) => resizeFromKeyboard(event, value, bounds)}
+      onPointerUp={(event) => {
+        finishPointerResize(event, resizeSession, onResize, resetPreviewValue);
+      }}
+      onPointerCancel={(event) => {
+        finishPointerResize(event, resizeSession, onResize, resetPreviewValue);
+      }}
+      onLostPointerCapture={() => {
+        finishLostPointerResize(resizeSession, onResize, resetPreviewValue);
+      }}
+      onKeyDown={(event) => {
+        resizeFromKeyboard(event, value, bounds);
+      }}
     />
   );
 }

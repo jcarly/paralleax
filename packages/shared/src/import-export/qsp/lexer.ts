@@ -5,65 +5,67 @@
  * executable statements.
  */
 export function lexQspLines(lines: readonly string[]): string[] {
-  const executableLines: string[] = [];
-  let blockComment = false;
-  let stringQuote: "'" | '"' | undefined;
+  const state: QspLexState = { blockComment: false, stringQuote: undefined };
+  return lines.map((line) => lexQspLine(line, state));
+}
 
-  for (const line of lines) {
-    let executable = '';
-    const continuesMultilineString = Boolean(stringQuote);
+type QspLexState = {
+  blockComment: boolean;
+  stringQuote: "'" | '"' | undefined;
+};
 
-    for (let index = 0; index < line.length; index += 1) {
-      const character = line[index];
+function lexQspLine(line: string, state: QspLexState): string {
+  let executable = '';
+  const continuesMultilineString = Boolean(state.stringQuote);
 
-      if (blockComment) {
-        if (character === '!' && line[index + 1] === '}') {
-          blockComment = false;
-          index += 1;
-        }
-        continue;
+  for (let index = 0; index < line.length; index += 1) {
+    const character = line[index];
+
+    if (state.blockComment) {
+      if (character === '!' && line[index + 1] === '}') {
+        state.blockComment = false;
+        index += 1;
       }
+      continue;
+    }
 
-      if (stringQuote) {
-        if (character === stringQuote && line[index + 1] === stringQuote) {
-          if (!continuesMultilineString) {
-            executable += `${character}${line[index + 1]}`;
-          }
-          index += 1;
-          continue;
-        }
-        if (character === stringQuote) {
-          if (!continuesMultilineString) {
-            executable += character;
-          }
-          stringQuote = undefined;
-          continue;
-        }
+    if (state.stringQuote) {
+      if (character === state.stringQuote && line[index + 1] === state.stringQuote) {
         if (!continuesMultilineString) {
-          executable += character;
+          executable += `${character}${line[index + 1]}`;
         }
-        continue;
-      }
-
-      if (character === '!' && line[index + 1] === '{') {
-        blockComment = true;
         index += 1;
         continue;
       }
-      if (character === '!' && !isQspNotEqualOperator(line, index)) {
-        break;
+      if (character === state.stringQuote) {
+        if (!continuesMultilineString) {
+          executable += character;
+        }
+        state.stringQuote = undefined;
+        continue;
       }
-
-      executable += character;
-      if (character === "'" || character === '"') {
-        stringQuote = character;
+      if (!continuesMultilineString) {
+        executable += character;
       }
+      continue;
     }
 
-    executableLines.push(executable);
+    if (character === '!' && line[index + 1] === '{') {
+      state.blockComment = true;
+      index += 1;
+      continue;
+    }
+    if (character === '!' && !isQspNotEqualOperator(line, index)) {
+      break;
+    }
+
+    executable += character;
+    if (character === "'" || character === '"') {
+      state.stringQuote = character;
+    }
   }
 
-  return executableLines;
+  return executable;
 }
 
 function isQspNotEqualOperator(line: string, index: number) {

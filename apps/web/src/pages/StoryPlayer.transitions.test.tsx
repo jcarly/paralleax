@@ -107,16 +107,13 @@ function recordVisibleCards(): string[] {
       if (card?.classList.contains('player-card-passing')) {
         return {};
       }
+      const titleText =
+        document.querySelector('.player-card > .player-interaction-label')?.textContent ?? '';
+      const leadingIconText =
+        document.querySelector('.interaction-label-leading')?.textContent ?? '';
       const title =
         document.querySelector<HTMLInputElement>('.simulation-title-input')?.value ??
-        document
-          .querySelector('.player-card > .player-interaction-label')
-          ?.textContent?.replace(
-            document.querySelector('.interaction-label-leading')?.textContent ?? '',
-            '',
-          )
-          .trim() ??
-        '';
+        titleText.replace(leadingIconText, '').trim();
       visibleCards.push(title);
       return {};
     },

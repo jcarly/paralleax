@@ -23,7 +23,9 @@ function expectLanguageOptions() {
   ]);
 }
 
-afterEach(() => cleanup());
+afterEach(() => {
+  cleanup();
+});
 beforeEach(async () => {
   await i18n.changeLanguage('en');
 });

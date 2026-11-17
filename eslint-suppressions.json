@@ -698,9 +698,6 @@
     "max-lines": {
       "count": 1
     },
-    "max-lines-per-function": {
-      "count": 1
-    },
     "max-params": {
       "count": 2
     },
@@ -842,15 +839,9 @@
       "count": 1
     },
     "@typescript-eslint/strict-boolean-expressions": {
-      "count": 10
+      "count": 7
     },
     "complexity": {
-      "count": 1
-    },
-    "jsx-a11y-x/no-autofocus": {
-      "count": 1
-    },
-    "jsx-a11y-x/no-noninteractive-tabindex": {
       "count": 1
     },
     "max-lines": {
@@ -864,9 +855,6 @@
     }
   },
   "apps/web/src/components/InteractionNode.tsx": {
-    "@typescript-eslint/strict-boolean-expressions": {
-      "count": 11
-    },
     "complexity": {
       "count": 1
     },
@@ -2356,38 +2344,20 @@
     }
   },
   "apps/web/src/pages/StoryEditor.tsx": {
-    "@typescript-eslint/consistent-type-imports": {
-      "count": 1
-    },
-    "@typescript-eslint/no-confusing-void-expression": {
-      "count": 28
-    },
     "@typescript-eslint/no-unnecessary-condition": {
-      "count": 10
-    },
-    "@typescript-eslint/no-unsafe-type-assertion": {
-      "count": 1
+      "count": 3
     },
     "@typescript-eslint/prefer-optional-chain": {
       "count": 2
     },
-    "@typescript-eslint/strict-boolean-expressions": {
-      "count": 29
-    },
     "complexity": {
-      "count": 9
-    },
-    "curly": {
-      "count": 74
+      "count": 1
     },
     "max-lines": {
       "count": 1
     },
     "max-lines-per-function": {
-      "count": 5
-    },
-    "sonarjs/cognitive-complexity": {
-      "count": 6
+      "count": 3
     }
   },
   "apps/web/src/pages/StoryList.test.tsx": {
@@ -2466,9 +2436,6 @@
     "jsx-a11y-x/click-events-have-key-events": {
       "count": 1
     },
-    "jsx-a11y-x/no-autofocus": {
-      "count": 1
-    },
     "jsx-a11y-x/no-noninteractive-element-interactions": {
       "count": 1
     },
@@ -2522,9 +2489,6 @@
   "apps/web/src/storyGraph.ts": {
     "@typescript-eslint/no-unnecessary-condition": {
       "count": 5
-    },
-    "@typescript-eslint/strict-boolean-expressions": {
-      "count": 6
     },
     "complexity": {
       "count": 1
@@ -3119,9 +3083,6 @@
     "@typescript-eslint/no-shadow": {
       "count": 1
     },
-    "curly": {
-      "count": 4
-    },
     "max-lines-per-function": {
       "count": 1
     }
@@ -3150,9 +3111,6 @@
     "complexity": {
       "count": 1
     },
-    "curly": {
-      "count": 12
-    },
     "max-depth": {
       "count": 3
     },
@@ -3177,9 +3135,6 @@
   "packages/shared/src/import-export/choicescript/importer.ts": {
     "@typescript-eslint/no-non-null-assertion": {
       "count": 1
-    },
-    "curly": {
-      "count": 4
     }
   },
   "packages/shared/src/import-export/choicescript/mapping.ts": {
@@ -3188,9 +3143,6 @@
     },
     "@typescript-eslint/strict-boolean-expressions": {
       "count": 1
-    },
-    "curly": {
-      "count": 6
     },
     "max-lines-per-function": {
       "count": 2
@@ -3214,17 +3166,11 @@
     "@typescript-eslint/no-non-null-assertion": {
       "count": 1
     },
-    "@typescript-eslint/no-unnecessary-condition": {
-      "count": 2
-    },
     "@typescript-eslint/strict-boolean-expressions": {
       "count": 1
     },
     "complexity": {
       "count": 2
-    },
-    "curly": {
-      "count": 17
     },
     "max-lines-per-function": {
       "count": 2
@@ -3241,9 +3187,6 @@
   "packages/shared/src/import-export/layout.ts": {
     "complexity": {
       "count": 1
-    },
-    "curly": {
-      "count": 6
     },
     "sonarjs/cognitive-complexity": {
       "count": 1
@@ -3303,9 +3246,6 @@
     "@typescript-eslint/no-unsafe-assignment": {
       "count": 10
     },
-    "curly": {
-      "count": 1
-    },
     "max-depth": {
       "count": 3
     },
@@ -3323,11 +3263,8 @@
     "complexity": {
       "count": 1
     },
-    "curly": {
-      "count": 6
-    },
     "max-depth": {
-      "count": 6
+      "count": 2
     },
     "sonarjs/cognitive-complexity": {
       "count": 1
@@ -3336,9 +3273,6 @@
   "packages/shared/src/import-export/qsp/mapping.ts": {
     "@typescript-eslint/no-non-null-assertion": {
       "count": 8
-    },
-    "curly": {
-      "count": 6
     },
     "max-depth": {
       "count": 1
@@ -3382,17 +3316,11 @@
     }
   },
   "packages/shared/src/import-export/qsp/report.ts": {
-    "curly": {
-      "count": 1
-    },
     "max-params": {
       "count": 1
     }
   },
   "packages/shared/src/import-export/story-builders.ts": {
-    "curly": {
-      "count": 1
-    },
     "sonarjs/cognitive-complexity": {
       "count": 1
     }
@@ -3400,9 +3328,6 @@
   "packages/shared/src/items/graph.test.ts": {
     "@typescript-eslint/no-non-null-assertion": {
       "count": 7
-    },
-    "curly": {
-      "count": 2
     },
     "max-lines-per-function": {
       "count": 1
@@ -3415,19 +3340,11 @@
     "complexity": {
       "count": 1
     },
-    "curly": {
-      "count": 14
-    },
     "max-lines-per-function": {
       "count": 1
     },
     "sonarjs/cognitive-complexity": {
       "count": 1
-    }
-  },
-  "packages/shared/src/model/reader-progress.ts": {
-    "curly": {
-      "count": 2
     }
   },
   "packages/shared/src/model/story-loading.test.ts": {
@@ -3438,9 +3355,6 @@
   "packages/shared/src/model/story-loading.ts": {
     "@typescript-eslint/strict-boolean-expressions": {
       "count": 4
-    },
-    "curly": {
-      "count": 2
     }
   },
   "packages/shared/src/operations/cleanup.test.ts": {
@@ -3463,9 +3377,6 @@
     "@typescript-eslint/strict-boolean-expressions": {
       "count": 2
     },
-    "curly": {
-      "count": 2
-    },
     "max-lines-per-function": {
       "count": 1
     }
@@ -3480,9 +3391,6 @@
       "count": 3
     },
     "complexity": {
-      "count": 1
-    },
-    "curly": {
       "count": 1
     },
     "max-lines-per-function": {
@@ -3529,9 +3437,6 @@
     },
     "complexity": {
       "count": 1
-    },
-    "curly": {
-      "count": 2
     }
   },
   "packages/shared/src/stats/targets.test.ts": {
@@ -3545,9 +3450,6 @@
   "packages/shared/src/stats/targets.ts": {
     "@typescript-eslint/strict-boolean-expressions": {
       "count": 4
-    },
-    "curly": {
-      "count": 2
     }
   },
   "packages/shared/src/story-operations.test.ts": {
@@ -3558,9 +3460,6 @@
   "packages/shared/src/time/conditions.ts": {
     "complexity": {
       "count": 1
-    },
-    "curly": {
-      "count": 3
     }
   },
   "packages/shared/src/triggers/connections.test.ts": {
@@ -3569,11 +3468,6 @@
     },
     "max-lines-per-function": {
       "count": 1
-    }
-  },
-  "packages/shared/src/triggers/connections.ts": {
-    "curly": {
-      "count": 2
     }
   },
   "packages/shared/src/triggers/evaluation.test.ts": {
@@ -3594,9 +3488,6 @@
     "complexity": {
       "count": 1
     },
-    "curly": {
-      "count": 2
-    },
     "max-lines": {
       "count": 1
     },
@@ -3605,32 +3496,18 @@
     }
   },
   "scripts/benchmark-qsp-import.mjs": {
-    "curly": {
-      "count": 6
-    },
     "max-depth": {
       "count": 4
-    }
-  },
-  "scripts/check-web-bundle.mjs": {
-    "curly": {
-      "count": 1
     }
   },
   "scripts/deployment-smoke.mjs": {
     "complexity": {
       "count": 1
-    },
-    "curly": {
-      "count": 3
     }
   },
   "scripts/eslint-rules/require-shared-form-control.mjs": {
     "complexity": {
       "count": 1
-    },
-    "curly": {
-      "count": 14
     },
     "max-depth": {
       "count": 1
@@ -3642,20 +3519,7 @@
       "count": 1
     }
   },
-  "scripts/postgres-operations.mjs": {
-    "curly": {
-      "count": 3
-    }
-  },
-  "scripts/verify-postgres-restore.mjs": {
-    "curly": {
-      "count": 1
-    }
-  },
   "scripts/web-bundle.mjs": {
-    "curly": {
-      "count": 5
-    },
     "max-lines-per-function": {
       "count": 1
     }

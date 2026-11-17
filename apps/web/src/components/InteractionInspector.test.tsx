@@ -77,6 +77,71 @@ function expectPresentationContainsContext(
   expect(titleReadout.querySelector('.interaction-label-leading')).toHaveTextContent('→');
 }
 
+function richTextPreviewStory(body: string) {
+  const interaction: Story['interactions'][number] = {
+    id: 'interaction-1',
+    title: 'Start',
+    body,
+    position: { x: 0, y: 0 },
+    triggers: [],
+  };
+  const target: Story['interactions'][number] = {
+    id: 'interaction-2',
+    title: 'Next',
+    body: '',
+    position: { x: 200, y: 0 },
+    triggers: [],
+  };
+  return {
+    interaction,
+    story: {
+      id: 'story-1',
+      title: 'Story',
+      interactions: [interaction, target],
+      createdAt: '2026-10-21T08:00:00Z',
+      updatedAt: '2026-10-21T08:00:00Z',
+    } satisfies Story,
+  };
+}
+
+describe('InteractionInspector rich text preview', () => {
+  it.each([
+    {
+      body: '<p><span data-interaction-link-target="interaction-2">Continue</span></p>',
+      text: 'Continue',
+    },
+    {
+      body: '<p><button data-conditional-text-link="interaction-2">Read the clue</button></p>',
+      text: 'Read the clue',
+    },
+  ])('opens editing instead of navigating when "$text" is clicked', async ({ body, text }) => {
+    const user = userEvent.setup();
+    const { interaction, story } = richTextPreviewStory(body);
+    const onSelectInteraction = vi.fn();
+
+    render(
+      <InteractionInspector
+        story={story}
+        interaction={interaction}
+        onChange={vi.fn()}
+        onPatch={vi.fn().mockResolvedValue(true)}
+        onDelete={vi.fn()}
+        onSelectInteraction={onSelectInteraction}
+      />,
+    );
+
+    const preview = screen.getByRole('button', { name: /Content/ });
+    expect(preview.querySelectorAll('button')).toHaveLength(0);
+
+    await user.click(within(preview).getByText(text));
+
+    expect(
+      await screen.findByRole('textbox', { name: 'Content' }, { timeout: 5_000 }),
+    ).toBeInTheDocument();
+    expect(onSelectInteraction).not.toHaveBeenCalled();
+  });
+});
+
 describe('InteractionInspector time', () => {
   it('reports authored scene content after the save succeeds', async () => {
     const user = userEvent.setup();
@@ -429,13 +494,14 @@ describe('InteractionInspector time', () => {
       createdAt: '2026-07-26T00:00:00.000Z',
       updatedAt: '2026-07-26T00:00:00.000Z',
     };
+    const onPatch = vi.fn().mockResolvedValue(undefined);
 
     render(
       <InteractionInspector
         story={story}
         interaction={interaction}
         onChange={vi.fn()}
-        onPatch={vi.fn().mockResolvedValue(undefined)}
+        onPatch={onPatch}
         onDelete={vi.fn()}
       />,
     );
@@ -443,8 +509,17 @@ describe('InteractionInspector time', () => {
     fireEvent.click(screen.getByRole('button', { name: 'Add effect' }));
 
     const picker = screen.getByRole('group', { name: 'Effect type' });
-    expect(within(picker).getByRole('button', { name: 'Variable' })).toBeDisabled();
-    expect(within(picker).getByRole('button', { name: 'Item inventory' })).toBeDisabled();
+    const unavailableVariable = within(picker).getByRole('button', { name: 'Variable' });
+    expect(unavailableVariable).toHaveAttribute('aria-disabled', 'true');
+    expect(unavailableVariable).not.toBeDisabled();
+    unavailableVariable.focus();
+    expect(unavailableVariable).toHaveFocus();
+    fireEvent.click(unavailableVariable);
+    expect(onPatch).not.toHaveBeenCalled();
+    expect(within(picker).getByRole('button', { name: 'Item inventory' })).toHaveAttribute(
+      'aria-disabled',
+      'true',
+    );
     expect(screen.getByText('Create and attach a variable first.')).toHaveAttribute(
       'role',
       'tooltip',

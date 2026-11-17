@@ -89,7 +89,11 @@ export function buildInteractionNodes(
 
   return story.interactions.map((item, index) => {
     const rootTrigger = item.triggers.find((trigger) => trigger.inputInteractionIds.length === 0);
-    const location = item.locationId ? locationsById.get(item.locationId) : undefined;
+    const locationId = item.locationId;
+    const location =
+      typeof locationId === 'string' && locationId.length > 0
+        ? locationsById.get(locationId)
+        : undefined;
     const characters = (item.characterIds ?? []).flatMap((characterId) => {
       const character = charactersById.get(characterId);
       return character
@@ -97,11 +101,20 @@ export function buildInteractionNodes(
             {
               id: character.id,
               name: character.name,
-              ...(character.imageUrl ? { imageUrl: character.imageUrl } : {}),
+              ...(character.imageUrl !== undefined && character.imageUrl.length > 0
+                ? { imageUrl: character.imageUrl }
+                : {}),
             },
           ]
         : [];
     });
+    const statEffectCount = item.statEffects?.length ?? 0;
+    const itemEffectCount = item.itemEffects?.length ?? 0;
+    const occurrenceCount = actions.occurrenceCounts?.get(item.id) ?? 0;
+    const commentCount = actions.commentCounts?.get(item.id) ?? 0;
+    const rootTriggerCommentCount = rootTrigger
+      ? (actions.commentCounts?.get(rootTrigger.id) ?? 0)
+      : 0;
     return {
       id: item.id,
       type: 'interaction',
@@ -109,24 +122,20 @@ export function buildInteractionNodes(
       data: {
         title: item.title,
         body: item.body,
-        ...(item.statEffects?.length ? { statEffectCount: item.statEffects.length } : {}),
-        ...(item.itemEffects?.length ? { itemEffectCount: item.itemEffects.length } : {}),
+        ...(statEffectCount > 0 ? { statEffectCount } : {}),
+        ...(itemEffectCount > 0 ? { itemEffectCount } : {}),
         selected: item.id === selectedId,
         ...(actions.onboardingBranchSourceId === item.id ? { onboardingBranchAdd: true } : {}),
         ...(location ? { location: { id: location.id, name: location.name } } : {}),
         ...(characters.length > 0 ? { characters } : {}),
-        ...(actions.occurrenceCounts?.get(item.id)
-          ? { occurrenceCount: actions.occurrenceCounts.get(item.id) }
-          : {}),
+        ...(occurrenceCount > 0 ? { occurrenceCount } : {}),
         ...(actions.emphasizedInteractionIds
           ? { dimmed: !actions.emphasizedInteractionIds.has(item.id) }
           : {}),
         ...(rootTrigger
           ? {
               rootTriggerId: rootTrigger.id,
-              ...(actions.commentCounts?.get(rootTrigger.id)
-                ? { rootTriggerCommentCount: actions.commentCounts.get(rootTrigger.id) }
-                : {}),
+              ...(rootTriggerCommentCount > 0 ? { rootTriggerCommentCount } : {}),
               rootTriggerSelected:
                 selectedTrigger?.interactionId === item.id &&
                 selectedTrigger.triggerId === rootTrigger.id,
@@ -137,9 +146,7 @@ export function buildInteractionNodes(
         ...(actions.onSelectRootTrigger
           ? { onSelectRootTrigger: actions.onSelectRootTrigger }
           : {}),
-        ...(actions.commentCounts?.get(item.id)
-          ? { commentCount: actions.commentCounts.get(item.id) }
-          : {}),
+        ...(commentCount > 0 ? { commentCount } : {}),
         ...(actions.onOpenComments ? { onOpenComments: actions.onOpenComments } : {}),
       },
     };
@@ -159,6 +166,10 @@ export function buildTriggerNodes(
         const selected =
           selectedTrigger?.interactionId === target.id &&
           Boolean(selectedTrigger.triggerId && triggerIds.includes(selectedTrigger.triggerId));
+
+        const commentTargetId = triggerIds.find(
+          (triggerId) => (actions.commentCounts?.get(triggerId) ?? 0) > 0,
+        );
 
         return {
           id: getTriggerNodeId(target.id, group.primaryTrigger.id),
@@ -188,13 +199,7 @@ export function buildTriggerNodes(
                   ),
                 }
               : {}),
-            ...(triggerIds.find((triggerId) => (actions.commentCounts?.get(triggerId) ?? 0) > 0)
-              ? {
-                  commentTargetId: triggerIds.find(
-                    (triggerId) => (actions.commentCounts?.get(triggerId) ?? 0) > 0,
-                  ),
-                }
-              : {}),
+            ...(commentTargetId !== undefined ? { commentTargetId } : {}),
             ...(actions.onSelectTrigger ? { onSelectTrigger: actions.onSelectTrigger } : {}),
             ...(actions.onOpenComments ? { onOpenComments: actions.onOpenComments } : {}),
           },

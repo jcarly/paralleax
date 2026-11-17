@@ -353,10 +353,14 @@
   margin: 0;
 }
 .trigger-condition-type-option:focus-visible,
-.interaction-effect-type-option:focus-visible {
+:where(.interaction-effect-type-option > button:focus-visible) {
   border-radius: 8px;
   outline: 3px solid var(--color-primary-halo-strong);
   outline-offset: 2px;
+}
+.interaction-effect-type-option > button[aria-disabled='true'] {
+  opacity: 0.45;
+  cursor: not-allowed;
 }
 .trigger-condition-type-tooltip,
 .interaction-effect-type-tooltip {

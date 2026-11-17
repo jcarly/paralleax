@@ -204,7 +204,9 @@ function StoryTitleControl({
           aria-label={t('storySettings.open')}
           data-tooltip={t('storySettings.open')}
           title={t('storySettings.open')}
-          onClick={() => setStorySettingsTab('properties')}
+          onClick={() => {
+            setStorySettingsTab('properties');
+          }}
         >
           <StorySettingsIcon />
         </button>
@@ -238,9 +240,12 @@ function StoryEditorActions(props: StoryEditorActionsProps) {
       }
       commentAccess={props.commentAccess}
       commentsOpen={props.commentsOpen}
-      openCommentCount={props.comments.threads.filter(
-        ({ status, deletedAt }) => status === 'open' && !deletedAt,
-      ).length}
+      openCommentCount={
+        props.comments.threads.filter(
+          ({ status, deletedAt }) =>
+            status === 'open' && (deletedAt === undefined || deletedAt.length === 0),
+        ).length
+      }
       onToggleComments={props.toggleCommentsList}
       reviewOnly={props.reviewOnly}
       readerPath={`/stories/${props.storyId}/play`}
@@ -430,9 +435,7 @@ type StoryEditorInspectorActions = Pick<
     ids: string[],
     parentGroupId?: string,
   ) => Promise<string | false>;
-  createChildAndFocus: ReturnType<
-    typeof useStoryEditorRelatedCreation
-  >['createChildAndFocus'];
+  createChildAndFocus: ReturnType<typeof useStoryEditorRelatedCreation>['createChildAndFocus'];
   selectExclusive: (selection?: StoryEditorExclusiveSelection) => void;
   updateLocalStatDefinition: (definition: StatDefinition) => void;
   updateLocalLocation: (location: Location) => void;
@@ -702,8 +705,12 @@ function StoryCommentsInspector({
         )}
         deletedLoading={model.comments.deletedLoading}
         realtimeStatus={model.comments.realtimeStatus}
-        onClose={() => model.actions.setCommentsOpen(false)}
-        onSelect={(threadId) => selectCommentInspectorThread(model, threadId)}
+        onClose={() => {
+          model.actions.setCommentsOpen(false);
+        }}
+        onSelect={(threadId) => {
+          selectCommentInspectorThread(model, threadId);
+        }}
         onCancelDraft={model.comments.cancelDraft}
         onCreate={model.comments.create}
         onReply={model.comments.reply}
@@ -720,12 +727,12 @@ function selectCommentInspectorThread(
   model: StoryEditorInspectorModel,
   threadId: string | undefined,
 ) {
-  if (!threadId) {
+  if (threadId === undefined || threadId.length === 0) {
     model.comments.selectThread(undefined);
     return;
   }
   const thread = model.projectedCommentThreads.find(({ id }) => id === threadId);
-  if (thread?.deletedAt) {
+  if (thread?.deletedAt !== undefined && thread.deletedAt.length > 0) {
     model.comments.selectThread(threadId);
   } else {
     model.actions.focusCommentThread(threadId);
@@ -777,7 +784,7 @@ function StoryInspectorHeader({
 }) {
   return (
     <div className="inspector-header">
-      {model.selection.selectedCommentTarget && model.story.capabilities?.canComment ? (
+      {model.selection.selectedCommentTarget && model.story.capabilities?.canComment === true ? (
         <StoryInspectorCommentActions model={model} />
       ) : null}
       <InspectorMaximizeButton
@@ -877,7 +884,7 @@ function StoryInspectorContent({ model }: { model: StoryEditorInspectorModel }) 
 
 function hasStoryContextInspectorSelection(selection: StoryEditorSelectionModel) {
   return Boolean(
-    selection.selectedLocation || selection.selectedCharacter || selection.selectedItemDefinition,
+    selection.selectedLocation ?? selection.selectedCharacter ?? selection.selectedItemDefinition,
   );
 }
 
@@ -955,7 +962,7 @@ async function createStoryStatDefinition(
   input: Parameters<StoryEditorInspectorActions['createStatDefinition']>[0],
 ) {
   const definitionId = await model.actions.createStatDefinition(input);
-  if (definitionId) {
+  if (definitionId !== undefined && definitionId.length > 0) {
     model.actions.selectExclusive({ type: 'statDefinition', id: definitionId });
   }
   return definitionId;
@@ -1002,9 +1009,9 @@ function StoryInteractionContent({ model }: { model: StoryEditorInspectorModel }
           }
         }}
         onDelete={actions.remove}
-        onSelectInteraction={(interactionId) =>
-          actions.selectExclusive({ type: 'interaction', id: interactionId })
-        }
+        onSelectInteraction={(interactionId) => {
+          actions.selectExclusive({ type: 'interaction', id: interactionId });
+        }}
         onAddOption={() => actions.createChildAndFocus(interaction.id)}
         textCommentCounts={commentSummary.selectedTextCommentCounts}
         onOpenTextComments={actions.openTextComments}
@@ -1178,7 +1185,9 @@ function StoryContextSearch({ navigation, t }: Pick<StoryContextPanelProps, 'nav
         aria-label={t('editor.search')}
         placeholder={t('editor.searchPlaceholder')}
         value={navigation.searchQuery}
-        onChange={(event) => navigation.setSearchQuery(event.target.value)}
+        onChange={(event) => {
+          navigation.setSearchQuery(event.target.value);
+        }}
       />
       <button
         className="ghost"
@@ -1186,7 +1195,9 @@ function StoryContextSearch({ navigation, t }: Pick<StoryContextPanelProps, 'nav
         aria-label={t('editor.previousResult')}
         title={t('editor.previousResult')}
         disabled={count === 0}
-        onClick={() => navigation.navigateInteractions(-1)}
+        onClick={() => {
+          navigation.navigateInteractions(-1);
+        }}
       >
         ↑
       </button>
@@ -1196,7 +1207,9 @@ function StoryContextSearch({ navigation, t }: Pick<StoryContextPanelProps, 'nav
         aria-label={t('editor.nextResult')}
         title={t('editor.nextResult')}
         disabled={count === 0}
-        onClick={() => navigation.navigateInteractions(1)}
+        onClick={() => {
+          navigation.navigateInteractions(1);
+        }}
       >
         ↓
       </button>
@@ -1219,10 +1232,16 @@ function StoryContextEntitySectionsTop(props: StoryContextPanelProps) {
         selectedId={selection.selectedStatDefinitionId}
         referenceCounts={navigation.contextReferenceCounts.stats}
         commentCounts={commentCounts}
-        onToggle={() => navigation.toggleContextSection('stats')}
+        onToggle={() => {
+          navigation.toggleContextSection('stats');
+        }}
         onAdd={!reviewOnly ? props.entityActions.addStatDefinition : undefined}
-        onSelect={(id) => selectContextEntity(props, { type: 'statDefinition', id })}
-        onOpenComments={(id) => props.openCommentsForTarget('statDefinition', id)}
+        onSelect={(id) => {
+          selectContextEntity(props, { type: 'statDefinition', id });
+        }}
+        onOpenComments={(id) => {
+          props.openCommentsForTarget('statDefinition', id);
+        }}
       />
       <ItemDefinitionContextSection
         items={navigation.filteredItemDefinitions}
@@ -1232,10 +1251,16 @@ function StoryContextEntitySectionsTop(props: StoryContextPanelProps) {
         selectedId={selection.selectedItemDefinitionId}
         referenceCounts={navigation.contextReferenceCounts.items}
         commentCounts={commentCounts}
-        onToggle={() => navigation.toggleContextSection('items')}
+        onToggle={() => {
+          navigation.toggleContextSection('items');
+        }}
         onAdd={!reviewOnly ? () => void props.entityActions.addItemDefinition() : undefined}
-        onSelect={(id) => selectContextEntity(props, { type: 'itemDefinition', id })}
-        onOpenComments={(id) => props.openCommentsForTarget('itemDefinition', id)}
+        onSelect={(id) => {
+          selectContextEntity(props, { type: 'itemDefinition', id });
+        }}
+        onOpenComments={(id) => {
+          props.openCommentsForTarget('itemDefinition', id);
+        }}
       />
     </>
   );
@@ -1253,10 +1278,16 @@ function StoryContextEntitySectionsBottom(props: StoryContextPanelProps) {
         selectedId={selection.selectedCharacterId}
         referenceCounts={navigation.contextReferenceCounts.characters}
         commentCounts={commentCounts}
-        onToggle={() => navigation.toggleContextSection('characters')}
+        onToggle={() => {
+          navigation.toggleContextSection('characters');
+        }}
         onAdd={!reviewOnly ? () => void props.entityActions.addCharacter() : undefined}
-        onSelect={(id) => selectContextEntity(props, { type: 'character', id })}
-        onOpenComments={(id) => props.openCommentsForTarget('character', id)}
+        onSelect={(id) => {
+          selectContextEntity(props, { type: 'character', id });
+        }}
+        onOpenComments={(id) => {
+          props.openCommentsForTarget('character', id);
+        }}
       />
       <LocationContextSection
         items={navigation.filteredLocations}
@@ -1266,10 +1297,16 @@ function StoryContextEntitySectionsBottom(props: StoryContextPanelProps) {
         selectedId={selection.selectedLocationId}
         referenceCounts={navigation.contextReferenceCounts.locations}
         commentCounts={commentCounts}
-        onToggle={() => navigation.toggleContextSection('locations')}
+        onToggle={() => {
+          navigation.toggleContextSection('locations');
+        }}
         onAdd={!reviewOnly ? () => void props.entityActions.addLocation() : undefined}
-        onSelect={(id) => selectContextEntity(props, { type: 'location', id })}
-        onOpenComments={(id) => props.openCommentsForTarget('location', id)}
+        onSelect={(id) => {
+          selectContextEntity(props, { type: 'location', id });
+        }}
+        onOpenComments={(id) => {
+          props.openCommentsForTarget('location', id);
+        }}
       />
     </>
   );
@@ -1288,7 +1325,9 @@ function StoryContextGroupsSection(props: StoryContextPanelProps) {
   const { navigation, selection, story, reviewOnly, groupActions, t } = props;
   const selectionIds =
     selection.graphSelection?.interactionIds ??
-    (selection.selectedId ? [selection.selectedId] : []);
+    (selection.selectedId !== undefined && selection.selectedId.length > 0
+      ? [selection.selectedId]
+      : []);
   return (
     <StoryGroupsPanel
       key={story.id}
@@ -1296,7 +1335,9 @@ function StoryContextGroupsSection(props: StoryContextPanelProps) {
       searchQuery={navigation.searchQuery}
       matchingInteractionIds={navigation.matchingInteractionIds}
       open={navigation.openContextSections.groups}
-      onToggle={() => navigation.toggleContextSection('groups')}
+      onToggle={() => {
+        navigation.toggleContextSection('groups');
+      }}
       onAdd={() => void groupActions.create(t('editor.groups.newGroup'), [])}
       selectedGroupId={selection.selectedGroupId}
       selectedInteractionId={selection.selectedId}
@@ -1306,7 +1347,9 @@ function StoryContextGroupsSection(props: StoryContextPanelProps) {
       onSelectInteractions={selection.selectGraphInteractions}
       selectionIds={selectionIds}
       readOnly={reviewOnly}
-      onSelect={(id) => selectContextEntity(props, { type: 'group', id })}
+      onSelect={(id) => {
+        selectContextEntity(props, { type: 'group', id });
+      }}
       onSelectInteraction={props.selectInteraction}
       onFocus={(ids) => {
         void props.flowInstanceRef.current?.fitView({
@@ -1336,7 +1379,7 @@ type StoryEditorEntityActionInput = {
 
 async function addStoryLocation(input: StoryEditorEntityActionInput) {
   const locationId = await input.createLocation();
-  if (!locationId) {
+  if (locationId === undefined || locationId.length === 0) {
     return;
   }
   input.selectExclusive({ type: 'location', id: locationId });
@@ -1358,7 +1401,7 @@ function updateStoryLocation(input: StoryEditorEntityActionInput, nextLocation: 
 
 async function addStoryCharacter(input: StoryEditorEntityActionInput) {
   const characterId = await input.createCharacter();
-  if (!characterId) {
+  if (characterId === undefined || characterId.length === 0) {
     return;
   }
   input.selectExclusive({ type: 'character', id: characterId });
@@ -1389,7 +1432,7 @@ function updateStoryStatDefinition(
 
 async function addStoryItemDefinition(input: StoryEditorEntityActionInput) {
   const itemDefinitionId = await input.createItemDefinition();
-  if (!itemDefinitionId) {
+  if (itemDefinitionId === undefined || itemDefinitionId.length === 0) {
     return;
   }
   input.selectExclusive({ type: 'itemDefinition', id: itemDefinitionId });
@@ -1427,15 +1470,23 @@ function updateStoryCharacter(input: StoryEditorEntityActionInput, patch: Partia
 function useStoryEditorEntityActions(input: StoryEditorEntityActionInput) {
   return {
     addLocation: () => addStoryLocation(input),
-    updateLocalLocation: (location: Location) => updateStoryLocation(input, location),
+    updateLocalLocation: (location: Location) => {
+      updateStoryLocation(input, location);
+    },
     addCharacter: () => addStoryCharacter(input),
-    addStatDefinition: () => addStoryStatDefinition(input),
-    updateLocalStatDefinition: (definition: StatDefinition) =>
-      updateStoryStatDefinition(input, definition),
+    addStatDefinition: () => {
+      addStoryStatDefinition(input);
+    },
+    updateLocalStatDefinition: (definition: StatDefinition) => {
+      updateStoryStatDefinition(input, definition);
+    },
     addItemDefinition: () => addStoryItemDefinition(input),
-    updateLocalItemDefinition: (definition: ItemDefinition) =>
-      updateStoryItemDefinition(input, definition),
-    updateLocalCharacter: (patch: Partial<Character>) => updateStoryCharacter(input, patch),
+    updateLocalItemDefinition: (definition: ItemDefinition) => {
+      updateStoryItemDefinition(input, definition);
+    },
+    updateLocalCharacter: (patch: Partial<Character>) => {
+      updateStoryCharacter(input, patch);
+    },
   };
 }
 
@@ -1732,7 +1783,10 @@ function useStoryEditorCommentProjection(input: {
     [input.commentThreads, input.story],
   );
   const activeCommentThreads = useMemo(
-    () => projectedCommentThreads.filter((thread) => !thread.deletedAt),
+    () =>
+      projectedCommentThreads.filter(
+        (thread) => thread.deletedAt === undefined || thread.deletedAt.length === 0,
+      ),
     [projectedCommentThreads],
   );
   const selectedTargetThreads = useMemo(
@@ -1794,7 +1848,7 @@ function useStoryEditorCommentSummary(input: {
 }
 
 function getCommentTargetCount(counts: ReadonlyMap<string, number>, key: string | undefined) {
-  return key ? (counts.get(key) ?? 0) : 0;
+  return key !== undefined && key.length > 0 ? (counts.get(key) ?? 0) : 0;
 }
 
 function isContextualCommentsOpen(
@@ -1805,7 +1859,8 @@ function isContextualCommentsOpen(
 ) {
   return Boolean(
     !commentsOpen &&
-    selectedTargetKey &&
+    selectedTargetKey !== undefined &&
+    selectedTargetKey.length > 0 &&
     (contextualTargetKey === selectedTargetKey || draftAnchor),
   );
 }
@@ -2006,12 +2061,15 @@ function useStoryEditorNodeDragHandlers(input: StoryEditorNodeDragInput) {
     ],
   );
   const handleNodeDragStart = useCallback(
-    (_: MouseEvent | TouchEvent, node: StoryFlowNode) => startStoryNodeDrag(stableInput, node),
+    (_: MouseEvent | TouchEvent, node: StoryFlowNode) => {
+      startStoryNodeDrag(stableInput, node);
+    },
     [stableInput],
   );
   const handleNodeDrag = useCallback(
-    (_: MouseEvent | TouchEvent, node: StoryFlowNode, draggedNodes: StoryFlowNode[]) =>
-      previewDraggedStoryNodes(stableInput, node, draggedNodes),
+    (_: MouseEvent | TouchEvent, node: StoryFlowNode, draggedNodes: StoryFlowNode[]) => {
+      previewDraggedStoryNodes(stableInput, node, draggedNodes);
+    },
     [stableInput],
   );
   const persistNodeDrag = useCallback(
@@ -2042,7 +2100,7 @@ function openEntityCommentThread(
   targetType: CommentTargetType,
   targetId: string,
 ) {
-  if (!input.story?.capabilities?.canComment) {
+  if (input.story?.capabilities?.canComment !== true) {
     return;
   }
   input.comments.startThread({ kind: 'entity', targetType, targetId });
@@ -2079,7 +2137,7 @@ function toggleStoryContextualComments(input: StoryEditorCommentActionInput) {
 }
 
 function selectTextCommentThread(input: StoryEditorCommentActionInput, field: CommentTextField) {
-  if (!input.selectedCommentTargetKey) {
+  if (input.selectedCommentTargetKey === undefined || input.selectedCommentTargetKey.length === 0) {
     return;
   }
   const thread =
@@ -2105,7 +2163,7 @@ function selectSemanticCommentThread(
   input: StoryEditorCommentActionInput,
   slot: CommentSemanticSlot,
 ) {
-  if (!input.selectedCommentTarget || !input.story?.capabilities?.canComment) {
+  if (!input.selectedCommentTarget || input.story?.capabilities?.canComment !== true) {
     return;
   }
   const key = commentSemanticSlotKey(slot);
@@ -2140,7 +2198,7 @@ function findSemanticCommentThread(
 }
 
 function startStoryTextComment(input: StoryEditorCommentActionInput) {
-  if (!input.selectedCommentTarget || !input.story?.capabilities?.canComment) {
+  if (!input.selectedCommentTarget || input.story?.capabilities?.canComment !== true) {
     return;
   }
   const selection = captureActiveTextSelection();
@@ -2181,20 +2239,33 @@ async function reattachStoryCommentThread(
 
 function bindStoryEditorCommentActions(input: StoryEditorCommentActionInput) {
   return {
-    startEntityCommentForTarget: (targetType: CommentTargetType, targetId: string) =>
-      openEntityCommentThread(input, targetType, targetId),
-    startEntityComment: () =>
-      input.selectedCommentTarget &&
-      openEntityCommentThread(
-        input,
-        input.selectedCommentTarget.targetType,
-        input.selectedCommentTarget.targetId,
-      ),
-    closeContextualComments: () => resetContextualCommentState(input),
-    toggleContextualComments: () => toggleStoryContextualComments(input),
-    openTextComments: (field: CommentTextField) => selectTextCommentThread(input, field),
-    openSemanticComments: (slot: CommentSemanticSlot) => selectSemanticCommentThread(input, slot),
-    startTextComment: () => startStoryTextComment(input),
+    startEntityCommentForTarget: (targetType: CommentTargetType, targetId: string) => {
+      openEntityCommentThread(input, targetType, targetId);
+    },
+    startEntityComment: () => {
+      if (input.selectedCommentTarget) {
+        openEntityCommentThread(
+          input,
+          input.selectedCommentTarget.targetType,
+          input.selectedCommentTarget.targetId,
+        );
+      }
+    },
+    closeContextualComments: () => {
+      resetContextualCommentState(input);
+    },
+    toggleContextualComments: () => {
+      toggleStoryContextualComments(input);
+    },
+    openTextComments: (field: CommentTextField) => {
+      selectTextCommentThread(input, field);
+    },
+    openSemanticComments: (slot: CommentSemanticSlot) => {
+      selectSemanticCommentThread(input, slot);
+    },
+    startTextComment: () => {
+      startStoryTextComment(input);
+    },
     reattachSelectedThread: (threadId: string) => reattachStoryCommentThread(input, threadId),
   };
 }
@@ -2219,7 +2290,7 @@ type StoryEditorPointerActionInput = {
 function runStoryPaneClick(input: StoryEditorPointerActionInput, event: ReactMouseEvent) {
   input.setCanvasContextMenu(undefined);
   input.selectCommentThread(undefined);
-  if (input.placingComment && input.story?.capabilities?.canComment) {
+  if (input.placingComment && input.story?.capabilities?.canComment === true) {
     const position = input.getFlowInstance()?.screenToFlowPosition({
       x: event.clientX,
       y: event.clientY,
@@ -2314,15 +2385,24 @@ function runToggleStoryComments(input: StoryEditorPointerActionInput, commentsOp
 
 function useStoryEditorPointerActions(input: StoryEditorPointerActionInput) {
   return {
-    handlePaneClick: (event: ReactMouseEvent) => runStoryPaneClick(input, event),
-    handlePaneContextMenu: (event: MouseEvent | ReactMouseEvent) =>
-      runStoryPaneContextMenu(input, event),
+    handlePaneClick: (event: ReactMouseEvent) => {
+      runStoryPaneClick(input, event);
+    },
+    handlePaneContextMenu: (event: MouseEvent | ReactMouseEvent) => {
+      runStoryPaneContextMenu(input, event);
+    },
     handleNodeContextMenu: (
       event: Parameters<NodeMouseHandler<StoryFlowNode>>[0],
       node: StoryFlowNode,
-    ) => runStoryNodeContextMenu(input, event, node),
-    startCanvasComment: (position: Position) => runStartStoryCanvasComment(input, position),
-    toggleCommentsList: () => runToggleStoryComments(input, input.commentsOpen),
+    ) => {
+      runStoryNodeContextMenu(input, event, node);
+    },
+    startCanvasComment: (position: Position) => {
+      runStartStoryCanvasComment(input, position);
+    },
+    toggleCommentsList: () => {
+      runToggleStoryComments(input, input.commentsOpen);
+    },
   };
 }
 
@@ -2331,7 +2411,9 @@ function toggleGraphNodeSelection(input: StoryNodeSelectionInput) {
   if (reviewOnly || node.type !== 'interaction' || !(event.ctrlKey || event.metaKey)) {
     return false;
   }
-  const current = graphSelection?.interactionIds ?? (selectedId ? [selectedId] : []);
+  const current =
+    graphSelection?.interactionIds ??
+    (selectedId !== undefined && selectedId.length > 0 ? [selectedId] : []);
   const next = current.includes(node.id)
     ? current.filter((id) => id !== node.id)
     : [...current, node.id];
@@ -2361,7 +2443,7 @@ function getStoryNodeContextTarget(
       ? event.target.closest<HTMLElement>('[data-interaction-id][data-trigger-id]')
       : null;
   const rootTriggerId = node.type === 'interaction' ? triggerElement?.dataset.triggerId : undefined;
-  if (node.type === 'interaction' && rootTriggerId) {
+  if (node.type === 'interaction' && rootTriggerId !== undefined && rootTriggerId.length > 0) {
     return { kind: 'trigger', interactionId: node.id, triggerId: rootTriggerId };
   }
   if (node.type === 'trigger') {
@@ -2440,7 +2522,11 @@ async function removeGraphElement(
 
 function waitForGraphPaint() {
   return new Promise<void>((resolve) => {
-    window.requestAnimationFrame(() => window.requestAnimationFrame(() => resolve()));
+    window.requestAnimationFrame(() =>
+      window.requestAnimationFrame(() => {
+        resolve();
+      }),
+    );
   });
 }
 
@@ -2484,9 +2570,9 @@ async function runGraphOrganization(input: {
     if (hasPositionUpdates) {
       input.beginLocalEdit();
     }
-    window.requestAnimationFrame(() =>
-      fitOrganizedGraph(layout.affectedNodeIds, input.scope, input.getFlowInstance),
-    );
+    window.requestAnimationFrame(() => {
+      fitOrganizedGraph(layout.affectedNodeIds, input.scope, input.getFlowInstance);
+    });
     await input.saveGraphPositions({
       interactionUpdates: layout.interactionUpdates,
       triggerUpdates: layout.triggerUpdates,
@@ -2501,13 +2587,17 @@ async function runGraphOrganization(input: {
 function scheduleIdleWork(callback: () => void) {
   const idleWindow = window as IdleCallbackWindow;
 
-  if (idleWindow.requestIdleCallback) {
+  if (idleWindow.requestIdleCallback !== undefined) {
     const handle = idleWindow.requestIdleCallback(callback, { timeout: 2_000 });
-    return () => idleWindow.cancelIdleCallback?.(handle);
+    return () => {
+      idleWindow.cancelIdleCallback?.(handle);
+    };
   }
 
   const handle = window.setTimeout(callback, 0);
-  return () => window.clearTimeout(handle);
+  return () => {
+    window.clearTimeout(handle);
+  };
 }
 
 type StoryEditorOnboardingInput = {
@@ -2544,7 +2634,13 @@ function useStoryEditorOnboardingEffects({
     reportStoryState(storyId, storyHasAuthoredScene(story), storyHasBranchingChoice(story));
   }, [loadPhase, reportStoryState, story, storyId]);
   useEffect(() => {
-    if (loadPhase !== 'ready' || !story || story.id !== storyId || !selectedId) {
+    if (
+      loadPhase !== 'ready' ||
+      !story ||
+      story.id !== storyId ||
+      selectedId === undefined ||
+      selectedId.length === 0
+    ) {
       return;
     }
     if (story.interactions.some(({ id }) => id === selectedId)) {
@@ -2933,10 +3029,11 @@ function useStoryEditorInteractionFocus({
   const initialFocusInteractionId = searchParams.get('focusInteractionId');
   useEffect(() => {
     if (
-      !initialFocusInteractionId ||
+      initialFocusInteractionId === null ||
+      initialFocusInteractionId.length === 0 ||
       appliedInitialFocusInteractionIdRef.current === initialFocusInteractionId ||
       loadPhase !== 'ready' ||
-      !story?.interactions.some(({ id }) => id === initialFocusInteractionId)
+      story?.interactions.some(({ id }) => id === initialFocusInteractionId) !== true
     ) {
       return;
     }
@@ -2980,7 +3077,7 @@ function useStoryEditorRelatedCreation({
         sourceId,
         position ?? (await getClickCreationPosition({ kind: 'child', sourceId })),
       );
-      if (interactionId) {
+      if (interactionId !== undefined && interactionId.length > 0) {
         focusInteractionNode(interactionId);
       }
     },
@@ -2992,7 +3089,7 @@ function useStoryEditorRelatedCreation({
         targetId,
         position ?? (await getClickCreationPosition({ kind: 'parent', targetId })),
       );
-      if (interactionId) {
+      if (interactionId !== undefined && interactionId.length > 0) {
         focusInteractionNode(interactionId);
       }
     },
@@ -3073,7 +3170,7 @@ function useStoryEditorRootCreation(
       const interactionId = await createRoot(
         position ?? (await getClickCreationPosition({ kind: 'root' })),
       );
-      if (interactionId) {
+      if (interactionId !== undefined && interactionId.length > 0) {
         focusInteractionNode(interactionId);
       }
     },
@@ -3284,8 +3381,9 @@ function buildStoryEditorInteractionNodes(input: StoryEditorInteractionNodesInpu
     onCreateParent: input.reviewOnly
       ? undefined
       : (interactionId) => void input.createParentAndFocus(interactionId),
-    onSelectRootTrigger: (interactionId, triggerId) =>
-      input.selectExclusive({ type: 'trigger', trigger: { interactionId, triggerId } }),
+    onSelectRootTrigger: (interactionId, triggerId) => {
+      input.selectExclusive({ type: 'trigger', trigger: { interactionId, triggerId } });
+    },
     onboardingBranchSourceId,
     occurrenceCounts: input.occurrenceCounts,
     emphasizedInteractionIds: input.emphasizedInteractionIds,
@@ -3372,8 +3470,9 @@ type StoryEditorTriggerNodesInput = {
 function buildStoryEditorTriggerNodes(input: StoryEditorTriggerNodesInput) {
   const story = input.story;
   return buildTriggerNodes(story, input.selectedTrigger, {
-    onSelectTrigger: (interactionId, triggerId) =>
-      input.selectExclusive({ type: 'trigger', trigger: { interactionId, triggerId } }),
+    onSelectTrigger: (interactionId, triggerId) => {
+      input.selectExclusive({ type: 'trigger', trigger: { interactionId, triggerId } });
+    },
     conditionSummary: (triggers) => {
       if (!story) {
         return '';
@@ -3620,7 +3719,11 @@ function useStoryEditorFlowNodeSynchronization({
   }, [commentNodes, decorationNodes, narrativeNodes, reviewOnly, setNodes]);
   useEffect(() => {
     const interactionId = pendingFocusInteractionId;
-    if (!interactionId || !nodes.some((node) => node.id === interactionId)) {
+    if (
+      interactionId === undefined ||
+      interactionId.length === 0 ||
+      !nodes.some((node) => node.id === interactionId)
+    ) {
       return;
     }
     window.requestAnimationFrame(() => {
@@ -3730,7 +3833,9 @@ function useStoryEditorGroupShortcut({
       if (!isGroupShortcut(event, reviewOnly)) {
         return;
       }
-      const ids = graphSelection?.interactionIds ?? (selectedId ? [selectedId] : []);
+      const ids =
+        graphSelection?.interactionIds ??
+        (selectedId !== undefined && selectedId.length > 0 ? [selectedId] : []);
       if (!ids.length) {
         return;
       }
@@ -3739,7 +3844,9 @@ function useStoryEditorGroupShortcut({
       void createEditorGroup(t('editor.groups.newGroup'), ids);
     }
     document.addEventListener('keydown', handleGroupShortcut);
-    return () => document.removeEventListener('keydown', handleGroupShortcut);
+    return () => {
+      document.removeEventListener('keydown', handleGroupShortcut);
+    };
   }, [createEditorGroup, graphSelection, reviewOnly, selectedId, setCommentsOpen, t]);
 }
 
@@ -3762,7 +3869,7 @@ function useStoryEditorGroupActions(input: StoryEditorGroupActionsInput) {
       creatingGroupRef.current = true;
       try {
         const id = await createGroup(title, ids, parentGroupId);
-        if (id) {
+        if (typeof id === 'string' && id.length > 0) {
           clearSearch();
           openContextPanel();
           openContextSection('groups');
@@ -3770,7 +3877,7 @@ function useStoryEditorGroupActions(input: StoryEditorGroupActionsInput) {
           selectExclusive({ type: 'group', id });
           setEditingGroupId(id);
         }
-        return id;
+        return typeof id === 'string' ? id : false;
       } finally {
         creatingGroupRef.current = false;
       }
@@ -3817,7 +3924,7 @@ function useStoryEditorDecorationAction({
           : center
         : { x: 80, y: 80 };
       const decorationId = await createGraphDecoration(kind, position);
-      if (decorationId) {
+      if (decorationId !== undefined && decorationId.length > 0) {
         selectExclusive({ type: 'graphDecoration', id: decorationId });
       }
     },
@@ -3965,7 +4072,7 @@ function useStoryEditorNodeSelection(input: StoryEditorNodeSelectionInput) {
     setCommentsOpen,
   } = input;
   return useCallback(
-    (event: ReactMouseEvent, node: StoryFlowNode) =>
+    (event: ReactMouseEvent, node: StoryFlowNode) => {
       selectStoryFlowNode({
         event,
         node,
@@ -3978,7 +4085,8 @@ function useStoryEditorNodeSelection(input: StoryEditorNodeSelectionInput) {
         setCommentsOpen,
         selectCommentThread,
         selectExclusive,
-      }),
+      });
+    },
     [
       graphSelection,
       reviewOnly,
@@ -4111,7 +4219,9 @@ function useStoryEditorDeleteShortcut({
       }
     };
     document.addEventListener('keydown', handleDeleteShortcut);
-    return () => document.removeEventListener('keydown', handleDeleteShortcut);
+    return () => {
+      document.removeEventListener('keydown', handleDeleteShortcut);
+    };
   }, [deleteGraphElement, reviewOnly, selected, selectedGraphDecoration, selectedTriggerTarget]);
 }
 
@@ -4555,15 +4665,14 @@ function useStoryEditorGraphPreparation(
   storyId: string | undefined,
 ) {
   useEffect(() => {
-    if (loadPhase !== 'ready' || !storyId) {
+    if (loadPhase !== 'ready' || storyId === undefined || storyId.length === 0) {
       return;
     }
     return scheduleIdleWork(() => {
       void Promise.all([
         import('../storyGraphCreationLayout'),
         import('../storyGraphElkLayout').then(({ preloadStoryGraphElk }) => preloadStoryGraphElk()),
-      ])
-        .catch(() => undefined);
+      ]).catch(() => undefined);
     });
   }, [loadPhase, storyId]);
 }
@@ -4595,7 +4704,9 @@ function useStoryEditorHistoryShortcuts({
       void (action === 'undo' ? undo() : redo());
     };
     document.addEventListener('keydown', handleHistoryShortcut);
-    return () => document.removeEventListener('keydown', handleHistoryShortcut);
+    return () => {
+      document.removeEventListener('keydown', handleHistoryShortcut);
+    };
   }, [history.canRedo, history.canUndo, historyBusy, redo, saveStatus, undo]);
 }
 
@@ -4668,7 +4779,9 @@ function buildStoryEditorCanvasToolbarProps(input: StoryEditorCanvasToolbarInput
     onAddFrame: () => void input.addGraphDecoration('frame'),
     onAddText: () => void input.addGraphDecoration('text'),
     onOrganize: () => void input.organizeGraph(),
-    onToggleCommentPlacement: () => input.setPlacingComment((placing) => !placing),
+    onToggleCommentPlacement: () => {
+      input.setPlacingComment((placing) => !placing);
+    },
   } satisfies React.ComponentProps<typeof StoryCanvasToolbar>;
 }
 
@@ -4712,7 +4825,9 @@ function buildStoryEditorCanvasMenuActions(input: StoryEditorCanvasMenuActionsIn
     onOrganizeAll: () => void input.organizeGraph('all'),
     onOrganizeSelection: () => void input.organizeGraph('selection'),
     onOrganizeTarget: () => void input.organizeGraph('selection'),
-    onClose: () => input.setCanvasContextMenu(undefined),
+    onClose: () => {
+      input.setCanvasContextMenu(undefined);
+    },
   } satisfies StoryEditorCanvasMenuActionProps;
 }
 
@@ -4894,7 +5009,9 @@ function StoryEditorCanvasContent({
     <>
       <StoryCanvasConnectionAlert
         open={model.connectionConflict}
-        onClose={() => model.setConnectionConflict(false)}
+        onClose={() => {
+          model.setConnectionConflict(false);
+        }}
       />
       <StoryEditorCanvasToolbar
         toolbarProps={model.toolbarProps}
@@ -4937,7 +5054,10 @@ function StoryEditorRoute({ base, runtime, currentUserId }: StoryEditorRouteProp
   if (!persistence.story) {
     return <main className="page">{persistence.error || base.t('editor.loading')}</main>;
   }
-  if (uiState.storySettingsRouteTab === 'access' && !persistence.story.capabilities?.canManage) {
+  if (
+    uiState.storySettingsRouteTab === 'access' &&
+    persistence.story.capabilities?.canManage !== true
+  ) {
     return (
       <StoryUnavailablePage
         authenticated={Boolean(currentUserId)}
@@ -5014,7 +5134,9 @@ function buildStoryEditorHistoryProps(base: StoryEditorBaseRuntime) {
       persistence.saveStatus === 'error',
     onUndo: () => void persistence.undo(),
     onRedo: () => void persistence.redo(),
-    onClose: () => base.uiState.setHistoryOpen(false),
+    onClose: () => {
+      base.uiState.setHistoryOpen(false);
+    },
   } satisfies React.ComponentProps<typeof StoryCanvasHistoryLayer>;
 }
 
@@ -5103,12 +5225,12 @@ function StoryEditorPage({ base, runtime }: Pick<StoryEditorRouteProps, 'base' |
   return (
     <main
       className="editor-page"
-      onFocusCapture={(event) =>
-        handleStoryEditorFocus(base.persistence, runtime.comments.reviewOnly, event)
-      }
-      onBlurCapture={(event) =>
-        handleStoryEditorBlur(base.persistence, runtime.comments.reviewOnly, event)
-      }
+      onFocusCapture={(event) => {
+        handleStoryEditorFocus(base.persistence, runtime.comments.reviewOnly, event);
+      }}
+      onBlurCapture={(event) => {
+        handleStoryEditorBlur(base.persistence, runtime.comments.reviewOnly, event);
+      }}
     >
       {base.persistence.pendingSaveGuard}
       <StoryEditorHeader base={base} runtime={runtime} story={story} />
@@ -5632,7 +5754,7 @@ function ReviewNamedTarget({
       >
         <h2 data-comment-field="name">{target.name}</h2>
       </InspectorCommentField>
-      {description ? (
+      {description !== undefined && description.length > 0 ? (
         <InspectorCommentField
           field="description"
           label={t('inspector.description')}
