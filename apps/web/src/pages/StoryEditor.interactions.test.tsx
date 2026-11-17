@@ -505,9 +505,9 @@ it('serializes title and body saves so reopening keeps both edits', async () => 
   });
 
   expect(screen.getByRole('button', { name: 'Title: Saved title' })).toBeInTheDocument();
-  expect(
-    screen.getByRole('button', { name: 'Saved content Select to edit' }),
-  ).toHaveTextContent('Saved content');
+  expect(screen.getByRole('button', { name: 'Saved content Select to edit' })).toHaveTextContent(
+    'Saved content',
+  );
   await waitFor(() => {
     expect(screen.queryByRole('status', { name: /Saving/ })).not.toBeInTheDocument();
   });
