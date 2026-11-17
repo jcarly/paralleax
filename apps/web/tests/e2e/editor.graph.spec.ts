@@ -143,7 +143,9 @@ async function expectCommentsInspectorLayout(
   await page.locator('.react-flow__node[data-id="interaction-1"]').click({ force: true });
   await expect(commentsInspector).toBeHidden();
   await expect(page.getByRole('complementary', { name: 'Inspector' })).toBeVisible();
-  await expect(page.getByLabel('Title', { exact: true })).toHaveValue('Original title');
+  await expect(
+    page.getByRole('button', { name: 'Title: Original title', exact: true }),
+  ).toBeVisible();
 }
 
 async function expectGroupMovementAndClearSelection(

@@ -45,7 +45,7 @@ describe('LanguageSwitcher language changes', () => {
     render(<Harness />);
 
     expect(screen.getByText('Stories')).toBeInTheDocument();
-    const englishButton = screen.getByRole('button', { name: 'Language (en)' });
+    const englishButton = screen.getByRole('button', { name: 'en Language' });
     expect(englishButton).toHaveTextContent('en');
     expect(screen.queryByRole('radio')).not.toBeInTheDocument();
     await user.click(englishButton);
@@ -53,7 +53,7 @@ describe('LanguageSwitcher language changes', () => {
     await user.click(screen.getByRole('radio', { name: 'fr Français' }));
 
     expect(await screen.findByText('Histoires')).toBeInTheDocument();
-    expect(screen.getByRole('button', { name: 'Langue (fr)' })).toHaveTextContent('fr');
+    expect(screen.getByRole('button', { name: 'fr Langue' })).toHaveTextContent('fr');
     expect(screen.queryByRole('radio')).not.toBeInTheDocument();
     expect(window.localStorage.getItem(languageStorageKey)).toBe('fr');
     expect(document.documentElement.lang).toBe('fr');
@@ -65,12 +65,12 @@ describe('LanguageSwitcher language changes', () => {
     const user = userEvent.setup();
     render(<Harness />);
 
-    await user.click(screen.getByRole('button', { name: 'Language (en)' }));
+    await user.click(screen.getByRole('button', { name: 'en Language' }));
     expectLanguageOptions();
     await user.click(screen.getByRole('radio', { name: 'it Italiano' }));
 
     expect(await screen.findByText('Storie')).toBeInTheDocument();
-    expect(screen.getByRole('button', { name: 'Lingua (it)' })).toHaveTextContent('it');
+    expect(screen.getByRole('button', { name: 'it Lingua' })).toHaveTextContent('it');
     expect(screen.queryByRole('radio')).not.toBeInTheDocument();
     expect(window.localStorage.getItem(languageStorageKey)).toBe('it');
     expect(document.documentElement.lang).toBe('it');
@@ -84,7 +84,7 @@ describe('LanguageSwitcher options', () => {
     const user = userEvent.setup();
     render(<Harness />);
 
-    const toggle = screen.getByRole('button', { name: 'Language (en)' });
+    const toggle = screen.getByRole('button', { name: 'en Language' });
     expect(screen.queryByRole('radio')).not.toBeInTheDocument();
 
     await user.click(toggle);

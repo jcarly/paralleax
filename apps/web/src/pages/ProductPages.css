@@ -198,6 +198,14 @@
   font-size: 0.72rem;
 }
 
+.language-switcher-chevron {
+  width: 0.35rem;
+  height: 0.35rem;
+  transform: translateY(-0.1rem) rotate(45deg);
+  border-right: 1px solid currentColor;
+  border-bottom: 1px solid currentColor;
+}
+
 .language-switcher-options {
   position: absolute;
   top: calc(100% + 0.25rem);

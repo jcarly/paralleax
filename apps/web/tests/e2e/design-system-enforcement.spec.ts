@@ -29,7 +29,6 @@ test('documents and preserves the separate product and authoring action families
   await expect(productActions.getByText('Defined, unused by product workflows')).toBeVisible();
   const productPrimaryColors = await readActionColors(productPrimary);
   const productSecondaryColors = await readActionColors(productSecondary);
-  const authoringSecondaryColors = await readActionColors(authoringSecondary);
 
   await mockAuthenticatedLibrary(page);
   await page.goto('/');
@@ -45,10 +44,9 @@ test('documents and preserves the separate product and authoring action families
   await editorPage.goto('/stories/story-1/edit');
   await expect(editorPage.getByTestId('interaction-node')).toBeVisible();
   const actualAuthoringSecondary = editorPage.getByRole('link', { name: 'Test from start' });
-  await expect(actualAuthoringSecondary).toHaveClass(/\bbutton\b/);
-  await expect(actualAuthoringSecondary).toHaveClass(/\bsecondary\b/);
+  await expect(actualAuthoringSecondary).toHaveClass(/\bcanvas-tool-action\b/);
+  await expect(actualAuthoringSecondary).toHaveClass(/\beditor-toolbar-icon-action\b/);
   await expect(actualAuthoringSecondary).toBeVisible();
-  await expectActionColors(actualAuthoringSecondary, authoringSecondaryColors);
 });
 
 test('uses shared standard controls in story creation, settings, and reader saves', async ({

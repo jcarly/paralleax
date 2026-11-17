@@ -115,9 +115,11 @@ test('registers, verifies email, creates a story, signs out, and signs back in',
 
   await page.setViewportSize({ width: 360, height: 640 });
   await expectAccountActionsToFit(page, 'Sign in', 'Create account');
-  await page.getByLabel('Language').selectOption('fr');
+  await page.getByRole('button', { name: 'en Language' }).click();
+  await page.getByRole('radio', { name: 'fr Français' }).click();
   await expectAccountActionsToFit(page, 'Se connecter', 'Créer un compte');
-  await page.getByLabel('Langue').selectOption('en');
+  await page.getByRole('button', { name: 'fr Langue' }).click();
+  await page.getByRole('radio', { name: 'en English' }).click();
 
   await createAccount.click();
   await page.getByLabel('Display name', { exact: true }).fill('Author');

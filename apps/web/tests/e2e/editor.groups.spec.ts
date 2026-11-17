@@ -497,8 +497,10 @@ async function checkSearchableGroupResults(page: Page) {
   await expect(groups.getByRole('button', { name: 'Loose note' })).toBeVisible();
   await groups.getByRole('treeitem', { name: 'Mira at the quay' }).click();
   await expect(
-    page.getByRole('complementary', { name: 'Inspector' }).getByLabel('Title'),
-  ).toHaveValue('Mira at the quay');
+    page
+      .getByRole('complementary', { name: 'Inspector' })
+      .getByRole('button', { name: 'Title: Mira at the quay', exact: true }),
+  ).toBeVisible();
 
   await search.fill('Silver Key');
   await expect(groups.getByRole('button', { name: 'Loose note' })).toBeVisible();

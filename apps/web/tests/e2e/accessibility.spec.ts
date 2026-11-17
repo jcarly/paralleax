@@ -115,7 +115,7 @@ test.describe('automated accessibility', () => {
     await page.goto('/stories/story-1/play');
     const sceneTitle = page.getByRole('heading', { name: 'Original title' });
     await expect(sceneTitle).toBeAttached();
-    await expect(sceneTitle).toHaveClass(/sr-only/);
+    await expect(sceneTitle).toBeVisible();
     await expect(page.locator('.story-body')).toContainText('Original content');
 
     await expectNoWcagViolations(page);

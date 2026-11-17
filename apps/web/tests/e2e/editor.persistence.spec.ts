@@ -3,6 +3,8 @@ import {
   cloneStory,
   mockGraphPositionUpdates,
   mockStory,
+  openInteractionBodyEditor,
+  openInteractionTitleEditor,
   prepareEditorPage,
   storyWithConditionCandidate,
 } from './editorTestHarness';
@@ -20,7 +22,9 @@ test.describe('Story editor persistence', () => {
     );
 
     await page.goto('/stories/story-1/edit');
-    await expect(page.getByText('Collaborative editing live')).toBeVisible();
+    await expect(
+      page.getByRole('status', { name: 'Changes saved and live updates connected' }),
+    ).toBeVisible();
     await expect(page.getByTestId('interaction-node')).toContainText('Original title');
 
     current = structuredClone(current);
@@ -59,13 +63,14 @@ test.describe('Story editor persistence', () => {
 
     await page.goto('/stories/story-1/edit');
     await page.getByTestId('interaction-node').filter({ hasText: 'Original title' }).click();
-    await page.getByLabel('Title', { exact: true }).fill('New title');
-    await page.getByLabel('Title', { exact: true }).blur();
+    const title = await openInteractionTitleEditor(page, 'Original title');
+    await title.fill('New title');
+    await title.blur();
 
     await expect(
       page.getByTestId('interaction-node').filter({ hasText: 'New title' }),
     ).toBeVisible();
-    await expect(page.getByLabel('Title', { exact: true })).toBeVisible();
+    await expect(page.getByRole('button', { name: 'Title: New title', exact: true })).toBeVisible();
     await expect(page.getByText('Loading...')).toHaveCount(0);
   });
 
@@ -143,7 +148,7 @@ test.describe('Story editor persistence', () => {
 
     await page.goto('/stories/story-1/edit');
     await page.getByTestId('interaction-node').filter({ hasText: 'Original title' }).click();
-    const content = page.getByRole('textbox', { name: 'Content' });
+    const content = await openInteractionBodyEditor(page);
     await content.click();
     await page.keyboard.press('Control+a');
     await page.keyboard.type('A rich scene.');
@@ -162,11 +167,11 @@ test.describe('Story editor persistence', () => {
       'src',
       'https://media.example/scene.gif',
     );
-    await page.getByLabel('Title', { exact: true }).click();
+    await openInteractionTitleEditor(page, 'Original title');
     await expect.poll(() => bodyPatches.at(-1)).toContain('<strong>A rich scene.</strong>');
     expect(bodyPatches.at(-1)).toContain('src="https://media.example/scene.gif"');
-    await expect(content.locator('strong')).toHaveText('A rich scene.');
-    await expect(page.getByRole('button', { name: 'Edit content' })).toHaveCount(0);
+    await expect(page.locator('.interaction-content-preview strong')).toHaveText('A rich scene.');
+    await expect(page.locator('.interaction-content-preview')).toBeVisible();
     await expect(page.getByRole('button', { name: 'Done' })).toHaveCount(0);
     await expect(page.getByRole('toolbar', { name: 'Content formatting' })).toBeHidden();
   });
@@ -190,7 +195,7 @@ test.describe('Story editor persistence', () => {
     });
     await page.goto('/stories/story-1/edit');
     await page.getByTestId('interaction-node').filter({ hasText: 'Original title' }).click();
-    const content = page.getByRole('textbox', { name: 'Content' });
+    const content = await openInteractionBodyEditor(page);
     await content.evaluate((element) => {
       element.focus();
       const range = document.createRange();
@@ -246,7 +251,7 @@ test.describe('Story editor persistence', () => {
 
     await page.goto('/stories/story-1/edit');
     await page.getByTestId('interaction-node').filter({ hasText: 'Original title' }).click();
-    const content = page.getByRole('textbox', { name: 'Content' });
+    const content = await openInteractionBodyEditor(page);
     await content.evaluate((element) => {
       element.focus();
       const text = element.querySelector('p')?.firstChild;
@@ -265,7 +270,10 @@ test.describe('Story editor persistence', () => {
     await page.getByRole('button', { name: 'Add conditional text' }).click();
     const dialog = page.getByRole('dialog', { name: 'Add a condition' });
     await dialog.getByRole('button', { name: 'Interaction' }).click();
-    await dialog.getByRole('button', { name: 'Insert' }).click();
+    await expect(dialog).toBeVisible();
+    const insertCondition = dialog.getByRole('button', { name: 'Insert', exact: true });
+    await expect(insertCondition).toBeEnabled();
+    await insertCondition.click();
 
     await expect
       .poll(() => patches.find((patch) => 'conditionalTextBlocks' in patch))
@@ -296,6 +304,7 @@ test.describe('Story editor persistence', () => {
     const timed = cloneStory();
     timed.startDateTime = '2026-07-27T09:30';
     timed.interactions[0].durationMinutes = 45;
+    await mockStory(page, cloneStory());
 
     await page.route('**/api/stories/story-1', async (route) => {
       if (route.request().method() !== 'PATCH') {
@@ -319,15 +328,17 @@ test.describe('Story editor persistence', () => {
     await expect(page.getByRole('button', { name: 'Save properties' })).toHaveCount(0);
     await page.getByRole('button', { name: 'Close Story settings' }).click();
     await page.getByTestId('interaction-node').filter({ hasText: 'Original title' }).click();
-    await page.getByLabel('Duration (minutes)').fill('45');
-    await page.getByLabel('Duration (minutes)').blur();
+    await page.getByRole('button', { name: 'Duration: No time change', exact: true }).click();
+    const duration = page.getByLabel('Duration (minutes)');
+    await duration.fill('45');
+    await duration.blur();
 
     await page.getByRole('button', { name: 'Story settings' }).click();
     await expect(page.getByLabel('Story start date and time', { exact: true })).toHaveValue(
       '2026-07-27T09:30',
     );
     await page.getByRole('button', { name: 'Close Story settings' }).click();
-    await expect(page.getByLabel('Duration (minutes)')).toHaveValue('45');
+    await expect(page.getByRole('button', { name: 'Duration: 45 min', exact: true })).toBeVisible();
   });
 
   test('exposes location-owned item instances', async ({ page }) => {
@@ -402,9 +413,10 @@ test.describe('Story editor persistence', () => {
 
     await page.goto('/stories/story-1/edit');
     await page.getByTestId('interaction-node').filter({ hasText: 'Original title' }).click();
-    await page.getByLabel('Title', { exact: true }).fill('Pending browser reload');
-    await page.getByLabel('Title', { exact: true }).blur();
-    await expect(page.getByLabel('Story save status')).toContainText('Saving');
+    const title = await openInteractionTitleEditor(page, 'Original title');
+    await title.fill('Pending browser reload');
+    await title.blur();
+    await expect(page.getByRole('status', { name: 'Saving…' })).toBeVisible();
 
     const dialogPromise = page.waitForEvent('dialog');
     const closePromise = page.close({ runBeforeUnload: true });
@@ -415,10 +427,14 @@ test.describe('Story editor persistence', () => {
 
     expect(page.isClosed()).toBe(false);
     await expect(page).toHaveURL('/stories/story-1/edit');
-    await expect(page.getByLabel('Title', { exact: true })).toHaveValue('Pending browser reload');
+    await expect(
+      page.getByRole('button', { name: 'Title: Pending browser reload', exact: true }),
+    ).toBeVisible();
 
     releaseSave();
-    await expect(page.getByLabel('Story save status')).toHaveText('Saved');
+    await expect(
+      page.getByRole('status', { name: 'Changes saved and live updates connected' }),
+    ).toBeVisible();
   });
 });
 

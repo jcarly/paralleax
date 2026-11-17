@@ -457,9 +457,9 @@ it('updates interaction body from the inspector', async () => {
     body: '<p>Long new content</p>',
   });
   await waitFor(() => {
-    expect(
-      within(inspector).getByRole('button', { name: 'Content. Select to edit' }),
-    ).toHaveTextContent('Long new content');
+    expect(within(inspector).getByRole('button', { name: 'Long new content' })).toHaveTextContent(
+      'Long new content',
+    );
   });
 });
 
@@ -505,9 +505,7 @@ it('serializes title and body saves so reopening keeps both edits', async () => 
   });
 
   expect(screen.getByRole('button', { name: 'Title: Saved title' })).toBeInTheDocument();
-  expect(screen.getByRole('button', { name: 'Content. Select to edit' })).toHaveTextContent(
-    'Saved content',
-  );
+  expect(screen.getByRole('button', { name: 'Saved content' })).toHaveTextContent('Saved content');
   await waitFor(() => {
     expect(screen.queryByRole('status', { name: /Saving/ })).not.toBeInTheDocument();
   });

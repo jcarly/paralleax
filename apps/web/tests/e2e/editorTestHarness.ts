@@ -291,6 +291,16 @@ export async function prepareEditorPage(
   await mockStory(page, initialStory, onEditorResponse);
 }
 
+export async function openInteractionTitleEditor(page: Page, title: string) {
+  await page.getByRole('button', { name: `Title: ${title}`, exact: true }).click();
+  return page.getByLabel('Title', { exact: true });
+}
+
+export async function openInteractionBodyEditor(page: Page) {
+  await page.locator('.interaction-content-preview').click();
+  return page.getByRole('textbox', { name: 'Content', exact: true });
+}
+
 function resolveStory(source: StorySource): Story {
   return typeof source === 'function' ? source() : source;
 }

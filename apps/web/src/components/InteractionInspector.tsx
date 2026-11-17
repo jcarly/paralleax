@@ -343,6 +343,7 @@ function InteractionInspectorView({
   const [editingLocation, setEditingLocation] = useState(false);
   const [editingCharacters, setEditingCharacters] = useState(false);
   const [editingDuration, setEditingDuration] = useState(false);
+  const bodyEditHelpId = useId();
   const locationSelectRef = useRef<HTMLSelectElement | null>(null);
   const durationInputRef = useRef<HTMLInputElement | null>(null);
   const bodyDraftRef = useRef<{ interactionId: string; body: string } | undefined>(undefined);
@@ -458,6 +459,12 @@ function InteractionInspectorView({
   function handleBodyRegionBlur(event: FocusEvent<HTMLDivElement>) {
     const nextElement = event.relatedTarget;
     if (nextElement instanceof Node && event.currentTarget.contains(nextElement)) {
+      return;
+    }
+    if (
+      nextElement instanceof HTMLElement &&
+      (nextElement.closest('.rich-text-editor') || nextElement.closest('[role="dialog"]'))
+    ) {
       return;
     }
     window.setTimeout(() => {
@@ -792,7 +799,7 @@ function InteractionInspectorView({
               </div>
             ) : hasAuthoredRichTextContent(interaction.body) ? (
               <div
-                aria-label={`${t('richText.content')}. ${t('interactionInspector.editValueHelp')}`}
+                aria-describedby={bodyEditHelpId}
                 className="interaction-content-preview"
                 onBlurCapture={handleBodyRegionBlur}
                 role="button"
@@ -805,6 +812,9 @@ function InteractionInspectorView({
                   html={interaction.body}
                   interactionLinksInteractive={false}
                 />
+                <span className="sr-only" id={bodyEditHelpId}>
+                  {t('interactionInspector.editValueHelp')}
+                </span>
               </div>
             ) : (
               <div className="interaction-content-empty">

@@ -76,7 +76,7 @@ test('opens an unlisted Story at its player URL without signing in', async ({ pa
 
   const sceneTitle = page.getByRole('heading', { name: 'Original title' });
   await expect(sceneTitle).toBeAttached();
-  await expect(sceneTitle).toHaveClass(/sr-only/);
+  await expect(sceneTitle).toBeVisible();
   await expect(page.locator('.story-body')).toContainText('Original content');
   await expect(page.getByText('Sign in to save progress')).toBeVisible();
 });
