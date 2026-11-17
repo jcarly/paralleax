@@ -8,18 +8,13 @@ import {
 } from '@paralleax/shared';
 
 export type StoryGraphClickCreation =
-  | { kind: 'root' }
-  | { kind: 'child'; sourceId: string }
-  | { kind: 'parent'; targetId: string };
+  { kind: 'root' } | { kind: 'child'; sourceId: string } | { kind: 'parent'; targetId: string };
 
 export function getStoryGraphFallbackCreationPosition(
   story: Story,
   creation: StoryGraphClickCreation,
 ): Position | undefined {
-  return getPositionedStoryGraphFallbackPosition(
-    ensureStoryInteractionPositions(story),
-    creation,
-  );
+  return getPositionedStoryGraphFallbackPosition(ensureStoryInteractionPositions(story), creation);
 }
 
 export function getPositionedStoryGraphFallbackPosition(
