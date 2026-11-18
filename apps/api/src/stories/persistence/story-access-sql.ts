@@ -5,7 +5,7 @@
  * restating the rules, and `story-access.postgres.spec.ts` checks every
  * predicate against the shared functions.
  *
- * Every predicate expects these aliases in the surrounding query:
+ * Unless stated otherwise, every predicate expects these aliases in the surrounding query:
  * - `stories`: the story row;
  * - `actor`: the acting user's `users` row, or NULLs for an anonymous reader
  *   when it is joined with `LEFT JOIN`;
@@ -51,6 +51,13 @@ export function storyDiscoverableSql(userParameter: SqlParameter) {
     )
     OR (stories.visibility <> 'unlisted' AND (${readableByVisibilitySql})))`;
 }
+
+/**
+ * `canDiscoverStory` for an anonymous subject: readable stories are public or
+ * unlisted, and unlisted stories are never discoverable without a grant. Needs
+ * only `stories`, so anonymous listings avoid the actor and permission joins.
+ */
+export const storyAnonymouslyDiscoverableSql = `(stories.visibility = 'public')`;
 
 /** `resolveStoryAccess(...).canEdit`. */
 export function storyEditableSql(userParameter: SqlParameter) {

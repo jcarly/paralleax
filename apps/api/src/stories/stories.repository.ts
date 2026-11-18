@@ -44,6 +44,7 @@ import { DatabaseConnection } from '../database/database.connection';
 import { assertStoryWithinQuotas } from './story-quotas';
 import type { Queryable } from './persistence/stories.persistence.types';
 import {
+  storyAnonymouslyDiscoverableSql,
   storyCommentableSql,
   storyDiscoverableSql,
   storyEditableSql,
@@ -335,7 +336,7 @@ export class StoriesRepository {
               COUNT(*) OVER() AS total_count
        FROM stories
        JOIN users AS owner ON owner.id = stories.creator_user_id
-       WHERE stories.visibility = 'public'
+       WHERE ${storyAnonymouslyDiscoverableSql}
          AND ($1 = '' OR stories.title ILIKE '%' || $1 || '%')
        ORDER BY ${order}
        LIMIT $2 OFFSET $3`,

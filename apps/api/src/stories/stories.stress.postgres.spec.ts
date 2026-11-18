@@ -3,6 +3,7 @@ import type { Story } from '@paralleax/shared';
 import { Pool } from 'pg';
 import type { DatabaseConnection } from '../database/database.connection';
 import { DatabaseMigrator } from '../database/database.migrator';
+import { resetPostgresTestDatabase } from '../database/postgres-test-database';
 import { StoriesRepository } from './stories.repository';
 
 const connectionString = process.env.POSTGRES_TEST_DATABASE_URL;
@@ -40,9 +41,7 @@ describeStress('StoriesRepository PostgreSQL stress', () => {
 });
 
 async function prepareStressDatabase() {
-  await pool.query('DROP SCHEMA public CASCADE');
-  await pool.query('CREATE SCHEMA public');
-  await new DatabaseMigrator(database).run();
+  await resetPostgresTestDatabase(pool, new DatabaseMigrator(database));
   await pool.query(
     `INSERT INTO users (id, email, password_hash, created_at)
      VALUES ($1, $2, 'stress-only', now())`,

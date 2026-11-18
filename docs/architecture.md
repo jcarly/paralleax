@@ -316,13 +316,15 @@ viewer/editor grants live in `story_user_permissions` and target existing local
 accounts. See ADR-017.
 
 Repository queries enforce these rules through one set of SQL predicates in
-`stories/persistence/story-access-sql.ts`: readable, discoverable, editable,
-commentable, and manageable. They are SQL projections of the shared
+`stories/persistence/story-access-sql.ts`: readable, discoverable, anonymously
+discoverable, editable, commentable, and manageable. They are SQL projections of the shared
 `resolveStoryAccess` and `canDiscoverStory` rules; queries must reuse them
 rather than restate visibility or policy conditions. The PostgreSQL parity spec
 `story-access.postgres.spec.ts` compares every repository access path with the
 shared rules across all visibility, edit-policy, and comment-policy combinations
 for anonymous, unrelated, viewer, editor, owner, and administrator subjects.
+It checks the stored state as well as returned results, so a refused operation
+must leave the database unchanged and a refused read must hide rows that exist.
 
 Authenticated saves use one `story_reader_progress` row per user, story, and
 slot. The slot id, optional manual-save name, and timestamps are relational; the
