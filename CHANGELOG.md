@@ -2,6 +2,12 @@
 
 ## Unreleased
 
+- Centralized the API's SQL story access predicates in one module derived from
+  the shared access rules, replacing thirteen hand-copied conditions. A new
+  PostgreSQL parity spec checks reads, library discovery and filters, edits,
+  reader progress, and access management against `resolveStoryAccess` and
+  `canDiscoverStory` for every policy combination. Access behavior is unchanged.
+
 - Expanded ESLint quality gates for TypeScript, React, accessibility, import
   consistency, and code size. CI now rejects unapproved growth in the historical
   suppression baseline.
