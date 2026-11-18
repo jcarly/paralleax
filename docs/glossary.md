@@ -163,8 +163,12 @@ _Interface:_ "Test from start", "Test from current interaction".
 
 ### Journey
 
-The ordered list of Interactions selected during one reading. Reader results are
-deterministic from the authored Story plus the journey. Implemented.
+The ordered list of Interactions selected during one reading. Implemented.
+
+Reader results are deterministic from the authored Story, the journey, the run's
+random seed (for appearance probability), and the recorded start time of each
+choice step (for availability timers). A save keeps all four inputs; see
+[Reader semantics](reader-semantics.md).
 
 ### Play Session
 

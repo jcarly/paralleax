@@ -23,8 +23,10 @@ on Paralleax for valuable project data until the backup and restore gates in
 
 ## What exists today
 
-Labels: **Shipped** works in the current alpha. **Experimental** works on a
-limited subset and reports what it cannot handle. **Planned** is not implemented.
+Labels: **Shipped** works in the current alpha. **Partial** works, but an
+important part of the expected capability is missing (the summary says which).
+**Experimental** works on a limited subset and reports what it cannot handle.
+**Planned** is not implemented.
 The authoritative detail is [Current scope](docs/current-scope.md).
 
 | Area                            | Status       | Summary                                                                                                                         |

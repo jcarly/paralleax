@@ -94,7 +94,9 @@ drawer gives her a key, and with the key the door opens.
 
 1. In the editor header, select the **Test from start** icon (hover the icons
    to see their names).
-2. Choose _Mira_.
+2. Choose _Mira_, then select _Hall_ to start. Simulation always lets you
+   choose the opening scene; the Reader starts it automatically when there is
+   only one.
 3. In _Hall_, _Open the door_ is shown greyed out, with the reason: the key is
    missing. A reader would not see it at all.
 4. Choose _Search the desk_. Mira's inventory now shows the key, and _Open the

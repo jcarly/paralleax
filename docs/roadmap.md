@@ -37,15 +37,16 @@ projects, and make the platform safe for valuable data. Full task descriptions,
 dependencies, and acceptance criteria are in
 [Next delivery tasks](roadmap-history.md#next-delivery-tasks).
 
-| #   | Task                                                 | Status                    |
-| --- | ---------------------------------------------------- | ------------------------- |
-| 1   | Prepare the alpha session brief                      | To do                     |
-| 2   | Complete confirmed Lot A quick fixes                 | To do                     |
-| 3   | Run guided author sessions on disposable projects    | To do                     |
-| 4   | Triage observations and close essential blockers     | After 3                   |
-| 5   | Complete the valuable-project safety gate (P0)       | Can run in parallel       |
-| 6   | Ship the next UX improvement selected by observation | After 4                   |
-| 8   | Make import reports durable                          | Before production imports |
+| #   | Task                                                  | Status                        |
+| --- | ----------------------------------------------------- | ----------------------------- |
+| 1   | Prepare the alpha session brief                       | To do                         |
+| 2   | Complete confirmed Lot A quick fixes                  | To do                         |
+| 3   | Run guided author sessions on disposable projects     | To do                         |
+| 4   | Triage observations and close essential blockers      | After 3                       |
+| 5   | Complete the valuable-project safety gate (P0)        | Can run in parallel           |
+| 6   | Ship the next UX improvement selected by observation  | After 4                       |
+| 8   | Make import reports durable                           | Before production imports     |
+| 9   | Prepare any open creator alpha from observed evidence | After 4–7 (and 8 for imports) |
 
 Recommended addition to the session brief (task 1): include at least one
 studio or visual-novel participant and one task that follows a Story from the
@@ -80,7 +81,8 @@ Former task 7, promoted.
   a documented specification. See [Positioning](positioning.md#decisions-required).
 - **Acceptance:** a Story authored in Paralleax runs in the chosen engine sample
   with the same availability results as Paralleax Simulation for a set of
-  recorded journeys.
+  recorded journeys, given the same random seed and the same recorded choice-step
+  start times (probability and timers are otherwise not reproducible).
 
 ### 3. Durable Story-level collaboration groundwork
 
@@ -109,12 +111,33 @@ explicit decision before they change the order above.
   [ADR-043](decisions/ADR-043-ink-inspired-narrative-source.md); writers in
   studios often prefer text and version control.
 
-## Later
+## Before V1.0
+
+Remaining milestone work required by the
+[V1.0 baseline](roadmap-history.md#v10-baseline), in the order of the
+milestones. Each milestone keeps its goals, remaining scope, and exit criteria in
+the [milestone detail](roadmap-history.md).
+
+- **V0.2 to V0.4:** finish reliable large-Story authoring, revisions and
+  permissions, and typed world state.
+- **V0.5:** dynamic execution.
+- **V0.6:** import/export compatibility (the Story format and native export
+  above are its first deliverables).
+- **V0.7:** authoring beta usability requirements.
+- **V0.8:** collaboration and review beyond the current foundation.
+- **V0.9:** publishing readiness: immutable published versions, publication
+  validation, stable public reader URLs, reader-journey analytics with their
+  privacy gates, moderation and licensing rules.
+- Production operations and recovery gates in
+  [Production readiness](production-readiness.md) (P0 to P2).
+
+## Post-V1
 
 See [Post-V1 directions](roadmap-history.md#post-v1-directions) for the full
-list. Highlights: immutable publication and public reading (V0.9), reader
-analytics, embeddable reader, executable exports, managed media, multi-participant
-narratives, and external agent integrations.
+list. Highlights: embeddable reader, standalone and executable exports, advanced
+video export, managed media, richer story discovery, multi-participant
+narratives, advanced collaboration, and external agent integrations. These are
+directions for exploration, not commitments to an order.
 
 ## How to update this page
 

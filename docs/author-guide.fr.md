@@ -104,7 +104,9 @@ porte s'ouvre.
 
 1. Dans l'en-tête de l'éditeur, choisissez l'icône **Tester depuis le début**
    (survolez les icônes pour voir leur nom).
-2. Choisissez _Mira_.
+2. Choisissez _Mira_, puis sélectionnez _Hall_ pour commencer. La Simulation
+   laisse toujours choisir la scène d'ouverture ; le Lecteur la lance
+   automatiquement quand il n'y en a qu'une.
 3. Dans _Hall_, _Ouvrir la porte_ apparaît grisée, avec la raison : il manque la
    clé. Un lecteur ne la verrait pas du tout.
 4. Choisissez _Fouiller le bureau_. L'inventaire de Mira affiche la clé, et
