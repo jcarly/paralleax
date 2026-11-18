@@ -2,6 +2,13 @@
 
 ## Unreleased
 
+- API e2e specs for stories and comments now run against the real PostgreSQL
+  repositories instead of an in-memory fake, which is removed (963 lines) along
+  with the fake comments repository. Validation, body-limit, rate-limit and 404
+  checks moved to a fast HTTP boundary spec that needs no database and uses a
+  per-request repository stub. API coverage now runs in the PostgreSQL CI job.
+  Running on PostgreSQL revealed that undoing an Interaction creation is refused
+  as a conflict on PostgreSQL; the e2e spec documents it and the fix is pending.
 - Reorganized the documentation around its readers. Added an author guide in
   English and French with a first-Story tutorial, a positioning page presenting game
   studios and visual-novel teams as the first audience hypothesis to test, a completed glossary with

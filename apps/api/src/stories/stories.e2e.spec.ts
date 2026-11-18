@@ -1,512 +1,68 @@
 import 'reflect-metadata';
 import { randomUUID } from 'node:crypto';
-import { mkdtemp, rm } from 'node:fs/promises';
-import { Server, type IncomingMessage, type ServerResponse } from 'node:http';
-import { tmpdir } from 'node:os';
-import { join } from 'node:path';
-import { ValidationPipe, type INestApplication } from '@nestjs/common';
-import { Test, type TestingModule } from '@nestjs/testing';
+import type { INestApplication } from '@nestjs/common';
 import * as request from 'supertest';
-import type { Story } from '@paralleax/shared';
-import {
-  defaultStoryAccess,
-  importChoiceScript,
-  importQsp,
-  MAX_INTERACTION_BODY_LENGTH,
-  serializeQspLocationBundle,
-} from '@paralleax/shared';
-import { AppModule } from '../app.module';
-import { AuthService } from '../auth/auth.service';
+import { Pool } from 'pg';
+import { defaultStoryAccess, serializeQspLocationBundle, type Story } from '@paralleax/shared';
 import { DatabaseMigrator } from '../database/database.migrator';
-import { InMemoryStoriesRepository } from './stories.repository.memory';
+import {
+  insertPostgresTestUsers,
+  itWithPostgres,
+  postgresTestDatabaseUrl,
+  resetPostgresTestDatabase,
+  sharedPostgresTestConnection,
+  truncatePostgresTestTables,
+} from '../database/postgres-test-database';
 import { StoriesRepository } from './stories.repository';
-import { STORY_MUTATION_RATE_LIMIT } from './stories.controller';
 import { StoryEventsService } from './story.events';
-import { QspImportWorkerService } from './application/qsp-import-worker.service';
-import { ChoiceScriptImportWorkerService } from './application/choicescript-import-worker.service';
-import { ImportReportWriter } from '../imports/import-report-writer';
-import { LocalImportReportStorage } from '../imports/import-report-storage';
-import { ApiExceptionFilter } from '../operations/api-exception.filter';
-import { configureRequestBodyParsing } from '../operations/request-body';
-import { requestContextMiddleware } from '../operations/request-context';
-type ApiJsonValue = string | number | boolean | null | ApiJsonObject | ApiJsonValue[];
-interface ApiJsonObject {
-  [key: string]: ApiJsonValue | undefined;
-  id?: string;
-  title?: string;
-  name?: string;
-  code?: string;
-  message?: string | string[];
-  importId?: string;
-  status?: string | number;
-  category?: string;
-  imageUrl?: string | null;
-  updatedAt?: string;
-  createdAt?: string;
-  startDateTime?: string;
-  parentGroupId?: string | null;
-  groupId?: string;
-  interactionId?: string;
-  triggerId?: string;
-  characterId?: string;
-  statId?: string;
-  itemId?: string;
-  statDefinitionId?: string;
-  itemDefinitionId?: string;
-  parentItemId?: string;
-  locationId?: string;
-  revision?: number;
-  totalCount?: number;
-  page?: number;
-  pageSize?: number;
-  warningCount?: number;
-  errorCount?: number;
-  sourceFileCount?: number;
-  locationCount?: number;
-  initialValue?: ApiJsonValue;
-  changePerHour?: number | null;
-  durationMinutes?: number;
-  timerSeconds?: number | null;
-  attempted?: number;
-  hasMore?: boolean;
-  canRead?: boolean;
-  canEdit?: boolean;
-  canManage?: boolean;
-  isPlayable?: boolean;
-  canUndo?: boolean;
-  canRedo?: boolean;
-  triggerRemoved?: boolean;
-  isOwned?: boolean;
-  story?: ApiJsonObject;
-  group?: ApiJsonObject;
-  interaction?: ApiJsonObject;
-  decoration?: ApiJsonObject;
-  trigger?: ApiJsonObject;
-  location?: ApiJsonObject | string | null;
-  character?: ApiJsonObject;
-  statDefinition?: ApiJsonObject;
-  itemDefinition?: ApiJsonObject;
-  stat?: ApiJsonObject;
-  item?: ApiJsonObject;
-  report?: ApiJsonObject;
-  state?: ApiJsonObject;
-  history?: ApiJsonObject;
-  details?: ApiJsonObject;
-  capabilities?: ApiJsonObject;
-  owner?: ApiJsonObject;
-  access?: ApiJsonObject;
-  position?: ApiJsonObject;
-  stats?: ApiJsonObject[];
-  items?: ApiJsonObject[];
-  groups?: ApiJsonObject[];
-  interactions?: ApiJsonObject[];
-  characters?: ApiJsonObject[];
-  locations?: ApiJsonObject[];
-  statDefinitions?: ApiJsonObject[];
-  itemDefinitions?: ApiJsonObject[];
-  graphDecorations?: ApiJsonObject[];
-  triggers?: ApiJsonObject[];
-  entries?: ApiJsonObject[];
-  conditionGroups?: ApiJsonObject[];
-  collaborators?: ApiJsonObject[];
-  issues?: ApiJsonObject[];
-  optionInteractionIds?: string[];
-  interactionIds?: string[];
-  characterIds?: string[];
-  inputInteractionIds?: string[];
-  statEffects?: ApiJsonObject[];
-  itemEffects?: ApiJsonObject[];
-  conditionalTextBlocks?: ApiJsonObject[];
-  conditions?: ApiJsonObject[];
-  coverage?: ApiJsonObject[];
-  contextCounts?: Record<string, number>;
-}
-const stringFields = new Set([
-  'id',
-  'title',
-  'name',
-  'code',
-  'message',
-  'importId',
-  'status',
-  'category',
-  'updatedAt',
-  'createdAt',
-  'startDateTime',
-  'groupId',
-  'interactionId',
-  'triggerId',
-  'characterId',
-  'statId',
-  'itemId',
-  'statDefinitionId',
-  'itemDefinitionId',
-  'parentItemId',
-  'locationId',
-]);
-const numberFields = new Set([
-  'revision',
-  'totalCount',
-  'page',
-  'pageSize',
-  'warningCount',
-  'errorCount',
-  'sourceFileCount',
-  'locationCount',
-  'durationMinutes',
-  'attempted',
-]);
-const booleanFields = new Set([
-  'hasMore',
-  'canRead',
-  'canEdit',
-  'canManage',
-  'isPlayable',
-  'canUndo',
-  'canRedo',
-  'triggerRemoved',
-  'isOwned',
-]);
-const objectFields = new Set([
-  'story',
-  'group',
-  'interaction',
-  'decoration',
-  'trigger',
-  'location',
-  'character',
-  'statDefinition',
-  'itemDefinition',
-  'stat',
-  'item',
-  'report',
-  'state',
-  'history',
-  'details',
-  'capabilities',
-  'owner',
-  'access',
-  'position',
-  'contextCounts',
-]);
-const objectArrayFields = new Set([
-  'stats',
-  'items',
-  'groups',
-  'interactions',
-  'characters',
-  'locations',
-  'statDefinitions',
-  'itemDefinitions',
-  'graphDecorations',
-  'triggers',
-  'entries',
-  'conditionGroups',
-  'collaborators',
-  'issues',
-  'statEffects',
-  'itemEffects',
-  'conditionalTextBlocks',
-  'conditions',
-  'coverage',
-]);
-const stringArrayFields = new Set([
-  'optionInteractionIds',
-  'interactionIds',
-  'characterIds',
-  'inputInteractionIds',
-]);
-const jsonFieldValidators = new Map<string, (value: unknown) => boolean>([
-  ...[...stringFields].map((key) => [key, (value: unknown) => typeof value === 'string'] as const),
-  ...[...numberFields].map((key) => [key, (value: unknown) => typeof value === 'number'] as const),
-  ...[...booleanFields].map(
-    (key) => [key, (value: unknown) => typeof value === 'boolean'] as const,
-  ),
-  ...[...objectFields].map((key) => [key, isJsonObject] as const),
-  ...[...objectArrayFields].map((key) => [key, isJsonObjectArray] as const),
-  ...[...stringArrayFields].map((key) => [key, isStringArray] as const),
-  ['imageUrl', isNullableString],
-  ['parentGroupId', isNullableString],
-  ['changePerHour', isNullableNumber],
-  ['timerSeconds', isNullableNumber],
-  ['status', (value: unknown) => typeof value === 'string' || typeof value === 'number'],
-  ['message', (value: unknown) => typeof value === 'string' || isStringArray(value)],
-  [
-    'location',
-    (value: unknown) => value === null || typeof value === 'string' || isJsonObject(value),
-  ],
-  ['contextCounts', isNumberRecord],
-]);
-function isRecord(value: unknown): value is Record<string, unknown> {
-  return typeof value === 'object' && value !== null && !Array.isArray(value);
-}
-function isNullableString(value: unknown): boolean {
-  return value === null || typeof value === 'string';
-}
-function isNullableNumber(value: unknown): boolean {
-  return value === null || typeof value === 'number';
-}
-function isStringArray(value: unknown): boolean {
-  return Array.isArray(value) && value.every((item) => typeof item === 'string');
-}
-function isNumberRecord(value: unknown): boolean {
-  return isRecord(value) && Object.values(value).every((item) => typeof item === 'number');
-}
-function isJsonObject(value: unknown): value is ApiJsonObject {
-  return isRecord(value) && isApiJsonValue(value);
-}
-function isJsonObjectArray(value: unknown): boolean {
-  return Array.isArray(value) && value.every(isJsonObject);
-}
-function isValidJsonField(key: string, value: unknown): boolean {
-  return jsonFieldValidators.get(key)?.(value) ?? isApiJsonValue(value);
-}
-function isApiJsonValue(value: unknown): value is ApiJsonValue {
-  if (
-    value === null ||
-    typeof value === 'string' ||
-    typeof value === 'number' ||
-    typeof value === 'boolean'
-  ) {
-    return true;
-  }
-  if (Array.isArray(value)) {
-    return value.every(isApiJsonValue);
-  }
-  if (!isRecord(value)) {
-    return false;
-  }
-  return Object.entries(value).every(([key, entry]) => isValidJsonField(key, entry));
-}
-function parseJsonValue(text: string): ApiJsonValue {
-  const parsed: unknown = JSON.parse(text) as unknown;
-  if (!isApiJsonValue(parsed)) {
-    throw new Error('Expected a valid JSON response value.');
-  }
-  return parsed;
-}
-function parseResponse(response: { text: string }): ApiJsonObject {
-  const parsed = parseJsonValue(response.text);
-  if (!isRecord(parsed)) {
-    throw new Error('Expected an object-shaped JSON API response.');
-  }
-  return parsed;
-}
-function parseResponseArray(response: { text: string }): ApiJsonObject[] {
-  const parsed = parseJsonValue(response.text);
-  if (!Array.isArray(parsed) || !parsed.every(isJsonObject)) {
-    throw new Error('Expected an array of object-shaped JSON API responses.');
-  }
-  return parsed;
-}
+import {
+  parseJsonValue,
+  parseResponse,
+  parseResponseArray,
+  required,
+  requiredJsonObject,
+  requiredString,
+  responseNumberAt,
+  responseObjectArrayAt,
+  responseObjectAt,
+  responseStringArrayAt,
+  responseStringAt,
+  responseValueAt,
+  triggerConditions,
+  type ApiJsonObject,
+} from './test/api-json';
+import {
+  apiRequests,
+  startStoriesApi,
+  storiesApiTestUsers,
+  type ApiHttpServer,
+  type StoriesApi,
+} from './test/stories-api';
+
+// Behavior that depends on persistence (access rules, history, concurrency,
+// pagination, quotas) runs against the real PostgreSQL repository. Request
+// validation that never reaches storage lives in stories.http.spec.ts.
+
+// Every test in this file needs the dedicated PostgreSQL test database; hooks
+// only run when a test runs, so the file is skipped when it is not configured.
+// This local `it` shadows the Jest global on purpose: one switch for the file.
+const it = itWithPostgres;
+const pool = new Pool({ connectionString: postgresTestDatabaseUrl });
+const database = sharedPostgresTestConnection(pool);
+let api: StoriesApi;
 let app: INestApplication;
-let httpServer: Server<typeof IncomingMessage, typeof ServerResponse>;
-let reportDirectory: string;
-function isHttpServer(
-  value: unknown,
-): value is Server<typeof IncomingMessage, typeof ServerResponse> {
-  return value instanceof Server;
-}
-function required<T>(value: T | undefined, message: string): T {
-  if (value === undefined) {
-    throw new Error(message);
-  }
-  return value;
-}
-function requiredString(value: unknown, message: string): string {
-  if (typeof value !== 'string') {
-    throw new Error(message);
-  }
-  return value;
-}
-function requiredJsonObject(value: unknown, message: string): ApiJsonObject {
-  if (!isJsonObject(value)) {
-    throw new Error(message);
-  }
-  return value;
-}
-function responseValueAt(
-  root: ApiJsonObject,
-  ...path: Array<string | number>
-): ApiJsonValue | undefined {
-  let current: unknown = root;
-  for (const segment of path) {
-    if (typeof segment === 'number') {
-      if (!Array.isArray(current)) {
-        throw new Error(`Expected an array before response index ${segment}.`);
-      }
-      current = current[segment];
-      continue;
-    }
-    if (!isRecord(current)) {
-      throw new Error(`Expected an object before response field ${segment}.`);
-    }
-    current = current[segment];
-  }
-  if (current === undefined) {
-    return undefined;
-  }
-  if (!isApiJsonValue(current)) {
-    throw new Error('The response path did not contain JSON data.');
-  }
-  return current;
-}
-function responseObjectAt(root: ApiJsonObject, ...path: Array<string | number>): ApiJsonObject {
-  return requiredJsonObject(responseValueAt(root, ...path), 'Expected a response object.');
-}
-function responseObjectArrayAt(
-  root: ApiJsonObject,
-  ...path: Array<string | number>
-): ApiJsonObject[] {
-  const value = responseValueAt(root, ...path);
-  if (!Array.isArray(value) || !value.every(isJsonObject)) {
-    throw new Error('Expected an array of response objects.');
-  }
-  return value;
-}
-function responseStringArrayAt(root: ApiJsonObject, ...path: Array<string | number>): string[] {
-  const value = responseValueAt(root, ...path);
-  if (!Array.isArray(value) || !value.every((item) => typeof item === 'string')) {
-    throw new Error('Expected an array of response strings.');
-  }
-  return value;
-}
-function responseStringAt(root: ApiJsonObject, ...path: Array<string | number>): string {
-  const value = responseValueAt(root, ...path);
-  if (typeof value !== 'string') {
-    throw new Error('Expected a string response value.');
-  }
-  return value;
-}
-function responseNumberAt(root: ApiJsonObject, ...path: Array<string | number>): number {
-  const value = responseValueAt(root, ...path);
-  if (typeof value !== 'number') {
-    throw new Error('Expected a numeric response value.');
-  }
-  return value;
-}
-function triggerConditions(trigger: ApiJsonObject): ApiJsonObject[] {
-  return (trigger.conditionGroups ?? []).flatMap((group) => group.conditions ?? []);
-}
-function createQspImportWorkerMock() {
-  return {
-    run: jest.fn(async (...args: Parameters<QspImportWorkerService['run']>) => {
-      const source = args[0];
-      const reportPath = args[3];
-      if (!reportPath) {
-        throw new Error('A test QSP report path is required.');
-      }
-      const writer = new ImportReportWriter({ reportPath });
-      await writer.start();
-      try {
-        return importQsp(source, {
-          storyId: randomUUID(),
-          timestamp: new Date().toISOString(),
-          createId: randomUUID,
-          maxPreviewIssues: 0,
-          onIssue: (issue) => {
-            writer.writeIssue(issue);
-          },
-          onProgress: args[1],
-        });
-      } finally {
-        await writer.close();
-      }
-    }),
-  };
-}
-function createChoiceScriptImportWorkerMock() {
-  return {
-    run: jest.fn(async (...args: Parameters<ChoiceScriptImportWorkerService['run']>) => {
-      const [files, options, , reportPath] = args;
-      if (!reportPath) {
-        throw new Error('A test ChoiceScript report path is required.');
-      }
-      const writer = new ImportReportWriter({ reportPath });
-      await writer.start();
-      try {
-        return importChoiceScript(files, {
-          ...options,
-          createId: randomUUID,
-          maxPreviewIssues: 0,
-          onIssue: (issue) => {
-            writer.writeIssue(issue);
-          },
-        });
-      } finally {
-        await writer.close();
-      }
-    }),
-  };
-}
-function userForTestToken(token?: string) {
-  if (token === 'anonymous') {
-    return Promise.resolve(undefined);
-  }
-  const ids: Record<string, string> = {
-    'user-two': 'user-2',
-    'user-one': 'user-1',
-    admin: 'admin-1',
-  };
-  return Promise.resolve({
-    id: token ? (ids[token] ?? 'test-user') : 'test-user',
-    email: `${token ?? 'test'}@paralleax.invalid`,
-    role: token === 'admin' ? 'admin' : 'user',
-    createdAt: '2026-01-01T00:00:00.000Z',
-  });
-}
-function createStoriesTestingModule(reportPath: string): Promise<TestingModule> {
-  return Test.createTestingModule({ imports: [AppModule] })
-    .overrideProvider(StoriesRepository)
-    .useClass(InMemoryStoriesRepository)
-    .overrideProvider(QspImportWorkerService)
-    .useValue(createQspImportWorkerMock())
-    .overrideProvider(ChoiceScriptImportWorkerService)
-    .useValue(createChoiceScriptImportWorkerMock())
-    .overrideProvider(LocalImportReportStorage)
-    .useValue(new LocalImportReportStorage(reportPath))
-    .overrideProvider(DatabaseMigrator)
-    .useValue({ run: jest.fn().mockResolvedValue(undefined) })
-    .overrideProvider(AuthService)
-    .useValue({ userForToken: jest.fn(userForTestToken) })
-    .compile();
-}
-function getApi(path: string, status = 200) {
-  return request(httpServer).get(path).expect(status);
-}
-function postApi(path: string, body: object, status = 201) {
-  return request(httpServer).post(path).send(body).expect(status);
-}
-function patchApi(path: string, body: object, status = 200) {
-  return request(httpServer).patch(path).send(body).expect(status);
-}
-function deleteApi(path: string, status = 200) {
-  return request(httpServer).delete(path).expect(status);
-}
-async function setupStoriesApi(): Promise<void> {
-  reportDirectory = await mkdtemp(join(tmpdir(), 'paralleax-import-api-'));
-  const moduleFixture = await createStoriesTestingModule(reportDirectory);
-  app = moduleFixture.createNestApplication({ bodyParser: false });
-  configureRequestBodyParsing(app);
-  app.use(requestContextMiddleware);
-  app.useGlobalPipes(
-    new ValidationPipe({ whitelist: true, forbidNonWhitelisted: true, transform: true }),
-  );
-  app.useGlobalFilters(new ApiExceptionFilter());
-  app.setGlobalPrefix('api');
-  await app.init();
-  const server: unknown = app.getHttpServer() as unknown;
-  if (!isHttpServer(server)) {
-    throw new Error('The Nest application did not create an HTTP server.');
-  }
-  httpServer = server;
-}
-async function teardownStoriesApi(): Promise<void> {
-  await app.close();
-  await rm(reportDirectory, { recursive: true, force: true });
-}
-beforeEach(setupStoriesApi);
-afterEach(teardownStoriesApi);
+let httpServer: ApiHttpServer;
+const { getApi, postApi, patchApi, deleteApi } = apiRequests(() => httpServer);
+
+beforeAll(() => resetPostgresTestDatabase(pool, new DatabaseMigrator(database)), 30_000);
+beforeEach(async () => {
+  await truncatePostgresTestTables(pool);
+  await insertPostgresTestUsers(pool, storiesApiTestUsers);
+  api = await startStoriesApi({ database });
+  ({ app, httpServer } = api);
+});
+afterEach(() => api.close());
+afterAll(() => pool.end());
 async function createStory(title = 'Test story'): Promise<Story> {
   const now = new Date().toISOString();
   const story: Story = {
@@ -825,20 +381,6 @@ it('records one reversible history event for a grouped graph position gesture', 
   await recordGroupedGraphMove(scenario);
   await undoGroupedGraphMove(scenario);
 });
-it('rate-limits story mutations independently from reads', async () => {
-  // Keep Supertest from owning and closing the shared server while concurrent requests are active.
-  await app.listen(0);
-  const responses = await Promise.all(
-    Array.from({ length: STORY_MUTATION_RATE_LIMIT + 1 }, (_, index) =>
-      request(httpServer)
-        .post('/api/stories')
-        .send({ title: `Story ${index}` }),
-    ),
-  );
-  expect(responses.filter(({ status }) => status === 201)).toHaveLength(STORY_MUTATION_RATE_LIMIT);
-  expect(responses.filter(({ status }) => status === 429)).toHaveLength(1);
-  await getApi('/api/stories', 200);
-});
 it('POST /api/stories creates a story', async () => {
   const response = await postApi('/api/stories', { title: 'New API story' }, 201);
   expect(parseResponse(response)).toMatchObject({
@@ -859,12 +401,6 @@ it('POST /api/stories creates a story', async () => {
       },
     ],
   });
-});
-it('POST /api/stories requires a non-null title', async () => {
-  await postApi('/api/stories', {}, 400);
-  await postApi('/api/stories', { title: null }, 400);
-  await postApi('/api/stories', { title: '' }, 400);
-  await postApi('/api/stories', { title: 'x'.repeat(201) }, 400);
 });
 it('POST /api/stories/demo is admin-only and creates the populated demo catalog', async () => {
   await request(httpServer)
@@ -1739,19 +1275,6 @@ it('creates, updates, persists, and deletes visual graph decorations', async () 
   const afterDelete = await getApi(`/api/stories/${story.id}`, 200);
   expect(responseObjectArrayAt(parseResponse(afterDelete), 'graphDecorations')).toEqual([text]);
 });
-it('rejects invalid graph decoration presentation values', async () => {
-  const story = await createStory();
-  await postApi(
-    `/api/stories/${story.id}/graph-decorations`,
-    { kind: 'frame', position: { x: 0, y: 0 }, color: 'blue', width: 40 },
-    400,
-  );
-  await postApi(
-    `/api/stories/${story.id}/graph-decorations`,
-    { kind: 'text', position: { x: 0, y: 0 }, fontSize: 120 },
-    400,
-  );
-});
 it('POST /api/stories/:storyId/interactions creates a child interaction linked to its parent', async () => {
   const story = await createStory();
   const withRoot = await createInteraction(story.id);
@@ -1847,16 +1370,6 @@ it('rejects null interaction titles and positions but normalizes a null body', a
     body: '',
     position: interaction.position,
   });
-});
-it('rejects interaction bodies above the authored content limit', async () => {
-  const story = await createStory();
-  const withInteraction = await createInteraction(story.id);
-  const interaction = withInteraction.interactions[0];
-  await patchApi(
-    `/api/stories/${story.id}/interactions/${interaction.id}`,
-    { body: 'x'.repeat(MAX_INTERACTION_BODY_LENGTH + 1) },
-    400,
-  );
 });
 it('rejects an over-quota edit atomically with a stable 422 response, while allowing deletion', async () => {
   const story = await createStory();
@@ -1957,14 +1470,6 @@ it('rejects redo when it would restore an over-quota entity', async () => {
     }
   }
 });
-it('rejects raw request bodies above the global HTTP limit', async () => {
-  const response = await postApi('/api/stories', { title: 'x'.repeat(140000) }, 413);
-  expect(parseResponse(response)).toMatchObject({
-    status: 413,
-    code: 'PAYLOAD_TOO_LARGE',
-    message: 'Request body is too large.',
-  });
-});
 it('sanitizes rich interaction content while preserving supported media', async () => {
   const story = await createStory();
   const withInteraction = await createInteraction(story.id);
@@ -1999,16 +1504,6 @@ it('sanitizes rich interaction content while preserving supported media', async 
   expect(sanitized).not.toContain('onerror');
   expect(sanitized).not.toContain('evil.example');
   expect(sanitized).not.toContain('<script');
-});
-it('rejects unknown interaction patch fields', async () => {
-  const story = await createStory();
-  const withInteraction = await createInteraction(story.id);
-  const interaction = withInteraction.interactions[0];
-  await patchApi(
-    `/api/stories/${story.id}/interactions/${interaction.id}`,
-    { unexpected: true },
-    400,
-  );
 });
 it('DELETE /api/stories/:storyId/interactions/:interactionId deletes an interaction and turns orphaned triggers into root triggers', async () => {
   const story = await createStory();
@@ -2162,16 +1657,6 @@ it('updates only a trigger canvas position without changing its narrative rules'
     ...trigger,
     position: { x: 245, y: 180 },
   });
-});
-it('rejects an invalid trigger canvas position', async () => {
-  const story = await createStory();
-  const graph = await createInteraction(story.id);
-  const interaction = graph.interactions[0];
-  await patchApi(
-    `/api/stories/${story.id}/interactions/${interaction.id}/triggers/${interaction.triggers[0].id}`,
-    { position: { x: null, y: 180 } },
-    400,
-  );
 });
 it('stores several temporal dates, weekdays, and time slots on a trigger', async () => {
   const story = await createStory();
@@ -3340,9 +2825,6 @@ it('DELETE /api/stories/:storyId/interactions/:interactionId/triggers/:triggerId
   );
   expect(updatedInteraction.triggers).toEqual([{ ...trigger, inputInteractionIds: [] }]);
 });
-it('returns 404 for unknown story ids', async () => {
-  await getApi('/api/stories/missing-story', 404);
-});
 it('isolates stories between authenticated owners', async () => {
   const created = await request(httpServer)
     .post('/api/stories')
@@ -3529,19 +3011,6 @@ it('does not expose the authoring event stream to readers', async () => {
     .get(`/api/stories/${responseStringAt(parseResponse(created), 'id')}/events`)
     .set('Cookie', 'paralleax_session=user-two')
     .expect(403);
-});
-it('rejects removed comment policies at the API boundary', async () => {
-  const story = await createStory('Current comment policies');
-  await patchApi(
-    `/api/stories/${story.id}/access`,
-    { visibility: 'private', editPolicy: 'owner', commentPolicy: 'disabled' },
-    400,
-  );
-  await patchApi(
-    `/api/stories/${story.id}/access`,
-    { visibility: 'private', editPolicy: 'owner', commentPolicy: 'authenticated' },
-    400,
-  );
 });
 it('exposes public stories to other users without granting modification', async () => {
   const created = await request(httpServer)

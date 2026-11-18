@@ -1211,9 +1211,23 @@ classes directly.
 
 ## Tests and CI
 
-- API: Jest and Supertest.
+- API: Jest and Supertest, in two layers with no parallel repository
+  implementation:
+  - HTTP boundary specs (`stories.http.spec.ts`) cover validation, body limits,
+    rate limiting, and error mapping. They boot the full Nest application with a
+    per-spec repository stub that answers only what each request needs, so any
+    unexpected storage call fails the request. They need no database.
+  - API e2e specs (`stories.e2e.spec.ts`, `comments.e2e.spec.ts`) exercise
+    behavior that depends on persistence (access, history, concurrency,
+    pagination, quotas) through the real repositories on the dedicated
+    PostgreSQL test database. Each test starts from emptied tables with the
+    accounts that the mocked `AuthService` authenticates.
+    The former in-memory `StoriesRepository` fake was removed because e2e specs
+    verified it rather than the SQL.
 - PostgreSQL integration: Jest against PostgreSQL 17, including persistence
-  across repository instances and concurrent row mutation coverage.
+  across repository instances and concurrent row mutation coverage. Specs that
+  need PostgreSQL are skipped when `POSTGRES_TEST_DATABASE_URL` is unset, and
+  destructive setup refuses a database whose name does not contain `test`.
 - Web: Vitest and Testing Library.
 - Shared: Vitest for narrative rules and pure story operations.
 - Functional UI: fast Playwright suites with controlled API responses.
@@ -1252,7 +1266,8 @@ classes directly.
   three samples per build with explicit per-sample budgets and retains every
   structured measurement as a JSON test attachment.
 - Coverage: Jest coverage for the API, Vitest V8 coverage for shared and the web app,
-  with per-workspace thresholds enforced by the coverage commands.
+  with per-workspace thresholds enforced by the coverage commands. API coverage
+  runs in the PostgreSQL CI job because the API e2e specs need the database.
 - Bundle contract: the production web build checks the Vite manifest, dynamic
   route boundaries, and compressed initial/editor/player budgets.
 - Code style: ESLint with zero-warning enforcement, Stylelint on

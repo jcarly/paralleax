@@ -149,7 +149,9 @@ npm run test -w @paralleax/web
 npm run test -w @paralleax/shared
 ```
 
-Run the API integration tests against the Docker PostgreSQL service:
+Without `POSTGRES_TEST_DATABASE_URL`, `npm run test -w @paralleax/api` skips the
+API e2e and PostgreSQL integration specs and still runs the HTTP boundary specs.
+Run the API e2e and integration tests against the Docker PostgreSQL service:
 
 ```powershell
 docker compose exec -T db createdb -U paralleax paralleax_test
@@ -159,7 +161,8 @@ npm run test:postgres -w @paralleax/api
 
 Create `paralleax_test` only once; `createdb` reports that it already exists on
 later runs. Never point `POSTGRES_TEST_DATABASE_URL` at the development database:
-the migration suite deliberately rebuilds the tested `public` schema.
+the suites deliberately rebuild the tested `public` schema and empty its tables,
+and refuse a database whose name does not contain `test`.
 
 Run the opt-in large-story stress test against the same isolated database:
 

@@ -6,7 +6,6 @@ import { AppModule } from '../app.module';
 import { AppConfigService } from '../config/app-config.service';
 import { DatabaseMigrator } from '../database/database.migrator';
 import { EmailService, type EmailMessage } from '../email/email.service';
-import { InMemoryStoriesRepository } from '../stories/stories.repository.memory';
 import { StoriesRepository } from '../stories/stories.repository';
 import { AuthRepository, type AccountActionTokenKind, type AuthUser } from './auth.repository';
 
@@ -149,8 +148,9 @@ describe('Auth API', () => {
       .useValue(authRepository)
       .overrideProvider(EmailService)
       .useValue(email)
+      // The account flow never reads stories; an empty stub fails any accidental call.
       .overrideProvider(StoriesRepository)
-      .useClass(InMemoryStoriesRepository)
+      .useValue({})
       .overrideProvider(DatabaseMigrator)
       .useValue({ run: jest.fn().mockResolvedValue(undefined) })
       .compile();

@@ -79,9 +79,6 @@
   },
   "apps/api/src/comments/comments.e2e.spec.ts": {
     "@typescript-eslint/strict-boolean-expressions": {
-      "count": 3
-    },
-    "max-lines": {
       "count": 1
     }
   },
@@ -588,26 +585,15 @@
       "count": 1
     },
     "@typescript-eslint/strict-boolean-expressions": {
-      "count": 4
-    },
-    "max-lines": {
       "count": 1
     },
-    "no-duplicate-imports": {
+    "max-lines": {
       "count": 1
     }
   },
   "apps/api/src/stories/stories.postgres.spec.ts": {
     "@typescript-eslint/strict-boolean-expressions": {
       "count": 1
-    },
-    "max-lines": {
-      "count": 1
-    }
-  },
-  "apps/api/src/stories/stories.repository.memory.ts": {
-    "@typescript-eslint/strict-boolean-expressions": {
-      "count": 8
     },
     "max-lines": {
       "count": 1
