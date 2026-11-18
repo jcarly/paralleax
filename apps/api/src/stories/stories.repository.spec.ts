@@ -782,7 +782,6 @@ async function runFindAndAssembleStory() {
     characters: saved.characters,
     interactions: saved.interactions.map((interaction) => ({
       ...interaction,
-      locationId: interaction.locationId ?? null,
       characterIds: interaction.characterIds ?? [],
       statEffects: interaction.statEffects ?? [],
       itemEffects: interaction.itemEffects ?? [],

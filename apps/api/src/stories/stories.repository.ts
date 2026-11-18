@@ -1371,7 +1371,9 @@ function projectStoryInteractions(storyId: string, indexes: StoryAssemblyIndexes
     title: interaction.title,
     body: interaction.body,
     position: { x: interaction.position_x, y: interaction.position_y },
-    locationId: interaction.location_id,
+    // An absent locationId means "no location", as authored Interactions omit
+    // it; returning null would make history deltas see a change that never happened.
+    ...(interaction.location_id === null ? {} : { locationId: interaction.location_id }),
     durationMinutes: interaction.duration_minutes,
     conditionalTextBlocks: interaction.conditional_text_blocks,
     characterIds: (indexes.charactersByInteraction.get(interaction.id) ?? []).map(

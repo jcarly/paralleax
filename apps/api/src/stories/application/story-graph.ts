@@ -469,7 +469,11 @@ export class StoryGraphService {
       ) {
         throw new BadRequestException('Interaction location must belong to the same story');
       }
-      interaction.locationId = input.locationId;
+      if (input.locationId === null) {
+        delete interaction.locationId;
+      } else {
+        interaction.locationId = input.locationId;
+      }
     }
     if (input.characterIds !== undefined) {
       const characterIds = new Set((story.characters ?? []).map(({ id }) => id));

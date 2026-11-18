@@ -283,6 +283,34 @@ it('persists authored Story history and supports undo and redo', async () => {
     canRedo: false,
   });
 });
+async function revertHistory(storyId: string, action: 'undo' | 'redo'): Promise<ApiJsonObject> {
+  const response = await request(httpServer)
+    .post(`/api/stories/${storyId}/history/${action}`)
+    .expect(201);
+  return responseObjectAt(parseResponse(response), 'story');
+}
+it('undoes and redoes an Interaction creation from stored history', async () => {
+  const story = await createStory();
+  const interactionId = (await createInteraction(story.id)).interactions[0].id;
+  expect(responseObjectArrayAt(await revertHistory(story.id, 'undo'), 'interactions')).toEqual([]);
+  expect(responseObjectArrayAt(await revertHistory(story.id, 'redo'), 'interactions')).toEqual([
+    expect.objectContaining({ id: interactionId }),
+  ]);
+});
+it('undoes and redoes clearing an Interaction location', async () => {
+  const story = await createStory();
+  const interactionId = (await createInteraction(story.id)).interactions[0].id;
+  const created = await postApi(`/api/stories/${story.id}/locations`, { name: 'Harbor' }, 201);
+  const locationId = responseStringAt(parseResponse(created), 'location', 'id');
+  const path = `/api/stories/${story.id}/interactions/${interactionId}`;
+  await patchApi(path, { locationId }, 200);
+  const cleared = await patchApi(path, { locationId: null }, 200);
+  expect(responseObjectAt(parseResponse(cleared), 'interaction')).not.toHaveProperty('locationId');
+  const undone = await revertHistory(story.id, 'undo');
+  expect(responseObjectAt(undone, 'interactions', 0)).toHaveProperty('locationId', locationId);
+  const redone = await revertHistory(story.id, 'redo');
+  expect(responseObjectAt(redone, 'interactions', 0)).not.toHaveProperty('locationId');
+});
 it('refuses to undo over a later overlapping collaborator change', async () => {
   const ownerCookie = 'paralleax_session=user-one';
   const collaboratorCookie = 'paralleax_session=user-two';
