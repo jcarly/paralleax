@@ -1,10 +1,18 @@
 # User Guide
 
-This guide covers the current MVP authoring workflow.
+This is the detailed reference for every editor control in the current alpha.
+If you are new to Paralleax, start with the [Author guide](author-guide.md)
+([version française](author-guide.fr.md)), which explains the concepts and
+walks through a first Story.
+
+This guide uses the canonical terms of the [Glossary](glossary.md). In
+particular, a **Variable** is what the interface shows as **Stats** on
+characters and in the reader.
 
 ## Open the App
 
-Start the local stack:
+On a hosted Paralleax instance, open the address you were given. For a local
+development stack (contributors), run:
 
 ```bash
 npm run dev
@@ -544,11 +552,11 @@ a character, a location, or another item without changing its instance ids.
 Location roots are authored world state and are not automatically part of a
 reader character's inventory.
 
-In an interaction inspector, use **Add item effect** to select one exact item
-instance and choose **obtain** or **lose**. If a character has several copies,
+In an interaction inspector, use **Add effect**, then **Item inventory**, to
+select one exact item instance and choose **obtain** or **lose**. If a character has several copies,
 the editor numbers them so the intended copy is explicit. The reader displays
-the resulting inventory and saves it with progress. Items do not have trigger
-conditions or equipment behavior yet.
+the resulting inventory and saves it with progress. Items do not have equipment
+behavior yet; ownership conditions are described below.
 
 ### Item variables
 
@@ -563,14 +571,15 @@ for owned items.
 
 ### Item effects and conditions
 
-Open an interaction and use **Add item effect** to obtain or lose any reusable
-item definition in the story. The item does not need to be preassigned to a
+Open an interaction and use **Add effect**, then **Item inventory**, to obtain
+or lose any reusable item definition in the story. The item does not need to be preassigned to a
 character. Select the character who obtains or loses it. Repeating an obtain
 effect creates another copy for that character; a lose effect removes one copy
 owned by the selected character.
 
-In the trigger editor, use **Add item condition** to require that the reader
-owns, or does not own, at least one copy of an item definition.
+In the trigger editor, select **Add condition**, then the **Item** type, to
+require that the reader owns, or does not own, at least one copy of an item
+definition.
 
 In a character inspector, use the `x` button beside an assigned characteristic
 or item to remove it. Removing an assignment also cleans interaction effects and
@@ -600,9 +609,9 @@ left without an availability rule.
 
 ## Test the Story
 
-Select `Read` from the story library to open the player reader. Select `Test`
-from the editor to open author Simulation Mode, either from the beginning or
-from the currently selected interaction.
+Select `Read` from the story library to open the player reader. In the editor
+header, the **Test from start** and **Test from current interaction** icons open
+author Simulation Mode from the beginning or from the selected interaction.
 
 Only editors can enter Simulation Mode. Adding simulation or starting-interaction
 parameters to a player URL does not enable author controls for a reader.
@@ -649,9 +658,9 @@ available. Simulation also provides `Back`, inline interaction editing, and
 option creation while keeping its automatic progression separate from the
 reader autosave.
 
-### Time-based stat changes
+### Time-based variable changes
 
-Open a stat from the **Stats** section and set **Change per story hour**. Use a
-positive value for growth, a negative value for decay, or `0` to disable the
-automatic change. The rate applies to every character using that reusable stat
-and is prorated over each interaction's duration.
+Open a Number variable from the **Variables** list in **Story context** and set
+**Change per story hour**. Use a positive value for growth, a negative value for
+decay, or `0` to disable the automatic change. The rate applies to every owner
+using that reusable variable and is prorated over each interaction's duration.
