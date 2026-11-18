@@ -1,3 +1,4 @@
+import { useMemo } from 'react';
 import type { CommentAnchor, StoryCommentThread } from '@paralleax/shared';
 import type { CommentPinFlowNode, CommentPinNodeData } from '../../comments/CommentPinNode';
 import type { useStoryComments } from '../../comments/useStoryComments';
@@ -91,4 +92,55 @@ function buildCommentDraftPin(
       onDelete: input.deleteCommentThread,
     },
   };
+}
+
+export function useStoryEditorCommentPinNodes(input: CommentNodeInput) {
+  const {
+    activeCommentThreads,
+    canDeleteCommentThread,
+    canManageCommentThread,
+    cancelCommentDraft,
+    createComment,
+    draftAnchor,
+    deleteCommentThread,
+    replyToComment,
+    selectCommentThread,
+    selectedThreadId,
+    setCommentStatus,
+    setCommentsOpen,
+    canComment,
+  } = input;
+  return useMemo(
+    () =>
+      buildCommentPinNodes({
+        activeCommentThreads,
+        canDeleteCommentThread,
+        canManageCommentThread,
+        cancelCommentDraft,
+        createComment,
+        draftAnchor,
+        deleteCommentThread,
+        replyToComment,
+        selectCommentThread,
+        selectedThreadId,
+        setCommentStatus,
+        setCommentsOpen,
+        canComment,
+      }),
+    [
+      activeCommentThreads,
+      canDeleteCommentThread,
+      canManageCommentThread,
+      cancelCommentDraft,
+      createComment,
+      draftAnchor,
+      deleteCommentThread,
+      replyToComment,
+      selectCommentThread,
+      selectedThreadId,
+      setCommentStatus,
+      setCommentsOpen,
+      canComment,
+    ],
+  );
 }

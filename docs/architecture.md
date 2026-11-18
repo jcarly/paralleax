@@ -542,6 +542,15 @@ component:
   for transient inspector targets and rectangle-selection gestures. It resolves
   selected entities from the canonical Story and deliberately preserves context
   references only for interaction navigation that requires them.
+- `features/story-editor/graph/useStoryEditorRuntime.ts`: composition of the
+  editor's focused graph, comment, selection, and action controllers. The graph
+  directory also owns canvas state, projections, pointer handling, layout,
+  synchronization, and canvas rendering.
+- `features/story-editor/inspectors/StoryEditorInspector.tsx`: inspector and
+  contextual comment composition; `StoryInspectorContent.tsx` renders the
+  selected authoring or review target.
+- `features/comments/`: editor comment projections, permissions, and actions
+  reuse the existing comment state and persistence hooks.
 - `features/story-editor/graph/useStoryEditorNodeDragHandlers.ts`: graph drag
   previews and persisted positions, including comment-pin reanchoring.
 - `features/story-editor/graph/storyCommentPinNodes.ts`: canvas comment-pin

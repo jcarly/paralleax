@@ -2,6 +2,11 @@
 
 ## Unreleased
 
+- Split the Story Editor page into focused canvas, inspector, navigation,
+  comment, and orchestration modules without changing editor behavior. Removed
+  the page's remaining ESLint baseline entry. Story settings now load on demand
+  to keep the editor within its existing bundle budget.
+
 - Extracted the Story Editor context panel into its navigation feature module;
   editor behavior is unchanged. Extracted graph drag handling, comment-pin
   projection, entity actions and inspector utilities into focused modules.
