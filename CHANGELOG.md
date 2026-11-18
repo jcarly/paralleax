@@ -2,6 +2,9 @@
 
 ## Unreleased
 
+- Extracted the Story Editor context panel into its navigation feature module;
+  editor behavior is unchanged.
+
 - Reorganized the documentation around its readers. Added an author guide in
   English and French with a first-Story tutorial, a positioning page presenting game
   studios and visual-novel teams as the first audience hypothesis to test, a completed glossary with

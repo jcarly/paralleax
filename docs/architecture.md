@@ -542,6 +542,9 @@ component:
   for transient inspector targets and rectangle-selection gestures. It resolves
   selected entities from the canonical Story and deliberately preserves context
   references only for interaction navigation that requires them.
+- `features/story-editor/navigation/StoryContextPanel.tsx`: context-panel rendering,
+  search controls, entity sections, and group navigation, composed with the
+  existing navigation, selection, and persistence actions.
 - `features/story-editor/navigation/useStoryContextNavigation.ts`: context-panel
   visibility, section state, entity filters and categories, reference summaries,
   text occurrences, and previous/next interaction focus. It consumes the pure
