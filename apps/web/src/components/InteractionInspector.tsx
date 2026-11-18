@@ -457,6 +457,10 @@ function InteractionInspectorView({
   }
 
   function handleBodyRegionBlur(event: FocusEvent<HTMLDivElement>) {
+    // React can reuse the focused preview as this wrapper while the editor loads.
+    if (event.target === event.currentTarget) {
+      return;
+    }
     const nextElement = event.relatedTarget;
     if (nextElement instanceof Node && event.currentTarget.contains(nextElement)) {
       return;
