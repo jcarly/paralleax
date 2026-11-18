@@ -4,7 +4,7 @@ import {
   editInteraction,
   expectSuccessful,
   interactionNode,
-  interactionTitleField,
+  openInteractionTitleEditor,
   registerAndCreateStory,
   requestApiJson,
   waitForApiResponse,
@@ -18,7 +18,7 @@ test('undo and redo remain durable after full editor reloads', async ({ page }) 
   const rootCreation = waitForApiResponse(page, 'POST', /\/api\/stories\/[^/]+\/interactions$/);
   await page.getByRole('button', { name: 'Add root' }).click();
   await createdInteraction(rootCreation);
-  await editInteraction(page, 'New interaction', 'Opening', 'First durable version.');
+  await editInteraction(page, 'Start', 'Opening', 'First durable version.');
 
   await interactionNode(page, 'Opening').click();
   const secondVersion = waitForInteractionPatch(page);
@@ -76,12 +76,12 @@ test('a network failure is visible, blocks navigation, and can be recovered safe
   const rootCreation = waitForApiResponse(page, 'POST', /\/api\/stories\/[^/]+\/interactions$/);
   await page.getByRole('button', { name: 'Add root' }).click();
   await createdInteraction(rootCreation);
-  await editInteraction(page, 'New interaction', 'Persisted interaction', 'Persisted content.');
+  await editInteraction(page, 'Start', 'Persisted interaction', 'Persisted content.');
   await expect(page.getByLabel('Story save status')).toHaveText('Saved');
 
   await interactionNode(page, 'Persisted interaction').click();
   await context.setOffline(true);
-  const titleField = interactionTitleField(inspector);
+  const titleField = await openInteractionTitleEditor(inspector, 'Persisted interaction');
   await expect(titleField).toBeVisible();
   await titleField.fill('Unsaved interaction');
   await titleField.blur();
@@ -104,7 +104,7 @@ test('a network failure is visible, blocks navigation, and can be recovered safe
   await expect(interactionNode(page, 'Unsaved interaction')).toHaveCount(0);
 
   await interactionNode(page, 'Persisted interaction').click();
-  const recoveredTitleField = interactionTitleField(inspector);
+  const recoveredTitleField = await openInteractionTitleEditor(inspector, 'Persisted interaction');
   await expect(recoveredTitleField).toBeVisible();
   const recoveredSave = waitForInteractionPatch(page);
   await recoveredTitleField.fill('Recovered interaction');
@@ -128,7 +128,7 @@ test('slow reordered saves preserve graph creation, movement, and deletion acros
   const rootCreation = waitForApiResponse(page, 'POST', /\/api\/stories\/[^/]+\/interactions$/);
   await page.getByRole('button', { name: 'Add root' }).click();
   const root = await createdInteraction(rootCreation);
-  await editInteraction(page, 'New interaction', 'Stable root', 'Structural test root.');
+  await editInteraction(page, 'Start', 'Stable root', 'Structural test root.');
 
   let releaseSlowResponse = () => {};
   const slowResponseRelease = new Promise<void>((resolve) => {
@@ -234,8 +234,9 @@ test('a response lost after creation commit recovers canonically without duplica
 }) => {
   const { storyId } = await registerAndCreateStory(page, 'Uncertain committed creation');
   await interactionNode(page, 'New interaction').click();
-  const existingTitle = interactionTitleField(
+  const existingTitle = await openInteractionTitleEditor(
     page.getByRole('complementary', { name: 'Inspector' }),
+    'New interaction',
   );
   const rename = waitForInteractionPatch(page);
   await existingTitle.fill('Existing interaction');

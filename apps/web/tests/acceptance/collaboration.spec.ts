@@ -4,8 +4,9 @@ import {
   configureStoryAccess,
   expectSuccessful,
   interactionNode,
-  interactionTitleField,
+  interactionTitleValue,
   inviteStoryCollaborator,
+  openInteractionTitleEditor,
   openStoryAccess,
   registerAndCreateStory,
   registerUser,
@@ -23,7 +24,7 @@ test('an owner grants reader then editor access and receives the collaborator ed
 
   await interactionNode(ownerPage, 'New interaction').click();
   const ownerInspector = ownerPage.getByRole('complementary', { name: 'Inspector' });
-  const ownerTitleField = interactionTitleField(ownerInspector);
+  const ownerTitleField = await openInteractionTitleEditor(ownerInspector, 'New interaction');
   await expect(ownerTitleField).toBeVisible();
   const initialTitleUpdate = waitForInteractionPatch(ownerPage);
   await ownerTitleField.fill('Shared opening');
@@ -82,7 +83,10 @@ test('an owner grants reader then editor access and receives the collaborator ed
     const collaboratorInspector = collaboratorPage.getByRole('complementary', {
       name: 'Inspector',
     });
-    const collaboratorTitleField = interactionTitleField(collaboratorInspector);
+    const collaboratorTitleField = await openInteractionTitleEditor(
+      collaboratorInspector,
+      'Shared opening',
+    );
     await expect(collaboratorTitleField).toBeVisible();
     const collaboratorUpdate = waitForInteractionPatch(collaboratorPage);
     await collaboratorTitleField.fill('Changed by collaborator');
@@ -90,7 +94,7 @@ test('an owner grants reader then editor access and receives the collaborator ed
     await expectSuccessful(collaboratorUpdate);
 
     await expect(interactionNode(ownerPage, 'Changed by collaborator')).toBeVisible();
-    await expect(interactionTitleField(ownerInspector)).toHaveValue('Changed by collaborator');
+    await expect(interactionTitleValue(ownerInspector, 'Changed by collaborator')).toBeVisible();
 
     await ownerPage.reload();
     await collaboratorPage.reload();

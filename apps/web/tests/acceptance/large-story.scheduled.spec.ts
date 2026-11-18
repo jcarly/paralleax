@@ -1,7 +1,8 @@
 import { expect, test, type Page, type Response } from '@playwright/test';
 import {
   expectSuccessful,
-  interactionTitleField,
+  interactionTitleValue,
+  openInteractionTitleEditor,
   registerUser,
   waitForApiResponse,
   waitForInteractionPatch,
@@ -96,11 +97,10 @@ test('opens, navigates, edits, reloads, and simulates a realistically sized Stor
   await page.getByRole('button', { name: 'Next interaction result' }).click();
 
   const inspector = page.getByRole('complementary', { name: 'Inspector' });
-  const titleField = interactionTitleField(inspector);
-  await expect(titleField).toHaveValue(finalTitle);
+  await expect(interactionTitleValue(inspector, finalTitle)).toBeVisible();
   const selectionMs = performance.now() - selectionStartedAt;
   const persistedTitle = `${finalTitle} verified`;
-  await expect(titleField).toBeVisible();
+  const titleField = await openInteractionTitleEditor(inspector, finalTitle);
   const titleUpdate = waitForInteractionPatch(page);
   await titleField.fill(persistedTitle);
   await titleField.blur();
@@ -155,16 +155,16 @@ test('opens, navigates, edits, reloads, and simulates a realistically sized Stor
     .fill(persistedTitle);
   await page.getByRole('button', { name: 'Next interaction result' }).click();
   await expect(
-    interactionTitleField(page.getByRole('complementary', { name: 'Inspector' })),
-  ).toHaveValue(persistedTitle);
+    interactionTitleValue(page.getByRole('complementary', { name: 'Inspector' }), persistedTitle),
+  ).toBeVisible();
 
   await page
     .getByRole('searchbox', { name: 'Search story context and interactions' })
     .fill('Narrative content for Location 1.');
   await page.getByRole('button', { name: 'Next interaction result' }).click();
   await expect(
-    interactionTitleField(page.getByRole('complementary', { name: 'Inspector' })),
-  ).toHaveValue('Location 1');
+    interactionTitleValue(page.getByRole('complementary', { name: 'Inspector' }), 'Location 1'),
+  ).toBeVisible();
   await page.getByRole('link', { name: 'Test from current interaction' }).click();
   await expect(page.getByLabel('Current interaction title')).toHaveValue('Location 1');
   await page.getByRole('button', { name: 'Continue to 2' }).click();

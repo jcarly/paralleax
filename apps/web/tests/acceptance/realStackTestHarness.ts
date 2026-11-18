@@ -189,11 +189,25 @@ export async function changeStoryCollaboratorRole(
 }
 
 export function interactionNode(page: Page, title: string) {
-  return page.getByTestId('interaction-node').filter({ hasText: title });
+  const nodes = page.getByTestId('interaction-node');
+  if (title === 'New interaction') {
+    // Untitled non-root Interactions intentionally have no graph label.
+    return nodes.filter({ hasNot: page.locator('.interaction-node-label') });
+  }
+  return nodes.filter({ hasText: title });
 }
 
 export function interactionTitleField(inspector: Locator) {
   return inspector.getByRole('textbox', { name: 'Title', exact: true });
+}
+
+export function interactionTitleValue(inspector: Locator, title: string) {
+  return inspector.getByRole('button', { name: `Title: ${title}`, exact: true });
+}
+
+export async function openInteractionTitleEditor(inspector: Locator, title: string) {
+  await interactionTitleValue(inspector, title).click();
+  return interactionTitleField(inspector);
 }
 
 export async function editInteraction(
@@ -203,11 +217,13 @@ export async function editInteraction(
   body: string,
 ) {
   const inspector = page.getByRole('complementary', { name: 'Inspector' });
-  const titleField = interactionTitleField(inspector);
   await page.getByRole('button', { name: 'Fit View' }).click();
   const target = interactionNode(page, currentTitle).last();
   await expect(target).toBeInViewport();
   await target.click();
+  const titleValue = interactionTitleValue(inspector, currentTitle);
+  await expect(titleValue).toBeVisible();
+  const titleField = await openInteractionTitleEditor(inspector, currentTitle);
   await expect(titleField).toBeVisible();
   await expect(titleField).toHaveValue('');
   await expect(titleField).toHaveAttribute('placeholder', currentTitle);
