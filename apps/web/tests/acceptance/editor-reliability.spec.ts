@@ -1,9 +1,12 @@
 import { expect, test } from '@playwright/test';
 import {
   createdInteraction,
+  editorSyncIndicator,
   editInteraction,
   expectSuccessful,
+  interactionBodyPreview,
   interactionNode,
+  openInteractionBodyEditor,
   openInteractionTitleEditor,
   registerAndCreateStory,
   requestApiJson,
@@ -21,11 +24,12 @@ test('undo and redo remain durable after full editor reloads', async ({ page }) 
   await editInteraction(page, 'Start', 'Opening', 'First durable version.');
 
   await interactionNode(page, 'Opening').click();
+  const contentField = await openInteractionBodyEditor(inspector);
   const secondVersion = waitForInteractionPatch(page);
-  await inspector.getByRole('textbox', { name: 'Content' }).fill('Second durable version.');
-  await inspector.getByRole('textbox', { name: 'Content' }).blur();
+  await contentField.fill('Second durable version.');
+  await contentField.blur();
   await expectSuccessful(secondVersion);
-  await expect(page.getByLabel('Story save status')).toHaveText('Saved');
+  await expect(editorSyncIndicator(page)).toHaveClass(/editor-sync-indicator saved/);
 
   const undo = waitForApiResponse(
     page,
@@ -34,16 +38,12 @@ test('undo and redo remain durable after full editor reloads', async ({ page }) 
   );
   await page.getByRole('button', { name: 'Undo last Story change' }).click();
   await expectSuccessful(undo);
-  await expect(inspector.getByRole('textbox', { name: 'Content' })).toHaveText(
-    'First durable version.',
-  );
+  await expect(interactionBodyPreview(inspector)).toHaveText('First durable version.');
 
   await page.reload();
   await expect(interactionNode(page, 'Opening')).toBeVisible();
   await interactionNode(page, 'Opening').click();
-  await expect(inspector.getByRole('textbox', { name: 'Content' })).toHaveText(
-    'First durable version.',
-  );
+  await expect(interactionBodyPreview(inspector)).toHaveText('First durable version.');
 
   const redoButton = page.getByRole('button', { name: 'Redo Story change' });
   await expect(redoButton).toBeEnabled();
@@ -54,16 +54,12 @@ test('undo and redo remain durable after full editor reloads', async ({ page }) 
   );
   await redoButton.click();
   await expectSuccessful(redo);
-  await expect(inspector.getByRole('textbox', { name: 'Content' })).toHaveText(
-    'Second durable version.',
-  );
+  await expect(interactionBodyPreview(inspector)).toHaveText('Second durable version.');
 
   await page.reload();
   await expect(interactionNode(page, 'Opening')).toBeVisible();
   await interactionNode(page, 'Opening').click();
-  await expect(inspector.getByRole('textbox', { name: 'Content' })).toHaveText(
-    'Second durable version.',
-  );
+  await expect(interactionBodyPreview(inspector)).toHaveText('Second durable version.');
 });
 
 test('a network failure is visible, blocks navigation, and can be recovered safely', async ({
@@ -77,7 +73,7 @@ test('a network failure is visible, blocks navigation, and can be recovered safe
   await page.getByRole('button', { name: 'Add root' }).click();
   await createdInteraction(rootCreation);
   await editInteraction(page, 'Start', 'Persisted interaction', 'Persisted content.');
-  await expect(page.getByLabel('Story save status')).toHaveText('Saved');
+  await expect(editorSyncIndicator(page)).toHaveClass(/editor-sync-indicator saved/);
 
   await interactionNode(page, 'Persisted interaction').click();
   await context.setOffline(true);
@@ -86,7 +82,7 @@ test('a network failure is visible, blocks navigation, and can be recovered safe
   await titleField.fill('Unsaved interaction');
   await titleField.blur();
 
-  await expect(page.getByLabel('Story save status')).toHaveText('Save failed');
+  await expect(editorSyncIndicator(page)).toHaveAttribute('aria-label', 'Save failed');
   await expect(page.getByRole('button', { name: 'Reload story' })).toBeVisible();
 
   await page.getByRole('link', { name: 'Stories', exact: true }).click();
@@ -110,14 +106,12 @@ test('a network failure is visible, blocks navigation, and can be recovered safe
   await recoveredTitleField.fill('Recovered interaction');
   await recoveredTitleField.blur();
   await expectSuccessful(recoveredSave);
-  await expect(page.getByLabel('Story save status')).toHaveText('Saved');
+  await expect(editorSyncIndicator(page)).toHaveClass(/editor-sync-indicator saved/);
 
   await page.reload();
   await expect(interactionNode(page, 'Recovered interaction')).toBeVisible();
   await interactionNode(page, 'Recovered interaction').click();
-  await expect(inspector.getByRole('textbox', { name: 'Content' })).toHaveText(
-    'Persisted content.',
-  );
+  await expect(interactionBodyPreview(inspector)).toHaveText('Persisted content.');
 });
 
 test('slow reordered saves preserve graph creation, movement, and deletion across reloads', async ({
@@ -160,7 +154,7 @@ test('slow reordered saves preserve graph creation, movement, and deletion acros
   await page.locator('.story-title-input').fill('Slow structural save');
   await page.locator('.story-title-input').blur();
   await slowMutationCommitted;
-  await expect(page.getByLabel('Story save status')).toContainText('Saving');
+  await expect(editorSyncIndicator(page)).toHaveAttribute('aria-label', /^Saving/);
 
   const childCreation = waitForApiResponse(page, 'POST', /\/api\/stories\/[^/]+\/interactions$/);
   await interactionNode(page, 'Stable root')
@@ -170,11 +164,11 @@ test('slow reordered saves preserve graph creation, movement, and deletion acros
   const childTriggerId = child.triggers[0]?.id;
   expect(childTriggerId).toBeTruthy();
   await expect(interactionNode(page, 'New interaction').last()).toBeVisible();
-  await expect(page.getByLabel('Story save status')).toContainText('Saving');
+  await expect(editorSyncIndicator(page)).toHaveAttribute('aria-label', /^Saving/);
 
   releaseSlowResponse();
   await expectSuccessful(slowSave);
-  await expect(page.getByLabel('Story save status')).toHaveText('Saved');
+  await expect(editorSyncIndicator(page)).toHaveClass(/editor-sync-indicator saved/);
   await expect(interactionNode(page, 'New interaction').last()).toBeVisible();
   await editInteraction(page, 'New interaction', 'Movable child', 'Created during the slow save.');
   await page.getByRole('button', { name: 'Close inspector' }).click();
@@ -263,7 +257,7 @@ test('a response lost after creation commit recovers canonically without duplica
 
   await page.getByRole('button', { name: 'Add root' }).click();
   await committed;
-  await expect(page.getByLabel('Story save status')).toHaveText('Save failed');
+  await expect(editorSyncIndicator(page)).toHaveAttribute('aria-label', 'Save failed');
   await expect(page.getByRole('button', { name: 'Reload story' })).toBeVisible();
 
   await page.getByRole('button', { name: 'Reload story' }).click();

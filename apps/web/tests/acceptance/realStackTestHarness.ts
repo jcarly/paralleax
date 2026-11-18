@@ -205,6 +205,29 @@ export function interactionTitleValue(inspector: Locator, title: string) {
   return inspector.getByRole('button', { name: `Title: ${title}`, exact: true });
 }
 
+export function interactionBodyPreview(inspector: Locator) {
+  return inspector.locator('.interaction-content-preview');
+}
+
+export async function openInteractionBodyEditor(inspector: Locator) {
+  const contentField = inspector.getByRole('textbox', { name: 'Content', exact: true });
+  if (await contentField.count()) {
+    return contentField;
+  }
+
+  const addContent = inspector.getByRole('button', { name: 'Add content', exact: true });
+  if (await addContent.count()) {
+    await addContent.click();
+  } else {
+    await interactionBodyPreview(inspector).click();
+  }
+  return contentField;
+}
+
+export function editorSyncIndicator(page: Page) {
+  return page.locator('.editor-sync-indicator');
+}
+
 export async function openInteractionTitleEditor(inspector: Locator, title: string) {
   await interactionTitleValue(inspector, title).click();
   return interactionTitleField(inspector);
@@ -232,12 +255,7 @@ export async function editInteraction(
   await titleField.blur();
   await expectSuccessful(titleUpdate);
 
-  const contentField = inspector.getByRole('textbox', { name: 'Content' });
-  if (!(await contentField.count())) {
-    const addContent = inspector.getByRole('button', { name: 'Add content', exact: true });
-    await expect(addContent).toBeVisible();
-    await addContent.click();
-  }
+  const contentField = await openInteractionBodyEditor(inspector);
   await expect(contentField).toBeVisible();
   const bodyUpdate = waitForInteractionPatch(page);
   await contentField.fill(body);

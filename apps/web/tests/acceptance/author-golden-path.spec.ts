@@ -4,8 +4,10 @@ import {
   createdInteraction,
   editInspectorField,
   editInteraction,
+  editorSyncIndicator,
   expectSuccessful,
   interactionNode,
+  interactionBodyPreview,
   registerAndCreateStory,
   requestApiJson,
   waitForApiResponse,
@@ -68,10 +70,12 @@ test('an author creates, persists, resumes, and simulates a conditional story', 
   let openingNode = interactionNode(page, 'Opening');
   await openingNode.click();
   const locationAssignment = waitForInteractionPatch(page);
+  await inspector.getByRole('button', { name: /^Location:/ }).click();
   const locationSelect = inspector.getByRole('combobox', { name: /^Location/ });
   await locationSelect.selectOption({ label: 'Atrium' });
   await expectSuccessful(locationAssignment);
   const characterAssignment = waitForInteractionPatch(page);
+  await inspector.getByRole('button', { name: /^Characters present:/ }).click();
   await inspector.getByRole('checkbox', { name: 'Alice' }).check();
   await expectSuccessful(characterAssignment);
 
@@ -103,7 +107,7 @@ test('an author creates, persists, resumes, and simulates a conditional story', 
     .locator('option:checked');
   await expect(selectedEffectTarget).toHaveText(/Courage/);
   await expect(inspector.getByLabel('Variable effect value')).toHaveValue('1');
-  await expect(page.getByLabel('Story save status')).toHaveText('Saved');
+  await expect(editorSyncIndicator(page)).toHaveClass(/editor-sync-indicator saved/);
 
   const finalCreation = waitForApiResponse(page, 'POST', /\/api\/stories\/[^/]+\/interactions$/);
   await interactionNode(page, 'Gain courage')
@@ -150,11 +154,11 @@ test('an author creates, persists, resumes, and simulates a conditional story', 
   await page.getByRole('button', { name: 'Collapse story context' }).click();
   await page.getByRole('button', { name: 'Fit View' }).click();
   await interactionNode(page, 'Opening').click();
-  await expect(inspector.getByRole('textbox', { name: 'Content' })).toHaveText(
-    'Alice enters the atrium.',
-  );
-  await expect(locationSelect.locator('option:checked')).toHaveText('Atrium');
-  await expect(inspector.getByRole('checkbox', { name: 'Alice' })).toBeChecked();
+  await expect(interactionBodyPreview(inspector)).toHaveText('Alice enters the atrium.');
+  await expect(inspector.getByRole('button', { name: /^Location: Atrium$/ })).toBeVisible();
+  await expect(
+    inspector.getByRole('button', { name: /^Characters present: Alice$/ }),
+  ).toBeVisible();
   await interactionNode(page, 'Gain courage').click();
   await expect(selectedEffectTarget).toHaveText(/Courage/);
   await expect(inspector.getByLabel('Variable effect value')).toHaveValue('1');
