@@ -10,7 +10,9 @@ export function ModalPortal({ children }: { children: ReactNode }) {
 
   useLayoutEffect(() => {
     const portal = portalRef.current;
-    if (portal) return isolateModalDialog(portal, openerRef.current);
+    if (portal) {
+      return isolateModalDialog(portal, openerRef.current);
+    }
   }, []);
 
   return createPortal(
@@ -18,10 +20,18 @@ export function ModalPortal({ children }: { children: ReactNode }) {
       className="modal-portal"
       ref={portalRef}
       tabIndex={-1}
-      onKeyDown={(event) => event.stopPropagation()}
-      onKeyUp={(event) => event.stopPropagation()}
-      onMouseDown={(event) => event.stopPropagation()}
-      onClick={(event) => event.stopPropagation()}
+      onKeyDown={(event) => {
+        event.stopPropagation();
+      }}
+      onKeyUp={(event) => {
+        event.stopPropagation();
+      }}
+      onMouseDown={(event) => {
+        event.stopPropagation();
+      }}
+      onClick={(event) => {
+        event.stopPropagation();
+      }}
     >
       <ModalPortalContext.Provider value={portalRef}>{children}</ModalPortalContext.Provider>
     </div>,

@@ -258,7 +258,9 @@ function groupItemsByOwner(
   const result = new Map<string, StoryEditorItemInstance[]>();
   for (const item of items) {
     const owner = resolveItemOwner(item, itemsById);
-    if (!owner) continue;
+    if (!owner) {
+      continue;
+    }
     const key = `${owner.ownerType}:${owner.ownerId}`;
     result.set(key, [...(result.get(key) ?? []), projectItemInstance(item)]);
   }
@@ -299,6 +301,8 @@ function stripStatOwners(assignments: StoryEditorStatAssignment[] | undefined) {
 
 function groupBy<T>(items: readonly T[], keyOf: (item: T) => string): Map<string, T[]> {
   const grouped = new Map<string, T[]>();
-  for (const item of items) grouped.set(keyOf(item), [...(grouped.get(keyOf(item)) ?? []), item]);
+  for (const item of items) {
+    grouped.set(keyOf(item), [...(grouped.get(keyOf(item)) ?? []), item]);
+  }
   return grouped;
 }

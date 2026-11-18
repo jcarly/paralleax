@@ -102,9 +102,15 @@ describe('story graph mapping', () => {
     ];
     contextualStory.interactions[1].locationId = 'archive';
     contextualStory.interactions[1].characterIds = ['ivo', 'mara', 'missing-character'];
+    contextualStory.interactions[1].statEffects = [{ statId: 'trust', operation: 'add', value: 1 }];
+    contextualStory.interactions[1].itemEffects = [
+      { itemDefinitionId: 'key', characterId: 'ivo', operation: 'obtain' },
+    ];
 
     expect(buildInteractionNodes(contextualStory, undefined)[1].data).toMatchObject({
       location: { id: 'archive', name: 'Lower archive' },
+      statEffectCount: 1,
+      itemEffectCount: 1,
       characters: [
         { id: 'ivo', name: 'Ivo Hale' },
         { id: 'mara', name: 'Mara Venn', imageUrl: 'https://example.com/mara.png' },
@@ -355,7 +361,9 @@ describe('story graph mapping', () => {
     expect(preview.find((node) => node.id === unrelatedId)).toBe(unrelatedBefore);
     nodes
       .filter((node) => node.type === 'interaction')
-      .forEach((node) => expect(preview.find((candidate) => candidate.id === node.id)).toBe(node));
+      .forEach((node) => {
+        expect(preview.find((candidate) => candidate.id === node.id)).toBe(node);
+      });
     expect(
       getInteractionDragTriggerPositionUpdates(previewStory, 'interaction-1', {
         x: 180,

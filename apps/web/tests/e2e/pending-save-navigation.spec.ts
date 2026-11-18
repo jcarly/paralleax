@@ -1,5 +1,11 @@
 import { expect, test } from '@playwright/test';
-import { cloneStory, mockRuntimeStory, paginated, prepareEditorPage } from './editorTestHarness';
+import {
+  cloneStory,
+  mockRuntimeStory,
+  openInteractionTitleEditor,
+  paginated,
+  prepareEditorPage,
+} from './editorTestHarness';
 
 test('guards browser Back while an editor save is in flight', async ({ page }) => {
   await prepareEditorPage(page);
@@ -31,15 +37,18 @@ test('guards browser Back while an editor save is in flight', async ({ page }) =
   await page.goto('/');
   await page.getByRole('link', { name: /Edit/ }).click();
   await page.getByTestId('interaction-node').filter({ hasText: 'Original title' }).click();
-  await page.getByLabel('Title', { exact: true }).fill('Pending title');
-  await page.getByLabel('Title', { exact: true }).blur();
-  await expect(page.getByLabel('Story save status')).toContainText('Saving');
+  const title = await openInteractionTitleEditor(page, 'Original title');
+  await title.fill('Pending title');
+  await title.blur();
+  await expect(page.getByRole('status', { name: 'Saving…' })).toBeVisible();
 
   await page.goBack();
   await expect(page.getByRole('dialog', { name: 'Unsaved changes' })).toBeVisible();
   await page.getByRole('button', { name: 'Stay on this page' }).click();
   await expect(page).toHaveURL('/stories/story-1/edit');
-  await expect(page.getByLabel('Title', { exact: true })).toHaveValue('Pending title');
+  await expect(
+    page.getByRole('button', { name: 'Title: Pending title', exact: true }),
+  ).toBeVisible();
 
   await page.goBack();
   await page.getByRole('button', { name: 'Leave page' }).click();
@@ -69,16 +78,19 @@ test('guards browser Forward while an editor save is in flight', async ({ page }
   await page.goBack();
   await expect(page).toHaveURL('/stories/story-1/edit');
   await page.getByTestId('interaction-node').filter({ hasText: 'Original title' }).click();
-  await page.getByLabel('Title', { exact: true }).fill('Forward pending');
-  await page.getByLabel('Title', { exact: true }).blur();
-  await expect(page.getByLabel('Story save status')).toContainText('Saving');
+  const title = await openInteractionTitleEditor(page, 'Original title');
+  await title.fill('Forward pending');
+  await title.blur();
+  await expect(page.getByRole('status', { name: 'Saving…' })).toBeVisible();
 
   await page.goForward();
   await expect(page.getByRole('dialog', { name: 'Unsaved changes' })).toBeVisible();
   await page.getByRole('button', { name: 'Stay on this page' }).click();
   await expect(page).toHaveURL('/stories/story-1/edit');
   releaseSave();
-  await expect(page.getByLabel('Story save status')).toContainText('Saved');
+  await expect(
+    page.getByRole('status', { name: 'Changes saved and live updates connected' }),
+  ).toBeVisible();
   await page.goForward();
   await expect(page).toHaveURL('/');
 });
@@ -104,9 +116,10 @@ test('guards a failed editor save and allows navigation after a successful retry
   await page.goBack();
   await expect(page).toHaveURL('/stories/story-1/edit');
   await page.getByTestId('interaction-node').filter({ hasText: 'Original title' }).click();
-  await page.getByLabel('Title', { exact: true }).fill('Retried title');
-  await page.getByLabel('Title', { exact: true }).blur();
-  await expect(page.getByLabel('Story save status')).toContainText('Save failed');
+  const title = await openInteractionTitleEditor(page, 'Original title');
+  await title.fill('Retried title');
+  await title.blur();
+  await expect(page.getByRole('status', { name: 'Save failed' })).toBeVisible();
 
   await page.getByRole('link', { name: 'Stories', exact: true }).click();
   await expect(page.getByRole('dialog', { name: 'Unsaved changes' })).toBeVisible();
@@ -116,10 +129,13 @@ test('guards a failed editor save and allows navigation after a successful retry
   await expect(page.getByRole('dialog', { name: 'Unsaved changes' })).toBeVisible();
   await page.getByRole('button', { name: 'Stay on this page' }).click();
   await expect(page.locator('#root')).not.toHaveAttribute('inert');
-  await page.getByLabel('Title', { exact: true }).fill('Saved title');
-  await page.getByLabel('Title', { exact: true }).blur();
+  const retryTitle = await openInteractionTitleEditor(page, 'Retried title');
+  await retryTitle.fill('Saved title');
+  await retryTitle.blur();
   await expect.poll(() => attempts).toBe(2);
-  await expect(page.getByLabel('Story save status')).toContainText('Saved');
+  await expect(
+    page.getByRole('status', { name: 'Changes saved and live updates connected' }),
+  ).toBeVisible();
   await page.reload();
   await expect(page.getByTestId('interaction-node')).toBeVisible();
   await page.getByRole('link', { name: 'Stories', exact: true }).click();

@@ -20,7 +20,9 @@ function blockStorageAccess() {
 }
 
 describe('onboarding progress', () => {
-  beforeEach(() => window.localStorage.clear());
+  beforeEach(() => {
+    window.localStorage.clear();
+  });
   afterEach(() => vi.restoreAllMocks());
 
   it('starts with the first action and advances only when that step is completed or skipped', () => {
@@ -53,9 +55,9 @@ describe('onboarding progress', () => {
 
     blockStorageAccess();
     expect(readOnboardingProgress(window.localStorage, key)).toEqual(initialOnboardingProgress);
-    expect(() =>
-      writeOnboardingProgress(window.localStorage, key, initialOnboardingProgress),
-    ).not.toThrow();
+    expect(() => {
+      writeOnboardingProgress(window.localStorage, key, initialOnboardingProgress);
+    }).not.toThrow();
   });
 
   it('does not show the guide again after all steps are completed or passed', () => {

@@ -118,11 +118,11 @@ describe('StoryEditor story context', () => {
     await user.type(start, '2026-07-27T09:30');
     await user.tab();
 
-    await waitFor(() =>
+    await waitFor(() => {
       expect(api.updateStory).toHaveBeenCalledWith('story-1', {
         startDateTime: '2026-07-27T09:30',
-      }),
-    );
+      });
+    });
     expect(screen.queryByRole('button', { name: 'Save properties' })).not.toBeInTheDocument();
     expect(await screen.findByDisplayValue('2026-07-27T09:30')).toBeInTheDocument();
   });
@@ -218,21 +218,21 @@ describe('StoryEditor story context', () => {
     const category = within(inspector).getByLabelText('Category');
     await user.type(category, 'Coastal places');
     fireEvent.blur(category);
-    await waitFor(() =>
+    await waitFor(() => {
       expect(api.updateLocation).toHaveBeenCalledWith('story-1', 'location-1', {
         category: 'Coastal places',
-      }),
-    );
+      });
+    });
     const description = within(inspector).getByLabelText('Description');
     await user.clear(description);
     await user.type(description, 'A quiet harbor.');
     fireEvent.blur(description);
 
-    await waitFor(() =>
+    await waitFor(() => {
       expect(api.updateLocation).toHaveBeenLastCalledWith('story-1', 'location-1', {
         description: 'A quiet harbor.',
-      }),
-    );
+      });
+    });
     expect(screen.getByRole('button', { name: 'Harbor' })).toBeInTheDocument();
   });
 
@@ -292,13 +292,20 @@ describe('StoryEditor story context', () => {
 
     await renderEditor(locatedStory);
     await user.click(screen.getByTestId('flow-node-interaction-1'));
+    await user.click(
+      await screen.findByRole(
+        'button',
+        { name: 'Location: No location change' },
+        { timeout: 5_000 },
+      ),
+    );
     await user.selectOptions(screen.getByLabelText('Location'), 'location-1');
     expect(api.updateInteraction).toHaveBeenCalledWith('story-1', 'interaction-1', {
       locationId: 'location-1',
     });
 
     await user.click(screen.getByRole('button', { name: 'Select root trigger' }));
-    await user.click(screen.getByRole('button', { name: 'Add condition' }));
+    await user.click(await screen.findByRole('button', { name: 'Add condition' }));
     await chooseTriggerConditionType(user, 'Location');
     expect(api.updateTrigger).toHaveBeenCalledWith('story-1', 'interaction-1', 'trigger-1', {
       conditionGroups: [
@@ -337,22 +344,29 @@ describe('StoryEditor story context', () => {
     const category = within(inspector).getByLabelText('Category');
     await user.type(category, 'Allies');
     fireEvent.blur(category);
-    await waitFor(() =>
+    await waitFor(() => {
       expect(api.updateCharacter).toHaveBeenCalledWith('story-1', 'character-1', {
         category: 'Allies',
-      }),
-    );
+      });
+    });
     const description = within(inspector).getByLabelText('Description');
     await user.type(description, 'An investigator.');
     fireEvent.blur(description);
-    await waitFor(() =>
+    await waitFor(() => {
       expect(api.updateCharacter).toHaveBeenCalledWith('story-1', 'character-1', {
         description: 'An investigator.',
-      }),
-    );
+      });
+    });
     expect(await screen.findByRole('button', { name: 'Mira' })).toBeInTheDocument();
 
     await user.click(screen.getByTestId('flow-node-interaction-1'));
+    await user.click(
+      await screen.findByRole(
+        'button',
+        { name: 'Characters present: No characters yet.' },
+        { timeout: 5_000 },
+      ),
+    );
     const assignedStory = cloneStory();
     assignedStory.characters = [{ id: 'character-1', name: 'Mira', description: '' }];
     assignedStory.interactions[0].characterIds = ['character-1'];
@@ -372,7 +386,7 @@ describe('StoryEditor story context', () => {
       triggerMutation(conditionedStory, 'interaction-1', 'trigger-1'),
     );
     await user.click(screen.getByRole('button', { name: 'Select root trigger' }));
-    await user.click(screen.getByRole('button', { name: 'Add condition' }));
+    await user.click(await screen.findByRole('button', { name: 'Add condition' }));
     await chooseTriggerConditionType(user, 'Character');
     expect(api.updateTrigger).toHaveBeenCalledWith('story-1', 'interaction-1', 'trigger-1', {
       conditionGroups: [
@@ -433,11 +447,11 @@ describe('StoryEditor story context', () => {
     const category = screen.getByLabelText('Category');
     await user.type(category, 'Relationships');
     fireEvent.blur(category);
-    await waitFor(() =>
+    await waitFor(() => {
       expect(api.updateStatDefinition).toHaveBeenCalledWith('story-1', 'definition-1', {
         category: 'Relationships',
-      }),
-    );
+      });
+    });
     await user.click(screen.getByRole('button', { name: 'Add character' }));
     await user.click(screen.getByRole('button', { name: 'Add stat' }));
     expect(api.createCharacterStat).toHaveBeenCalledWith('story-1', 'character-1', {
@@ -491,7 +505,7 @@ describe('StoryEditor story context', () => {
       triggerMutation(conditioned, 'interaction-1', 'trigger-1'),
     );
     await user.click(screen.getByRole('button', { name: 'Select root trigger' }));
-    await user.click(screen.getByRole('button', { name: 'Add condition' }));
+    await user.click(await screen.findByRole('button', { name: 'Add condition' }));
     await chooseTriggerConditionType(user, 'Variable');
     expect(api.updateTrigger).toHaveBeenCalledWith('story-1', 'interaction-1', 'trigger-1', {
       conditionGroups: [
@@ -556,11 +570,11 @@ describe('StoryEditor story context', () => {
     const category = screen.getByLabelText('Category');
     await user.type(category, 'Quest items');
     fireEvent.blur(category);
-    await waitFor(() =>
+    await waitFor(() => {
       expect(api.updateItemDefinition).toHaveBeenCalledWith('story-1', 'item-definition-1', {
         category: 'Quest items',
-      }),
-    );
+      });
+    });
     const itemDescription = screen.getByLabelText('Description');
     await user.clear(itemDescription);
     await user.type(itemDescription, 'Opens the archive.');
@@ -661,18 +675,18 @@ describe('StoryEditor story context', () => {
 
     await user.click(screen.getByRole('button', { name: 'Add group' }));
 
-    await waitFor(() =>
+    await waitFor(() => {
       expect(api.createGroup).toHaveBeenCalledWith('story-1', {
         title: 'New group',
         interactionIds: [],
-      }),
-    );
-    await waitFor(() =>
+      });
+    });
+    await waitFor(() => {
       expect(screen.getByRole('button', { name: /Groups/ })).toHaveAttribute(
         'aria-expanded',
         'true',
-      ),
-    );
+      );
+    });
     expect(await screen.findByRole('textbox', { name: 'Group title' })).toHaveValue('New group');
   });
 
@@ -830,6 +844,12 @@ describe('StoryEditor story context', () => {
     expect(within(interactionCard).getByText('Harbor')).toBeInTheDocument();
     expect(
       within(interactionCard).getByLabelText('Characters present: Mira Vale'),
+    ).toBeInTheDocument();
+    expect(
+      interactionCard.querySelector('[data-interaction-metadata-icon="location"]'),
+    ).toBeInTheDocument();
+    expect(
+      interactionCard.querySelector('[data-interaction-metadata-icon="characters"]'),
     ).toBeInTheDocument();
   });
 

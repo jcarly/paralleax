@@ -154,7 +154,9 @@ function TestReactFlow({
         {nodes.map((node) => {
           const NodeComponent = nodeTypes[node.type ?? 'default'] as
             ComponentType<NodeProps<TestFlowNode>> | undefined;
-          if (!NodeComponent) return null;
+          if (!NodeComponent) {
+            return null;
+          }
 
           return (
             <div
@@ -216,7 +218,9 @@ function TestReactFlow({
                     },
                   }));
                   const movedNode = movedNodes.find((candidate) => candidate.id === node.id);
-                  if (movedNode) onNodeDrag?.(event.nativeEvent, movedNode, movedNodes);
+                  if (movedNode) {
+                    onNodeDrag?.(event.nativeEvent, movedNode, movedNodes);
+                  }
                 }}
               />
               <span
@@ -234,7 +238,9 @@ function TestReactFlow({
                     },
                   }));
                   const movedNode = movedNodes.find((candidate) => candidate.id === node.id);
-                  if (!movedNode) return;
+                  if (!movedNode) {
+                    return;
+                  }
                   onNodeDragStart?.(event.nativeEvent, node, selectedNodes);
                   onNodeDragStop?.(event.nativeEvent, movedNode, movedNodes);
                 }}
@@ -315,7 +321,7 @@ function TestReactFlow({
           {edge.data?.inputInteractionId && edge.data.interactionId ? (
             <button
               data-testid={`delete-link-${edge.data.inputInteractionId}-${edge.data.interactionId}`}
-              onClick={() =>
+              onClick={() => {
                 (edge.data?.triggerIds ?? [edge.data?.triggerId]).forEach((triggerId) => {
                   if (triggerId && edge.data?.inputInteractionId && edge.data.interactionId) {
                     edge.data.onDeleteTriggerInput?.(
@@ -324,8 +330,8 @@ function TestReactFlow({
                       edge.data.inputInteractionId,
                     );
                   }
-                })
-              }
+                });
+              }}
             />
           ) : null}
         </div>

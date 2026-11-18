@@ -661,9 +661,13 @@ word in the CSS cascade. Vite emits a production manifest, and every web build
 checks its complete static import graph using compressed asset sizes. Production
 JavaScript uses Terser minification to stay within the entry and route budgets. The
 initial JavaScript and stylesheet budgets are 150 KiB and 24 KiB; incremental
-Story Editor and Story Player assets are limited to 145 KiB and 95 KiB. The
-contract also fails if either route stops being a dynamic entry or becomes a
-static dependency of the application entry.
+Story Editor and Story Player assets are limited to 146 KiB and 95 KiB. The
+editor budget includes 1 KiB of release-build headroom for metadata-dependent
+bundle changes; the cap remains enforced. The editor preloads its click-creation
+helper and ELK adapter during the existing idle preparation; create and organize
+actions also load them on demand. The interaction inspector loads when an
+interaction is selected. The contract also fails if either route stops being a
+dynamic entry or becomes a static dependency of the application entry.
 
 ## Automated Architecture Checks
 
@@ -922,7 +926,10 @@ split deliberately:
 - `storyGraphCreationLayout.ts` projects a temporary interaction and its linked
   trigger, then asks the scoped layout for their creation position. Click-based
   root, child, parent, and Simulation Mode option creation use this projection;
-  connection drops keep their explicit pointer-derived position.
+  the editor preloads it during idle preparation and requests it on demand, and
+  it retains its deterministic fallback if the ELK adapter or layout fails. If
+  the deferred helper cannot load, creation actions use their shared placement
+  defaults. Connection drops keep their explicit pointer-derived position.
 - `storyConnection.ts` validates whether a graph connection can become a
   Trigger input. Shared validation rejects a directed source → target pair
   already owned by another Trigger, and the API repeats the check inside the
@@ -1120,7 +1127,10 @@ the reply without closing its context. The global list is nested in the standard
 inspector pane, while explicit grid areas keep navigation, canvas, and inspector
 ordering stable. At the narrow breakpoint, navigation and inspector panes overlay
 a single full-width canvas column, including every contextual-comment layout
-variant. The global list is one inspector mode rather than a competing panel:
+variant. The Inspector width is transient editor state: its vertical separator
+supports pointer dragging and keyboard resizing, and maximize spans the graph
+area while leaving the navigation column available. The global list is one
+inspector mode rather than a competing panel:
 the shared editor selection entry points close it before projecting an element
 inspector. Moving a canvas post-it calls the existing
 thread-anchor update and reprojects its returned position; a failed mutation
@@ -1250,14 +1260,18 @@ classes directly.
 
 `CI` runs for pull requests targeting `dev` or `main` and for pushes to those
 branches. Feature-branch pushes do not start a second workflow beside the pull
-request run. The workflow does not use top-level path filters, so the stable
-`Quality` check remains present for documentation-only and workflow-only pull
-requests. An event-specific concurrency group cancels stale runs for the same
-pull request or branch without letting a scheduled run cancel a branch push.
+request run. Newly created tags matching `x.y.z` also run the exhaustive
+validation lane; only after every required check succeeds does the release job
+publish API/web images and deploy their immutable digests to the Railway alpha.
+The workflow does not use top-level path filters, so the stable `Quality` check
+remains present for documentation-only and workflow-only pull requests. An
+event-specific concurrency group cancels stale runs for the same pull request
+or branch without letting a scheduled run cancel a branch push.
 
 | Previous behavior                                                                 | Current behavior                                                                                                                                                                           |
 | --------------------------------------------------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------ |
 | Every push on every branch and every pull request ran the full five-job workflow. | Pull requests to `dev`/`main` run once per update; branch pushes are limited to `dev`/`main`.                                                                                              |
+| Railway's connected `main` branch deployed directly on pushes.                    | GitHub Actions releases only newly created `x.y.z` tags after exhaustive CI; it publishes and deploys API then web by digest and runs the deployment smoke check.                          |
 | Every run collected coverage and built both production images.                    | Code changes build `shared` plus the affected workspace(s) and collect their coverage. Production images build for Docker, production Compose, deployment, or dependency-manifest changes. |
 | PostgreSQL integration and backup restoration ran for unrelated changes.          | API/shared/dependency changes run PostgreSQL integration and migration tests. Backup restoration runs for its scripts and in the exhaustive lane.                                          |
 | E2E, real-stack acceptance, and stress checks ran together on each event.         | Web/shared/dependency changes run browser E2E. Real-stack acceptance runs after relevant pushes to `dev`/`main`; full acceptance, stress, and performance checks remain weekly and manual. |
@@ -1276,6 +1290,28 @@ cache, although each isolated job still runs `npm ci`. Browser setup is shared b
 E2E and acceptance in a run. Their installs took 24 sec and 31 sec in the
 measured run, so Playwright's browser cache is not persisted; its storage and
 maintenance do not justify that short saving.
+
+Railway's native branch auto-deploy must be disabled for the alpha API and web
+services. The release job changes each service source to the published GHCR
+digest and waits for Railway success, keeping the API migration and healthcheck
+before web deployment. The workflow links both GHCR packages to the public
+repository and verifies anonymous pulls before deployment; public packages need
+no Railway registry credentials. The alpha deployment runbook documents the
+one-time visibility check.
+
+Railway service settings are authored in `.railway/railway.ts` as the named
+`paralleax-apps` partial. It manages only `@paralleax/api` and `@paralleax/web`;
+the Postgres service and its persistent volume remain outside IaC ownership.
+This is a deliberate lifecycle boundary: GitHub Actions controls the app source
+digests during tagged releases, while the database and its data are not part of
+this app release configuration. The IaC services omit `source`, so applying
+build and deploy settings cannot switch a service back to its GitHub branch.
+The current app variables are declared with `preserve()` so Railway keeps their
+values, including secrets, without storing them in source. Keep those preserved
+names in sync when service variables change. The existing private network
+endpoints and custom web domain are retained in the partial, while generated
+Railway domains stay provider-managed. Review `railway config plan` before
+applying and reject any change outside the two application services.
 
 The weekly schedule runs Monday at 04:00 UTC. Manual dispatch runs the same
 exhaustive lane: all workspace coverage and builds, PostgreSQL integration and

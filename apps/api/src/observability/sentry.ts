@@ -3,6 +3,8 @@ import { loadSentryConfig } from './sentry-config';
 
 const sentryConfig = loadSentryConfig(process.env);
 const sentryEnabled = Boolean(sentryConfig.dsn) && process.env.NODE_ENV !== 'test';
+const sensitiveEventProperties = ['request', 'user', 'extra', 'contexts'] as const;
+const sensitiveFrameProperties = ['context_line', 'pre_context', 'post_context', 'vars'] as const;
 
 if (sentryEnabled) {
   Sentry.init({
@@ -40,7 +42,9 @@ interface ApiExceptionContext {
 }
 
 export function captureApiException(exception: unknown, context: ApiExceptionContext) {
-  if (!sentryEnabled) return;
+  if (!sentryEnabled) {
+    return;
+  }
   Sentry.withScope((scope) => {
     scope.setTags({
       request_id: context.requestId,
@@ -53,30 +57,43 @@ export function captureApiException(exception: unknown, context: ApiExceptionCon
 }
 
 export function redactSentryEvent<T extends object>(event: T): T {
-  const redacted = event as unknown as Record<string, unknown>;
-  delete redacted.request;
-  delete redacted.user;
-  delete redacted.extra;
-  delete redacted.contexts;
-  redacted['breadcrumbs'] = [];
-  redactExceptionPayload(redacted.exception);
+  for (const property of sensitiveEventProperties) {
+    Reflect.deleteProperty(event, property);
+  }
+  Reflect.set(event, 'breadcrumbs', []);
+  redactExceptionPayload(Reflect.get(event, 'exception'));
   return event;
 }
 
 function redactExceptionPayload(exception: unknown) {
-  if (!isRecord(exception) || !Array.isArray(exception.values)) return;
+  if (!isRecord(exception) || !Array.isArray(exception.values)) {
+    return;
+  }
   for (const value of exception.values) {
-    if (!isRecord(value)) continue;
-    delete value.value;
-    const frames = isRecord(value.stacktrace) ? value.stacktrace.frames : undefined;
-    if (!Array.isArray(frames)) continue;
-    for (const frame of frames) {
-      if (!isRecord(frame)) continue;
-      delete frame.context_line;
-      delete frame.pre_context;
-      delete frame.post_context;
-      delete frame.vars;
-    }
+    redactExceptionValue(value);
+  }
+}
+
+function redactExceptionValue(value: unknown) {
+  if (!isRecord(value)) {
+    return;
+  }
+  Reflect.deleteProperty(value, 'value');
+  const frames = isRecord(value.stacktrace) ? value.stacktrace.frames : undefined;
+  if (!Array.isArray(frames)) {
+    return;
+  }
+  for (const frame of frames) {
+    redactStackFrame(frame);
+  }
+}
+
+function redactStackFrame(frame: unknown) {
+  if (!isRecord(frame)) {
+    return;
+  }
+  for (const property of sensitiveFrameProperties) {
+    Reflect.deleteProperty(frame, property);
   }
 }
 

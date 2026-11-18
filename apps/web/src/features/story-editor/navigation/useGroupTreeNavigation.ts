@@ -261,12 +261,21 @@ function toggleExpandedGroup(current: ReadonlySet<string>, groupId: string) {
 
 function useGroupTreeFocus(props: StoryGroupsPanelProps, panel: RefObject<HTMLElement | null>) {
   const restoreFocusGroupId = useRef<string | undefined>(undefined);
-  const focusRow = useCallback((id?: string) => focusPanelRow(panel, id), [panel]);
+  const focusRow = useCallback(
+    (id?: string) => {
+      focusPanelRow(panel, id);
+    },
+    [panel],
+  );
   const focusEntry = useCallback(
-    (entry?: GroupExplorerEntry) => focusRow(getEntryId(entry)),
+    (entry?: GroupExplorerEntry) => {
+      focusRow(getEntryId(entry));
+    },
     [focusRow],
   );
-  useEffect(() => scrollToEditingGroup(panel, props.editingGroupId), [panel, props.editingGroupId]);
+  useEffect(() => {
+    scrollToEditingGroup(panel, props.editingGroupId);
+  }, [panel, props.editingGroupId]);
   useLayoutEffect(() => {
     if (!restoreFocusGroupId.current || props.editingGroupId) {
       return;
@@ -337,7 +346,9 @@ function createGroupKeyDownHandler({
       focusEntry: focus.focusEntry,
       selectGroup: props.onSelect,
       renameGroup: props.onEditingChange,
-      openMenu: (groupId, position) => setMenu({ groupId, position }),
+      openMenu: (groupId, position) => {
+        setMenu({ groupId, position });
+      },
       moveGroup,
     };
     handleGroupTreeKeyDown(event, group, context);
@@ -348,13 +359,14 @@ function createInteractionKeyDownHandler(
   projection: ReturnType<typeof useGroupTreeProjection>,
   focus: ReturnType<typeof useGroupTreeFocus>,
 ) {
-  return (event: React.KeyboardEvent<HTMLButtonElement>, interactionId: string) =>
+  return (event: React.KeyboardEvent<HTMLButtonElement>, interactionId: string) => {
     handleInteractionTreeKeyDown(event, interactionId, {
       entries: projection.entries,
       tree: projection.tree,
       focusRow: focus.focusRow,
       focusEntry: focus.focusEntry,
     });
+  };
 }
 
 function useUngroupedInteractions(

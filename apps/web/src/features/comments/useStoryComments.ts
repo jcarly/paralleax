@@ -23,7 +23,9 @@ export function useStoryComments(storyId: string, enabled: boolean) {
     const sequence = ++requestSequence.current;
     try {
       const items = await api.listCommentThreads(storyId, includeDeleted.current);
-      if (sequence !== requestSequence.current) return;
+      if (sequence !== requestSequence.current) {
+        return;
+      }
       setThreads(items);
       setError('');
     } catch (caught) {
@@ -31,18 +33,24 @@ export function useStoryComments(storyId: string, enabled: boolean) {
         setError(apiErrorMessage(caught, t, t('comments.loadFailed')));
       }
     } finally {
-      if (sequence === requestSequence.current) setLoadedStoryId(storyId);
+      if (sequence === requestSequence.current) {
+        setLoadedStoryId(storyId);
+      }
     }
   }, [storyId, t]);
 
   useEffect(() => {
-    if (!enabled) return;
+    if (!enabled) {
+      return;
+    }
     includeDeleted.current = false;
     const sequence = ++requestSequence.current;
     api
       .listCommentThreads(storyId)
       .then((items) => {
-        if (sequence !== requestSequence.current) return;
+        if (sequence !== requestSequence.current) {
+          return;
+        }
         setThreads(items);
         setError('');
       })
@@ -52,24 +60,33 @@ export function useStoryComments(storyId: string, enabled: boolean) {
         }
       })
       .finally(() => {
-        if (sequence === requestSequence.current) setLoadedStoryId(storyId);
+        if (sequence === requestSequence.current) {
+          setLoadedStoryId(storyId);
+        }
       });
   }, [enabled, storyId, t]);
 
   useEffect(() => {
-    if (!enabled || typeof EventSource === 'undefined') return;
+    if (!enabled || typeof EventSource === 'undefined') {
+      return;
+    }
     const source = new EventSource(
       `/api/stories/${encodeURIComponent(storyId)}/comment-threads/events`,
     );
     const refresh = () => void reload();
     source.addEventListener('ready', refresh);
     source.addEventListener('comments-changed', refresh);
-    source.onopen = () => setLiveStoryId(storyId);
-    source.onerror = () =>
+    source.onopen = () => {
+      setLiveStoryId(storyId);
+    };
+    source.onerror = () => {
       setLiveStoryId((connectedStoryId) =>
         connectedStoryId === storyId ? undefined : connectedStoryId,
       );
-    return () => source.close();
+    };
+    return () => {
+      source.close();
+    };
   }, [enabled, reload, storyId]);
 
   const loading = enabled && loadedStoryId !== storyId;
@@ -87,7 +104,9 @@ export function useStoryComments(storyId: string, enabled: boolean) {
 
   const selectThread = useCallback((threadId: string | undefined) => {
     setSelectedThreadId(threadId);
-    if (threadId) setDraftAnchor(undefined);
+    if (threadId) {
+      setDraftAnchor(undefined);
+    }
   }, []);
 
   const startThread = useCallback((anchor: CommentAnchor) => {
@@ -95,7 +114,9 @@ export function useStoryComments(storyId: string, enabled: boolean) {
     setSelectedThreadId(undefined);
   }, []);
 
-  const cancelDraft = useCallback(() => setDraftAnchor(undefined), []);
+  const cancelDraft = useCallback(() => {
+    setDraftAnchor(undefined);
+  }, []);
 
   const upsert = useCallback((thread: StoryCommentThread) => {
     setThreads((items) => {
@@ -111,7 +132,9 @@ export function useStoryComments(storyId: string, enabled: boolean) {
 
   const create = useCallback(
     async (body: string) => {
-      if (!draftAnchor) return;
+      if (!draftAnchor) {
+        return;
+      }
       setError('');
       try {
         return upsert(await api.createCommentThread(storyId, draftAnchor, body));
@@ -160,13 +183,17 @@ export function useStoryComments(storyId: string, enabled: boolean) {
 
   const loadDeleted = useCallback(async () => {
     const deletedLoading = deletedLoadingStoryId === storyId;
-    if (deletedLoadedStoryId === storyId || deletedLoading) return;
+    if (deletedLoadedStoryId === storyId || deletedLoading) {
+      return;
+    }
     includeDeleted.current = true;
     setDeletedLoadingStoryId(storyId);
     const sequence = ++requestSequence.current;
     try {
       const items = await api.listCommentThreads(storyId, true);
-      if (sequence !== requestSequence.current) return;
+      if (sequence !== requestSequence.current) {
+        return;
+      }
       setThreads(items);
       setDeletedLoadedStoryId(storyId);
       setError('');
@@ -176,7 +203,9 @@ export function useStoryComments(storyId: string, enabled: boolean) {
         setError(apiErrorMessage(caught, t, t('comments.loadFailed')));
       }
     } finally {
-      if (sequence === requestSequence.current) setDeletedLoadingStoryId(undefined);
+      if (sequence === requestSequence.current) {
+        setDeletedLoadingStoryId(undefined);
+      }
     }
   }, [deletedLoadedStoryId, deletedLoadingStoryId, storyId, t]);
 

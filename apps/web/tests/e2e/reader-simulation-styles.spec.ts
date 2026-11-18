@@ -30,14 +30,12 @@ async function assertReaderDesktopTypography(page: Page) {
     backgroundColor: 'rgb(255, 255, 255)',
   });
   await page.locator('.character-choice-card').click();
-  await expect(page.getByRole('heading', { name: 'Original title' })).toBeVisible();
+  await expectReaderInteractionPresentation(page, 'A brass door waits at the end of the hall.');
 
-  const readerTypography = await readNarrativeTypography(page, '.story-body', 'h1');
+  const readerTypography = await readNarrativeTypography(page, '.story-body');
   expect(readerTypography).toMatchObject({
     bodyFontFamily: 'Georgia, "Times New Roman", serif',
-    titleFontFamily: 'Georgia, "Times New Roman", serif',
     bodyFontSize: '18.4px',
-    titleFontSize: '48px',
   });
 
   return readerTypography;
@@ -116,18 +114,15 @@ async function assertSimulationDesktopTypography(
   );
   await expect(page.locator('.simulation-controls')).toBeVisible();
   await expect(page.locator('.reader-comment-actions')).toHaveCount(0);
+  await expectSceneMetadataIcons(page);
 
   const simulationTypography = await readNarrativeTypography(
     page,
     '.simulation-body-preview .story-body',
-    '.simulation-title-input',
   );
   expect(simulationTypography.bodyFontFamily).toBe(readerTypography.bodyFontFamily);
-  expect(simulationTypography.titleFontFamily).toBe(readerTypography.titleFontFamily);
   expect(simulationTypography.bodyFontSize).toBe(readerTypography.bodyFontSize);
-  expect(simulationTypography.titleFontSize).toBe(readerTypography.titleFontSize);
   expect(simulationTypography.bodyLineHeight).toBe(readerTypography.bodyLineHeight);
-  expect(simulationTypography.titleLineHeight).toBe(readerTypography.titleLineHeight);
 }
 
 async function assertSimulationDesktopLayout(
@@ -219,7 +214,7 @@ async function assertReaderResponsiveLayout(
   await page.goto('/stories/story-1/play');
   await page.setViewportSize({ width: 900, height: 768 });
   await page.locator('.character-choice-card').click();
-  await expect(page.getByRole('heading', { name: 'Original title' })).toBeVisible();
+  await expectReaderInteractionPresentation(page, 'A brass door waits at the end of the hall.');
   const tabletReaderLayout = await readPlayerLayout(page);
   expect(tabletReaderLayout.page).toEqual(simulation.tablet.page);
   expect(tabletReaderLayout.page.display).toBe('grid');
@@ -300,7 +295,7 @@ test('shows forced unavailable choices in Simulation and preserves Reader ending
 
   await page.goto('/stories/story-1/play');
   await page.locator('.character-choice-card').click();
-  await expect(page.getByRole('heading', { name: 'Original title' })).toBeVisible();
+  await expectReaderInteractionPresentation(page, 'A brass door waits at the end of the hall.');
   await page.getByRole('button', { name: /Continue/ }).click();
   await expect(page.getByRole('heading', { name: 'Continue' })).toBeVisible();
   await expect(page.locator('.ending')).toBeVisible();
@@ -312,6 +307,47 @@ test('shows forced unavailable choices in Simulation and preserves Reader ending
   });
   await expect(page.locator('.simulation-title-input')).toHaveCount(0);
 });
+
+async function expectReaderInteractionPresentation(page: Page, visibleContent: string) {
+  const sceneTitle = page.locator('.player-card > .player-interaction-label');
+  await expect(sceneTitle).toContainText('Original title');
+  await expect(sceneTitle.locator('.interaction-label-leading')).toHaveText('→');
+  await expect(sceneTitle).toBeVisible();
+  await expect(page.locator('.story-body')).toContainText(visibleContent);
+  await expect(page.locator('.simulation-current-effects')).toHaveCount(0);
+  await expectSceneMetadataIcons(page);
+
+  const cardChildren = await page
+    .locator('.player-card')
+    .evaluate((card) => Array.from(card.children).map((child) => child.className));
+  const contentChildren = await page
+    .locator('.player-story-content')
+    .evaluate((content) => Array.from(content.children).map((child) => child.className));
+  const labelIndex = cardChildren.findIndex((className) =>
+    className.includes('player-interaction-label'),
+  );
+  const sceneIndex = cardChildren.findIndex((className) =>
+    className.includes('player-scene-visual'),
+  );
+  const bodyIndex = contentChildren.findIndex((className) => className.includes('story-body'));
+  const choicesIndex = contentChildren.findIndex((className) => className.includes('choices'));
+  expect(labelIndex).toBeGreaterThanOrEqual(0);
+  expect(labelIndex).toBeLessThan(sceneIndex);
+  expect(sceneIndex).toBeLessThan(cardChildren.indexOf('player-story-content'));
+  expect(bodyIndex).toBeGreaterThanOrEqual(0);
+  expect(bodyIndex).toBeLessThan(choicesIndex);
+}
+
+async function expectSceneMetadataIcons(page: Page) {
+  await expect(page.getByRole('group', { name: 'Location: Clockwork Hall' })).toBeVisible();
+  await expect(
+    page.getByRole('group', { name: 'Characters present: Mira Vale, Ivo Reed' }),
+  ).toBeVisible();
+  await expect(page.getByLabel('Story time: 2000-01-03 08:00')).toBeVisible();
+  for (const kind of ['location', 'characters', 'time']) {
+    await expect(page.locator(`[data-interaction-metadata-icon="${kind}"]`)).toBeVisible();
+  }
+}
 
 async function preparePlayer(page: Page) {
   await mockAuthenticatedUser(page);
@@ -459,23 +495,19 @@ async function readStyle(page: Page, selector: string) {
   });
 }
 
-async function readNarrativeTypography(page: Page, bodySelector: string, titleSelector: string) {
+async function readNarrativeTypography(page: Page, bodySelector: string) {
   return page.evaluate(
-    ({ bodySelector, titleSelector }) => {
+    ({ bodySelector }) => {
       const body = document.querySelector(bodySelector);
-      const title = document.querySelector(titleSelector);
-      if (!(body instanceof HTMLElement) || !(title instanceof HTMLElement)) {
-        throw new Error('Narrative title and body must be rendered');
+      if (!(body instanceof HTMLElement)) {
+        throw new Error('Narrative body must be rendered');
       }
       return {
         bodyFontFamily: getComputedStyle(body).fontFamily,
         bodyFontSize: getComputedStyle(body).fontSize,
         bodyLineHeight: getComputedStyle(body).lineHeight,
-        titleFontFamily: getComputedStyle(title).fontFamily,
-        titleFontSize: getComputedStyle(title).fontSize,
-        titleLineHeight: getComputedStyle(title).lineHeight,
       };
     },
-    { bodySelector, titleSelector },
+    { bodySelector },
   );
 }

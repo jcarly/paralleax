@@ -34,9 +34,13 @@ export function requestContextMiddleware(
       status: response.statusCode,
       durationMs: Math.round((performance.now() - startedAt) * 100) / 100,
     };
-    if (response.statusCode >= 500) requestLogger.error(event);
-    else if (response.statusCode >= 400) requestLogger.warn(event);
-    else requestLogger.log(event);
+    if (response.statusCode >= 500) {
+      requestLogger.error(event);
+    } else if (response.statusCode >= 400) {
+      requestLogger.warn(event);
+    } else {
+      requestLogger.log(event);
+    }
   });
 
   next();

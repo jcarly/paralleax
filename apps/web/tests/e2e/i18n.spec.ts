@@ -23,14 +23,16 @@ test('switches and remembers the interface language without translating story ti
   await page.goto('/');
   await expect(page.getByRole('heading', { name: 'Stories', exact: true })).toBeVisible();
 
-  await page.getByLabel('Language').selectOption('fr');
+  await page.getByRole('button', { name: 'en Language' }).click();
+  await page.getByRole('radio', { name: 'fr Français' }).click();
   await expect(page.getByRole('heading', { name: 'Histoires', exact: true })).toBeVisible();
   await expect(
     page.getByRole('heading', { name: 'A room full of echoes', exact: true }),
   ).toBeVisible();
   await expect(page.locator('html')).toHaveAttribute('lang', 'fr');
 
-  await page.getByLabel('Langue').selectOption('it');
+  await page.getByRole('button', { name: 'fr Langue' }).click();
+  await page.getByRole('radio', { name: 'it Italiano' }).click();
   await expect(page.getByRole('heading', { name: 'Storie', exact: true })).toBeVisible();
   await expect(
     page.getByRole('heading', { name: 'A room full of echoes', exact: true }),
@@ -38,7 +40,9 @@ test('switches and remembers the interface language without translating story ti
   await expect(page.locator('html')).toHaveAttribute('lang', 'it');
 
   await page.reload();
-  await expect(page.getByLabel('Lingua')).toHaveValue('it');
+  await expect(page.getByRole('button', { name: 'it Lingua' }).locator('span').first()).toHaveText(
+    'it',
+  );
   await expect(page.getByRole('heading', { name: 'Storie', exact: true })).toBeVisible();
   await expect(
     page.getByRole('heading', { name: 'A room full of echoes', exact: true }),

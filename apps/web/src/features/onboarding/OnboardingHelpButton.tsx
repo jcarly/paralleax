@@ -7,7 +7,13 @@ export function OnboardingHelpButton({ storyId }: { storyId?: string }) {
   const { openHelp } = useOnboarding();
 
   return (
-    <button className="product-help-button" type="button" onClick={() => openHelp(storyId)}>
+    <button
+      className="product-help-button"
+      type="button"
+      onClick={() => {
+        openHelp(storyId);
+      }}
+    >
       {t('shell.help')}
     </button>
   );

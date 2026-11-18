@@ -77,8 +77,8 @@ test('imports and plays a repository ChoiceScript fixture through the real stack
   await expect(interactionNode(page, 'Wait outside')).toBeVisible();
   await expect(interactionNode(page, 'Ending')).toBeVisible();
 
-  await interactionNode(page, 'Startup').click();
-  await page.getByRole('link', { name: 'Test from current interaction' }).click();
+  await page.getByRole('link', { name: 'Test from start' }).click();
+  await page.getByRole('button', { name: 'Startup', exact: true }).click();
   await expect(page.getByLabel('Current interaction title')).toHaveValue('Startup');
   await page.getByRole('button', { name: 'Open the door' }).click();
   await expect(page.getByLabel('Current interaction title')).toHaveValue('Open the door');
@@ -175,8 +175,8 @@ test('imports and plays repository QSP location fixtures through the real stack'
   await expect(interactionNode(page, 'Enter the room')).toBeVisible();
   await expect(interactionNode(page, 'room · inside')).toBeVisible();
 
-  await interactionNode(page, 'start').click();
-  await page.getByRole('link', { name: 'Test from current interaction' }).click();
+  await page.getByRole('link', { name: 'Test from start' }).click();
+  await page.getByRole('button', { name: 'start', exact: true }).click();
   await expect(page.getByLabel('Current interaction title')).toHaveValue('start');
   await page.getByRole('button', { name: 'Enter the room' }).click();
   await expect(page.getByLabel('Current interaction title')).toHaveValue('Enter the room');

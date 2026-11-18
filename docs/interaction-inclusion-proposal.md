@@ -87,10 +87,11 @@ unsupported conversion. Dynamic targets, unsupported argument expressions,
 `DELACT`, and other unrepresentable control flow must keep precise diagnostics.
 Recognizing a subroutine call is not sufficient reason to remove its warning.
 
-Large-game validation, including Girl Life where legally available, must measure
-diagnostic reduction, conversion time, runtime resolution, and Workbench cost.
-The implementation must use id references and suitable indexes rather than
-duplicating content, effects, or graph edges.
+Validation on appropriately licensed large QSP corpora must measure diagnostic
+reduction, conversion time, runtime resolution, and Workbench cost. The
+implementation must use id references and suitable indexes rather than
+duplicating content, effects, or graph edges; see the source-neutral
+[large-import lessons](large-qsp-import-lessons.md).
 
 ## Required design decisions before implementation
 

@@ -132,7 +132,9 @@ describe('story group persistence', () => {
     });
     const { result } = renderHook(() => {
       const [story, setStory] = useState<Story | undefined>(storyFixture());
-      if (!story) throw new Error('Expected the story fixture to be available');
+      if (!story) {
+        throw new Error('Expected the story fixture to be available');
+      }
       const actions = useStoryGroupPersistence({
         storyId: story.id,
         setStory,

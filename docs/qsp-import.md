@@ -223,7 +223,7 @@ The matrix reports three states:
   media/UI, runtime events, QSP saves/input, and libraries.
 
 Each matrix row includes the number of detected occurrences. Zero does not mean
-that the feature is supported; it only means that the selected game did not
+that the feature is supported; it only means that the selected source did not
 exercise it in code the static analyzer could identify.
 
 The Playwright real-stack acceptance project imports two small repository-owned
@@ -231,74 +231,15 @@ The Playwright real-stack acceptance project imports two small repository-owned
 literal `ARGS[0]` destination in the graph, and traverses that path in Simulation
 Mode without mocking a Paralleax endpoint.
 
-## Local large-corpus comparison
+## Large-corpus observations
 
-The locally available compiled Girl Life 0.9.9.2 corpus was analyzed before and
-after static-call support. No third-party source or assets were added to the
-repository. Counts below inspect the mapped Story before the importer's final
-error gate; both versions reject persistence because of the same existing
-unresolved static `GOTO` target.
-
-| Measurement                             |   Before |    After |
-| --------------------------------------- | -------: | -------: |
-| Source locations                        |    1,397 |    1,397 |
-| Extracted actions                       |   14,643 |   14,643 |
-| Lexically detected `GS` / `GOSUB` sites |   91,625 |   91,625 |
-| Translated static call sites            |        0 |    6,268 |
-| Call sites not translated               |   91,625 |   85,357 |
-| Generated interactions                  |   31,470 |   37,757 |
-| Generated Triggers                      |   31,470 |   37,758 |
-| Warnings                                |  625,807 |  629,734 |
-| Errors                                  |        1 |        1 |
-| Analysis and mapping duration           |  14.95 s |  18.49 s |
-| RSS after mapping                       | 1.00 GiB | 1.07 GiB |
-
-These are single local observations, not performance guarantees or peak-memory
-measurements. They include decoding and retain the decoded inventory alongside
-the importer data; garbage collection affects the memory snapshots. The lexical
-inventory masks strings and comments and includes contexts that the analyzer
-cannot extract. The analyzer's diagnostic occurrence counts therefore do not
-form a disjoint reconciliation of that inventory. Important remaining call
-diagnostics include:
-
-| Diagnostic                                               | After occurrences |
-| -------------------------------------------------------- | ----------------: |
-| Unsupported call context / function-return behavior      |            43,263 |
-| Unsupported argument expressions or additional arguments |            20,765 |
-| Call after an earlier control-flow boundary              |            11,317 |
-| Unsupported base-code / argument scope                   |             5,752 |
-| Missing static callee or argument variant                |             1,414 |
-| Recursive call-cycle target                              |                95 |
-| Dynamic callee                                           |                27 |
-
-Another 3,929 ordered paths stop at unsupported control flow rather than
-inventing a return. Shared subroutines are not copied per caller: growth is
-6,268 continuation interactions plus 19 shared return interactions (about 20%
-over the baseline). The worker execution boundary remains unchanged.
-
-The built API worker also analyzed this corpus with file-backed diagnostics in
-23.66 s. A 20 ms main-thread heartbeat fired 885 times with a maximum observed
-gap of 46 ms, while 4,090 progress events arrived. The worker exited normally;
-the expected blocking source error remains the missing `hookup_morning` target
-from `hookup_after` (compiled location-code line 2,267). This checks worker
-responsiveness and report/progress delivery, not browser or full-game playability.
-
-Representative local reader replay checked the shared `saveposition` path from
-`shortgs · mk1` and `adverts_manager · start`: each exposes its own continuation
-and excludes the other caller's continuation. These are isolated imported path
-segments, not complete game journeys. The synthetic shared reader suite covers
-full supported paths, including action bodies, nesting, repeated visits, and
-navigation away.
-
-To inspect another local compiled corpus after building shared:
-
-```bash
-node scripts/benchmark-qsp-import.mjs path/to/local-game.qsp
-```
-
-The script reuses the parser and mapper, streams diagnostic counts without
-retaining issue details, records graph sizes even for rejected imports, and
-replays representative shared call segments. It never persists the Story.
+An anonymized local benchmark showed that static-call handling can expose more
+reachable paths while leaving unresolved dynamic or unsupported calls visible
+as diagnostics. The import remained correctly blocked by an unresolved static
+navigation target. This is a single-corpus engineering observation, not a
+performance guarantee or a complete accounting of source constructs. See
+[Large QSP Import Lessons](large-qsp-import-lessons.md) for source-neutral
+scaling and operational reflections.
 
 ## What remains for runtime-equivalent support
 

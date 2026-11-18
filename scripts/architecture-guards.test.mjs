@@ -8,6 +8,25 @@ import { fileURLToPath } from 'node:url';
 import { ESLint } from 'eslint';
 
 const repositoryRoot = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '..');
+const typeAwareRuleIds = [
+  '@typescript-eslint/no-unnecessary-condition',
+  '@typescript-eslint/strict-boolean-expressions',
+  '@typescript-eslint/prefer-nullish-coalescing',
+  '@typescript-eslint/prefer-optional-chain',
+  '@typescript-eslint/no-confusing-void-expression',
+  '@typescript-eslint/no-floating-promises',
+  '@typescript-eslint/no-misused-promises',
+  '@typescript-eslint/no-unnecessary-type-assertion',
+  '@typescript-eslint/no-unsafe-argument',
+  '@typescript-eslint/no-unsafe-assignment',
+  '@typescript-eslint/no-unsafe-call',
+  '@typescript-eslint/no-unsafe-declaration-merging',
+  '@typescript-eslint/no-unsafe-enum-comparison',
+  '@typescript-eslint/no-unsafe-function-type',
+  '@typescript-eslint/no-unsafe-member-access',
+  '@typescript-eslint/no-unsafe-return',
+  '@typescript-eslint/no-unsafe-unary-minus',
+];
 const dependencyCruiserCli = path.join(
   repositoryRoot,
   'node_modules',
@@ -255,20 +274,6 @@ test('typed ESLint rules and the suppression baseline cover all production works
     applySuppressions: true,
     suppressionsLocation: path.join(repositoryRoot, 'eslint-suppressions.json'),
   });
-  const ruleIds = [
-    '@typescript-eslint/no-floating-promises',
-    '@typescript-eslint/no-misused-promises',
-    '@typescript-eslint/no-unnecessary-type-assertion',
-    '@typescript-eslint/no-unsafe-argument',
-    '@typescript-eslint/no-unsafe-assignment',
-    '@typescript-eslint/no-unsafe-call',
-    '@typescript-eslint/no-unsafe-declaration-merging',
-    '@typescript-eslint/no-unsafe-enum-comparison',
-    '@typescript-eslint/no-unsafe-function-type',
-    '@typescript-eslint/no-unsafe-member-access',
-    '@typescript-eslint/no-unsafe-return',
-    '@typescript-eslint/no-unsafe-unary-minus',
-  ];
   const sourceFiles = [
     'packages/shared/src/import-export/qsp/converter.ts',
     'apps/api/src/main.ts',
@@ -277,12 +282,12 @@ test('typed ESLint rules and the suppression baseline cover all production works
   const sourceConfigs = await Promise.all(
     sourceFiles.map((file) => eslint.calculateConfigForFile(path.join(repositoryRoot, file))),
   );
-  const [converterResult] = await eslint.lintFiles([
-    'packages/shared/src/import-export/qsp/converter.ts',
+  const [qspImporterResult] = await eslint.lintFiles([
+    'packages/shared/src/import-export/qsp/importer.test.ts',
   ]);
 
   for (const [index, sourceConfig] of sourceConfigs.entries()) {
-    for (const ruleId of ruleIds) {
+    for (const ruleId of typeAwareRuleIds) {
       assert.equal(
         sourceConfig.rules[ruleId][0],
         2,
@@ -291,7 +296,7 @@ test('typed ESLint rules and the suppression baseline cover all production works
     }
   }
   assert.ok(
-    converterResult.suppressedMessages.some(
+    qspImporterResult.suppressedMessages.some(
       ({ ruleId }) => ruleId === '@typescript-eslint/no-unsafe-assignment',
     ),
   );

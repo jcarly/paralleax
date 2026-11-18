@@ -76,36 +76,47 @@ export function App() {
   const [accountOpen, setAccountOpen] = useState(false);
 
   useEffect(() => {
-    if (isPrototype) return;
+    if (isPrototype) {
+      return;
+    }
     api
       .me()
       .then(setUser)
-      .catch(() => setUser(null));
+      .catch(() => {
+        setUser(null);
+      });
   }, [isPrototype]);
 
   useEffect(() => {
-    if (isPrototype) return;
+    if (isPrototype) {
+      return;
+    }
     const expireSession = () => {
       setSessionExpired(true);
       setUser(null);
     };
     window.addEventListener('paralleax:session-expired', expireSession);
-    return () => window.removeEventListener('paralleax:session-expired', expireSession);
+    return () => {
+      window.removeEventListener('paralleax:session-expired', expireSession);
+    };
   }, [isPrototype]);
 
-  if (isPrototype)
+  if (isPrototype) {
     return (
       <Suspense fallback={<main className="page">{t('shell.loadingWorkspace')}</main>}>
         <ParalleaxPrototype />
       </Suspense>
     );
-  if (user === undefined) return <main className="page">{t('shell.loading')}</main>;
+  }
+  if (user === undefined) {
+    return <main className="page">{t('shell.loading')}</main>;
+  }
   const currentDestination = `${location.pathname}${location.search}${location.hash}`;
   const returnTo = safeReturnTo(new URLSearchParams(location.search).get('returnTo'));
   const isAuthenticationRoute = location.pathname === '/login' || location.pathname === '/register';
   const accountAction = accountActionForPath(location.pathname);
 
-  if (accountAction)
+  if (accountAction) {
     return (
       <Suspense fallback={<main className="page">{t('shell.loadingWorkspace')}</main>}>
         <AccountActionPage
@@ -121,33 +132,33 @@ export function App() {
         />
       </Suspense>
     );
+  }
 
-  if (user === null && isAuthenticationRoute)
-    return (
-      <Suspense fallback={<main className="page">{t('shell.loadingWorkspace')}</main>}>
-        <AuthPage
-          initialMode={location.pathname === '/register' ? 'register' : 'login'}
-          notice={sessionExpired ? t('shell.sessionExpired') : ''}
-          onModeChange={async (mode) => {
-            await navigate(authenticationPath(mode, returnTo), { replace: true });
-          }}
-          onAuthenticated={async (authenticatedUser) => {
-            setSessionExpired(false);
-            setUser(authenticatedUser);
-            await navigate(returnTo, { replace: true });
-          }}
-        />
-      </Suspense>
-    );
-
-  const signInPath = authenticationPath('login', currentDestination);
-  const registerPath = authenticationPath('register', currentDestination);
+  const authenticationReturnTo = isAuthenticationRoute ? returnTo : currentDestination;
+  const signInPath = authenticationPath('login', authenticationReturnTo);
+  const registerPath = authenticationPath('register', authenticationReturnTo);
   const currentStoryId = location.pathname.match(/^\/stories\/([^/]+)\/(edit|play)\/?$/)?.[1];
+  const authPage = (initialMode: 'login' | 'register') => (
+    <AuthPage
+      initialMode={initialMode}
+      notice={sessionExpired ? t('shell.sessionExpired') : ''}
+      onModeChange={async (mode) => {
+        await navigate(authenticationPath(mode, returnTo), { replace: true });
+      }}
+      onAuthenticated={async (authenticatedUser) => {
+        setSessionExpired(false);
+        setUser(authenticatedUser);
+        await navigate(returnTo, { replace: true });
+      }}
+    />
+  );
 
   return (
     <OnboardingProvider key={user?.id ?? 'anonymous'} userId={user?.id ?? null}>
       <div className="app">
-        <header className="product-app-header">
+        <header
+          className={`product-app-header${isAuthenticationRoute ? ' product-app-header-auth' : ''}`}
+        >
           <Link to="/" className="product-app-brand">
             <span aria-hidden="true">P</span>
             <b>Paralleax</b>
@@ -172,14 +183,20 @@ export function App() {
                 className="product-user"
                 type="button"
                 aria-label={`${user.displayName.slice(0, 2).toUpperCase()} ${user.displayName}: ${t('shell.account')}`}
-                onClick={() => setAccountOpen(true)}
+                onClick={() => {
+                  setAccountOpen(true);
+                }}
               >
                 <span aria-hidden="true">{user.displayName.slice(0, 2).toUpperCase()}</span>{' '}
                 <span>{user.displayName}</span>
               </button>
               <button
                 className="product-signout"
-                onClick={() => void api.logout().finally(() => setUser(null))}
+                onClick={() =>
+                  void api.logout().finally(() => {
+                    setUser(null);
+                  })
+                }
               >
                 {t('shell.signOut')}
               </button>
@@ -211,8 +228,14 @@ export function App() {
                 />
               }
             />
-            <Route path="/login" element={<Navigate to={returnTo} replace />} />
-            <Route path="/register" element={<Navigate to={returnTo} replace />} />
+            <Route
+              path="/login"
+              element={user ? <Navigate to={returnTo} replace /> : authPage('login')}
+            />
+            <Route
+              path="/register"
+              element={user ? <Navigate to={returnTo} replace /> : authPage('register')}
+            />
             <Route
               path="/stories"
               element={user ? <Navigate to="/" replace /> : <Navigate to={signInPath} replace />}
@@ -249,7 +272,13 @@ export function App() {
         </Suspense>
         {user && accountOpen ? (
           <Suspense fallback={null}>
-            <AccountDialog user={user} onClose={() => setAccountOpen(false)} onUpdated={setUser} />
+            <AccountDialog
+              user={user}
+              onClose={() => {
+                setAccountOpen(false);
+              }}
+              onUpdated={setUser}
+            />
           </Suspense>
         ) : null}
       </div>
@@ -269,8 +298,14 @@ function OnboardingStoryList({ user }: { user: AuthUser | null }) {
 }
 
 function accountActionForPath(pathname: string): AccountAction | undefined {
-  if (pathname === '/verify-email') return 'verify-email';
-  if (pathname === '/reset-password') return 'reset-password';
-  if (pathname === '/forgot-password') return 'request-password-reset';
+  if (pathname === '/verify-email') {
+    return 'verify-email';
+  }
+  if (pathname === '/reset-password') {
+    return 'reset-password';
+  }
+  if (pathname === '/forgot-password') {
+    return 'request-password-reset';
+  }
   return undefined;
 }

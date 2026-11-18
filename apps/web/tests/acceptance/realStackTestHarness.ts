@@ -55,8 +55,9 @@ export async function registerUser(page: Page, prefix: string): Promise<Acceptan
   const verificationUrl = verificationEmail.text.match(
     /https?:\/\/[^\s]+\/verify-email\?token=[A-Za-z0-9_-]{43}/,
   )?.[0];
-  if (!verificationUrl)
+  if (!verificationUrl) {
     throw new Error('The verification email did not contain an account action link');
+  }
   await page.goto(verificationUrl);
   const verification = waitForApiResponse(page, 'POST', /\/api\/auth\/verify-email$/);
   await page.getByRole('button', { name: 'Verify and sign in' }).click();
@@ -91,8 +92,14 @@ export async function createStory(page: Page, prefix: string) {
 
   await expect(page).toHaveURL(new RegExp(`/stories/${story.id}/edit`));
   await expect(page.locator('.story-title-input')).toHaveValue(storyTitle);
-  await expect(page.getByRole('button', { name: 'Add root' })).toBeVisible();
-  await expect(page.getByRole('heading', { name: 'Explore the graph' })).toBeVisible();
+  await expect(page.getByTestId('interaction-node').first()).toBeVisible();
+  await expect(page.getByRole('navigation', { name: 'Story context' })).toBeVisible();
+  await expect(page.getByRole('complementary', { name: 'Inspector' })).toBeVisible();
+  await expect(page.getByRole('button', { name: 'Add root' })).toBeEnabled();
+  await expect(page.getByRole('link', { name: 'Test from start' })).toBeVisible();
+  const closeGuide = page.getByRole('button', { name: 'Close guide' });
+  await expect(closeGuide).toBeVisible();
+  await closeGuide.click();
 
   return { storyId: story.id, storyTitle };
 }
@@ -127,7 +134,9 @@ async function autoSaveAccessOption(
   value: string,
 ) {
   const field = page.getByRole('combobox', { name: label });
-  if ((await field.inputValue()) === value) return;
+  if ((await field.inputValue()) === value) {
+    return;
+  }
   const accessUpdate = waitForApiResponse(
     page,
     'PATCH',
@@ -180,11 +189,52 @@ export async function changeStoryCollaboratorRole(
 }
 
 export function interactionNode(page: Page, title: string) {
-  return page.getByTestId('interaction-node').filter({ hasText: title });
+  const nodes = page.getByTestId('interaction-node');
+  if (title === 'New interaction') {
+    // Untitled non-root Interactions intentionally have no graph label.
+    return nodes.filter({ hasNot: page.locator('.interaction-node-label') });
+  }
+  return nodes.filter({ hasText: title });
 }
 
 export function interactionTitleField(inspector: Locator) {
   return inspector.getByRole('textbox', { name: 'Title', exact: true });
+}
+
+export function interactionTitleValue(inspector: Locator, title: string) {
+  return inspector.getByRole('button', { name: `Title: ${title}`, exact: true });
+}
+
+export function interactionBodyPreview(inspector: Locator) {
+  return inspector.locator('.interaction-content-preview');
+}
+
+export function interactionBodyContent(inspector: Locator) {
+  return interactionBodyPreview(inspector).locator('.story-body');
+}
+
+export async function openInteractionBodyEditor(inspector: Locator) {
+  const contentField = inspector.getByRole('textbox', { name: 'Content', exact: true });
+  if (await contentField.count()) {
+    return contentField;
+  }
+
+  const addContent = inspector.getByRole('button', { name: 'Add content', exact: true });
+  if (await addContent.count()) {
+    await addContent.click();
+  } else {
+    await interactionBodyPreview(inspector).click();
+  }
+  return contentField;
+}
+
+export function editorSyncIndicator(page: Page) {
+  return page.locator('.editor-sync-indicator');
+}
+
+export async function openInteractionTitleEditor(inspector: Locator, title: string) {
+  await interactionTitleValue(inspector, title).click();
+  return interactionTitleField(inspector);
 }
 
 export async function editInteraction(
@@ -194,23 +244,22 @@ export async function editInteraction(
   body: string,
 ) {
   const inspector = page.getByRole('complementary', { name: 'Inspector' });
-  const titleField = interactionTitleField(inspector);
+  await page.getByRole('button', { name: 'Fit View' }).click();
+  const target = interactionNode(page, currentTitle).last();
+  await expect(target).toBeInViewport();
+  await target.click();
+  const titleValue = interactionTitleValue(inspector, currentTitle);
+  await expect(titleValue).toBeVisible();
+  const titleField = await openInteractionTitleEditor(inspector, currentTitle);
   await expect(titleField).toBeVisible();
-  if ((await titleField.inputValue()) !== currentTitle) {
-    await interactionNode(page, currentTitle).last().click();
-    await expect(titleField).toHaveValue(currentTitle);
-  }
+  await expect(titleField).toHaveValue('');
+  await expect(titleField).toHaveAttribute('placeholder', currentTitle);
   const titleUpdate = waitForInteractionPatch(page);
   await titleField.fill(title);
   await titleField.blur();
   await expectSuccessful(titleUpdate);
 
-  const contentField = inspector.getByRole('textbox', { name: 'Content' });
-  if (!(await contentField.count())) {
-    const addContent = inspector.getByRole('button', { name: 'Add content', exact: true });
-    await expect(addContent).toBeVisible();
-    await addContent.click();
-  }
+  const contentField = await openInteractionBodyEditor(inspector);
   await expect(contentField).toBeVisible();
   const bodyUpdate = waitForInteractionPatch(page);
   await contentField.fill(body);

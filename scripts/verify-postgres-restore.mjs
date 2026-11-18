@@ -7,7 +7,9 @@ import pg from 'pg';
 import { createBackup, restoreBackup } from './postgres-operations.mjs';
 
 const sourceUrl = process.env.POSTGRES_TEST_DATABASE_URL;
-if (!sourceUrl) throw new Error('POSTGRES_TEST_DATABASE_URL is required');
+if (!sourceUrl) {
+  throw new Error('POSTGRES_TEST_DATABASE_URL is required');
+}
 
 const restoreDatabase = `paralleax_restore_${process.pid}_${Date.now()}`;
 const restoreUrl = new URL(sourceUrl);

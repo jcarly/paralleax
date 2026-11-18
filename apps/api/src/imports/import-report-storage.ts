@@ -14,6 +14,9 @@ export interface ImportReportMetadata {
   size: number;
 }
 
+const reportFileNamePattern =
+  /^[0-9a-f]{8}-[0-9a-f]{4}-4[0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}\.(?:choicescript|qsp)\.jsonl$/i;
+
 export abstract class ImportReportStorage {
   abstract getBaseDirectory(): string;
 
@@ -27,31 +30,38 @@ export abstract class ImportReportStorage {
 
   async cleanupExpiredReports(ttlMs = 7 * 24 * 60 * 60 * 1000): Promise<void> {
     const dir = this.getBaseDirectory();
-    let entries: string[];
-    try {
-      entries = await readdir(dir);
-    } catch (caught) {
-      if (isMissingPath(caught)) return;
-      throw caught;
-    }
+    const entries = await readReportEntries(dir);
     const now = Date.now();
     for (const entry of entries) {
-      if (
-        !/^[0-9a-f]{8}-[0-9a-f]{4}-4[0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}\.(?:choicescript|qsp)\.jsonl$/i.test(
-          entry,
-        )
-      ) {
+      if (!reportFileNamePattern.test(entry)) {
         continue;
       }
-      try {
-        const fullPath = join(dir, entry);
-        const statResult = await lstat(fullPath);
-        if (statResult.isFile() && now - statResult.mtimeMs > ttlMs) {
-          await rm(fullPath, { force: true });
-        }
-      } catch (caught) {
-        if (!isMissingPath(caught)) throw caught;
-      }
+      await removeExpiredReportFile(join(dir, entry), now, ttlMs);
+    }
+  }
+}
+
+async function readReportEntries(directory: string): Promise<string[]> {
+  try {
+    return await readdir(directory);
+  } catch (caught) {
+    if (isMissingPath(caught)) {
+      return [];
+    }
+    throw caught;
+  }
+}
+
+async function removeExpiredReportFile(path: string, now: number, ttlMs: number): Promise<void> {
+  try {
+    const statResult = await lstat(path);
+    if (!statResult.isFile() || now - statResult.mtimeMs <= ttlMs) {
+      return;
+    }
+    await rm(path, { force: true });
+  } catch (caught) {
+    if (!isMissingPath(caught)) {
+      throw caught;
     }
   }
 }
@@ -98,7 +108,9 @@ export class LocalImportReportStorage extends ImportReportStorage implements OnM
     try {
       entries = await readdir(dir, { withFileTypes: true });
     } catch (caught) {
-      if (isMissingPath(caught)) return undefined;
+      if (isMissingPath(caught)) {
+        return undefined;
+      }
       throw caught;
     }
     const match = entries.find(
@@ -111,18 +123,24 @@ export class LocalImportReportStorage extends ImportReportStorage implements OnM
 
   async streamReport(importId: string): Promise<Readable | undefined> {
     const filePath = await this.getReportPath(importId);
-    if (!filePath) return undefined;
+    if (!filePath) {
+      return undefined;
+    }
     return createReadStream(filePath, { encoding: 'utf8' });
   }
 
   async deleteReport(importId: string): Promise<void> {
     validateImportId(importId);
     const filePath = await this.getReportPath(importId);
-    if (!filePath) return;
+    if (!filePath) {
+      return;
+    }
     try {
       await rm(filePath, { force: true });
     } catch (caught) {
-      if (!isMissingPath(caught)) throw caught;
+      if (!isMissingPath(caught)) {
+        throw caught;
+      }
     }
   }
 }
@@ -133,7 +151,9 @@ export async function copyImportReportFile(
   destination: string,
 ): Promise<void> {
   const source = await storage.getReportPath(importId);
-  if (!source) return;
+  if (!source) {
+    return;
+  }
   await mkdir(destination, { recursive: true });
   await pipeline(
     createReadStream(source),

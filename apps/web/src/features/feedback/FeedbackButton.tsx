@@ -12,7 +12,9 @@ export function FeedbackButton() {
   const [opening, setOpening] = useState(false);
   const [unavailable, setUnavailable] = useState(false);
 
-  if (!formbricksFeedbackClient.isConfigured) return null;
+  if (!formbricksFeedbackClient.isConfigured) {
+    return null;
+  }
 
   return (
     <button
@@ -25,8 +27,12 @@ export function FeedbackButton() {
         setOpening(true);
         void formbricksFeedbackClient
           .trackFeedback(language, buildFeedbackHiddenFields(location.pathname, language))
-          .then((opened) => setUnavailable(!opened))
-          .finally(() => setOpening(false));
+          .then((opened) => {
+            setUnavailable(!opened);
+          })
+          .finally(() => {
+            setOpening(false);
+          });
       }}
     >
       <svg aria-hidden="true" viewBox="0 0 24 24">

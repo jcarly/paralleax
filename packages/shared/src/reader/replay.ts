@@ -62,7 +62,9 @@ function resolveEffectValue(
 ): StatValue | undefined {
   if (effect.expression !== undefined) {
     const result = evaluateExpression(effect.expression, values);
-    if (typeof result === 'object' && result !== null) return undefined;
+    if (typeof result === 'object' && result !== null) {
+      return undefined;
+    }
     return result;
   }
   return effect.value;
@@ -76,9 +78,15 @@ function applyEffect(
   if (value === undefined || (typeof value === 'number' && !Number.isFinite(value))) {
     return currentValue;
   }
-  if (currentValue !== undefined && typeof currentValue !== typeof value) return currentValue;
-  if (operation === 'set') return value ?? currentValue;
-  if (typeof currentValue !== 'number' || typeof value !== 'number') return currentValue;
+  if (currentValue !== undefined && typeof currentValue !== typeof value) {
+    return currentValue;
+  }
+  if (operation === 'set') {
+    return value ?? currentValue;
+  }
+  if (typeof currentValue !== 'number' || typeof value !== 'number') {
+    return currentValue;
+  }
   const sum = currentValue + value;
   return Number.isFinite(sum) ? sum : currentValue;
 }
@@ -94,7 +102,9 @@ export function applyInteractionStatEffects(
 ): Record<string, StatValue> {
   const next = { ...values };
   for (const effect of interaction.statEffects ?? []) {
-    if (effect.itemId) continue;
+    if (effect.itemId) {
+      continue;
+    }
     const expressionContext: Record<string, StatValue | undefined> = { ...next };
     for (const [itemId, itemValues] of Object.entries(itemStatValues)) {
       for (const [statId, value] of Object.entries(itemValues)) {
@@ -103,7 +113,9 @@ export function applyInteractionStatEffects(
     }
     const resolvedValue = resolveEffectValue(effect, expressionContext);
     const changed = applyEffect(next[effect.statId], effect.operation, resolvedValue);
-    if (changed !== undefined) next[effect.statId] = changed;
+    if (changed !== undefined) {
+      next[effect.statId] = changed;
+    }
   }
   return next;
 }
@@ -113,7 +125,9 @@ export function applyInteractionTimeStatChanges(
   values: Readonly<Record<string, StatValue>>,
   interaction: Interaction,
 ): Record<string, StatValue> {
-  if (!interaction.durationMinutes) return { ...values };
+  if (!interaction.durationMinutes) {
+    return { ...values };
+  }
   const definitions = getStatDefinitions(story);
   const next = { ...values };
   for (const assignment of getNonItemStatAssignments(story)) {
@@ -153,7 +167,9 @@ function replayJourneyStats(story: Story, journey: string[]) {
   return journey.reduce(
     (state, interactionId, journeyIndex) => {
       const interaction = story.interactions.find(({ id }) => id === interactionId);
-      if (!interaction) return state;
+      if (!interaction) {
+        return state;
+      }
       const ownedItemIds = applyInteractionItemEffects(
         story,
         state.ownedItemIds,
@@ -202,14 +218,22 @@ export function applyInteractionItemEffects(
             (!effect.characterId ||
               getItemOwnerIdForInstance(story, itemId) === effect.characterId),
         );
-        if (index !== -1) next.splice(index, 1);
+        if (index !== -1) {
+          next.splice(index, 1);
+        }
       }
       continue;
     }
-    if (!effect.itemId) continue;
+    if (!effect.itemId) {
+      continue;
+    }
     const index = next.indexOf(effect.itemId);
-    if (effect.operation === 'obtain' && index === -1) next.push(effect.itemId);
-    if (effect.operation === 'lose' && index !== -1) next.splice(index, 1);
+    if (effect.operation === 'obtain' && index === -1) {
+      next.push(effect.itemId);
+    }
+    if (effect.operation === 'lose' && index !== -1) {
+      next.splice(index, 1);
+    }
   }
   return next;
 }
@@ -225,16 +249,22 @@ export function getJourneyOwnedItemIds(story: Story, journey: string[]): string[
 
 export function getItemDefinitionIdForInstance(story: Story, itemId: string): string | undefined {
   const authored = getStructurallyPlacedItemInstances(story).find(({ item }) => item.id === itemId);
-  if (authored) return authored.item.itemDefinitionId;
+  if (authored) {
+    return authored.item.itemDefinitionId;
+  }
   const ownedRuntimeMatch = /^runtime-item:\d+:\d+:[^:]*:(.+)$/.exec(itemId);
-  if (ownedRuntimeMatch) return decodeURIComponent(ownedRuntimeMatch[1]);
+  if (ownedRuntimeMatch) {
+    return decodeURIComponent(ownedRuntimeMatch[1]);
+  }
   const legacyRuntimeMatch = /^runtime-item:\d+:\d+:(.+)$/.exec(itemId);
   return legacyRuntimeMatch ? decodeURIComponent(legacyRuntimeMatch[1]) : undefined;
 }
 
 export function getItemOwnerIdForInstance(story: Story, itemId: string): string | undefined {
   const authored = getStructurallyPlacedItemInstances(story).find(({ item }) => item.id === itemId);
-  if (authored) return authored.ownerId;
+  if (authored) {
+    return authored.ownerId;
+  }
   const match = /^runtime-item:\d+:\d+:([^:]*):/.exec(itemId);
   return match?.[1] ? decodeURIComponent(match[1]) : undefined;
 }
@@ -351,7 +381,9 @@ export function applyInteractionItemStatChanges(
       effect.operation,
       resolvedValue,
     );
-    if (changed !== undefined) next[effect.itemId][effect.statId] = changed;
+    if (changed !== undefined) {
+      next[effect.itemId][effect.statId] = changed;
+    }
   }
   return next;
 }
@@ -381,7 +413,9 @@ export function applyInteractionVariableChanges(
   for (const effect of interaction.statEffects ?? []) {
     const target = effect.itemId ? itemStatValues[effect.itemId] : statValues;
     const definition = getStatDefinitionForAssignment(story, effect.statId, effect.itemId);
-    if (!target || !definition) continue;
+    if (!target || !definition) {
+      continue;
+    }
     const context: Record<string, StatValue> = { ...statValues };
     for (const [itemId, assignments] of Object.entries(itemStatValues)) {
       for (const [statId, value] of Object.entries(assignments)) {
@@ -389,9 +423,13 @@ export function applyInteractionVariableChanges(
       }
     }
     const value = resolveEffectValue(effect, context);
-    if (value === undefined || !isStatValueOfType(value, getStatValueType(definition))) continue;
+    if (value === undefined || !isStatValueOfType(value, getStatValueType(definition))) {
+      continue;
+    }
     const changed = applyEffect(target[effect.statId], effect.operation, value);
-    if (changed !== undefined) target[effect.statId] = changed;
+    if (changed !== undefined) {
+      target[effect.statId] = changed;
+    }
   }
   return { statValues, itemStatValues };
 }
@@ -399,7 +437,9 @@ export function applyInteractionVariableChanges(
 export function getJourneyLocation(story: Story, journey: string[]): string | null {
   for (let index = journey.length - 1; index >= 0; index -= 1) {
     const interaction = story.interactions.find(({ id }) => id === journey[index]);
-    if (interaction?.locationId) return interaction.locationId;
+    if (interaction?.locationId) {
+      return interaction.locationId;
+    }
   }
   return null;
 }

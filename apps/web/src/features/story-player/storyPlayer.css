@@ -1,5 +1,26 @@
 /* Shared Reader and Simulation player workspace. */
 
+.interaction-effects-summary {
+  display: grid;
+  gap: 0.35rem;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.interaction-effects-summary li {
+  display: flex;
+  align-items: baseline;
+  gap: 0.45rem;
+}
+
+.interaction-effects-summary-icon {
+  color: var(--color-primary);
+  font-size: 0.8em;
+  font-style: normal;
+  font-weight: 700;
+}
+
 .player-page {
   position: relative;
   display: grid;
@@ -218,6 +239,29 @@
 
 .player-card-passing {
   visibility: hidden;
+}
+
+.player-card > .player-interaction-label {
+  display: flex;
+  width: fit-content;
+  max-width: calc(100% - 2rem);
+  align-items: center;
+  justify-content: center;
+  gap: 0.35rem;
+  margin: 0.9rem auto 0.75rem;
+  padding: 0.35rem 0.75rem;
+  border: 1px solid var(--color-primary-halo-strong);
+  border-radius: 999px;
+  background: var(--color-primary-soft);
+  color: var(--color-primary-strong);
+  box-shadow: var(--shadow-card);
+  font-family: inherit;
+  font-size: 0.9rem;
+  font-weight: 650;
+  line-height: 1.25;
+  text-align: center;
+  text-overflow: ellipsis;
+  white-space: nowrap;
 }
 
 ::view-transition-old(root),
@@ -623,23 +667,42 @@ span.conditional-text {
   color: white;
 }
 
-.player-scene-meta > span:first-child {
-  display: grid;
+.player-scene-meta .interaction-context--scene {
+  display: flex;
+  min-width: 0;
+  align-items: end;
+  gap: 1rem;
   margin-right: auto;
 }
 
-.player-scene-meta small {
-  color: #c5d2cc;
-  font-size: 0.53rem;
-  font-weight: 700;
-  letter-spacing: 0.1em;
-  text-transform: uppercase;
-}
-
-.player-scene-meta b {
+.interaction-context--scene .interaction-context-location {
+  display: flex;
+  min-width: 0;
+  align-items: center;
+  gap: 0.35rem;
   font-family: var(--font-narrative);
   font-size: 0.95rem;
   font-weight: 500;
+}
+
+.interaction-context--scene .interaction-context-location-icon {
+  flex: none;
+  width: 1rem;
+  height: 1rem;
+  color: var(--color-surface);
+}
+
+.player-scene-time {
+  display: inline-flex;
+  flex: none;
+  align-items: center;
+  gap: 0.35rem;
+}
+
+.player-scene-time-icon {
+  width: 0.85rem;
+  height: 0.85rem;
+  color: var(--color-surface);
 }
 
 .player-scene-meta time {
@@ -648,25 +711,43 @@ span.conditional-text {
   font-variant-numeric: tabular-nums;
 }
 
-.scene-character-list {
+.interaction-context--scene .interaction-context-character-group {
   display: flex;
   padding-left: 0.35rem;
 }
+.interaction-context--scene .interaction-context-characters-icon {
+  width: 0.9rem;
+  height: 0.9rem;
+  color: var(--color-surface);
+}
 
-.scene-character-list img,
-.scene-character-list i {
+.interaction-context--scene .interaction-context-avatar {
   display: grid;
   width: 28px;
   height: 28px;
   place-items: center;
   margin-left: -0.35rem;
-  border: 2px solid #20342b;
+  border: 2px solid var(--color-surface);
   border-radius: 50%;
-  background: #789181;
-  color: white;
+  background: var(--color-primary-strong);
+  color: var(--color-surface);
   object-fit: cover;
   font-size: 0.48rem;
   font-style: normal;
+}
+
+.simulation-current-effects {
+  margin: 1rem 0;
+  color: var(--color-muted);
+  font-size: var(--type-size-control);
+}
+
+.simulation-current-effects > h2 {
+  margin: 0 0 0.4rem;
+  color: var(--color-text);
+  font-family: inherit;
+  font-size: var(--type-size-compact);
+  font-weight: 700;
 }
 
 .player-story-content {
@@ -1051,8 +1132,9 @@ span.conditional-text {
     left: 1rem;
   }
 
-  .scene-character-list {
-    display: none;
+  .interaction-context--scene .interaction-context-avatar {
+    width: 22px;
+    height: 22px;
   }
 
   .player-story-content {

@@ -44,6 +44,26 @@ need an explicit answer before the affected capability is implemented.
   deletion should also soft-delete or hide its threads, and define how undo,
   restore, and replies behave. Do not permanently delete the discussion.
 
+## Author Notes and Writing Workflows
+
+- Define the purpose, category, target, ownership/visibility, filtering, and
+  lifecycle of persistent author notes before implementing them. Distinguish
+  notes that remain as documentation from the existing threaded, open/resolved
+  review discussions. See [Annotations](annotations.md) and the
+  [anonymized product discovery synthesis](product-discovery-synthesis.md).
+- Explore whether authors need a continuous document or sequence view for writing
+  long linear passages across several Interactions. Compare a projection over
+  existing Interactions with introducing a higher-level scene/sequence concept;
+  preserve stable identity, Triggers, conditions, comments, and one canonical
+  Story model. Do not infer that the Tiptap editor for one Interaction or the
+  proposed CodeMirror source mode already solves this workflow.
+- Decide whether Groups, notes, entities, and current Story Canvas navigation
+  adequately support visual research and worldbuilding before introducing a free
+  context board. Keep documentary links distinct from executable Triggers.
+- Before implementing presets, define how object presets differ from reusable
+  structures, how built-in defaults differ from saved templates, and how copied
+  references, variable dependencies, and stable identifiers are resolved.
+
 ## Story Format and Examples
 
 - Define a stable `story-format.md` before JSON import/export or external

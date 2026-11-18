@@ -1,13 +1,10 @@
-import type { StatEffect, StatValue } from '../../model/stats.js';
-import type { StatComparisonOperator } from '../../triggers/conditions.js';
-import { escapeRegExp, normalizeIdentifier } from './helpers.js';
-import type {
-  ChoiceOption,
-  ParsedScene,
-  SourceCondition,
-  SourceLine,
-  Statement,
-} from './models.js';
+import { normalizeIdentifier } from './helpers.js';
+import {
+  readSourceCondition,
+  readVariableAssignment,
+  readVariableDeclaration,
+} from './expressions.js';
+import type { ChoiceOption, ParsedScene, SourceLine, Statement } from './models.js';
 import { addChoiceScriptImportIssue, addChoiceScriptSourceIssue as addIssue } from './report.js';
 import type { ChoiceScriptImportReport, ChoiceScriptSourceFile } from './types.js';
 
@@ -78,14 +75,24 @@ function readSceneMetadata(lines: SourceLine[]) {
   for (let index = 0; index < lines.length; index += 1) {
     const line = lines[index];
     const titleMatch = line.text.match(/^\*title\s+(.+)$/i);
-    if (titleMatch) title = titleMatch[1].trim();
-    if (!/^\*scene_list\b/i.test(line.text)) continue;
+    if (titleMatch) {
+      title = titleMatch[1].trim();
+    }
+    if (!/^\*scene_list\b/i.test(line.text)) {
+      continue;
+    }
     for (let child = index + 1; child < lines.length; child += 1) {
       const candidate = lines[child];
-      if (!candidate.text) continue;
-      if (candidate.indent <= line.indent) break;
+      if (!candidate.text) {
+        continue;
+      }
+      if (candidate.indent <= line.indent) {
+        break;
+      }
       const name = normalizeIdentifier(candidate.text.split(/\s+/)[0]);
-      if (name) sceneList.push(name);
+      if (name) {
+        sceneList.push(name);
+      }
     }
   }
   return { title, sceneList };
@@ -101,8 +108,12 @@ function parseStatements(
   let textLines: string[] = [];
   let textSource: SourceLine | undefined;
   const flushText = () => {
-    while (textLines[0] === '') textLines.shift();
-    while (textLines.at(-1) === '') textLines.pop();
+    while (textLines[0] === '') {
+      textLines.shift();
+    }
+    while (textLines.at(-1) === '') {
+      textLines.pop();
+    }
     if (textLines.length > 0 && textSource) {
       statements.push({ kind: 'text', lines: textLines, source: textSource });
     }
@@ -127,7 +138,9 @@ function parseStatements(
       continue;
     }
     if (!line.text) {
-      if (textLines.length > 0) textLines.push('');
+      if (textLines.length > 0) {
+        textLines.push('');
+      }
       continue;
     }
     if (!line.text.startsWith('*')) {
@@ -243,7 +256,9 @@ function parseChoice(
       cursor += 1;
       continue;
     }
-    if (candidate.indent <= choiceLine.indent) break;
+    if (candidate.indent <= choiceLine.indent) {
+      break;
+    }
     if (readOptionHeader(candidate.text)) {
       optionIndent = candidate.indent;
       break;
@@ -269,8 +284,9 @@ function parseChoice(
       choiceEnd = index;
       break;
     }
-    if (candidate.indent === optionIndent && readOptionHeader(candidate.text))
+    if (candidate.indent === optionIndent && readOptionHeader(candidate.text)) {
       optionStarts.push(index);
+    }
   }
   const options = optionStarts.map((optionStart, optionIndex) => {
     const source = lines[optionStart];
@@ -303,7 +319,9 @@ function readOptionHeader(
   text: string,
 ): { title: string; conditional: boolean; conditionExpression?: string } | undefined {
   const direct = text.match(/^#\s*(.*)$/);
-  if (direct) return { title: direct[1].trim(), conditional: false };
+  if (direct) {
+    return { title: direct[1].trim(), conditional: false };
+  }
   const conditional = text.match(/^\*(?:selectable_if|if)\s+(.+?)\s*#\s*(.*)$/i);
   if (conditional) {
     return {
@@ -317,96 +335,8 @@ function readOptionHeader(
 
 function skipIndentedBlock(lines: SourceLine[], index: number, end: number): number {
   let cursor = index + 1;
-  while (cursor < end && (!lines[cursor].text || lines[cursor].indent > lines[index].indent))
+  while (cursor < end && (!lines[cursor].text || lines[cursor].indent > lines[index].indent)) {
     cursor += 1;
+  }
   return cursor - 1;
-}
-
-function readVariableDeclaration(argument: string) {
-  const match = argument.match(/^([a-z_][a-z0-9_]*)\s+(.+)$/i);
-  if (!match) return undefined;
-  const value = readLiteral(match[2]);
-  return value === undefined ? undefined : { name: normalizeIdentifier(match[1]), value };
-}
-
-function readVariableAssignment(
-  argument: string,
-): { name: string; operation: StatEffect['operation']; value: StatValue } | undefined {
-  const match = argument.match(/^([a-z_][a-z0-9_]*)\s+(.+)$/i);
-  if (!match) return undefined;
-  const name = normalizeIdentifier(match[1]);
-  const expression = match[2].trim();
-  const relative = expression.match(/^([+-])\s*(\d+(?:\.\d+)?)$/);
-  if (relative) {
-    return {
-      name,
-      operation: 'add',
-      value: Number(relative[2]) * (relative[1] === '-' ? -1 : 1),
-    };
-  }
-  const selfRelative = expression.match(
-    new RegExp(`^${escapeRegExp(name)}\\s*([+-])\\s*(\\d+(?:\\.\\d+)?)$`, 'i'),
-  );
-  if (selfRelative) {
-    return {
-      name,
-      operation: 'add',
-      value: Number(selfRelative[2]) * (selfRelative[1] === '-' ? -1 : 1),
-    };
-  }
-  const value = readLiteral(expression);
-  return value === undefined ? undefined : { name, operation: 'set', value };
-}
-
-function readSourceCondition(expression: string, source: SourceLine): SourceCondition | undefined {
-  const normalized = expression
-    .trim()
-    .replace(/^\((.*)\)$/, '$1')
-    .trim();
-  const negated = normalized.match(/^not\s*\(\s*([a-z_][a-z0-9_]*)\s*\)$/i);
-  if (negated) {
-    return {
-      name: normalizeIdentifier(negated[1]),
-      operator: 'eq',
-      value: false,
-      source,
-    };
-  }
-  const truthy = normalized.match(/^([a-z_][a-z0-9_]*)$/i);
-  if (truthy) {
-    return { name: normalizeIdentifier(truthy[1]), operator: 'eq', value: true, source };
-  }
-  const comparison = normalized.match(/^([a-z_][a-z0-9_]*)\s*(<=|>=|!=|<>|=|<|>)\s*(.+)$/i);
-  if (!comparison) return undefined;
-  const value = readLiteral(comparison[3]);
-  if (value === undefined) return undefined;
-  const operators: Record<string, StatComparisonOperator> = {
-    '=': 'eq',
-    '!=': 'neq',
-    '<>': 'neq',
-    '<': 'lt',
-    '<=': 'lte',
-    '>': 'gt',
-    '>=': 'gte',
-  };
-  return {
-    name: normalizeIdentifier(comparison[1]),
-    operator: operators[comparison[2]],
-    value,
-    source,
-  };
-}
-
-function readLiteral(expression: string): StatValue | undefined {
-  const text = expression
-    .trim()
-    .replace(/^\((.*)\)$/, '$1')
-    .trim();
-  if (/^(true|false)$/i.test(text)) return text.toLowerCase() === 'true';
-  if (/^-?\d+(?:\.\d+)?$/.test(text)) {
-    const value = Number(text);
-    return Number.isFinite(value) ? value : undefined;
-  }
-  const quoted = text.match(/^(?:"([\s\S]*)"|'([\s\S]*)')$/);
-  return quoted ? (quoted[1] ?? quoted[2] ?? '') : undefined;
 }

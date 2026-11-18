@@ -36,7 +36,9 @@ describe('story persistence lifecycle', () => {
     vi.mocked(api.getStory).mockResolvedValue(storyFixture());
     const { result } = renderLifecycle();
 
-    await waitFor(() => expect(result.current.story?.id).toBe('story-1'));
+    await waitFor(() => {
+      expect(result.current.story?.id).toBe('story-1');
+    });
 
     expect(result.current.error).toBe('');
     expect(result.current.saveStatus).toBe('idle');
@@ -55,7 +57,9 @@ describe('story persistence lifecycle', () => {
       { wrapper },
     );
 
-    await waitFor(() => expect(result.current.story?.id).toBe('story-1'));
+    await waitFor(() => {
+      expect(result.current.story?.id).toBe('story-1');
+    });
 
     expect(loadStoryEditorProjection).toHaveBeenCalledOnce();
   });
@@ -63,7 +67,9 @@ describe('story persistence lifecycle', () => {
   it('tracks successful and failed saves without owning another Story state', async () => {
     vi.mocked(api.getStory).mockResolvedValue(storyFixture());
     const { result } = renderLifecycle();
-    await waitFor(() => expect(result.current.story).toBeDefined());
+    await waitFor(() => {
+      expect(result.current.story).toBeDefined();
+    });
 
     let saved: string | undefined;
     await act(async () => {
@@ -85,9 +91,13 @@ describe('story persistence lifecycle', () => {
   it('reports unexpected editor operation failures through save feedback', async () => {
     vi.mocked(api.getStory).mockResolvedValue(storyFixture());
     const { result } = renderLifecycle();
-    await waitFor(() => expect(result.current.story).toBeDefined());
+    await waitFor(() => {
+      expect(result.current.story).toBeDefined();
+    });
 
-    act(() => result.current.reportSaveError(new Error('Unexpected graph failure')));
+    act(() => {
+      result.current.reportSaveError(new Error('Unexpected graph failure'));
+    });
 
     expect(result.current).toMatchObject({
       error: 'Unexpected graph failure',
@@ -98,7 +108,9 @@ describe('story persistence lifecycle', () => {
   it('keeps a concurrent save batch pending until every response completes', async () => {
     vi.mocked(api.getStory).mockResolvedValue(storyFixture());
     const { result } = renderLifecycle();
-    await waitFor(() => expect(result.current.story).toBeDefined());
+    await waitFor(() => {
+      expect(result.current.story).toBeDefined();
+    });
 
     let resolveSlowSave: ((value: string) => void) | undefined;
     const slowOperation = new Promise<string>((resolve) => {
@@ -124,7 +136,9 @@ describe('story persistence lifecycle', () => {
   it('keeps an earlier concurrent failure visible after a later save succeeds', async () => {
     vi.mocked(api.getStory).mockResolvedValue(storyFixture());
     const { result } = renderLifecycle();
-    await waitFor(() => expect(result.current.story).toBeDefined());
+    await waitFor(() => {
+      expect(result.current.story).toBeDefined();
+    });
 
     let rejectSlowSave: ((reason: Error) => void) | undefined;
     const slowOperation = new Promise<string>((_, reject) => {
@@ -153,25 +167,39 @@ describe('story persistence lifecycle', () => {
   it('defers realtime reloads until a local edit finishes', async () => {
     vi.mocked(api.getStory).mockResolvedValue(storyFixture());
     const { result } = renderLifecycle();
-    await waitFor(() => expect(result.current.story).toBeDefined());
+    await waitFor(() => {
+      expect(result.current.story).toBeDefined();
+    });
     vi.mocked(api.getStory).mockClear();
     vi.mocked(api.getStory).mockResolvedValue({ ...storyFixture(), title: 'Remote title' });
     const invalidate = vi.mocked(useStoryRealtime).mock.calls.at(-1)?.[2];
-    if (!invalidate) throw new Error('Expected a realtime callback');
+    if (!invalidate) {
+      throw new Error('Expected a realtime callback');
+    }
 
-    act(() => result.current.beginLocalEdit());
-    act(() => invalidate('changed'));
+    act(() => {
+      result.current.beginLocalEdit();
+    });
+    act(() => {
+      invalidate('changed');
+    });
     expect(api.getStory).not.toHaveBeenCalled();
 
-    act(() => result.current.endLocalEdit());
-    await waitFor(() => expect(result.current.story?.title).toBe('Remote title'));
+    act(() => {
+      result.current.endLocalEdit();
+    });
+    await waitFor(() => {
+      expect(result.current.story?.title).toBe('Remote title');
+    });
     expect(api.getStory).toHaveBeenCalledOnce();
   });
 
   it('does not replace a newer local revision with an older realtime projection', async () => {
     vi.mocked(api.getStory).mockResolvedValue(storyFixture());
     const { result } = renderLifecycle();
-    await waitFor(() => expect(result.current.story).toBeDefined());
+    await waitFor(() => {
+      expect(result.current.story).toBeDefined();
+    });
 
     let resolveRefresh: ((story: Story) => void) | undefined;
     vi.mocked(loadStoryEditorProjection).mockImplementationOnce(
@@ -181,10 +209,16 @@ describe('story persistence lifecycle', () => {
         }),
     );
     const invalidate = vi.mocked(useStoryRealtime).mock.calls.at(-1)?.[2];
-    if (!invalidate) throw new Error('Expected a realtime callback');
+    if (!invalidate) {
+      throw new Error('Expected a realtime callback');
+    }
 
-    act(() => invalidate('changed'));
-    await waitFor(() => expect(resolveRefresh).toBeDefined());
+    act(() => {
+      invalidate('changed');
+    });
+    await waitFor(() => {
+      expect(resolveRefresh).toBeDefined();
+    });
     act(() => {
       result.current.setStory({ ...storyFixture(), revision: 3, title: 'Latest local state' });
       resolveRefresh?.({ ...storyFixture(), revision: 2, title: 'Stale projection' });
@@ -197,7 +231,9 @@ describe('story persistence lifecycle', () => {
   it('applies trigger tombstones to complete incoming story responses', async () => {
     vi.mocked(api.getStory).mockResolvedValue(storyFixture());
     const { result } = renderLifecycle();
-    await waitFor(() => expect(result.current.story).toBeDefined());
+    await waitFor(() => {
+      expect(result.current.story).toBeDefined();
+    });
     result.current.deletedTriggerIdsRef.current.add('alternative-trigger');
 
     const merged = result.current.mergeIncomingStory(storyFixture(), storyFixture());
@@ -229,9 +265,13 @@ describe('story persistence lifecycle', () => {
       { initialProps: { storyId: 'story-1' } },
     );
 
-    await waitFor(() => expect(reportFirstProgress).toBeDefined());
+    await waitFor(() => {
+      expect(reportFirstProgress).toBeDefined();
+    });
     rerender({ storyId: 'story-2' });
-    await waitFor(() => expect(result.current.story?.id).toBe('story-2'));
+    await waitFor(() => {
+      expect(result.current.story?.id).toBe('story-2');
+    });
 
     act(() => {
       reportFirstProgress?.(firstStory);
@@ -259,7 +299,9 @@ describe('story persistence lifecycle', () => {
       },
       { initialProps: { storyId: 'story-1' } },
     );
-    await waitFor(() => expect(result.current.story?.id).toBe('story-1'));
+    await waitFor(() => {
+      expect(result.current.story?.id).toBe('story-1');
+    });
 
     let trackedSave: Promise<Story | undefined> | undefined;
     act(() => {
@@ -268,7 +310,9 @@ describe('story persistence lifecycle', () => {
     expect(result.current.saveStatus).toBe('saving');
 
     rerender({ storyId: 'story-2' });
-    await waitFor(() => expect(result.current.story?.id).toBe('story-2'));
+    await waitFor(() => {
+      expect(result.current.story?.id).toBe('story-2');
+    });
 
     let saveResult: Story | undefined;
     await act(async () => {
@@ -296,7 +340,9 @@ describe('story persistence lifecycle', () => {
       useStoryPersistenceLifecycle({ storyId: 'story-1', story: undefined, setStory }),
     );
 
-    await waitFor(() => expect(resolveLoad).toBeDefined());
+    await waitFor(() => {
+      expect(resolveLoad).toBeDefined();
+    });
     unmount();
     act(() => {
       reportProgress?.(storyFixture());

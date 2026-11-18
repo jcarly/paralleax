@@ -10,7 +10,9 @@ describe('story connection controller', () => {
     const { actions, result } = renderController();
     const connection = connect('source', 'target');
 
-    act(() => result.current.requestConnection(connection));
+    act(() => {
+      result.current.requestConnection(connection);
+    });
 
     expect(actions.connectInteractions).toHaveBeenCalledWith(connection);
     expect(actions.connectToExistingTrigger).not.toHaveBeenCalled();
@@ -21,9 +23,13 @@ describe('story connection controller', () => {
     const error = new Error('Unexpected graph mutation failure');
     actions.connectInteractions.mockRejectedValue(error);
 
-    act(() => result.current.requestConnection(connect('source', 'target')));
+    act(() => {
+      result.current.requestConnection(connect('source', 'target'));
+    });
 
-    await waitFor(() => expect(actions.onUnexpectedError).toHaveBeenCalledWith(error));
+    await waitFor(() => {
+      expect(actions.onUnexpectedError).toHaveBeenCalledWith(error);
+    });
   });
 
   it('ignores a connection that does not target the input plus handle', () => {
@@ -33,7 +39,9 @@ describe('story connection controller', () => {
       targetHandle: 'routing-input-top',
     };
 
-    act(() => result.current.requestConnection(connection));
+    act(() => {
+      result.current.requestConnection(connection);
+    });
 
     expect(actions.connectInteractions).not.toHaveBeenCalled();
     expect(actions.connectToExistingTrigger).not.toHaveBeenCalled();
@@ -42,26 +50,30 @@ describe('story connection controller', () => {
   it('creates positioned child and parent interactions after empty-canvas drops', () => {
     const { actions, result } = renderController();
 
-    act(() =>
+    act(() => {
       result.current.startCanvasConnection(mouseEvent(580, 452), {
         nodeId: 'source',
         handleType: 'source',
         handleId: null,
-      }),
-    );
-    act(() => result.current.endCanvasConnection(mouseEvent(580, 452), emptyConnectionState()));
+      });
+    });
+    act(() => {
+      result.current.endCanvasConnection(mouseEvent(580, 452), emptyConnectionState());
+    });
     expect(actions.createChildFromInteraction).toHaveBeenCalledWith('source', {
       x: 475,
       y: 452,
     });
-    act(() =>
+    act(() => {
       result.current.startCanvasConnection(mouseEvent(320, 328), {
         nodeId: 'target',
         handleType: 'target',
         handleId: null,
-      }),
-    );
-    act(() => result.current.endCanvasConnection(mouseEvent(320, 328), emptyConnectionState()));
+      });
+    });
+    act(() => {
+      result.current.endCanvasConnection(mouseEvent(320, 328), emptyConnectionState());
+    });
     expect(actions.createParentForInteraction).toHaveBeenCalledWith('target', {
       x: 215,
       y: 212,
@@ -75,14 +87,16 @@ describe('story connection controller', () => {
     marker.dataset.interactionId = 'target';
     marker.dataset.triggerId = 'target-trigger';
 
-    act(() =>
+    act(() => {
       result.current.startCanvasConnection(mouseEvent(0, 0), {
         nodeId: 'source',
         handleType: 'source',
         handleId: null,
-      }),
-    );
-    act(() => result.current.endCanvasConnection(mouseEvent(0, 0, marker), emptyConnectionState()));
+      });
+    });
+    act(() => {
+      result.current.endCanvasConnection(mouseEvent(0, 0, marker), emptyConnectionState());
+    });
 
     expect(actions.connectToExistingTrigger).toHaveBeenCalledWith(
       'source',
@@ -95,15 +109,19 @@ describe('story connection controller', () => {
   it('does not create an interaction after a completed or unstarted connection', () => {
     const { actions, result } = renderController();
 
-    act(() => result.current.endCanvasConnection(mouseEvent(0, 0), emptyConnectionState()));
-    act(() =>
+    act(() => {
+      result.current.endCanvasConnection(mouseEvent(0, 0), emptyConnectionState());
+    });
+    act(() => {
       result.current.startCanvasConnection(mouseEvent(0, 0), {
         nodeId: 'source',
         handleType: 'source',
         handleId: null,
-      }),
-    );
-    act(() => result.current.endCanvasConnection(mouseEvent(0, 0), connectionState(true)));
+      });
+    });
+    act(() => {
+      result.current.endCanvasConnection(mouseEvent(0, 0), connectionState(true));
+    });
 
     expect(actions.createChildFromInteraction).not.toHaveBeenCalled();
     expect(actions.createParentForInteraction).not.toHaveBeenCalled();
@@ -151,7 +169,9 @@ function connect(source: string, target: string): Connection {
 
 function mouseEvent(clientX: number, clientY: number, target?: Element) {
   const event = new MouseEvent('mouseup', { clientX, clientY });
-  if (target) Object.defineProperty(event, 'target', { value: target });
+  if (target) {
+    Object.defineProperty(event, 'target', { value: target });
+  }
   return event;
 }
 

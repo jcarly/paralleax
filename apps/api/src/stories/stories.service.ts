@@ -1,4 +1,4 @@
-import { Injectable } from '@nestjs/common';
+import { Inject, Injectable } from '@nestjs/common';
 import {
   STORY_LIST_PAGE_SIZE,
   type CharacterItemMutationResult,
@@ -68,16 +68,29 @@ import type {
 
 @Injectable()
 export class StoriesService {
-  constructor(
-    private readonly metadata: StoryMetadataService,
-    private readonly access: StoryAccessService,
-    private readonly readerProgress: StoryReaderProgressService,
-    private readonly runtime: StoryRuntimeService,
-    private readonly graph: StoryGraphService,
-    private readonly groups: StoryGroupService,
-    private readonly context: StoryContextService,
-    private readonly history: StoryHistoryService,
-  ) {}
+  @Inject(StoryMetadataService)
+  private readonly metadata!: StoryMetadataService;
+
+  @Inject(StoryAccessService)
+  private readonly access!: StoryAccessService;
+
+  @Inject(StoryReaderProgressService)
+  private readonly readerProgress!: StoryReaderProgressService;
+
+  @Inject(StoryRuntimeService)
+  private readonly runtime!: StoryRuntimeService;
+
+  @Inject(StoryGraphService)
+  private readonly graph!: StoryGraphService;
+
+  @Inject(StoryGroupService)
+  private readonly groups!: StoryGroupService;
+
+  @Inject(StoryContextService)
+  private readonly context!: StoryContextService;
+
+  @Inject(StoryHistoryService)
+  private readonly history!: StoryHistoryService;
 
   async list(
     userId: string,
@@ -314,10 +327,9 @@ export class StoriesService {
   async updateTrigger(
     storyId: string,
     interactionId: string,
-    triggerId: string,
-    input: UpdateTriggerDto,
-    userId: string,
+    ...update: [triggerId: string, input: UpdateTriggerDto, userId: string]
   ): Promise<TriggerMutationResult> {
+    const [triggerId, input, userId] = update;
     return this.graph.updateTrigger(storyId, interactionId, triggerId, input, userId);
   }
 
@@ -439,10 +451,9 @@ export class StoriesService {
   async updateCharacterStat(
     storyId: string,
     characterId: string,
-    statId: string,
-    input: UpdateCharacterStatDto,
-    userId: string,
+    ...update: [statId: string, input: UpdateCharacterStatDto, userId: string]
   ): Promise<CharacterStatMutationResult> {
+    const [statId, input, userId] = update;
     return this.context.updateCharacterStat(storyId, characterId, statId, input, userId);
   }
 

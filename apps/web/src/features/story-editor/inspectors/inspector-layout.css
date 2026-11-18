@@ -14,6 +14,42 @@
   box-shadow: -10px 0 28px #2d2d2d0f;
   z-index: 5;
 }
+.inspector-resize-handle {
+  position: absolute;
+  z-index: 8;
+  top: 0;
+  bottom: 0;
+  left: 0;
+  width: 12px;
+  cursor: col-resize;
+  touch-action: none;
+}
+.inspector-resize-handle::after {
+  position: absolute;
+  top: 0;
+  bottom: 0;
+  left: 5px;
+  width: 2px;
+  background: transparent;
+  content: '';
+}
+.inspector-resize-handle:focus-visible {
+  outline: 2px solid var(--color-primary);
+  outline-offset: -2px;
+}
+.inspector-maximize {
+  flex: none;
+  width: 32px;
+  height: 32px;
+  padding: 0;
+  border: 1px solid var(--color-border);
+  background: var(--color-surface-secondary);
+}
+.inspector-maximize span {
+  display: inline-block;
+  font-size: 1rem;
+  line-height: 1;
+}
 .inspector.comments-inspector {
   display: flex;
   padding: 0;

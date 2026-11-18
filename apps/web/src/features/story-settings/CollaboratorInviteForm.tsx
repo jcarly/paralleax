@@ -76,7 +76,7 @@ function CollaboratorInviteFormView({
   const { t } = useTranslation();
 
   return (
-    <form className="collaborator-form" onSubmit={(event) => void onSubmit(event)}>
+    <form className="collaborator-form" onSubmit={onSubmit}>
       <CollaboratorEmailField
         email={email}
         emailError={emailError}
@@ -161,7 +161,9 @@ function CollaboratorEmailField({
         disabled={pending}
         aria-invalid={emailError ? true : undefined}
         aria-describedby={emailError ? 'collaborator-email-error' : undefined}
-        onChange={(event) => onChange(event.target.value, event.currentTarget.validity.valid)}
+        onChange={(event) => {
+          onChange(event.target.value, event.currentTarget.validity.valid);
+        }}
       />
       {emailError ? (
         <small className="form-field-error" id="collaborator-email-error">

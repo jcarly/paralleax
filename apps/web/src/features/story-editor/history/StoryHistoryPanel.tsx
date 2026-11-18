@@ -139,8 +139,12 @@ function historyEntryLabel(
   const operation = key
     ? t(`editor.history.operations.${key}`)
     : humanizeUnknownOperation(entry.operation);
-  if (entry.kind === 'undo') return t('editor.history.undid', { operation });
-  if (entry.kind === 'redo') return t('editor.history.redid', { operation });
+  if (entry.kind === 'undo') {
+    return t('editor.history.undid', { operation });
+  }
+  if (entry.kind === 'redo') {
+    return t('editor.history.redid', { operation });
+  }
   return operation;
 }
 

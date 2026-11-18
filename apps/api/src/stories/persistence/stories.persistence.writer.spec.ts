@@ -1,5 +1,4 @@
 import { createStoryChangeDelta, type Story } from '@paralleax/shared';
-import type { Queryable } from './stories.persistence.types';
 import { persistStoryDifference } from './stories.persistence.writer';
 
 describe('Story difference persistence', () => {
@@ -20,7 +19,7 @@ describe('Story difference persistence', () => {
     const delta = createStoryChangeDelta(before, after)!;
     const query = jest.fn().mockResolvedValue({ rows: [], rowCount: 2_000 });
 
-    await persistStoryDifference({ query } as unknown as Queryable, before, after, delta);
+    await persistStoryDifference({ query }, before, after, delta);
 
     expect(query).toHaveBeenCalledTimes(3);
     expect(query).toHaveBeenCalledWith(expect.stringContaining('UPDATE interactions AS target'), [
@@ -50,7 +49,7 @@ describe('Story difference persistence', () => {
     ];
     const query = jest.fn().mockResolvedValue({ rows: [], rowCount: 1 });
 
-    await persistStoryDifference({ query } as unknown as Queryable, before, after);
+    await persistStoryDifference({ query }, before, after);
 
     expect(query).toHaveBeenCalledWith(
       'UPDATE interactions SET conditional_text_blocks = $2 WHERE id = $1',

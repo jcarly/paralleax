@@ -17,7 +17,9 @@ const WEEKDAYS: Weekday[] = [
 ];
 
 export function isStoryDate(value: string): boolean {
-  if (!STORY_DATE_PATTERN.test(value)) return false;
+  if (!STORY_DATE_PATTERN.test(value)) {
+    return false;
+  }
   const [year, month, day] = value.split('-').map(Number);
   const date = new Date(Date.UTC(year, month - 1, day));
   return (
@@ -34,7 +36,9 @@ export function isStoryDateTime(value: string): boolean {
 }
 
 export function addStoryMinutes(dateTime: string, minutes: number): string {
-  if (!isStoryDateTime(dateTime)) throw new Error('Invalid story date and time');
+  if (!isStoryDateTime(dateTime)) {
+    throw new Error('Invalid story date and time');
+  }
   if (!Number.isInteger(minutes) || minutes < 0) {
     throw new Error('Interaction duration must be a non-negative integer');
   }
@@ -47,7 +51,9 @@ export function getJourneyDateTime(story: Story, journey: string[]): string {
   let current = story.startDateTime ?? DEFAULT_STORY_DATE_TIME;
   for (const interactionId of journey) {
     const interaction = story.interactions.find(({ id }) => id === interactionId);
-    if (interaction) current = addStoryMinutes(current, interaction.durationMinutes ?? 0);
+    if (interaction) {
+      current = addStoryMinutes(current, interaction.durationMinutes ?? 0);
+    }
   }
   return current;
 }

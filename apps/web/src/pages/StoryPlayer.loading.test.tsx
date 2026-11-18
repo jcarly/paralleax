@@ -1,7 +1,15 @@
-import { act, render, screen, waitFor, within } from '@testing-library/react';
+import { act, cleanup, render, screen, waitFor, within } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import { Link, Route, Routes } from 'react-router-dom';
 import { TestDataRouter } from '../test/TestDataRouter';
+
+function requireSceneElement() {
+  const element = document.querySelector('.player-scene-visual');
+  if (!element) {
+    throw new Error('Expected the scene presentation.');
+  }
+  return element;
+}
 import { describe, expect, it, vi } from 'vitest';
 import {
   api,
@@ -55,7 +63,9 @@ describe('StoryPlayer loading and presentation', () => {
     });
 
     const loadRuntimeSlice = vi.mocked(api.getStoryRuntimeSlice).getMockImplementation();
-    if (!loadRuntimeSlice) throw new Error('Expected runtime slice loading to be mocked.');
+    if (!loadRuntimeSlice) {
+      throw new Error('Expected runtime slice loading to be mocked.');
+    }
     let staleSliceRequested = false;
     let releaseStaleSlice: (() => void) | undefined;
     vi.mocked(api.getStoryRuntimeSlice).mockImplementation((storyId, request = {}) => {
@@ -71,7 +81,9 @@ describe('StoryPlayer loading and presentation', () => {
     });
 
     source?.emit('story-changed');
-    await waitFor(() => expect(staleSliceRequested).toBe(true));
+    await waitFor(() => {
+      expect(staleSliceRequested).toBe(true);
+    });
 
     await user.click(screen.getByRole('button', { name: 'Next' }));
     expect(await screen.findByDisplayValue('Next')).toBeInTheDocument();
@@ -83,11 +95,11 @@ describe('StoryPlayer loading and presentation', () => {
       await Promise.resolve();
     });
 
-    await waitFor(() =>
+    await waitFor(() => {
       expect(vi.mocked(api.getStoryRuntimeSlice).mock.calls.length).toBeGreaterThan(
         sliceCallsBeforeRelease,
-      ),
-    );
+      );
+    });
     expect(screen.getByDisplayValue('Next')).toBeInTheDocument();
     expect(screen.getByRole('button', { name: 'Secret' })).toBeInTheDocument();
   });
@@ -165,7 +177,9 @@ describe('StoryPlayer loading and presentation', () => {
     };
     let releaseFirst = () => {};
     const firstRequest = new Promise<typeof story>((resolve) => {
-      releaseFirst = () => resolve(firstStory);
+      releaseFirst = () => {
+        resolve(firstStory);
+      };
     });
     vi.mocked(api.getStory).mockImplementation((storyId) =>
       storyId === 'story-1' ? firstRequest : Promise.resolve(secondStory),
@@ -184,7 +198,9 @@ describe('StoryPlayer loading and presentation', () => {
     await user.click(screen.getByRole('link', { name: 'Open second Story' }));
     expect(await screen.findAllByText('Second active Story')).not.toHaveLength(0);
 
-    act(() => releaseFirst());
+    act(() => {
+      releaseFirst();
+    });
     await act(async () => Promise.resolve());
 
     expect(screen.queryByText('First delayed Story')).not.toBeInTheDocument();
@@ -220,7 +236,8 @@ describe('StoryPlayer loading and presentation', () => {
     const user = userEvent.setup();
     await renderPlayer();
 
-    expect(await screen.findByRole('heading', { name: 'Start' })).toBeInTheDocument();
+    const currentOptionLabel = await screen.findByRole('heading', { name: 'Start' });
+    expect(currentOptionLabel).toBeVisible();
     expect(screen.queryByRole('heading', { name: /Start the story/ })).not.toBeInTheDocument();
     expect(screen.queryByRole('button', { name: 'Start' })).not.toBeInTheDocument();
     expect(await screen.findByRole('button', { name: 'Next' })).toBeInTheDocument();
@@ -230,7 +247,7 @@ describe('StoryPlayer loading and presentation', () => {
 
     expect(screen.getByText('You arrive.')).toBeInTheDocument();
     expect(await screen.findByRole('button', { name: 'Next' })).toBeInTheDocument();
-    await waitFor(() =>
+    await waitFor(() => {
       expect(api.saveReaderProgress).toHaveBeenCalledWith(
         'story-1',
         {
@@ -240,15 +257,110 @@ describe('StoryPlayer loading and presentation', () => {
           stepStartedAt: [expect.any(String), expect.any(String)],
         },
         'reader',
-      ),
-    );
+      );
+    });
 
     await user.click(screen.getByRole('button', { name: 'Next' }));
-    expect(screen.getByRole('heading', { name: 'Next' })).toBeInTheDocument();
+    expect(screen.getByRole('heading', { name: 'Next' })).toBeVisible();
     expect(screen.getByRole('button', { name: 'Secret' })).toHaveAttribute(
       'title',
       '"Start" has been visited',
     );
+  });
+
+  it('shows the option label before the scene and authored narrative heading', async () => {
+    const titledStory = structuredClone(story);
+    titledStory.interactions[0].body = '<h2>At the door</h2><p>You arrive.</p>';
+    await renderPlayer('/stories/story-1/play', titledStory);
+
+    const optionLabel = await screen.findByRole('heading', { name: 'Start' });
+    expect(optionLabel).toBeVisible();
+    expect(screen.getByRole('heading', { name: 'At the door' })).toBeVisible();
+    expect(
+      optionLabel.compareDocumentPosition(screen.getByText('You arrive.')) &
+        Node.DOCUMENT_POSITION_FOLLOWING,
+    ).toBeTruthy();
+    expect(await screen.findByRole('button', { name: 'Next' })).toBeVisible();
+  });
+
+  it('shares label, context, and narrative order while showing effects only in Simulation', async () => {
+    const user = userEvent.setup();
+    const presentationStory = structuredClone(story);
+    presentationStory.locations = [{ id: 'harbor', name: 'Harbor', description: '' }];
+    presentationStory.characters = [{ id: 'mira', name: 'Mira Vale', description: '' }];
+    presentationStory.statDefinitions = [
+      { id: 'trust-definition', name: 'Trust', valueType: 'number' },
+    ];
+    presentationStory.stats = [
+      { id: 'trust', statDefinitionId: 'trust-definition', initialValue: 0 },
+    ];
+    presentationStory.interactions[0].locationId = 'harbor';
+    presentationStory.interactions[0].characterIds = ['mira'];
+    presentationStory.interactions[0].statEffects = [
+      { statId: 'trust', operation: 'add', value: 1 },
+    ];
+
+    await renderPlayer('/stories/story-1/play?mode=simulation', presentationStory);
+    await user.click(screen.getByRole('button', { name: 'Start' }));
+
+    const simulationLabel = await screen.findByDisplayValue('Start');
+    const simulationScene = requireSceneElement();
+    const simulationBody = screen.getByText('You arrive.');
+    expect(
+      simulationLabel.compareDocumentPosition(simulationScene) & Node.DOCUMENT_POSITION_FOLLOWING,
+    ).toBeTruthy();
+    expect(
+      simulationScene.compareDocumentPosition(simulationBody) & Node.DOCUMENT_POSITION_FOLLOWING,
+    ).toBeTruthy();
+    expect(screen.getByText('Playable story → Trust: add 1')).toBeInTheDocument();
+
+    cleanup();
+    await renderPlayer('/stories/story-1/play', presentationStory);
+    const readerLabel = await screen.findByRole('heading', { name: 'Start' });
+    const readerScene = requireSceneElement();
+    const readerBody = screen.getByText('You arrive.');
+    expect(
+      readerLabel.compareDocumentPosition(readerScene) & Node.DOCUMENT_POSITION_FOLLOWING,
+    ).toBeTruthy();
+    expect(
+      readerScene.compareDocumentPosition(readerBody) & Node.DOCUMENT_POSITION_FOLLOWING,
+    ).toBeTruthy();
+    expect(screen.queryByText('Playable story → Trust: add 1')).not.toBeInTheDocument();
+  });
+
+  it('uses the converged destination title after either incoming choice', async () => {
+    const user = userEvent.setup();
+    const convergingStory = structuredClone(story);
+    convergingStory.interactions[1] = {
+      ...convergingStory.interactions[1],
+      title: 'North path',
+      triggers: [{ id: 'north-trigger', inputInteractionIds: ['start'], conditions: [] }],
+    };
+    convergingStory.interactions[2] = {
+      ...convergingStory.interactions[2],
+      title: 'South path',
+      triggers: [{ id: 'south-trigger', inputInteractionIds: ['start'], conditions: [] }],
+    };
+    convergingStory.interactions.push({
+      id: 'common-room',
+      title: 'Common room',
+      body: 'The paths meet.',
+      position: { x: 300, y: 0 },
+      triggers: [{ id: 'common-trigger', inputInteractionIds: ['next', 'hidden'], conditions: [] }],
+    });
+    await renderPlayer('/stories/story-1/play', convergingStory);
+
+    await user.click(await screen.findByRole('button', { name: 'North path' }));
+    expect(await screen.findByRole('heading', { name: 'North path' })).toBeVisible();
+    await user.click(screen.getByRole('button', { name: 'Common room' }));
+    expect(await screen.findByRole('heading', { name: 'Common room' })).toBeVisible();
+
+    await user.click(screen.getByRole('button', { name: 'Restart' }));
+    await screen.findByRole('heading', { name: 'Start' });
+    await user.click(await screen.findByRole('button', { name: 'South path' }));
+    expect(await screen.findByRole('heading', { name: 'South path' })).toBeVisible();
+    await user.click(screen.getByRole('button', { name: 'Common room' }));
+    expect(await screen.findByRole('heading', { name: 'Common room' })).toBeVisible();
   });
 
   it('automatically passes through a body with no visible content and applies its state changes', async () => {
@@ -292,13 +404,13 @@ describe('StoryPlayer loading and presentation', () => {
     expect(screen.queryByRole('heading', { name: 'Next' })).not.toBeInTheDocument();
     expect(screen.getByText('Harbor')).toBeInTheDocument();
     expect(screen.getByText('2026-07-27 10:00')).toBeInTheDocument();
-    await waitFor(() =>
+    await waitFor(() => {
       expect(api.saveReaderProgress).toHaveBeenLastCalledWith(
         'story-1',
         expect.objectContaining({ journeyInteractionIds: ['start', 'next', 'hidden'] }),
         'reader',
-      ),
-    );
+      );
+    });
   });
 
   it('keeps an empty interaction visible when its only destination is unavailable', async () => {
@@ -348,13 +460,13 @@ describe('StoryPlayer loading and presentation', () => {
 
     expect(await screen.findByRole('heading', { name: 'Secret' })).toBeInTheDocument();
     expect(await screen.findByRole('button', { name: 'Next' })).toBeInTheDocument();
-    await waitFor(() =>
+    await waitFor(() => {
       expect(api.saveReaderProgress).toHaveBeenLastCalledWith(
         'story-1',
         expect.objectContaining({ journeyInteractionIds: ['start', 'next', 'hidden'] }),
         'reader',
-      ),
-    );
+      );
+    });
   });
 
   it('keeps empty interactions selectable in Simulation Mode', async () => {
@@ -417,7 +529,9 @@ describe('StoryPlayer loading and presentation', () => {
     });
 
     expect(await screen.findByRole('heading', { name: 'Start' })).toBeInTheDocument();
-    await waitFor(() => expect(api.saveReaderProgress).toHaveBeenCalledTimes(1));
+    await waitFor(() => {
+      expect(api.saveReaderProgress).toHaveBeenCalledTimes(1);
+    });
     expect(api.saveReaderProgress).toHaveBeenCalledWith(
       'story-1',
       expect.objectContaining({ journeyInteractionIds: ['start'] }),

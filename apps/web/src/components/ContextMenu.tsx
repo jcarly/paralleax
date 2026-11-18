@@ -31,11 +31,17 @@ export function ContextMenu({
     const previous = document.activeElement as HTMLElement | null;
     ref.current?.querySelector<HTMLButtonElement>('button:not(:disabled)')?.focus();
     const outside = (event: PointerEvent) => {
-      if (!ref.current?.contains(event.target as Node)) close.current();
+      if (!ref.current?.contains(event.target as Node)) {
+        close.current();
+      }
     };
-    const dismiss = () => close.current();
+    const dismiss = () => {
+      close.current();
+    };
     const escape = (event: globalThis.KeyboardEvent) => {
-      if (event.key === 'Escape') close.current();
+      if (event.key === 'Escape') {
+        close.current();
+      }
     };
     document.addEventListener('pointerdown', outside);
     document.addEventListener('keydown', escape);
@@ -46,8 +52,9 @@ export function ContextMenu({
       document.removeEventListener('keydown', escape);
       window.removeEventListener('blur', dismiss);
       window.removeEventListener('resize', dismiss);
-      if (document.activeElement === document.body || menu?.contains(document.activeElement))
+      if (document.activeElement === document.body || menu?.contains(document.activeElement)) {
         previous?.focus();
+      }
     };
   }, []);
   return createPortal(
@@ -62,14 +69,18 @@ export function ContextMenu({
         maxHeight: scrollable ? 'calc(100vh - 16px)' : undefined,
         overflowY: scrollable ? 'auto' : undefined,
       }}
-      onContextMenu={(event) => event.preventDefault()}
+      onContextMenu={(event) => {
+        event.preventDefault();
+      }}
       onKeyDown={(event) => {
         if (event.key === 'Escape' || event.key === 'Tab') {
           event.stopPropagation();
           close.current();
           return;
         }
-        if (!['ArrowDown', 'ArrowUp', 'Home', 'End'].includes(event.key)) return;
+        if (!['ArrowDown', 'ArrowUp', 'Home', 'End'].includes(event.key)) {
+          return;
+        }
         event.preventDefault();
         event.stopPropagation();
         const buttons = [

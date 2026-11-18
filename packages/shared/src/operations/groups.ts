@@ -4,7 +4,9 @@ import type { Group, Story } from '../model/index.js';
 export function getGroupDescendantIds(groups: readonly Group[], groupId: string): Set<string> {
   const children = new Map<string, string[]>();
   for (const group of groups) {
-    if (!group.parentGroupId) continue;
+    if (!group.parentGroupId) {
+      continue;
+    }
     const siblings = children.get(group.parentGroupId) ?? [];
     siblings.push(group.id);
     children.set(group.parentGroupId, siblings);
@@ -16,7 +18,9 @@ export function getGroupDescendantIds(groups: readonly Group[], groupId: string)
     if (id === undefined) {
       continue;
     }
-    if (result.has(id)) continue;
+    if (result.has(id)) {
+      continue;
+    }
     result.add(id);
     pending.push(...(children.get(id) ?? []));
   }
@@ -32,13 +36,17 @@ export function moveStoryGroup(
 ): Story {
   const groups = story.groups ?? [];
   const group = groups.find(({ id }) => id === groupId);
-  if (!group) throw new Error('Group not found');
+  if (!group) {
+    throw new Error('Group not found');
+  }
   validateGroupMoveParent(groups, groupId, parentGroupId);
   const remaining = groups.filter(({ id }) => id !== groupId);
   const sibling = findGroupMoveSibling(remaining, parentGroupId, beforeGroupId);
   const moved = { ...group };
   delete moved.parentGroupId;
-  if (parentGroupId !== null) moved.parentGroupId = parentGroupId;
+  if (parentGroupId !== null) {
+    moved.parentGroupId = parentGroupId;
+  }
   const index = sibling ? remaining.indexOf(sibling) : remaining.length;
   remaining.splice(index, 0, moved);
   return { ...story, groups: remaining };
@@ -79,7 +87,9 @@ function findGroupMoveSibling(
 export function validateStoryGroups(story: Story): string | undefined {
   const groups = story.groups ?? [];
   const byId = new Map(groups.map((group) => [group.id, group]));
-  if (byId.size !== groups.length) return 'Group ids must be unique';
+  if (byId.size !== groups.length) {
+    return 'Group ids must be unique';
+  }
   const interactions = new Set(story.interactions.map(({ id }) => id));
   const assignedInteractions = new Set<string>();
   for (const group of groups) {
@@ -144,12 +154,16 @@ export function setStoryGroupInteractions(
   groupId: string,
   interactionIds: readonly string[],
 ): Story {
-  if (!story.groups?.some(({ id }) => id === groupId)) return story;
+  if (!story.groups?.some(({ id }) => id === groupId)) {
+    return story;
+  }
   const assignedIds = new Set(interactionIds);
   return {
     ...story,
     groups: story.groups.map((group) => {
-      if (group.id === groupId) return { ...group, interactionIds: [...interactionIds] };
+      if (group.id === groupId) {
+        return { ...group, interactionIds: [...interactionIds] };
+      }
       const remaining = group.interactionIds.filter((id) => !assignedIds.has(id));
       return remaining.length === group.interactionIds.length
         ? group
@@ -162,16 +176,22 @@ export function setStoryGroupInteractions(
 export function removeStoryGroup(story: Story, groupId: string): Story {
   const groups = story.groups ?? [];
   const removed = groups.find(({ id }) => id === groupId);
-  if (!removed) return story;
+  if (!removed) {
+    return story;
+  }
   return {
     ...story,
     groups: groups
       .filter(({ id }) => id !== groupId)
       .map((group) => {
-        if (group.parentGroupId !== groupId) return group;
+        if (group.parentGroupId !== groupId) {
+          return group;
+        }
         const promoted = { ...group };
         delete promoted.parentGroupId;
-        if (removed.parentGroupId) promoted.parentGroupId = removed.parentGroupId;
+        if (removed.parentGroupId) {
+          promoted.parentGroupId = removed.parentGroupId;
+        }
         return promoted;
       }),
   };
@@ -196,7 +216,9 @@ export function getGroupInteractionIds(groups: readonly Group[], groupId: string
     if (id === undefined) {
       continue;
     }
-    if (visited.has(id)) continue;
+    if (visited.has(id)) {
+      continue;
+    }
     visited.add(id);
     byId.get(id)?.interactionIds.forEach((member) => interactions.add(member));
     pending.push(...(children.get(id) ?? []));

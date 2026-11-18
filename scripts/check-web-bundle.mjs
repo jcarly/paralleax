@@ -10,7 +10,9 @@ for (const chunk of Object.values(manifest)) {
   if (typeof chunk.file === 'string' && isMeasuredAsset(chunk.file)) {
     assetNames.add(chunk.file);
   }
-  for (const stylesheet of chunk.css ?? []) assetNames.add(stylesheet);
+  for (const stylesheet of chunk.css ?? []) {
+    assetNames.add(stylesheet);
+  }
 }
 
 const compressedAssetBytes = new Map(
@@ -23,8 +25,8 @@ const compressedAssetBytes = new Map(
 );
 const metrics = analyzeWebBundle(manifest, compressedAssetBytes);
 
-assertWebBundleBudgets(metrics);
 console.log(formatWebBundleReport(metrics));
+assertWebBundleBudgets(metrics);
 
 function isMeasuredAsset(asset) {
   return asset.endsWith('.js') || asset.endsWith('.css');

@@ -36,16 +36,22 @@ export function CommentDiscussionCard({
 
   async function submit(event: FormEvent) {
     event.preventDefault();
-    if (!body.trim() || pending) return;
+    if (!body.trim() || pending) {
+      return;
+    }
     setPending(true);
     const result = await onReply(body.trim());
-    if (result) setBody('');
+    if (result) {
+      setBody('');
+    }
     setPending(false);
   }
 
   function collapseReplyOnBlur(event: FocusEvent<HTMLFormElement>) {
     const discussion = event.currentTarget.closest('.comment-discussion-card');
-    if (discussion?.contains(event.relatedTarget as Node | null)) return;
+    if (discussion?.contains(event.relatedTarget)) {
+      return;
+    }
     onCollapse?.();
   }
 
@@ -88,7 +94,9 @@ export function CommentDiscussionCard({
                   className="secondary"
                   type="button"
                   title={t('comments.reattachHelp')}
-                  onMouseDown={(event) => event.preventDefault()}
+                  onMouseDown={(event) => {
+                    event.preventDefault();
+                  }}
                   onClick={() => void onReattach()}
                 >
                   {t('comments.reattach')}
@@ -127,7 +135,9 @@ export function CommentDiscussionCard({
                   value={body}
                   maxLength={4000}
                   rows={3}
-                  onChange={(event) => setBody(event.target.value)}
+                  onChange={(event) => {
+                    setBody(event.target.value);
+                  }}
                 />
               </label>
               <button type="submit" disabled={pending || !body.trim()}>
@@ -176,10 +186,14 @@ export function CommentDraftCard({
 
   async function submit(event: FormEvent) {
     event.preventDefault();
-    if (!body.trim() || pending) return;
+    if (!body.trim() || pending) {
+      return;
+    }
     setPending(true);
     const result = await onCreate(body.trim());
-    if (result) setBody('');
+    if (result) {
+      setBody('');
+    }
     setPending(false);
   }
 
@@ -199,7 +213,9 @@ export function CommentDraftCard({
             value={body}
             maxLength={4000}
             rows={3}
-            onChange={(event) => setBody(event.target.value)}
+            onChange={(event) => {
+              setBody(event.target.value);
+            }}
           />
         </label>
         <div>

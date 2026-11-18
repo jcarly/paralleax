@@ -2,7 +2,7 @@
 
 Status: Active
 
-Last triaged: 2026-11-04
+Last triaged: 2026-11-05
 
 This page records maintainability, reliability, performance, and test work found
 during the August 2026 code review and subsequent technical evaluations. Production gates remain authoritative in
@@ -57,6 +57,12 @@ Dependency-watch entries such as the Swagger `js-yaml` override and the
 development-only `glob@10.5.0` warning are removal conditions, not active feature
 work. Other UX ideas and library candidates remain discovery inputs until a
 product task promotes them.
+
+The anonymized product discovery proposals are recorded in the
+[roadmap](roadmap.md#product-discovery-follow-up). They remain product
+discovery inputs, not code-quality backlog tasks. Their proposed P0 label means
+first exploration and does not meet this backlog's P0 definition without
+observed evidence of a blocked essential path, risk, or scheduled validation.
 
 ## UX Quick Wins — Préparation des tests
 

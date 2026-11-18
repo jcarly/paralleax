@@ -73,35 +73,45 @@ export function StoryCanvasContextMenu({
         <ContextMenuAction
           icon="root"
           label={t('editor.contextMenu.addInteraction')}
-          onClick={() => run(onCreateInteraction)}
+          onClick={() => {
+            run(onCreateInteraction);
+          }}
         />
       ) : null}
       {targetKind !== 'graphDecoration' && canComment && onAddComment ? (
         <ContextMenuAction
           icon="postIt"
           label={t('editor.contextMenu.addComment')}
-          onClick={() => run(onAddComment)}
+          onClick={() => {
+            run(onAddComment);
+          }}
         />
       ) : null}
       {targetKind === 'canvas' && canEdit && onAddFrame ? (
         <ContextMenuAction
           icon="frame"
           label={t('decoration.addFrame')}
-          onClick={() => run(onAddFrame)}
+          onClick={() => {
+            run(onAddFrame);
+          }}
         />
       ) : null}
       {targetKind === 'canvas' && canEdit && onAddText ? (
         <ContextMenuAction
           icon="text"
           label={t('decoration.addText')}
-          onClick={() => run(onAddText)}
+          onClick={() => {
+            run(onAddText);
+          }}
         />
       ) : null}
       {targetKind === 'interaction' && canEdit && onAddChild ? (
         <ContextMenuAction
           icon="child"
           label={t('editor.contextMenu.addChild')}
-          onClick={() => run(onAddChild)}
+          onClick={() => {
+            run(onAddChild);
+          }}
         />
       ) : null}
       {(targetKind === 'interaction' || targetKind === 'trigger') && canEdit && onOrganizeTarget ? (
@@ -109,7 +119,9 @@ export function StoryCanvasContextMenu({
           icon="organize"
           label={t('editor.contextMenu.organizeTarget')}
           disabled={!canOrganize}
-          onClick={() => run(onOrganizeTarget)}
+          onClick={() => {
+            run(onOrganizeTarget);
+          }}
         />
       ) : null}
       {targetKind === 'canvas' && canEdit && onOrganizeAll && onOrganizeSelection ? (
@@ -121,7 +133,9 @@ export function StoryCanvasContextMenu({
             suffix={<span aria-hidden="true">›</span>}
             ariaExpanded={organizeOpen}
             ariaHasPopup="menu"
-            onClick={() => setOrganizeOpen((open) => !open)}
+            onClick={() => {
+              setOrganizeOpen((open) => !open);
+            }}
             onKeyDown={(event) => {
               if (event.key === 'ArrowRight') {
                 event.preventDefault();
@@ -137,12 +151,16 @@ export function StoryCanvasContextMenu({
             >
               <ContextMenuAction
                 label={t('editor.contextMenu.organizeAll')}
-                onClick={() => run(onOrganizeAll)}
+                onClick={() => {
+                  run(onOrganizeAll);
+                }}
               />
               <ContextMenuAction
                 label={t('editor.contextMenu.organizeSelection')}
                 disabled={organizeSelectionCount === 0}
-                onClick={() => run(onOrganizeSelection)}
+                onClick={() => {
+                  run(onOrganizeSelection);
+                }}
               />
             </div>
           ) : null}
@@ -153,7 +171,9 @@ export function StoryCanvasContextMenu({
           icon="delete"
           label={t(`editor.contextMenu.delete.${targetKind}`)}
           danger
-          onClick={() => run(onDelete)}
+          onClick={() => {
+            run(onDelete);
+          }}
         />
       ) : null}
     </ContextMenu>

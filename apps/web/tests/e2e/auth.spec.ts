@@ -58,12 +58,24 @@ test('registers, verifies email, creates a story, signs out, and signs back in',
       await route.fulfill({ status: 201, json: story });
       return;
     }
+    if (route.request().method() === 'DELETE') {
+      const id = url.pathname.split('/').at(-1);
+      const index = stories.findIndex((story) => story.id === id);
+      if (index >= 0) {
+        stories.splice(index, 1);
+      }
+      await route.fulfill({ status: 204, body: '' });
+      return;
+    }
     await route.fulfill({
       json: paginated(
         stories.map((story) => ({
           id: story.id,
           title: story.title,
           interactionCount: story.interactions.length,
+          access: { visibility: 'private', editPolicy: 'owner', commentPolicy: 'editors' },
+          capabilities: { canRead: true, canEdit: true, canManage: true, canComment: true },
+          owner: { id: user.id, displayName: user.displayName },
           createdAt: story.createdAt,
           updatedAt: story.updatedAt,
         })),
@@ -103,9 +115,11 @@ test('registers, verifies email, creates a story, signs out, and signs back in',
 
   await page.setViewportSize({ width: 360, height: 640 });
   await expectAccountActionsToFit(page, 'Sign in', 'Create account');
-  await page.getByLabel('Language').selectOption('fr');
+  await page.getByRole('button', { name: 'en Language' }).click();
+  await page.getByRole('radio', { name: 'fr Français' }).click();
   await expectAccountActionsToFit(page, 'Se connecter', 'Créer un compte');
-  await page.getByLabel('Langue').selectOption('en');
+  await page.getByRole('button', { name: 'fr Langue' }).click();
+  await page.getByRole('radio', { name: 'en English' }).click();
 
   await createAccount.click();
   await page.getByLabel('Display name', { exact: true }).fill('Author');
@@ -131,12 +145,17 @@ test('registers, verifies email, creates a story, signs out, and signs back in',
   await expect(page.getByRole('heading', { name: 'New story', exact: true })).toBeVisible();
   await page.getByRole('button', { name: 'Sign out' }).click();
   await page.getByRole('link', { name: 'Sign in' }).click();
-  await expect(page.getByRole('heading', { name: 'Sign in to Paralleax' })).toBeVisible();
+  await expect(page.getByRole('heading', { name: 'Sign in' })).toBeVisible();
+  await expect(page.getByRole('navigation', { name: 'Main navigation' })).toBeVisible();
   await page.getByLabel('Email address').fill('author@example.com');
   await page.getByLabel('Password', { exact: true }).fill('correct horse battery staple');
   await page.getByRole('button', { name: 'Sign in' }).click();
 
   await expect(page.getByRole('heading', { name: 'New story', exact: true })).toBeVisible();
+  await page.getByRole('button', { name: 'Close guide' }).click();
+  page.once('dialog', (dialog) => dialog.accept());
+  await page.getByRole('button', { name: 'Delete' }).click();
+  await expect(page.getByRole('heading', { name: 'New story', exact: true })).toHaveCount(0);
 });
 
 async function expectAccountActionsToFit(page: Page, signInName: string, createName: string) {

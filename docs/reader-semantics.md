@@ -3,6 +3,16 @@
 This page defines the MVP reader behavior implemented by `getAvailableInteractions`.
 It is the behavioral contract for executing a story outside the editor.
 
+## Interaction Presentation
+
+The Reader presents the current Interaction's option label (`Interaction.title`)
+in a compact bubble above its location and present characters, followed by the
+narrative content. Pictograms replace visible category labels while location,
+character, and story-time values remain available. The label is not a separate
+story heading. Effects remain hidden in the Reader. Available next Interactions
+remain below the current content. The Simulation uses the same label, context,
+story-time, and narrative order while showing effects and author diagnostics.
+
 ## Function Shape
 
 The shared reader function evaluates a story from the current interaction and the
@@ -448,6 +458,14 @@ item; otherwise the left panel keeps the character profile and stats. When there
 is no character profile, the player omits the context panel if there are no item
 definitions and no Simulation controls to show. Other characters assigned to the
 current interaction are shown as encounter cards in a right panel.
+
+Reader Mode presents authored Interaction content and destination titles as
+navigation choices. It does not display the current Interaction's technical
+title in the narrative scene. That title remains a screen-reader heading for
+scene orientation and remains editable in Simulation Mode. The Reader does not
+substitute the previous choice label when it enters a scene, so root entries,
+automatic pass-through, and converging routes use the same presentation rule.
+Titles explicitly written into the Interaction body remain part of its content.
 
 Simulation keeps unavailable choices visible for inspection except when their
 matched route fails a location condition; location-blocked choices are hidden to

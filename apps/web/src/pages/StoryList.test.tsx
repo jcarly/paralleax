@@ -7,7 +7,7 @@ import type { Story, StorySummary } from '@paralleax/shared';
 import { StoryList } from './StoryList';
 import { api, type AuthUser, type QspImportResponse } from '../api';
 import { loadStoryEditor, loadStoryPlayer } from './storyRouteLoaders';
-import { i18n } from '../i18n';
+import { changeInterfaceLanguage } from '../i18n';
 
 vi.mock('../api', () => ({
   api: {
@@ -57,7 +57,9 @@ class FakeEventSource {
 
   constructor(readonly url: string) {
     FakeEventSource.instances.push(this);
-    queueMicrotask(() => this.emit('ready'));
+    queueMicrotask(() => {
+      this.emit('ready');
+    });
   }
 
   addEventListener(type: string, listener: EventListener) {
@@ -177,22 +179,16 @@ describe('StoryList', () => {
     expect(screen.getByRole('heading', { name: 'Second story' })).toBeInTheDocument();
     expect(api.listStories).toHaveBeenCalledOnce();
     expect(api.listPublicStories).not.toHaveBeenCalled();
-    expect(
-      within(screen.getByRole('heading', { name: 'First story' }).closest('article')!).getByText(
-        '0',
-      ),
-    ).toBeInTheDocument();
-    expect(
-      within(screen.getByRole('heading', { name: 'Second story' }).closest('article')!).getByText(
-        '1',
-      ),
-    ).toBeInTheDocument();
-
     const firstCard = screen.getByRole('heading', { name: 'First story' }).closest('article')!;
+    expect(within(firstCard).queryByRole('img')).not.toBeInTheDocument();
+    expect(firstCard.querySelector('dl')).toBeNull();
+    expect(within(firstCard).queryByText('Interactions')).not.toBeInTheDocument();
     expect(within(firstCard).getByRole('link', { name: 'Edit' })).toHaveAttribute(
       'href',
       '/stories/story-1/edit',
     );
+    expect(within(firstCard).getByRole('link', { name: 'Edit' })).toHaveClass('product-primary');
+    expect(within(firstCard).getByRole('link', { name: 'Read' })).toHaveClass('product-secondary');
     expect(within(firstCard).getByRole('link', { name: 'Read' })).toHaveAttribute(
       'href',
       '/stories/story-1/play',
@@ -238,6 +234,7 @@ describe('StoryList', () => {
     expect(api.listPublicStories).toHaveBeenCalledOnce();
     expect(api.listStories).not.toHaveBeenCalled();
     expect(within(card).getByRole('link', { name: 'Read' })).toBeInTheDocument();
+    expect(within(card).getByRole('link', { name: 'Read' })).toHaveClass('product-primary');
     expect(within(card).queryByRole('link', { name: 'Edit' })).not.toBeInTheDocument();
     expect(within(card).queryByRole('link', { name: 'Access' })).not.toBeInTheDocument();
     expect(within(card).queryByRole('button', { name: 'Delete' })).not.toBeInTheDocument();
@@ -278,6 +275,7 @@ describe('StoryList', () => {
 
   it('deletes a story from the list', async () => {
     const user = userEvent.setup();
+    const confirm = vi.spyOn(window, 'confirm').mockReturnValue(false);
     vi.mocked(api.listStories)
       .mockResolvedValueOnce(storyPage([structuredClone(stories[0])]))
       .mockResolvedValueOnce(storyPage([]));
@@ -291,11 +289,21 @@ describe('StoryList', () => {
     await screen.findByRole('heading', { name: 'First story' });
 
     const firstCard = screen.getByRole('heading', { name: 'First story' }).closest('article')!;
-    await user.click(within(firstCard).getByRole('button', { name: 'Delete' }));
+    const deleteButton = within(firstCard).getByRole('button', { name: 'Delete' });
+    fireEvent.focus(deleteButton);
+    expect(deleteButton).toHaveAttribute('aria-describedby');
+    expect(screen.getByRole('tooltip')).toHaveTextContent('Delete this story');
+    await user.click(deleteButton);
+    expect(confirm).toHaveBeenCalledWith('Delete “First story”? This cannot be undone.');
+    expect(api.deleteStory).not.toHaveBeenCalled();
+    expect(screen.getByRole('heading', { name: 'First story' })).toBeInTheDocument();
 
-    await waitFor(() =>
-      expect(screen.queryByRole('heading', { name: 'First story' })).not.toBeInTheDocument(),
-    );
+    confirm.mockReturnValue(true);
+    await user.click(deleteButton);
+
+    await waitFor(() => {
+      expect(screen.queryByRole('heading', { name: 'First story' })).not.toBeInTheDocument();
+    });
     expect(api.deleteStory).toHaveBeenCalledWith('story-1');
     expect(api.listStories).toHaveBeenCalledTimes(2);
   });
@@ -334,12 +342,7 @@ describe('StoryList', () => {
 
     await user.click(screen.getByRole('button', { name: 'Generate demos' }));
 
-    const demoCard = (
-      await screen.findByRole('heading', {
-        name: 'Demo 1: paths only',
-      })
-    ).closest('article')!;
-    expect(within(demoCard).getByText('1')).toBeInTheDocument();
+    await screen.findByRole('heading', { name: 'Demo 1: paths only' });
     expect(
       await screen.findByRole('heading', { name: 'Demo 2: visited interaction conditions' }),
     ).toBeInTheDocument();
@@ -419,7 +422,7 @@ describe('StoryList', () => {
     const importedCard = screen
       .getByRole('heading', { name: 'Imported story' })
       .closest('article')!;
-    expect(within(importedCard).getByText('1')).toBeInTheDocument();
+    expect(within(importedCard).queryByText('Interactions')).not.toBeInTheDocument();
   });
 
   it('imports a QSP game and displays the compatibility coverage matrix', async () => {
@@ -548,9 +551,11 @@ describe('StoryList', () => {
       new File(["# Start\n'Hello'\n--- Start ---"], 'progress.qsps', { type: 'text/plain' }),
     );
     await user.click(screen.getByRole('button', { name: 'Import story' }));
-    await waitFor(() => expect(api.importQsp).toHaveBeenCalledOnce());
+    await waitFor(() => {
+      expect(api.importQsp).toHaveBeenCalledOnce();
+    });
 
-    act(() =>
+    act(() => {
       FakeEventSource.instances[0].emit(
         'progress',
         JSON.stringify({
@@ -559,8 +564,8 @@ describe('StoryList', () => {
           total: 42,
           currentFile: 'locations/room.qsrc',
         }),
-      ),
-    );
+      );
+    });
 
     expect(screen.getByText(/Parsing QSP locations/)).toBeVisible();
     expect(screen.getByText('Current file: locations/room.qsrc')).toBeVisible();
@@ -573,7 +578,7 @@ describe('StoryList', () => {
       '42',
     );
 
-    await act(async () =>
+    await act(async () => {
       finishImport({
         status: 'confirmation_required',
         importId: '00000000-0000-4000-8000-000000000005',
@@ -591,8 +596,8 @@ describe('StoryList', () => {
           coverage: [],
           issues: [],
         },
-      }),
-    );
+      });
+    });
 
     expect(await screen.findByRole('heading', { name: 'Review the import report' })).toBeVisible();
     expect(FakeEventSource.instances[0].closed).toBe(true);
@@ -739,7 +744,9 @@ describe('StoryList', () => {
     ]);
     await user.click(screen.getByRole('button', { name: 'Import story' }));
 
-    await waitFor(() => expect(api.importQsp).toHaveBeenCalledTimes(1));
+    await waitFor(() => {
+      expect(api.importQsp).toHaveBeenCalledTimes(1);
+    });
     const request = vi.mocked(api.importQsp).mock.calls[0][0];
     expect(request).toMatchObject({ name: 'QSP locations.qsrc', format: 'locations' });
     expect(JSON.parse(atob(request.contentBase64))).toEqual({
@@ -842,7 +849,9 @@ describe('StoryList', () => {
       }),
     ).not.toHaveAttribute('aria-valuenow');
 
-    await act(async () => finishImport(importResult));
+    await act(async () => {
+      finishImport(importResult);
+    });
     expect(await screen.findByRole('heading', { name: 'QSP story imported' })).toBeInTheDocument();
     expect(api.importQsp).not.toHaveBeenCalled();
   });
@@ -871,17 +880,17 @@ describe('StoryList', () => {
     await screen.findByRole('heading', { name: 'First story' });
 
     await user.type(screen.getByRole('searchbox', { name: 'Search stories' }), 'Second');
-    await waitFor(() =>
-      expect(screen.queryByRole('heading', { name: 'First story' })).not.toBeInTheDocument(),
-    );
+    await waitFor(() => {
+      expect(screen.queryByRole('heading', { name: 'First story' })).not.toBeInTheDocument();
+    });
     expect(await screen.findByRole('heading', { name: 'Second story' })).toBeInTheDocument();
 
     await user.clear(screen.getByRole('searchbox', { name: 'Search stories' }));
     await user.click(screen.getByRole('button', { name: 'Editable by me' }));
     expect(await screen.findByRole('heading', { name: 'First story' })).toBeInTheDocument();
-    await waitFor(() =>
-      expect(screen.queryByRole('heading', { name: 'Second story' })).not.toBeInTheDocument(),
-    );
+    await waitFor(() => {
+      expect(screen.queryByRole('heading', { name: 'Second story' })).not.toBeInTheDocument();
+    });
 
     await user.click(screen.getByRole('button', { name: 'Commentable by me' }));
     expect(await screen.findByRole('heading', { name: 'First story' })).toBeInTheDocument();
@@ -889,9 +898,9 @@ describe('StoryList', () => {
 
     await user.click(screen.getByRole('button', { name: 'Created by me' }));
     expect(await screen.findByRole('heading', { name: 'First story' })).toBeInTheDocument();
-    await waitFor(() =>
-      expect(screen.queryByRole('heading', { name: 'Second story' })).not.toBeInTheDocument(),
-    );
+    await waitFor(() => {
+      expect(screen.queryByRole('heading', { name: 'Second story' })).not.toBeInTheDocument();
+    });
 
     await user.click(screen.getByRole('button', { name: 'List view' }));
     expect(screen.getByRole('button', { name: 'List view' })).toHaveAttribute(
@@ -956,15 +965,15 @@ describe('StoryList', () => {
     expect(screen.getByRole('dialog', { name: 'Create a story' })).toBeVisible();
     expect(screen.getByRole('button', { name: 'Creating…' })).toBeDisabled();
 
-    await act(async () =>
+    await act(async () => {
       finishCreation({
         id: 'story-created-once',
         title: 'Only once',
         createdAt: '2026-07-14T08:00:00.000Z',
         updatedAt: '2026-07-14T08:00:00.000Z',
         interactions: [],
-      }),
-    );
+      });
+    });
     expect(await screen.findByRole('heading', { name: 'Story editor' })).toBeVisible();
   });
 
@@ -988,7 +997,9 @@ describe('StoryList', () => {
     await user.keyboard('{Escape}');
 
     expect(screen.queryByRole('dialog', { name: 'Create a story' })).not.toBeInTheDocument();
-    await waitFor(() => expect(openingControl).toHaveFocus());
+    await waitFor(() => {
+      expect(openingControl).toHaveFocus();
+    });
   });
 
   it('focuses and closes the import dialog without losing its opening control', async () => {
@@ -1011,7 +1022,9 @@ describe('StoryList', () => {
     expect(
       screen.queryByRole('dialog', { name: 'Import a ChoiceScript project' }),
     ).not.toBeInTheDocument();
-    await waitFor(() => expect(openingControl).toHaveFocus());
+    await waitFor(() => {
+      expect(openingControl).toHaveFocus();
+    });
   });
 
   it('keeps a non-cancellable import dialog open when Escape is pressed', async () => {
@@ -1034,7 +1047,9 @@ describe('StoryList', () => {
     );
 
     await user.click(within(dialog).getByRole('button', { name: 'Import story' }));
-    await waitFor(() => expect(api.importChoiceScript).toHaveBeenCalledOnce());
+    await waitFor(() => {
+      expect(api.importChoiceScript).toHaveBeenCalledOnce();
+    });
     fileInput.focus();
     await user.keyboard('{Escape}');
 
@@ -1167,7 +1182,7 @@ describe('StoryList', () => {
   });
 
   it('translates product copy without changing authored story titles', async () => {
-    await i18n.changeLanguage('fr');
+    await changeInterfaceLanguage('fr');
     vi.mocked(api.listStories).mockResolvedValue(storyPage([structuredClone(stories[0])]));
 
     render(

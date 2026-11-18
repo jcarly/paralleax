@@ -56,8 +56,12 @@ export function useStoryContextNavigation({
     }
   }, [isContextPanelOpen]);
 
-  const toggleContextPanel = useCallback(() => setIsContextPanelOpen((isOpen) => !isOpen), []);
-  const openContextPanel = useCallback(() => setIsContextPanelOpen(true), []);
+  const toggleContextPanel = useCallback(() => {
+    setIsContextPanelOpen((isOpen) => !isOpen);
+  }, []);
+  const openContextPanel = useCallback(() => {
+    setIsContextPanelOpen(true);
+  }, []);
   const toggleContextSection = useCallback((section: StoryContextSection) => {
     setOpenContextSections((sections) => ({ ...sections, [section]: !sections[section] }));
   }, []);
@@ -74,7 +78,9 @@ export function useStoryContextNavigation({
       );
     }
   }, []);
-  const clearSearch = useCallback(() => setSearchQuery(''), [setSearchQuery]);
+  const clearSearch = useCallback(() => {
+    setSearchQuery('');
+  }, [setSearchQuery]);
 
   const normalizedSearchQuery = searchQuery.trim().toLocaleLowerCase();
   const occurrenceCounts = useMemo(
@@ -151,7 +157,9 @@ export function useStoryContextNavigation({
 
   const navigateInteractions = useCallback(
     (direction: -1 | 1) => {
-      if (navigationInteractionIds.length === 0) return;
+      if (navigationInteractionIds.length === 0) {
+        return;
+      }
       const nextIndex =
         currentNavigationIndex < 0
           ? direction > 0
@@ -160,8 +168,11 @@ export function useStoryContextNavigation({
           : (currentNavigationIndex + direction + navigationInteractionIds.length) %
             navigationInteractionIds.length;
       const interactionId = navigationInteractionIds[nextIndex];
-      if (normalizedSearchQuery) selectInteraction(interactionId);
-      else focusInteraction(interactionId);
+      if (normalizedSearchQuery) {
+        selectInteraction(interactionId);
+      } else {
+        focusInteraction(interactionId);
+      }
       window.requestAnimationFrame(() => {
         void flowInstanceRef.current?.fitView({
           nodes: [{ id: interactionId }],

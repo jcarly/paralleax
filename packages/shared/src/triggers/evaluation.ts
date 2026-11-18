@@ -128,7 +128,9 @@ export function getTriggerTimerResult(
   elapsedTimeMs = 0,
 ): TriggerTimerResult | null {
   const timerSeconds = getTriggerTimerSeconds(trigger);
-  if (timerSeconds === null) return null;
+  if (timerSeconds === null) {
+    return null;
+  }
   const durationMs = timerSeconds * 1_000;
   const elapsed = Number.isFinite(elapsedTimeMs) ? Math.max(0, elapsedTimeMs) : 0;
   const remainingTimeMs = Math.max(0, durationMs - elapsed);
@@ -342,7 +344,9 @@ export function getTriggerProbabilityFailures(
     }
     return [{ trigger, result: getTriggerProbabilityResult(trigger, probabilityContext) }];
   });
-  if (results.some(({ result }) => result.succeeds)) return [];
+  if (results.some(({ result }) => result.succeeds)) {
+    return [];
+  }
   return results.map(({ trigger, result }) => ({
     triggerId: trigger.id,
     appearanceProbability: result.appearanceProbability,

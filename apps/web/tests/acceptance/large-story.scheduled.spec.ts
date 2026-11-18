@@ -1,7 +1,8 @@
 import { expect, test, type Page, type Response } from '@playwright/test';
 import {
   expectSuccessful,
-  interactionTitleField,
+  interactionTitleValue,
+  openInteractionTitleEditor,
   registerUser,
   waitForApiResponse,
   waitForInteractionPatch,
@@ -41,15 +42,41 @@ test('opens, navigates, edits, reloads, and simulates a realistically sized Stor
   );
   await page.getByRole('button', { name: 'Import story' }).click();
   const importResponse = await expectSuccessful(importRequest);
-  const importMs = performance.now() - importStartedAt;
-  const result = (await importResponse.json()) as {
-    story: { id: string };
-    report: { interactionCount: number };
-  };
+  const resultBody: unknown = await importResponse.json();
+  if (!isQspReviewResult(resultBody)) {
+    throw new Error('Expected the QSP import review response to include report counts');
+  }
+  const result = resultBody;
+  expect(result.status).toBe('confirmation_required');
   expect(result.report.interactionCount).toBe(expectedInteractionCount);
+  expect(result.report.warningCount).toBeGreaterThan(0);
+  expect(result.report.errorCount).toBe(0);
+
+  const reviewDialog = page.getByRole('dialog', { name: 'Review the import report' });
+  await expect(reviewDialog.getByText('QSP compatibility coverage')).toBeVisible();
+  await expect(reviewDialog.getByText('Locations and entry point')).toBeVisible();
+  await expect(reviewDialog.getByRole('link', { name: 'Download report' })).toBeVisible();
+
+  const confirmedImport = waitForApiResponse(
+    page,
+    'POST',
+    /\/api\/stories\/imports\/qsp(?:\/admin)?$/,
+    4 * 60_000,
+  );
+  await reviewDialog.getByRole('button', { name: 'Confirm import' }).click();
+  const confirmedResponse = await expectSuccessful(confirmedImport);
+  const importMs = performance.now() - importStartedAt;
+  const confirmedResultBody: unknown = await confirmedResponse.json();
+  if (!isQspImportedResult(confirmedResultBody)) {
+    throw new Error('Expected the confirmed QSP import response to include a Story');
+  }
+  const confirmedResult = confirmedResultBody;
+  expect(confirmedResult.status).toBe('imported');
+  expect(confirmedResult.story.id).toBeTruthy();
 
   const dialog = page.getByRole('dialog', { name: 'QSP story imported' });
   await expect(dialog.getByText('QSP compatibility coverage')).toBeVisible();
+  await expect(dialog.getByRole('link', { name: 'Download report' })).toBeVisible();
 
   const stopEditorResponseTracking = trackEditorResponses(page);
   const editorStartedAt = performance.now();
@@ -70,11 +97,10 @@ test('opens, navigates, edits, reloads, and simulates a realistically sized Stor
   await page.getByRole('button', { name: 'Next interaction result' }).click();
 
   const inspector = page.getByRole('complementary', { name: 'Inspector' });
-  const titleField = interactionTitleField(inspector);
-  await expect(titleField).toHaveValue(finalTitle);
+  await expect(interactionTitleValue(inspector, finalTitle)).toBeVisible();
   const selectionMs = performance.now() - selectionStartedAt;
   const persistedTitle = `${finalTitle} verified`;
-  await expect(titleField).toBeVisible();
+  const titleField = await openInteractionTitleEditor(inspector, finalTitle);
   const titleUpdate = waitForInteractionPatch(page);
   await titleField.fill(persistedTitle);
   await titleField.blur();
@@ -129,22 +155,22 @@ test('opens, navigates, edits, reloads, and simulates a realistically sized Stor
     .fill(persistedTitle);
   await page.getByRole('button', { name: 'Next interaction result' }).click();
   await expect(
-    interactionTitleField(page.getByRole('complementary', { name: 'Inspector' })),
-  ).toHaveValue(persistedTitle);
+    interactionTitleValue(page.getByRole('complementary', { name: 'Inspector' }), persistedTitle),
+  ).toBeVisible();
 
   await page
     .getByRole('searchbox', { name: 'Search story context and interactions' })
-    .fill('Location 0');
+    .fill('Narrative content for Location 1.');
   await page.getByRole('button', { name: 'Next interaction result' }).click();
   await expect(
-    interactionTitleField(page.getByRole('complementary', { name: 'Inspector' })),
-  ).toHaveValue('Location 0');
+    interactionTitleValue(page.getByRole('complementary', { name: 'Inspector' }), 'Location 1'),
+  ).toBeVisible();
   await page.getByRole('link', { name: 'Test from current interaction' }).click();
-  await expect(page.getByLabel('Current interaction title')).toHaveValue('Location 0');
-  await page.getByRole('button', { name: 'Continue to 1' }).click();
-  await expect(page.getByLabel('Current interaction title')).toHaveValue('Continue to 1');
-  await page.getByRole('button', { name: 'Location 1' }).click();
   await expect(page.getByLabel('Current interaction title')).toHaveValue('Location 1');
+  await page.getByRole('button', { name: 'Continue to 2' }).click();
+  await expect(page.getByLabel('Current interaction title')).toHaveValue('Continue to 2');
+  await page.getByRole('button', { name: 'Location 2' }).click();
+  await expect(page.getByLabel('Current interaction title')).toHaveValue('Location 2');
 
   console.info(
     `LARGE_STORY_ACCEPTANCE ${JSON.stringify({
@@ -195,7 +221,9 @@ interface ApiResponseMetric {
 function trackEditorResponses(page: Page) {
   const pendingMeasurements: Array<Promise<ApiResponseMetric>> = [];
   const listener = (response: Response) => {
-    if (!new URL(response.url()).pathname.includes('/editor')) return;
+    if (!new URL(response.url()).pathname.includes('/editor')) {
+      return;
+    }
     pendingMeasurements.push(apiResponseMetric(response));
   };
   page.on('response', listener);
@@ -226,6 +254,39 @@ function largeQspSource(count: number) {
       next < count ? `\nact 'Continue to ${next}':\n  goto 'Location ${next}'\nend` : '';
     return `# ${name}\n'Narrative content for ${name}.'${action}\n--- ${name} ---`;
   }).join('\n\n');
+}
+
+interface QspReviewResult {
+  status: 'confirmation_required';
+  report: { interactionCount: number; warningCount: number; errorCount: number };
+}
+
+interface QspImportedResult {
+  status: 'imported';
+  story: { id: string };
+}
+
+function isQspReviewResult(value: unknown): value is QspReviewResult {
+  if (!isRecord(value) || !isRecord(value.report)) {
+    return false;
+  }
+  return (
+    value.status === 'confirmation_required' &&
+    typeof value.report.interactionCount === 'number' &&
+    typeof value.report.warningCount === 'number' &&
+    typeof value.report.errorCount === 'number'
+  );
+}
+
+function isQspImportedResult(value: unknown): value is QspImportedResult {
+  if (!isRecord(value) || !isRecord(value.story)) {
+    return false;
+  }
+  return value.status === 'imported' && typeof value.story.id === 'string';
+}
+
+function isRecord(value: unknown): value is Record<string, unknown> {
+  return typeof value === 'object' && value !== null && !Array.isArray(value);
 }
 
 function positiveInteger(value: string | undefined, fallback: number) {

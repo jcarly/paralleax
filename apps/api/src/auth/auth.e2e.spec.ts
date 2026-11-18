@@ -25,7 +25,9 @@ describe('Auth API', () => {
       findUserById: (id: string) =>
         Promise.resolve([...users.values()].find((candidate) => candidate.id === id)),
       createUser: (user: Omit<AuthUser, 'role'>) => {
-        if (users.has(user.email)) return Promise.resolve(undefined);
+        if (users.has(user.email)) {
+          return Promise.resolve(undefined);
+        }
         const created: AuthUser = { ...user, role: users.size === 0 ? 'admin' : 'user' };
         users.set(created.email, created);
         return Promise.resolve(created);
@@ -48,15 +50,18 @@ describe('Auth API', () => {
       },
       deleteOtherSessions: (userId: string, currentTokenHash: string) => {
         for (const [tokenHash, session] of sessions) {
-          if (session.userId === userId && tokenHash !== currentTokenHash)
+          if (session.userId === userId && tokenHash !== currentTokenHash) {
             sessions.delete(tokenHash);
+          }
         }
         return Promise.resolve();
       },
       deleteExpiredSessions: () => {
         const now = new Date();
         for (const [tokenHash, session] of sessions) {
-          if (new Date(session.expiresAt) <= now) sessions.delete(tokenHash);
+          if (new Date(session.expiresAt) <= now) {
+            sessions.delete(tokenHash);
+          }
         }
         return Promise.resolve();
       },
@@ -76,36 +81,50 @@ describe('Auth API', () => {
       },
       verifyEmailWithActionToken: (tokenHash: string, now: string) => {
         const token = actionTokens.get(tokenHash);
-        if (!token || token.kind !== 'verify_email') return Promise.resolve(undefined);
+        if (!token || token.kind !== 'verify_email') {
+          return Promise.resolve(undefined);
+        }
         actionTokens.delete(tokenHash);
         const user = [...users.values()].find((candidate) => candidate.id === token.userId);
-        if (user) user.emailVerifiedAt = now;
+        if (user) {
+          user.emailVerifiedAt = now;
+        }
         return Promise.resolve(user);
       },
       resetPasswordWithActionToken: (tokenHash: string, passwordHash: string) => {
         const token = actionTokens.get(tokenHash);
-        if (!token || token.kind !== 'reset_password') return Promise.resolve(undefined);
+        if (!token || token.kind !== 'reset_password') {
+          return Promise.resolve(undefined);
+        }
         actionTokens.delete(tokenHash);
         const user = [...users.values()].find((candidate) => candidate.id === token.userId);
         if (user) {
           user.passwordHash = passwordHash;
           for (const [sessionHash, session] of sessions) {
-            if (session.userId === user.id) sessions.delete(sessionHash);
+            if (session.userId === user.id) {
+              sessions.delete(sessionHash);
+            }
           }
         }
         return Promise.resolve(user);
       },
       updatePasswordAndRevokeSessions: (userId: string, passwordHash: string) => {
         const user = [...users.values()].find((candidate) => candidate.id === userId);
-        if (user) user.passwordHash = passwordHash;
+        if (user) {
+          user.passwordHash = passwordHash;
+        }
         for (const [sessionHash, session] of sessions) {
-          if (session.userId === userId) sessions.delete(sessionHash);
+          if (session.userId === userId) {
+            sessions.delete(sessionHash);
+          }
         }
         return Promise.resolve();
       },
       updateDisplayName: (id: string, displayName: string) => {
         const user = [...users.values()].find((candidate) => candidate.id === id);
-        if (!user) return Promise.resolve(undefined);
+        if (!user) {
+          return Promise.resolve(undefined);
+        }
         user.displayName = displayName;
         return Promise.resolve({
           id: user.id,
@@ -249,7 +268,9 @@ describe('Auth API', () => {
         password: 'changed horse battery staple',
       })
       .expect(200)
-      .expect(({ body }) => expect(body.email).toBe('security@example.com'));
+      .expect(({ body }) => {
+        expect(body.email).toBe('security@example.com');
+      });
     await agent
       .post('/api/auth/password-reset')
       .send({ email: 'security@example.com' })
@@ -317,7 +338,9 @@ describe('Auth API', () => {
   function tokenFromLastEmail() {
     const text = sentMessages.at(-1)?.text ?? '';
     const token = text.match(/[?&]token=([^\s&]+)/u)?.[1];
-    if (!token) throw new Error('Expected an account action token in the email');
+    if (!token) {
+      throw new Error('Expected an account action token in the email');
+    }
     return decodeURIComponent(token);
   }
 

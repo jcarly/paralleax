@@ -30,7 +30,9 @@ export function AccountDialog({
 
   async function submit(event: FormEvent) {
     event.preventDefault();
-    if (!valid || pending) return;
+    if (!valid || pending) {
+      return;
+    }
     try {
       setPending(true);
       setError('');
@@ -45,7 +47,9 @@ export function AccountDialog({
 
   async function changePassword(event: FormEvent) {
     event.preventDefault();
-    if (currentPassword.length < 1 || newPassword.length < 8 || securityPending) return;
+    if (currentPassword.length < 1 || newPassword.length < 8 || securityPending) {
+      return;
+    }
     try {
       setSecurityPending(true);
       setSecurityError('');
@@ -62,7 +66,9 @@ export function AccountDialog({
   }
 
   async function revokeOtherSessions() {
-    if (securityPending) return;
+    if (securityPending) {
+      return;
+    }
     try {
       setSecurityPending(true);
       setSecurityError('');
@@ -84,7 +90,9 @@ export function AccountDialog({
           role="dialog"
           aria-modal="true"
           aria-labelledby="account-dialog-title"
-          onKeyDown={(event) => handleModalDialogKeyDown(event, onClose)}
+          onKeyDown={(event) => {
+            handleModalDialogKeyDown(event, onClose);
+          }}
         >
           <div className="dialog-icon" aria-hidden="true">
             â—‡
@@ -109,7 +117,9 @@ export function AccountDialog({
                 aria-label={t('account.displayName')}
                 autoComplete="nickname"
                 value={displayName}
-                onChange={(event) => setDisplayName(event.target.value)}
+                onChange={(event) => {
+                  setDisplayName(event.target.value);
+                }}
                 minLength={2}
                 maxLength={50}
                 required
@@ -149,7 +159,9 @@ export function AccountDialog({
                   autoComplete="current-password"
                   type="password"
                   value={currentPassword}
-                  onChange={(event) => setCurrentPassword(event.target.value)}
+                  onChange={(event) => {
+                    setCurrentPassword(event.target.value);
+                  }}
                   required
                 />
               </label>
@@ -160,7 +172,9 @@ export function AccountDialog({
                   autoComplete="new-password"
                   type="password"
                   value={newPassword}
-                  onChange={(event) => setNewPassword(event.target.value)}
+                  onChange={(event) => {
+                    setNewPassword(event.target.value);
+                  }}
                   minLength={8}
                   required
                 />

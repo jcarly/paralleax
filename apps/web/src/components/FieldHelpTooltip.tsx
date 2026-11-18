@@ -1,9 +1,23 @@
 import { createPortal } from 'react-dom';
-import type { KeyboardEvent as ReactKeyboardEvent } from 'react';
+import type { KeyboardEvent as ReactKeyboardEvent, ReactNode } from 'react';
 import { useContext, useEffect, useId, useLayoutEffect, useRef, useState } from 'react';
 import { ModalPortalContext } from './modalPortalContext';
 
-export function FieldHelpTooltip({ label, help }: { label: string; help: string }) {
+export function FieldHelpTooltip({
+  label,
+  help,
+  children,
+  className,
+  disabled,
+  onClick,
+}: {
+  label: string;
+  help: string;
+  children?: ReactNode;
+  className?: string;
+  disabled?: boolean;
+  onClick?: () => void;
+}) {
   const modalPortal = useContext(ModalPortalContext);
   const tooltipId = useId();
   const triggerRef = useRef<HTMLButtonElement>(null);
@@ -18,7 +32,9 @@ export function FieldHelpTooltip({ label, help }: { label: string; help: string 
 
   function updatePosition() {
     const trigger = triggerRef.current;
-    if (!trigger) return;
+    if (!trigger) {
+      return;
+    }
     const bounds = trigger.getBoundingClientRect();
     const gutter = 12;
     const tooltipWidth = tooltipRef.current?.offsetWidth ?? 288;
@@ -42,7 +58,9 @@ export function FieldHelpTooltip({ label, help }: { label: string; help: string 
   }
 
   function scheduleTooltipClose() {
-    if (closeTimerRef.current !== undefined) window.clearTimeout(closeTimerRef.current);
+    if (closeTimerRef.current !== undefined) {
+      window.clearTimeout(closeTimerRef.current);
+    }
     closeTimerRef.current = window.setTimeout(() => {
       closeTimerRef.current = undefined;
       const shouldStayOpen =
@@ -53,7 +71,9 @@ export function FieldHelpTooltip({ label, help }: { label: string; help: string 
   }
 
   function dismissTooltip(event: ReactKeyboardEvent<HTMLButtonElement>) {
-    if (event.key !== 'Escape' || !open) return;
+    if (event.key !== 'Escape' || !open) {
+      return;
+    }
     event.preventDefault();
     event.stopPropagation();
     if (closeTimerRef.current !== undefined) {
@@ -66,14 +86,20 @@ export function FieldHelpTooltip({ label, help }: { label: string; help: string 
 
   useEffect(
     () => () => {
-      if (closeTimerRef.current !== undefined) window.clearTimeout(closeTimerRef.current);
+      if (closeTimerRef.current !== undefined) {
+        window.clearTimeout(closeTimerRef.current);
+      }
     },
     [],
   );
 
   useEffect(() => {
-    if (!open) return;
-    const reposition = () => updatePosition();
+    if (!open) {
+      return;
+    }
+    const reposition = () => {
+      updatePosition();
+    };
     window.addEventListener('resize', reposition);
     window.addEventListener('scroll', reposition, true);
     return () => {
@@ -83,17 +109,21 @@ export function FieldHelpTooltip({ label, help }: { label: string; help: string 
   }, [open]);
 
   useLayoutEffect(() => {
-    if (open) updatePosition();
+    if (open) {
+      updatePosition();
+    }
   }, [open]);
 
   return (
     <>
       <button
         aria-describedby={tooltipId}
-        aria-label={`? — ${label}`}
-        className="field-help-tooltip-trigger"
+        aria-label={children === undefined ? `? — ${label}` : label}
+        className={`field-help-tooltip-trigger${className ? ` ${className}` : ''}`}
+        disabled={disabled}
         ref={triggerRef}
         type="button"
+        onClick={onClick}
         onBlur={() => {
           triggerFocusedRef.current = false;
           scheduleTooltipClose();
@@ -112,7 +142,7 @@ export function FieldHelpTooltip({ label, help }: { label: string; help: string 
           scheduleTooltipClose();
         }}
       >
-        ?
+        {children ?? '?'}
       </button>
       {createPortal(
         <span

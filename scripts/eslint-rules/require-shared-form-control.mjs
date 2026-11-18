@@ -17,7 +17,9 @@ const ATTRIBUTE_NAMES = new Set(['className']);
 function getVariableInitializer(identifier, scope) {
   for (let current = scope; current; current = current.upper) {
     const variable = current.set?.get(identifier.name);
-    if (!variable) continue;
+    if (!variable) {
+      continue;
+    }
 
     const definition = variable.defs.find((candidate) => candidate.type === 'Variable');
     return definition?.node.init;
@@ -27,7 +29,9 @@ function getVariableInitializer(identifier, scope) {
 }
 
 function collectStaticClasses(node, scope, seen = new Set()) {
-  if (!node) return { possible: new Set(), definite: new Set(), dynamicDensity: false };
+  if (!node) {
+    return { possible: new Set(), definite: new Set(), dynamicDensity: false };
+  }
 
   if (node.type === 'Literal' && typeof node.value === 'string') {
     const classes = new Set(node.value.split(/\s+/).filter(Boolean));
@@ -43,17 +47,22 @@ function collectStaticClasses(node, scope, seen = new Set()) {
 
     for (const expression of node.expressions) {
       const nested = collectStaticClasses(expression, scope, seen);
-      for (const className of nested.possible) classes.add(className);
+      for (const className of nested.possible) {
+        classes.add(className);
+      }
     }
 
     return { possible: classes, definite: classes, dynamicDensity };
   }
 
   if (node.type === 'Identifier') {
-    if (seen.has(node.name))
+    if (seen.has(node.name)) {
       return { possible: new Set(), definite: new Set(), dynamicDensity: false };
+    }
     const initializer = getVariableInitializer(node, scope);
-    if (!initializer) return { possible: new Set(), definite: new Set(), dynamicDensity: false };
+    if (!initializer) {
+      return { possible: new Set(), definite: new Set(), dynamicDensity: false };
+    }
     const nextSeen = new Set(seen);
     nextSeen.add(node.name);
     return collectStaticClasses(initializer, scope, nextSeen);
@@ -105,7 +114,9 @@ function collectStaticClasses(node, scope, seen = new Set()) {
     let dynamicDensity = false;
 
     for (const property of node.properties) {
-      if (property.type !== 'Property') continue;
+      if (property.type !== 'Property') {
+        continue;
+      }
       const key = property.key;
       const className =
         key.type === 'Identifier' && !property.computed
@@ -121,8 +132,12 @@ function collectStaticClasses(node, scope, seen = new Set()) {
       }
 
       const nested = collectStaticClasses(property.value, scope, seen);
-      for (const nestedClass of nested.possible) possible.add(nestedClass);
-      for (const nestedClass of nested.definite) definite.add(nestedClass);
+      for (const nestedClass of nested.possible) {
+        possible.add(nestedClass);
+      }
+      for (const nestedClass of nested.definite) {
+        definite.add(nestedClass);
+      }
       dynamicDensity ||= nested.dynamicDensity;
     }
 
@@ -142,7 +157,9 @@ function collectStaticClasses(node, scope, seen = new Set()) {
     let dynamicDensity = false;
 
     for (const argument of argumentsList) {
-      if (!argument || argument.type === 'SpreadElement') continue;
+      if (!argument || argument.type === 'SpreadElement') {
+        continue;
+      }
       const nested = collectStaticClasses(argument, scope, seen);
       possible = union(possible, nested.possible);
       definite = union(definite, nested.definite);
@@ -168,7 +185,9 @@ function collectStaticClasses(node, scope, seen = new Set()) {
           ((candidate.key.type === 'Identifier' && candidate.key.name === propertyName) ||
             (candidate.key.type === 'Literal' && candidate.key.value === propertyName)),
       );
-      if (property) return collectStaticClasses(property.value, scope, seen);
+      if (property) {
+        return collectStaticClasses(property.value, scope, seen);
+      }
     }
   }
 
@@ -194,7 +213,9 @@ function hasDensity(classes, dynamicDensity) {
 }
 
 function isCompliant(classNameAttribute, scope) {
-  if (!classNameAttribute?.value) return false;
+  if (!classNameAttribute?.value) {
+    return false;
+  }
 
   const result = collectStaticClasses(classNameAttribute.value, scope);
   const hasBase = result.definite.has('form-control');
@@ -222,7 +243,9 @@ export default {
     return {
       JSXOpeningElement(node) {
         const tagName = node.name.type === 'JSXIdentifier' ? node.name.name : undefined;
-        if (!['input', 'select', 'textarea'].includes(tagName)) return;
+        if (!['input', 'select', 'textarea'].includes(tagName)) {
+          return;
+        }
 
         const typeAttribute = node.attributes.find(
           (attribute) =>
@@ -232,7 +255,9 @@ export default {
         );
         const inputType =
           typeAttribute?.value?.type === 'Literal' ? typeAttribute.value.value : undefined;
-        if (tagName === 'input' && SPECIAL_INPUT_TYPES.has(inputType)) return;
+        if (tagName === 'input' && SPECIAL_INPUT_TYPES.has(inputType)) {
+          return;
+        }
 
         const classNameAttribute = node.attributes.find(
           (attribute) =>
@@ -241,7 +266,9 @@ export default {
             ATTRIBUTE_NAMES.has(attribute.name.name),
         );
 
-        if (isCompliant(classNameAttribute, context.sourceCode.getScope(node))) return;
+        if (isCompliant(classNameAttribute, context.sourceCode.getScope(node))) {
+          return;
+        }
         context.report({ node, messageId: 'requireSharedClasses' });
       },
     };

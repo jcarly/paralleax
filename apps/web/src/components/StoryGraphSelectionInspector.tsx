@@ -17,7 +17,9 @@ export function StoryGraphSelectionInspector({
   const interactionIds = selection.interactionIds;
 
   async function createGroup() {
-    if (interactionIds.length === 0 || isCreating) return;
+    if (interactionIds.length === 0 || isCreating) {
+      return;
+    }
     setIsCreating(true);
     setCreated(false);
     try {

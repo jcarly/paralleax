@@ -2,7 +2,7 @@ import { cleanup, render, screen, waitFor } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import { MemoryRouter } from 'react-router-dom';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
-import { i18n } from '../../i18n';
+import { changeInterfaceLanguage } from '../../i18n';
 import { FeedbackButton } from './FeedbackButton';
 import { formbricksFeedbackClient } from './formbricksClient';
 
@@ -33,7 +33,7 @@ describe('FeedbackButton', () => {
     expect(formbricksFeedbackClient.setup).not.toHaveBeenCalled();
     await user.click(button);
 
-    await waitFor(() =>
+    await waitFor(() => {
       expect(formbricksFeedbackClient.trackFeedback).toHaveBeenCalledWith(
         'en',
         expect.objectContaining({
@@ -42,16 +42,16 @@ describe('FeedbackButton', () => {
           paralleax_version: '0.1.0',
           paralleax_language: 'en',
         }),
-      ),
-    );
+      );
+    });
     expect(formbricksFeedbackClient.trackFeedback).not.toHaveBeenCalledWith(
       expect.anything(),
       expect.objectContaining({ storyId: expect.anything() }),
     );
   });
 
-  it('uses the localized label without loading the SDK until clicked', async () => {
-    await i18n.changeLanguage('fr');
+  it('uses the localized label and survey language', async () => {
+    await changeInterfaceLanguage('fr');
     render(
       <MemoryRouter>
         <FeedbackButton />

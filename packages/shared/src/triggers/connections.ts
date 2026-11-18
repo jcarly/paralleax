@@ -36,14 +36,18 @@ export function findNewTriggerInputConflict(
 ): TriggerConnectionConflict | undefined {
   const existingInputs = new Set(options.existingInputInteractionIds ?? []);
   for (const sourceInteractionId of new Set(proposedInputInteractionIds)) {
-    if (existingInputs.has(sourceInteractionId)) continue;
+    if (existingInputs.has(sourceInteractionId)) {
+      continue;
+    }
     const conflict = findTriggerConnectionConflict(
       story,
       sourceInteractionId,
       targetInteractionId,
       options.triggerId,
     );
-    if (conflict) return conflict;
+    if (conflict) {
+      return conflict;
+    }
   }
   return undefined;
 }

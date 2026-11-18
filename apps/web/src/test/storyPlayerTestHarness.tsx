@@ -118,6 +118,8 @@ function mockStoryRuntimeLoading() {
 }
 
 function requiredRuntimeStory(story: Story | undefined): Story {
-  if (!story) throw new Error('The runtime bootstrap must be loaded first.');
+  if (!story) {
+    throw new Error('The runtime bootstrap must be loaded first.');
+  }
   return story;
 }

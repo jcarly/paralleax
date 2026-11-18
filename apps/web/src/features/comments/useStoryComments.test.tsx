@@ -35,7 +35,9 @@ class FakeEventSource {
 
   emit(type: string) {
     const event = new Event(type);
-    for (const listener of this.listeners.get(type) ?? []) listener(event);
+    for (const listener of this.listeners.get(type) ?? []) {
+      listener(event);
+    }
   }
 
   close() {

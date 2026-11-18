@@ -14,15 +14,15 @@
   "scripts": {
     "build": "tsc -p tsconfig.json",
     "typecheck": "tsc -p tsconfig.json --noEmit",
-    "test": "vitest run",
-    "coverage": "vitest run --coverage"
+    "test": "vitest run --configLoader runner",
+    "coverage": "vitest run --coverage --configLoader runner"
   },
   "devDependencies": {
-    "@vitest/coverage-v8": "^5.0.0",
+    "@vitest/coverage-v8": "^5.1.0",
     "typescript": "^5.9.3",
     "vitest": "^5.0.0"
   },
   "dependencies": {
-    "@qsp/converters": "^1.0.1"
+    "@qsp/converters": "^2.0.0"
   }
 }

@@ -35,7 +35,9 @@ export function StorySettingsDialog({
   const tabs: StorySettingsTab[] = canManageAccess ? ['properties', 'access'] : ['properties'];
 
   async function saveProperties() {
-    if (propertiesStatus === 'saving' || draftStartDateTime === startDateTime) return;
+    if (propertiesStatus === 'saving' || draftStartDateTime === startDateTime) {
+      return;
+    }
     setPropertiesStatus('saving');
     setPropertiesStatus((await onSaveStartDateTime(draftStartDateTime)) ? 'saved' : 'error');
   }
@@ -48,16 +50,16 @@ export function StorySettingsDialog({
           role="dialog"
           aria-modal="true"
           aria-labelledby="story-settings-title"
-          onKeyDown={(event) => handleModalDialogKeyDown(event, onClose)}
+          onKeyDown={(event) => {
+            handleModalDialogKeyDown(event, onClose);
+          }}
         >
           <header className="story-settings-header">
             <span className="story-settings-heading-icon" aria-hidden="true">
               <StorySettingsIcon />
             </span>
             <div>
-              <span className="product-eyebrow">{t('storySettings.eyebrow')}</span>
               <h2 id="story-settings-title">{t('storySettings.title')}</h2>
-              <p>{t('storySettings.description')}</p>
             </div>
             <button
               className="product-ghost compact story-settings-close"
@@ -80,7 +82,9 @@ export function StorySettingsDialog({
                 className={activeTab === tab ? 'active' : ''}
                 autoFocus={initialTab === 'access' && tab === 'access'}
                 data-modal-autofocus={initialTab === 'access' && tab === 'access' ? '' : undefined}
-                onClick={() => setActiveTab(tab)}
+                onClick={() => {
+                  setActiveTab(tab);
+                }}
               >
                 {t(`storySettings.${tab}`)}
               </button>

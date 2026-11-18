@@ -339,8 +339,8 @@ when touching a responsibility.
 
 ## Imports and external story systems
 
-Imports such as Girl Life or Lilith's Throne are adapters, not specifications for
-the Paralleax core.
+Imports of external narrative systems are adapters, not specifications for the
+Paralleax core.
 
 An importer may translate foreign concepts into Paralleax concepts. It must not
 silently change Paralleax domain semantics to reproduce one source engine.

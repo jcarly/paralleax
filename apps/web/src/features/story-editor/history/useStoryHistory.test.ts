@@ -38,12 +38,18 @@ describe('useStoryHistory', () => {
         }),
       { initialProps: { story: storyAtRevision(1) } },
     );
-    await waitFor(() => expect(api.getStoryHistory).toHaveBeenCalledTimes(1));
+    await waitFor(() => {
+      expect(api.getStoryHistory).toHaveBeenCalledTimes(1);
+    });
 
     rerender({ story: storyAtRevision(2) });
-    await waitFor(() => expect(api.getStoryHistory).toHaveBeenCalledTimes(2));
+    await waitFor(() => {
+      expect(api.getStoryHistory).toHaveBeenCalledTimes(2);
+    });
 
-    act(() => result.current.markLocalChange(3));
+    act(() => {
+      result.current.markLocalChange(3);
+    });
     rerender({ story: storyAtRevision(3) });
     await Promise.resolve();
 
@@ -113,7 +119,9 @@ describe('useStoryHistory', () => {
         trackSave,
       }),
     );
-    act(() => result.current.markLocalChange(2, change));
+    act(() => {
+      result.current.markLocalChange(2, change);
+    });
 
     let undoPromise: Promise<void> | undefined;
     act(() => {
@@ -179,7 +187,9 @@ describe('useStoryHistory', () => {
         trackSave: trackFailedSave,
       }),
     );
-    act(() => result.current.markLocalChange(2, change));
+    act(() => {
+      result.current.markLocalChange(2, change);
+    });
 
     await act(() => result.current.undo());
 

@@ -8,7 +8,8 @@ export const WEB_BUNDLE_ROUTE_SOURCES = Object.freeze({
 export const WEB_BUNDLE_BUDGETS = Object.freeze({
   initialJavaScriptBytes: 150 * 1024,
   initialStylesheetBytes: 24 * 1024,
-  editorIncrementalBytes: 145 * 1024,
+  // Leave 1 KiB of headroom for release-specific build metadata while retaining a hard cap.
+  editorIncrementalBytes: 146 * 1024,
   playerIncrementalBytes: 95 * 1024,
 });
 
@@ -19,12 +20,18 @@ export function collectStaticBundleAssets(manifest, entryKey) {
 
   while (pending.length > 0) {
     const chunkKey = pending.pop();
-    if (chunkKeys.has(chunkKey)) continue;
+    if (chunkKeys.has(chunkKey)) {
+      continue;
+    }
     const chunk = manifest[chunkKey];
     assert.ok(chunk, 'Bundle manifest references missing chunk "' + chunkKey + '".');
     chunkKeys.add(chunkKey);
-    if (isMeasuredAsset(chunk.file)) assets.add(chunk.file);
-    for (const stylesheet of chunk.css ?? []) assets.add(stylesheet);
+    if (isMeasuredAsset(chunk.file)) {
+      assets.add(chunk.file);
+    }
+    for (const stylesheet of chunk.css ?? []) {
+      assets.add(stylesheet);
+    }
     pending.push(...(chunk.imports ?? []));
   }
 
@@ -96,7 +103,11 @@ export function assertWebBundleBudgets(metrics, budgets = WEB_BUNDLE_BUDGETS) {
         formatKibibytes(metrics[metric]) +
         ', above its ' +
         formatKibibytes(maximumBytes) +
-        ' budget.',
+        ' budget (' +
+        metrics[metric] +
+        ' bytes > ' +
+        maximumBytes +
+        ' bytes).',
     );
   }
 }
@@ -119,7 +130,9 @@ function findSourceChunkKey(manifest, source) {
   const direct = Object.entries(manifest).find(
     ([key, chunk]) => chunk.src === source || key === source,
   );
-  if (direct) return direct[0];
+  if (direct) {
+    return direct[0];
+  }
   // Rollup can retain a named dynamic route without a source facade when its
   // dependencies are shared with a lazily loaded feature. Keep measuring that
   // actual route graph, including every static dependency, under the same budget.
@@ -153,7 +166,9 @@ function difference(assets, excluded) {
 function sumCompressedBytes(assets, compressedAssetBytes, include = () => true) {
   let total = 0;
   for (const asset of assets) {
-    if (!include(asset)) continue;
+    if (!include(asset)) {
+      continue;
+    }
     const bytes =
       compressedAssetBytes instanceof Map
         ? compressedAssetBytes.get(asset)

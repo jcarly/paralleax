@@ -103,9 +103,13 @@ export function useStoryPersistenceLifecycle({
   );
 
   const flushPendingRealtimeRefresh = useCallback(() => {
-    if (activeSaveCountRef.current > 0 || localEditDepthRef.current > 0) return;
+    if (activeSaveCountRef.current > 0 || localEditDepthRef.current > 0) {
+      return;
+    }
     const pending = pendingRealtimeInvalidationRef.current;
-    if (!pending) return;
+    if (!pending) {
+      return;
+    }
     pendingRealtimeInvalidationRef.current = undefined;
     realtimeRefreshRef.current(pending);
   }, []);
@@ -133,7 +137,9 @@ export function useStoryPersistenceLifecycle({
         const result = await operation();
         return lifecycleVersion === lifecycleVersionRef.current ? result : undefined;
       } catch (caught) {
-        if (lifecycleVersion !== lifecycleVersionRef.current) return undefined;
+        if (lifecycleVersion !== lifecycleVersionRef.current) {
+          return undefined;
+        }
         reportSaveError(caught);
         return undefined;
       } finally {
@@ -169,19 +175,27 @@ export function useStoryPersistenceLifecycle({
   const load = useCallback(() => {
     const attempt = ++loadAttemptRef.current;
     return loadStoryEditorProjection(storyId, (projection) => {
-      if (attempt !== loadAttemptRef.current) return;
+      if (attempt !== loadAttemptRef.current) {
+        return;
+      }
       setStory(projection.story);
       setLoadProgress({ storyId, phase: projection.phase });
     })
       .then((next) => {
-        if (attempt !== loadAttemptRef.current) return;
+        if (attempt !== loadAttemptRef.current) {
+          return;
+        }
         replaceStory(next);
         setLoadProgress({ storyId, phase: 'ready' });
         updateFeedback({ error: '', saveStatus: 'idle' });
       })
       .catch((caught: unknown) => {
-        if (attempt !== loadAttemptRef.current) return;
-        if (recoverFromStoryAccessError(caught)) return;
+        if (attempt !== loadAttemptRef.current) {
+          return;
+        }
+        if (recoverFromStoryAccessError(caught)) {
+          return;
+        }
         updateFeedback({
           error: apiErrorMessage(caught, i18n.t, i18n.t('player.loadFailed')),
           saveStatus: 'error',
@@ -207,7 +221,9 @@ export function useStoryPersistenceLifecycle({
       const attempt = ++loadAttemptRef.current;
       void loadStoryEditorProjection(storyId)
         .then((next) => {
-          if (attempt !== loadAttemptRef.current) return;
+          if (attempt !== loadAttemptRef.current) {
+            return;
+          }
           if (activeSaveCountRef.current > 0 || localEditDepthRef.current > 0) {
             pendingRealtimeInvalidationRef.current = prioritizeStoryRealtimeInvalidation(
               pendingRealtimeInvalidationRef.current,
@@ -220,7 +236,9 @@ export function useStoryPersistenceLifecycle({
           updateFeedback({ error: '' });
         })
         .catch((caught: unknown) => {
-          if (attempt !== loadAttemptRef.current) return;
+          if (attempt !== loadAttemptRef.current) {
+            return;
+          }
           if (invalidation === 'deleted') {
             setStory(undefined);
             markStoryInaccessible();

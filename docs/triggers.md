@@ -199,9 +199,12 @@ on hover or keyboard focus. Deleting one group is immediate and keeps the Trigge
 inspector open. The same inspector edits the single 0–100 appearance probability
 and an optional integer timer in seconds.
 
-The interaction inspector should stay focused on interaction content. Trigger
-inputs and outputs are represented by the graph itself, so the trigger inspector
-does not need to repeat input or output lists.
+The interaction inspector stays focused on interaction content and may show a
+derived list of unique outgoing destination Interactions for navigation and
+canonical child creation. The list follows Story Interaction order and does not
+repeat a destination reached by multiple Triggers. Trigger inputs, conditions,
+and route editing remain represented by the graph and Trigger inspector; this
+destination list does not expose or edit Trigger structure.
 
 An edge represents one trigger input, not necessarily the whole trigger. If a
 trigger has several input interactions, it appears as several edges that share

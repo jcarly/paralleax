@@ -9,45 +9,71 @@ export interface ImportReportWriterOptions {
   reportPath?: string;
 }
 
+type ImportReportTarget =
+  | { kind: 'path'; path: string }
+  | { kind: 'storage'; storage: ImportReportStorage; importId: string; format: string };
+
+interface ActiveReportFile {
+  descriptor: number;
+  path: string;
+}
+
 export class ImportReportWriter {
-  private readonly storage?: ImportReportStorage;
-  private readonly importId?: string;
-  private readonly format?: string;
-  private readonly reportPath?: string;
-  private fileDescriptor?: number;
-  private activePath?: string;
+  private readonly target: ImportReportTarget;
+  private activeFile?: ActiveReportFile;
   private closed = false;
   private failure?: Error;
 
   constructor(options: ImportReportWriterOptions) {
-    this.storage = options.storage;
-    this.importId = options.importId;
-    this.format = options.format;
-    this.reportPath = options.reportPath;
-    if (!this.reportPath && (!this.storage || !this.importId || !this.format)) {
+    if (options.reportPath !== undefined) {
+      if (!options.reportPath && (!options.storage || !options.importId || !options.format)) {
+        throw new Error('A report path or storage, import id, and format are required.');
+      }
+      this.target = { kind: 'path', path: options.reportPath };
+      return;
+    }
+    if (!options.storage || !options.importId || !options.format) {
       throw new Error('A report path or storage, import id, and format are required.');
     }
+    this.target = {
+      kind: 'storage',
+      storage: options.storage,
+      importId: options.importId,
+      format: options.format,
+    };
   }
 
   async start(): Promise<string> {
-    if (this.closed) throw new Error('This report writer is already closed.');
-    if (this.fileDescriptor !== undefined) return this.activePath!;
+    if (this.closed) {
+      throw new Error('This report writer is already closed.');
+    }
+    if (this.activeFile !== undefined) {
+      return this.activeFile.path;
+    }
     const path =
-      this.reportPath ?? (await this.storage!.createReportFile(this.importId!, this.format!));
-    this.fileDescriptor = openSync(path, 'a', 0o600);
-    this.activePath = path;
+      this.target.kind === 'path'
+        ? this.target.path
+        : await this.target.storage.createReportFile(this.target.importId, this.target.format);
+    this.activeFile = { path, descriptor: openSync(path, 'a', 0o600) };
     return path;
   }
 
   writeIssue(issue: ImportIssue): void {
-    if (this.closed || this.fileDescriptor === undefined) {
+    const activeFile = this.activeFile;
+    if (this.closed || activeFile === undefined) {
       throw new Error('The report writer must be started before writing diagnostics.');
     }
-    if (this.failure) throw this.failure;
+    if (this.failure) {
+      throw this.failure;
+    }
 
     const payload: Record<string, unknown> = { ...issue };
-    if (issue.fileName !== undefined) payload.file = issue.fileName;
-    if (issue.locationName !== undefined) payload.location = issue.locationName;
+    if (issue.fileName !== undefined) {
+      payload.file = issue.fileName;
+    }
+    if (issue.locationName !== undefined) {
+      payload.location = issue.locationName;
+    }
     delete payload.fileName;
     delete payload.locationName;
 
@@ -55,8 +81,10 @@ export class ImportReportWriter {
       const line = Buffer.from(`${JSON.stringify(payload)}\n`, 'utf8');
       let offset = 0;
       while (offset < line.length) {
-        const written = writeSync(this.fileDescriptor, line, offset, line.length - offset);
-        if (written === 0) throw new Error('The import report write made no progress.');
+        const written = writeSync(activeFile.descriptor, line, offset, line.length - offset);
+        if (written === 0) {
+          throw new Error('The import report write made no progress.');
+        }
         offset += written;
       }
     } catch (caught) {
@@ -67,25 +95,32 @@ export class ImportReportWriter {
 
   async close(): Promise<void> {
     if (this.closed) {
-      if (this.failure) throw this.failure;
+      if (this.failure) {
+        throw this.failure;
+      }
       return;
     }
     this.closed = true;
-    if (this.fileDescriptor !== undefined) {
+    const activeFile = this.activeFile;
+    if (activeFile !== undefined) {
       try {
-        closeSync(this.fileDescriptor);
+        closeSync(activeFile.descriptor);
       } catch (caught) {
         this.failure ??= caught instanceof Error ? caught : new Error(String(caught));
       }
-      this.fileDescriptor = undefined;
+      this.activeFile = undefined;
     }
-    if (this.failure) throw this.failure;
+    if (this.failure) {
+      throw this.failure;
+    }
   }
 
   async persistSnapshot(report: ImportDiagnostics): Promise<void> {
     await this.start();
     try {
-      for (const issue of report.issues) this.writeIssue(issue);
+      for (const issue of report.issues) {
+        this.writeIssue(issue);
+      }
     } finally {
       await this.close();
     }

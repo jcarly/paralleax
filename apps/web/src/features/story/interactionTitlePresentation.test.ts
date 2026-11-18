@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest';
 import type { Interaction } from '@paralleax/shared';
-import { i18n } from '../../i18n';
+import { changeInterfaceLanguage, i18n } from '../../i18n';
 import {
   interactionTitleForDisplay,
   interactionTitlePlaceholder,
@@ -18,7 +18,7 @@ function interaction(title: string, inputInteractionIds: string[]): Interaction 
 
 describe('interaction title presentation', () => {
   it('shows localized placeholders without rewriting authored titles', async () => {
-    await i18n.changeLanguage('fr');
+    await changeInterfaceLanguage('fr');
     expect(interactionTitleForDisplay(interaction('', []), i18n.t.bind(i18n))).toBe('Départ');
     expect(interactionTitleForDisplay(interaction('', ['source']), i18n.t.bind(i18n))).toBe(
       'Nouvelle interaction',

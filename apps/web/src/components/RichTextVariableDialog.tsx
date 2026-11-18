@@ -46,7 +46,9 @@ export function RichTextVariableDialog({
         autoFocus
         story={story}
         selectedTarget={initialTarget}
-        onSelectionClear={() => setSelection(undefined)}
+        onSelectionClear={() => {
+          setSelection(undefined);
+        }}
         onSelect={setSelection}
       />
 
@@ -64,7 +66,9 @@ export function RichTextVariableDialog({
           disabled={!selection}
           type="button"
           onClick={() => {
-            if (selection) onConfirm(selection.target, selection.reference);
+            if (selection) {
+              onConfirm(selection.target, selection.reference);
+            }
           }}
         >
           {t(isEditing ? 'richText.updateVariable' : 'richText.insertVariable')}

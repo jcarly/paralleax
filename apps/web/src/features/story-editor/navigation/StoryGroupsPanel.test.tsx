@@ -69,7 +69,9 @@ function setup(
         }}
         onSelectInteraction={callbacks.onSelectInteraction}
         onUpdate={async (id, patch) => {
-          if (!(await callbacks.onUpdate(id, patch))) return false;
+          if (!(await callbacks.onUpdate(id, patch))) {
+            return false;
+          }
           setStory((old) => {
             let next: Story = {
               ...old,
@@ -79,16 +81,20 @@ function setup(
                   : group,
               ),
             };
-            if (patch.interactionIds)
+            if (patch.interactionIds) {
               next = setStoryGroupInteractions(next, id, patch.interactionIds);
-            if (patch.beforeGroupId !== undefined)
+            }
+            if (patch.beforeGroupId !== undefined) {
               next = moveStoryGroup(next, id, patch.parentGroupId ?? null, patch.beforeGroupId);
+            }
             return next;
           });
           return true;
         }}
         onDelete={async (id) => {
-          if (!(await callbacks.onDelete(id))) return false;
+          if (!(await callbacks.onDelete(id))) {
+            return false;
+          }
           setStory((old) => removeStoryGroup(old, id));
           return true;
         }}

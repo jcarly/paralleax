@@ -39,13 +39,13 @@ test('strict configuration rejects complexity, size, nesting, parameters and uns
   }
 });
 
-test('exact thresholds cover production, tests and Node scripts', async () => {
+test('complexity and file-size thresholds cover production, tests and Node scripts', async () => {
   const eslint = new ESLint();
-  for (const file of [
-    'apps/web/src/App.tsx',
-    'packages/shared/src/story-operations.test.ts',
-    'apps/api/src/stories/stories.service.spec.ts',
-    'scripts/quality/counts.mjs',
+  for (const [file, lineLimit] of [
+    ['apps/web/src/App.tsx', 400],
+    ['packages/shared/src/story-operations.test.ts', 600],
+    ['apps/api/src/stories/stories.service.spec.ts', 600],
+    ['scripts/quality/counts.mjs', 400],
   ]) {
     const config = await eslint.calculateConfigForFile(path.resolve(file));
     for (const [rule, threshold] of [
@@ -57,8 +57,100 @@ test('exact thresholds cover production, tests and Node scripts', async () => {
       assert.deepEqual(config.rules[rule], [2, threshold], `${file}: ${rule}`);
     }
     assert.equal(config.rules['max-lines-per-function'][1].max, 50);
+    assert.deepEqual(config.rules['max-lines'], [
+      2,
+      { max: lineLimit, skipBlankLines: true, skipComments: true },
+    ]);
+    assert.equal(config.rules['no-duplicate-imports'][0], 2);
     assert.equal(config.rules['@typescript-eslint/no-explicit-any'][0], 2);
   }
+  const jsxConfig = await eslint.calculateConfigForFile(
+    path.resolve('apps/web/src/QualityExample.jsx'),
+  );
+  assert.equal(jsxConfig.rules['max-lines'][1].max, 400);
+  assert.equal(jsxConfig.rules['no-duplicate-imports'][0], 2);
+});
+
+test('React and accessibility checks apply to the web workspace', async () => {
+  const eslint = new ESLint();
+  const config = await eslint.calculateConfigForFile(path.resolve('apps/web/src/App.tsx'));
+  for (const rule of [
+    '@eslint-react/no-missing-key',
+    '@eslint-react/no-array-index-key',
+    '@eslint-react/no-nested-component-definitions',
+    '@eslint-react/no-leaked-conditional-rendering',
+    '@eslint-react/no-unstable-context-value',
+    '@eslint-react/no-context-provider',
+    '@eslint-react/no-use-context',
+    'jsx-a11y-x/alt-text',
+    'jsx-a11y-x/click-events-have-key-events',
+    'jsx-a11y-x/label-has-associated-control',
+    'jsx-a11y-x/role-has-required-aria-props',
+  ]) {
+    assert.equal(config.rules[rule][0], 2, `${rule} must be an error`);
+  }
+  for (const rule of [
+    '@eslint-react/naming-convention-ref-name',
+    '@eslint-react/naming-convention-id-name',
+    '@eslint-react/rsc-function-definition',
+  ]) {
+    assert.equal(config.rules[rule][0], 0, `${rule} is outside this project's rules`);
+  }
+  const jsxConfig = await eslint.calculateConfigForFile(
+    path.resolve('apps/web/src/QualityExample.jsx'),
+  );
+  assert.equal(jsxConfig.rules['@eslint-react/no-missing-key'][0], 2);
+  assert.equal(jsxConfig.rules['jsx-a11y-x/alt-text'][0], 2);
+});
+
+test('new TypeScript correctness rules catch historical patterns in a typed fixture', async (t) => {
+  const file = path.resolve('apps/web/src/__quality_strict_fixture__.ts');
+  t.after(() => rmSync(file, { force: true }));
+  writeFileSync(
+    file,
+    `export function unnecessary(value: string) {
+  if (value === null) return true;
+  if (value) return true;
+  return false;
+}
+export function coalesce(value: string | null) {
+  return value || 'fallback';
+}
+export function chain(value: { child?: { name?: string } } | null) {
+  return value && value.child && value.child.name;
+}
+export function voidReturn(run: () => void) {
+  return run();
+}`,
+  );
+  const [result] = await new ESLint().lintFiles([file]);
+  assert.equal(result.fatalErrorCount, 0);
+  for (const rule of [
+    '@typescript-eslint/no-unnecessary-condition',
+    '@typescript-eslint/strict-boolean-expressions',
+    '@typescript-eslint/prefer-nullish-coalescing',
+    '@typescript-eslint/prefer-optional-chain',
+    '@typescript-eslint/no-confusing-void-expression',
+  ]) {
+    assert.ok(
+      result.messages.some((message) => message.ruleId === rule),
+      rule,
+    );
+  }
+});
+
+test('React and accessibility plugins report new JSX defects', async () => {
+  const file = path.resolve('apps/web/src/__quality_react_a11y_fixture__.tsx');
+  const source = `export function BadList({ items }: { items: string[] }) {
+  return <div>{items.map((item) => <span>{item}</span>)}</div>;
+}
+export function BadImage() {
+  return <img src="image.png" />;
+}`;
+  const [result] = await new ESLint().lintText(source, { filePath: file });
+  assert.equal(result.fatalErrorCount, 0);
+  assert.ok(result.messages.some(({ ruleId }) => ruleId === '@eslint-react/no-missing-key'));
+  assert.ok(result.messages.some(({ ruleId }) => ruleId === 'jsx-a11y-x/alt-text'));
 });
 
 test('generated output and local third-party corpora remain globally ignored', async () => {

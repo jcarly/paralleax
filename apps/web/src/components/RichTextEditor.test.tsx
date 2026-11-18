@@ -124,11 +124,11 @@ describe('RichTextEditor', () => {
         maxLength={20}
       />,
     );
-    await waitFor(() =>
+    await waitFor(() => {
       expect(within(container).getByRole('status', { name: 'Content length' })).toHaveTextContent(
         '2 characters over limit. This content cannot be saved.',
-      ),
-    );
+      );
+    });
     expect(within(container).getByRole('status', { name: 'Content length' })).toHaveClass('error');
   });
 

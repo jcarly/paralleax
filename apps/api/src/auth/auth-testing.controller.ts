@@ -17,9 +17,13 @@ export class AuthTestingController {
   @Public()
   @Get('emails/latest')
   latestEmail(@Query('to') recipient: string) {
-    if (!this.config.testEmailOutbox) throw new NotFoundException();
+    if (!this.config.testEmailOutbox) {
+      throw new NotFoundException();
+    }
     const email = this.outbox.latestFor(recipient);
-    if (!email) throw new NotFoundException();
+    if (!email) {
+      throw new NotFoundException();
+    }
     return email;
   }
 }

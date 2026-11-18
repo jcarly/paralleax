@@ -262,7 +262,9 @@ async function expectKeyboardFocusRing(locator: import('@playwright/test').Locat
 
 function parseColor(value: string): [number, number, number] {
   const channels = value.match(/[\d.]+/g)?.map(Number);
-  if (!channels || channels.length < 3) throw new Error(`Expected an RGB color, got ${value}`);
+  if (!channels || channels.length < 3) {
+    throw new Error(`Expected an RGB color, got ${value}`);
+  }
   return [channels[0], channels[1], channels[2]];
 }
 

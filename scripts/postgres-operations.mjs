@@ -25,7 +25,9 @@ export function databaseConnection(databaseUrl) {
     PGPASSWORD: decodeURIComponent(url.password),
   };
   const sslMode = url.searchParams.get('sslmode');
-  if (sslMode) environment.PGSSLMODE = sslMode;
+  if (sslMode) {
+    environment.PGSSLMODE = sslMode;
+  }
 
   return { database, environment };
 }
@@ -33,7 +35,9 @@ export function databaseConnection(databaseUrl) {
 export function option(args, name) {
   const prefix = `--${name}=`;
   const value = args.find((argument) => argument.startsWith(prefix))?.slice(prefix.length);
-  if (!value) throw new Error(`Missing required option ${prefix}<value>`);
+  if (!value) {
+    throw new Error(`Missing required option ${prefix}<value>`);
+  }
   return value;
 }
 
@@ -49,7 +53,9 @@ export async function createBackup({ databaseUrl, output, overwrite = false, run
       await access(target);
       throw new Error(`Backup already exists: ${target}`);
     } catch (error) {
-      if (error.code !== 'ENOENT') throw error;
+      if (error.code !== 'ENOENT') {
+        throw error;
+      }
     }
   }
 

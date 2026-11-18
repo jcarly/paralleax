@@ -62,8 +62,12 @@ export function ContextualCommentsRail({
           canComment={canComment}
           canManageThread={canManageThread(thread)}
           canDeleteThread={canDeleteThread(thread)}
-          onExpand={() => onSelect(thread.id)}
-          onCollapse={() => onSelect(undefined)}
+          onExpand={() => {
+            onSelect(thread.id);
+          }}
+          onCollapse={() => {
+            onSelect(undefined);
+          }}
           onReply={(body) => onReply(thread.id, body)}
           onStatus={(status) => onStatus(thread.id, status)}
           onDelete={onDelete ? () => onDelete(thread.id) : undefined}
@@ -78,7 +82,9 @@ function anchorDescription(
   anchor: Exclude<CommentAnchor, { kind: 'canvas' }>,
   t: (key: string) => string,
 ) {
-  if (anchor.kind === 'text') return `“${anchor.selector.exact}”`;
+  if (anchor.kind === 'text') {
+    return `“${anchor.selector.exact}”`;
+  }
   if (anchor.kind === 'field' || anchor.kind === 'section') {
     return `${t(`comments.anchor.${anchor.targetType}`)}: ${commentAnchorSlotLabel(anchor)}`;
   }

@@ -10,16 +10,6 @@
       "count": 1
     }
   },
-  "apps/web/src/components/ItemDefinitionInspector.tsx -> apps/web/src/components/LocationInspector.tsx": {
-    "f962cd02b3071a5e3bed2444b451189641fef86845cefd20052f2f3c92960189": {
-      "count": 1
-    }
-  },
-  "apps/web/src/components/CharacterInspector.tsx -> apps/web/src/components/LocationInspector.tsx": {
-    "356f8748362cdb149fcd7fe8fe8632c0a301112a37b0109128062cec917b457a": {
-      "count": 1
-    }
-  },
   "apps/web/src/storyGraph.ts -> apps/web/src/storyGraph.ts": {
     "b2216cc453aedf2a382fe78e131affc9f6175949b28a97da8fa71852fb933c4a": {
       "count": 1
@@ -48,11 +38,6 @@
       "count": 1
     },
     "eb5d6fe9aaa886d7c0bb7eab00aa41e0d3c1367ec1dc9dec50c21a496125abe5": {
-      "count": 1
-    }
-  },
-  "apps/api/src/observability/sentry.ts -> apps/web/src/observability/sentry.ts": {
-    "bbe7d2c23502a52fdb8dd0fb67197d36256b29c863fdb9cab333abca8d81555f": {
       "count": 1
     }
   }

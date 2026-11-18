@@ -1,7 +1,12 @@
 import { EventEmitter } from 'node:events';
 import type { ChoiceScriptImportResult, ChoiceScriptSourceFile } from '@paralleax/shared';
+import type { ChoiceScriptWorkerInput } from './choicescript-import.worker-protocol.js';
 
-const mockWorkerConstructor = jest.fn();
+type MockWorkerInvocation = [
+  path: string,
+  options: { workerData: ChoiceScriptWorkerInput; transferList: unknown[] },
+];
+const mockWorkerConstructor = jest.fn<TestWorker, MockWorkerInvocation>();
 
 jest.mock('node:worker_threads', () => ({ Worker: mockWorkerConstructor }));
 
@@ -11,6 +16,14 @@ const reportPath = 'C:\\tmp\\choicescript-import-report.jsonl';
 
 class TestWorker extends EventEmitter {
   readonly terminate = jest.fn(() => Promise.resolve(1));
+}
+
+function requiredWorkerInvocation(): MockWorkerInvocation {
+  const invocation = mockWorkerConstructor.mock.calls[0];
+  if (!invocation) {
+    throw new Error('The ChoiceScript worker was not created.');
+  }
+  return invocation;
 }
 
 const files: ChoiceScriptSourceFile[] = [{ name: 'startup.txt', content: '*finish' }];
@@ -50,10 +63,13 @@ describe('ChoiceScriptImportWorkerService', () => {
     const service = new ChoiceScriptImportWorkerService();
     const pending = service.run(files, options, undefined, reportPath);
 
-    expect(mockWorkerConstructor).toHaveBeenCalledWith(
-      expect.stringMatching(/choicescript-import\.worker\.js$/),
-      { workerData: expect.objectContaining({ files, ...options, reportPath }), transferList: [] },
-    );
+    expect(mockWorkerConstructor).toHaveBeenCalledTimes(1);
+    const [workerPath, workerOptions] = requiredWorkerInvocation();
+    expect(workerPath).toMatch(/choicescript-import\.worker\.js$/);
+    expect(workerOptions).toMatchObject({
+      workerData: { files, ...options, reportPath },
+      transferList: [],
+    });
 
     const result = emptyResult();
     workers[0].emit('message', { type: 'result', result });

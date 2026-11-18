@@ -1,7 +1,7 @@
 import { afterEach, describe, expect, it } from 'vitest';
 import { ApiError } from './api';
 import { apiErrorMessage } from './apiErrorMessages';
-import { i18n } from './i18n';
+import { changeInterfaceLanguage, i18n } from './i18n';
 
 describe('apiErrorMessage', () => {
   afterEach(async () => {
@@ -9,7 +9,7 @@ describe('apiErrorMessage', () => {
   });
 
   it('uses the localized copy for a stable application error code', async () => {
-    await i18n.changeLanguage('fr');
+    await changeInterfaceLanguage('fr');
 
     expect(
       apiErrorMessage(
@@ -25,7 +25,7 @@ describe('apiErrorMessage', () => {
   });
 
   it('does not expose the server message for a generic HTTP code', async () => {
-    await i18n.changeLanguage('fr');
+    await changeInterfaceLanguage('fr');
 
     expect(
       apiErrorMessage(
@@ -37,7 +37,7 @@ describe('apiErrorMessage', () => {
   });
 
   it('localizes comment deletion authorization failures', async () => {
-    await i18n.changeLanguage('fr');
+    await changeInterfaceLanguage('fr');
 
     expect(
       apiErrorMessage(
@@ -49,7 +49,7 @@ describe('apiErrorMessage', () => {
   });
 
   it('localizes Story quota failures', async () => {
-    await i18n.changeLanguage('fr');
+    await changeInterfaceLanguage('fr');
     expect(
       apiErrorMessage(
         new ApiError('The Story exceeds its limit', 422, 'STORY_QUOTA_EXCEEDED'),

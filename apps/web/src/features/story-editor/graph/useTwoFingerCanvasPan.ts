@@ -13,14 +13,19 @@ export function useTwoFingerCanvasPan(
 ) {
   useEffect(() => {
     const renderer = canvasRef.current?.querySelector<HTMLElement>('.react-flow__renderer');
-    if (!renderer) return;
+    if (!renderer) {
+      return;
+    }
 
     const preventSingleFingerPan = (event: TouchEvent) => {
-      if (event.touches.length < 2) event.stopImmediatePropagation();
+      if (event.touches.length < 2) {
+        event.stopImmediatePropagation();
+      }
     };
 
     renderer.addEventListener('touchstart', preventSingleFingerPan, { capture: true });
-    return () =>
+    return () => {
       renderer.removeEventListener('touchstart', preventSingleFingerPan, { capture: true });
+    };
   }, [canvasRef, canvasVersion]);
 }

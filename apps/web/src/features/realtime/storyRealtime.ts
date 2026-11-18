@@ -5,8 +5,12 @@ export function prioritizeStoryRealtimeInvalidation(
   current: StoryRealtimeInvalidation | undefined,
   incoming: StoryRealtimeInvalidation,
 ): StoryRealtimeInvalidation {
-  if (current === 'deleted' || incoming === 'deleted') return 'deleted';
-  if (current === 'changed' || incoming === 'changed') return 'changed';
+  if (current === 'deleted' || incoming === 'deleted') {
+    return 'deleted';
+  }
+  if (current === 'changed' || incoming === 'changed') {
+    return 'changed';
+  }
   return 'ready';
 }
 

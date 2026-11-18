@@ -2,6 +2,57 @@
 
 ## Unreleased
 
+- Expanded ESLint quality gates for TypeScript, React, accessibility, import
+  consistency, and code size. CI now rejects unapproved growth in the historical
+  suppression baseline.
+
+- Aligned Interaction presentation across the graph, Inspector, Simulation,
+  and Reader. Cards now show a label bubble, icon-marked location and cast,
+  a short wrapped narrative excerpt, and compact effect indicators. Label
+  bubbles include a direction arrow, and the Inspector groups its label, context,
+  and narrative in one quiet card. The Inspector uses icons for location, cast,
+  and duration while keeping values visible; empty body content shows only the
+  add-content action. Reader and Simulation share location, cast, and story-time
+  pictograms, while Simulation adds effect summaries. Existing trigger
+  diagnostics, conditional-text behavior, choice timers, transitions, and saves
+  continue through their current paths.
+
+- Made the editor Inspector resizable by pointer or keyboard and added a maximize
+  mode that covers the graph area. Restoring returns to the previous width, and
+  the context navigation stays available.
+
+- Replaced the editor header's text buttons with tooltip-labeled icons for
+  Simulation from the beginning or selected Interaction and for the comments
+  list. The comments icon retains its open-thread count. A combined sync icon is
+  green when the Story is saved and realtime updates are connected, with separate
+  accessible descriptions for saving, connection loss, and save errors.
+
+- Simplified account entry, the Story library, and settings. Sign-in and registration now
+  keep the site header and direct routes, while the library removes generated
+  graph art and reader-facing interaction counts. Story deletion now uses a
+  labeled trash action with confirmation, and settings drop their redundant
+  introduction. Reader scenes display the authored Interaction option label
+  above the scene context; choice labels and authored body content remain
+  unchanged.
+
+- Changed the Railway alpha release flow to run only for newly created `x.y.z`
+  tags after exhaustive CI. GitHub Actions now publishes API and web images to
+  GHCR and deploys their immutable digests in migration-first order before the
+  deployment smoke check.
+
+- Aligned production Docker builds with the Node 24 toolchain and split them by
+  API/web target. Railway source-build watch patterns now include shared and
+  Docker inputs, while Sentry upload credentials are mounted only as a web
+  BuildKit secret. Replaced the service Config as Code files with a named IaC
+  partial for API and web; it preserves existing app variable values and the
+  web domain, while Postgres and its volume remain unmanaged. Disabling live
+  branch auto-deploy, clearing Config File Path settings, and applying a reviewed
+  Railway plan are still required before the live services use this configuration.
+
+- Replaced named interview notes and a project-specific import example with an
+  anonymized product-discovery synthesis and source-neutral QSP import lessons.
+  Identifiable research records remain outside this public repository.
+
 - Local development registrations now skip email verification by default and
   sign in immediately. `DEV_SKIP_EMAIL_VERIFICATION=false` restores the normal
   email flow; the bypass cannot be enabled in test or production.
@@ -1249,14 +1300,8 @@
 - Added a project-wide production-readiness baseline and made its data safety,
   operations, performance, security, accessibility, publication, and
   collaboration gates part of the persistent agent rules and roadmap.
-- Added an idempotent, adult-only SQL compatibility prototype inspired by Girl
-  Life's broad work, study, village, progression, and inventory systems.
-- Added a Girl Life gap analysis covering licensing and safety constraints plus
-  the domain, reader, editor, persistence, and import capabilities required for
-  a substantially complete mechanical conversion.
-- Extended the Girl Life import analysis with current production-readiness
-  constraints around migration safety, full-graph operations, bulk persistence,
-  observability, backup, restoration, and publication.
+- Documented general large-import lessons around source rights, data safety,
+  migration strategy, bulk persistence, operational readiness, and domain gaps.
 - Added reusable story-level item definitions and separate character-owned item
   instances, including support for owning several copies of the same item.
 - Added item definition editing, character item assignment, relational

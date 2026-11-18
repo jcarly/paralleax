@@ -105,7 +105,7 @@ Primary scope:
 
 Best for:
 
-- Girl Life / Lilith's Throne source analysis;
+- licensed external QSP source analysis;
 - source-neutral intermediate representation;
 - mapping reports;
 - unsupported-feature inventories;

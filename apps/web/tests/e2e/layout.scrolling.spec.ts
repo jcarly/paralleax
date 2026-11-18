@@ -45,6 +45,10 @@ test.describe('Constrained overlays and editor panels', () => {
     await mockStory(page, current);
 
     await page.goto('/stories/story-1/edit');
+    await page
+      .getByRole('navigation', { name: 'Story context' })
+      .getByRole('button', { name: /Locations/ })
+      .click();
 
     const panel = page.locator('.location-panel-content');
     await expect(panel).toBeVisible();
@@ -88,6 +92,10 @@ test.describe('Constrained overlays and editor panels', () => {
       const canvas = page.locator('.canvas');
       const viewport = page.locator('.react-flow__viewport');
       await expect(content).toBeVisible();
+      await expect(inspector.locator('.interaction-inspector')).toBeVisible();
+      await expect(inspector.locator('.interaction-content-preview')).toContainText(
+        'Inspector paragraph 30.',
+      );
       const inspectorBox = (await inspector.boundingBox())!;
       const toggleBefore = (await toggle.boundingBox())!;
       const canvasBefore = await canvas.boundingBox();
@@ -124,7 +132,11 @@ test.describe('Constrained overlays and editor panels', () => {
       await page.evaluate(
         () =>
           new Promise<void>((resolve) =>
-            requestAnimationFrame(() => requestAnimationFrame(() => resolve())),
+            requestAnimationFrame(() =>
+              requestAnimationFrame(() => {
+                resolve();
+              }),
+            ),
           ),
       );
 
@@ -148,7 +160,9 @@ test.describe('Constrained overlays and editor panels', () => {
     await page.goto('/stories/story-1/edit');
     await page
       .getByRole('button', { name: 'Story settings' })
-      .evaluate((button: HTMLButtonElement) => button.click());
+      .evaluate((button: HTMLButtonElement) => {
+        button.click();
+      });
 
     const dialog = page.getByRole('dialog', { name: 'Story settings' });
     await expect(dialog).toBeVisible();
@@ -206,7 +220,9 @@ test.describe('Constrained overlays and editor panels', () => {
     await page.goto('/stories/story-1/edit');
     await page
       .getByRole('button', { name: 'Story settings' })
-      .evaluate((button: HTMLButtonElement) => button.click());
+      .evaluate((button: HTMLButtonElement) => {
+        button.click();
+      });
     await page.getByRole('tab', { name: 'Access' }).click();
     await expect(page.getByLabel('Reading', { exact: true })).toBeVisible();
 

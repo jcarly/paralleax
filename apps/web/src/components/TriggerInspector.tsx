@@ -45,7 +45,9 @@ export function TriggerInspector({
   const pendingConditionFocusRef = useRef(false);
 
   useLayoutEffect(() => {
-    if (!editingConditionKey || !pendingConditionFocusRef.current) return;
+    if (!editingConditionKey || !pendingConditionFocusRef.current) {
+      return;
+    }
     const editor = activeConditionRef.current;
     pendingConditionFocusRef.current = false;
     (
@@ -65,7 +67,7 @@ export function TriggerInspector({
   }
 
   function collapseWhenFocusLeaves(event: FocusEvent<HTMLDivElement>, conditionKey: string) {
-    if (!event.currentTarget.contains(event.relatedTarget as Node | null)) {
+    if (!event.currentTarget.contains(event.relatedTarget)) {
       setEditingConditionKey((current) => (current === conditionKey ? null : current));
     }
   }
@@ -124,11 +126,17 @@ export function TriggerInspector({
                     ref={isEditing ? activeConditionRef : undefined}
                     onBlur={
                       isEditing
-                        ? (event) => collapseWhenFocusLeaves(event, conditionKey)
+                        ? (event) => {
+                            collapseWhenFocusLeaves(event, conditionKey);
+                          }
                         : undefined
                     }
                     onKeyUp={
-                      isEditing ? (event) => collapseOnEnter(event, conditionKey) : undefined
+                      isEditing
+                        ? (event) => {
+                            collapseOnEnter(event, conditionKey);
+                          }
+                        : undefined
                     }
                   >
                     {index > 0 ? (
@@ -157,7 +165,9 @@ export function TriggerInspector({
                           className="condition-summary"
                           data-testid="condition-summary"
                           type="button"
-                          onClick={() => setEditingConditionKey(conditionKey)}
+                          onClick={() => {
+                            setEditingConditionKey(conditionKey);
+                          }}
                         >
                           {description}
                         </button>
@@ -184,7 +194,9 @@ export function TriggerInspector({
               unavailableReasons={conditionUnavailableReasons(story, interaction.id, t)}
               onAdd={(type) => {
                 const condition = createTriggerCondition(story, interaction.id, type);
-                if (!condition) return;
+                if (!condition) {
+                  return;
+                }
                 const nextConditions = [...group.conditions, condition];
                 pendingConditionFocusRef.current = true;
                 setEditingConditionKey(`${group.id}:${nextConditions.length - 1}`);
@@ -243,7 +255,9 @@ export function TriggerInspector({
                   Math.min(100, Math.max(0, Number(event.currentTarget.value))),
                 );
                 event.currentTarget.value = String(value);
-                if (value === getTriggerAppearanceProbability(trigger)) return;
+                if (value === getTriggerAppearanceProbability(trigger)) {
+                  return;
+                }
                 void onSaveTrigger(interaction.id, trigger.id, {
                   appearanceProbability: value,
                 });
@@ -283,7 +297,9 @@ export function TriggerInspector({
                   ? Math.round(Math.min(2_147_483_647, Math.max(0, Number(rawValue))))
                   : null;
                 event.currentTarget.value = value === null ? '' : String(value);
-                if (value === getTriggerTimerSeconds(trigger)) return;
+                if (value === getTriggerTimerSeconds(trigger)) {
+                  return;
+                }
                 void onSaveTrigger(interaction.id, trigger.id, { timerSeconds: value });
               }}
             />

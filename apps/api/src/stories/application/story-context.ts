@@ -46,6 +46,8 @@ import {
   updateStatDefinition,
 } from './story-stats';
 
+type CharacterStatUpdateArguments = [input: UpdateCharacterStatDto, userId: string];
+
 @Injectable()
 export class StoryContextService {
   constructor(private readonly mutations: StoryMutationService) {}
@@ -338,9 +340,9 @@ export class StoryContextService {
     storyId: string,
     characterId: string,
     statId: string,
-    input: UpdateCharacterStatDto,
-    userId: string,
+    ...args: CharacterStatUpdateArguments
   ): Promise<CharacterStatMutationResult> {
+    const [input, userId] = args;
     const updatedStory = await this.mutations.update(
       storyId,
       (story) => {

@@ -262,7 +262,9 @@ export async function mockEditorBackgroundRequests(page: Page) {
       }
 
       emit(type: string) {
-        this.listeners.get(type)?.forEach((listener) => listener());
+        this.listeners.get(type)?.forEach((listener) => {
+          listener();
+        });
       }
 
       close() {}
@@ -287,6 +289,16 @@ export async function prepareEditorPage(
   await mockAuthenticatedUser(page);
   await mockEditorBackgroundRequests(page);
   await mockStory(page, initialStory, onEditorResponse);
+}
+
+export async function openInteractionTitleEditor(page: Page, title: string) {
+  await page.getByRole('button', { name: `Title: ${title}`, exact: true }).click();
+  return page.getByLabel('Title', { exact: true });
+}
+
+export async function openInteractionBodyEditor(page: Page) {
+  await page.locator('.interaction-content-preview').click();
+  return page.getByRole('textbox', { name: 'Content', exact: true });
 }
 
 function resolveStory(source: StorySource): Story {

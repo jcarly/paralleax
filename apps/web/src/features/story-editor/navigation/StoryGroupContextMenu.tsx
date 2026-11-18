@@ -66,25 +66,33 @@ function GroupEditActions({
       <MenuAction
         label={t('editor.groups.rename')}
         onClose={onClose}
-        onClick={() => onRename(group.id)}
+        onClick={() => {
+          onRename(group.id);
+        }}
       />
       <MenuAction
         label={t('editor.groups.createChild')}
         onClose={onClose}
-        onClick={() => onCreateChild(group.id)}
+        onClick={() => {
+          onCreateChild(group.id);
+        }}
       />
       {canAdd ? (
         <MenuAction
           label={t('editor.groups.addSelection')}
           onClose={onClose}
-          onClick={() => onAddSelection(group)}
+          onClick={() => {
+            onAddSelection(group);
+          }}
         />
       ) : null}
       {canRemove ? (
         <MenuAction
           label={t('editor.groups.removeSelection')}
           onClose={onClose}
-          onClick={() => onRemoveSelection(group)}
+          onClick={() => {
+            onRemoveSelection(group);
+          }}
         />
       ) : null}
     </>
@@ -103,12 +111,16 @@ function GroupSelectionActions({
       <MenuAction
         label={t('editor.groups.selectInteractions')}
         onClose={onClose}
-        onClick={() => onSelectInteractions(interactionIds)}
+        onClick={() => {
+          onSelectInteractions(interactionIds);
+        }}
       />
       <MenuAction
         label={t('editor.groups.focus')}
         onClose={onClose}
-        onClick={() => onFocus(interactionIds)}
+        onClick={() => {
+          onFocus(interactionIds);
+        }}
       />
     </>
   );
@@ -169,12 +181,16 @@ function GroupSiblingActions({
           <MenuAction
             label={t('editor.groups.moveUp')}
             onClose={onClose}
-            onClick={() => onMove(group, 'up')}
+            onClick={() => {
+              onMove(group, 'up');
+            }}
           />
           <MenuAction
             label={t('editor.groups.moveIn')}
             onClose={onClose}
-            onClick={() => onMove(group, 'in')}
+            onClick={() => {
+              onMove(group, 'in');
+            }}
           />
         </>
       ) : null}
@@ -182,7 +198,9 @@ function GroupSiblingActions({
         <MenuAction
           label={t('editor.groups.moveDown')}
           onClose={onClose}
-          onClick={() => onMove(group, 'down')}
+          onClick={() => {
+            onMove(group, 'down');
+          }}
         />
       ) : null}
     </>
@@ -204,12 +222,16 @@ function GroupParentActions({
       <MenuAction
         label={t('editor.groups.moveOut')}
         onClose={onClose}
-        onClick={() => onMove(group, 'out')}
+        onClick={() => {
+          onMove(group, 'out');
+        }}
       />
       <MenuAction
         label={t('editor.groups.moveToRoot')}
         onClose={onClose}
-        onClick={() => onMoveToRoot(group.id)}
+        onClick={() => {
+          onMoveToRoot(group.id);
+        }}
       />
     </>
   );

@@ -500,7 +500,9 @@ function createHarness(
     deletedTriggerInputKeysRef,
     current: () => story,
     story: () => {
-      if (!story) throw new Error('Expected a loaded story');
+      if (!story) {
+        throw new Error('Expected a loaded story');
+      }
       return story;
     },
   };

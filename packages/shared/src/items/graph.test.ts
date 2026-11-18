@@ -70,7 +70,9 @@ describe('item graph operations', () => {
     const result = moveItemInstanceInStory(story, 'bag', { locationId: 'park' });
 
     expect(result.ok).toBe(true);
-    if (!result.ok) return;
+    if (!result.ok) {
+      return;
+    }
     expect(story.characters![0].items).toHaveLength(2);
     expect(result.story.characters![0].items).toEqual([]);
     expect(result.story.locations![0].items).toEqual([
@@ -100,7 +102,9 @@ describe('item graph operations', () => {
       slotKey: 'side',
     });
 
-    if (!nested.ok) return;
+    if (!nested.ok) {
+      return;
+    }
     const rooted = moveItemInstanceInStory(nested.story, 'cabinet', { characterId: 'luc' });
     expect(rooted.ok && rooted.story.characters![1].items).toEqual([
       { id: 'cabinet', itemDefinitionId: 'cabinet-definition' },

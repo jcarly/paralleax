@@ -13,7 +13,9 @@ export async function loadLatestRuntimeSliceForSession(
       requestedSession.journeyInteractionIds,
     );
     const latestSession = getCurrentSession();
-    if (hasSameRuntimeSliceRequest(requestedSession, latestSession)) return nextStory;
+    if (hasSameRuntimeSliceRequest(requestedSession, latestSession)) {
+      return nextStory;
+    }
     requestedSession = latestSession;
   }
 }

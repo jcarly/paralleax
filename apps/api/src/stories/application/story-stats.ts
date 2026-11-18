@@ -38,6 +38,24 @@ type StatAssignmentInput = {
   initialValue: unknown;
 };
 
+type StatEffectInput = {
+  statId: string;
+  itemId?: string;
+  operation: 'add' | 'set';
+  value?: unknown;
+  expression?: string;
+};
+
+type StatConditionInput = {
+  statId: string;
+  itemId?: string;
+  operator: StatComparisonOperator;
+  value?: unknown;
+  comparisonStatId?: string;
+  comparisonItemId?: string;
+  expression?: string;
+};
+
 export type StatAssignmentReference = {
   assignment: StatAssignment;
   ownerType: StatOwnerType;
@@ -49,23 +67,50 @@ export function createStatDefinition(
   id: string,
   input: StatDefinitionInput,
 ): StatDefinition {
-  const name = input.name.trim();
-  if (!name) throw new BadRequestException('Stat name cannot be blank');
-  if (input.valueType !== 'number' && input.changePerHour) {
-    throw new BadRequestException('Only numeric stats can change over time');
-  }
-  const definition: StatDefinition = {
+  const definition = statDefinitionFromInput(id, input);
+  (story.statDefinitions ??= []).push(definition);
+  return definition;
+}
+
+function statDefinitionFromInput(id: string, input: StatDefinitionInput): StatDefinition {
+  const name = requiredStatName(input.name);
+  validateChangePerHour(input.valueType, input.changePerHour);
+  return {
     id,
     name,
     valueType: input.valueType,
-    ...(input.category?.trim() ? { category: input.category.trim() } : {}),
-    ...(input.imageUrl?.trim() ? { imageUrl: input.imageUrl.trim() } : {}),
-    ...(input.valueType === 'number' && input.changePerHour
-      ? { changePerHour: input.changePerHour }
-      : {}),
+    ...optionalCategory(input.category),
+    ...optionalImageUrl(input.imageUrl),
+    ...optionalChangePerHour(input.valueType, input.changePerHour),
   };
-  (story.statDefinitions ??= []).push(definition);
-  return definition;
+}
+
+function requiredStatName(name: string) {
+  const normalized = name.trim();
+  if (!normalized) {
+    throw new BadRequestException('Stat name cannot be blank');
+  }
+  return normalized;
+}
+
+function validateChangePerHour(valueType: StatValueType, changePerHour?: number) {
+  if (valueType !== 'number' && changePerHour) {
+    throw new BadRequestException('Only numeric stats can change over time');
+  }
+}
+
+function optionalCategory(category?: string) {
+  const normalized = category?.trim();
+  return normalized ? { category: normalized } : {};
+}
+
+function optionalImageUrl(imageUrl?: string) {
+  const normalized = imageUrl?.trim();
+  return normalized ? { imageUrl: normalized } : {};
+}
+
+function optionalChangePerHour(valueType: StatValueType, changePerHour?: number) {
+  return valueType === 'number' && changePerHour ? { changePerHour } : {};
 }
 
 export function updateStatDefinition(
@@ -74,29 +119,55 @@ export function updateStatDefinition(
   input: { name?: string; category?: string; imageUrl?: string; changePerHour?: number },
 ): StatDefinition {
   const definition = findStatDefinition(story, id);
-  if (input.name !== undefined) {
-    const name = input.name.trim();
-    if (!name) throw new BadRequestException('Stat name cannot be blank');
-    definition.name = name;
-  }
-  if (input.category !== undefined) {
-    const category = input.category.trim();
-    if (category) definition.category = category;
-    else delete definition.category;
-  }
-  if (input.imageUrl !== undefined) {
-    const imageUrl = input.imageUrl.trim();
-    if (imageUrl) definition.imageUrl = imageUrl;
-    else delete definition.imageUrl;
-  }
-  if (input.changePerHour !== undefined) {
-    if (getStatValueType(definition) !== 'number' && input.changePerHour !== 0) {
-      throw new BadRequestException('Only numeric stats can change over time');
-    }
-    if (input.changePerHour) definition.changePerHour = input.changePerHour;
-    else delete definition.changePerHour;
-  }
+  updateStatName(definition, input.name);
+  updateStatCategory(definition, input.category);
+  updateStatImageUrl(definition, input.imageUrl);
+  updateStatChangePerHour(definition, input.changePerHour);
   return definition;
+}
+
+function updateStatName(definition: StatDefinition, name?: string) {
+  if (name !== undefined) {
+    definition.name = requiredStatName(name);
+  }
+}
+
+function updateStatCategory(definition: StatDefinition, category?: string) {
+  if (category === undefined) {
+    return;
+  }
+  const normalized = category.trim();
+  if (normalized) {
+    definition.category = normalized;
+  } else {
+    delete definition.category;
+  }
+}
+
+function updateStatImageUrl(definition: StatDefinition, imageUrl?: string) {
+  if (imageUrl === undefined) {
+    return;
+  }
+  const normalized = imageUrl.trim();
+  if (normalized) {
+    definition.imageUrl = normalized;
+  } else {
+    delete definition.imageUrl;
+  }
+}
+
+function updateStatChangePerHour(definition: StatDefinition, changePerHour?: number) {
+  if (changePerHour === undefined) {
+    return;
+  }
+  if (getStatValueType(definition) !== 'number' && changePerHour !== 0) {
+    throw new BadRequestException('Only numeric stats can change over time');
+  }
+  if (changePerHour) {
+    definition.changePerHour = changePerHour;
+  } else {
+    delete definition.changePerHour;
+  }
 }
 
 export function deleteStatDefinition(story: Story, id: string) {
@@ -144,128 +215,176 @@ export function deleteStatAssignment(story: Story, id: string) {
   removeStatAssignments(story, new Set([id]));
 }
 
-export function validateStatEffects(
-  story: Story,
-  effects: Array<{
-    statId: string;
-    itemId?: string;
-    operation: 'add' | 'set';
-    value?: unknown;
-    expression?: string;
-  }>,
-): StatEffect[] {
+export function validateStatEffects(story: Story, effects: StatEffectInput[]): StatEffect[] {
   const targets = new Set<string>();
-  return effects.map((effect) => {
-    if ((effect.value !== undefined) === (effect.expression !== undefined)) {
-      throw new BadRequestException('A stat effect requires one literal value or expression');
-    }
-    const reference = validateStatAssignmentReference(story, effect.statId);
-    assertItemTarget(story, reference, effect.itemId);
-    const definition = findStatDefinition(story, reference.assignment.statDefinitionId);
-
-    if (effect.expression !== undefined) {
-      const expressionType = validateExpression(story, effect.expression);
-      const targetType = getStatValueType(definition);
-      if (expressionType !== targetType) {
-        throw new BadRequestException(`Stat expression must evaluate to a ${targetType}`);
-      }
-      if (effect.operation === 'add' && targetType !== 'number') {
-        throw new BadRequestException('Only numeric stats support add effects');
-      }
-      const target = `${effect.itemId ?? ''}:${reference.assignment.id}`;
-      if (targets.has(target)) {
-        throw new BadRequestException('An interaction can affect each stat target at most once');
-      }
-      targets.add(target);
-      return {
-        statId: reference.assignment.id,
-        ...(effect.itemId ? { itemId: effect.itemId } : {}),
-        operation: effect.operation,
-        expression: effect.expression,
-      };
-    }
-
-    const value = assertStatValue(effect.value, definition);
-    if (effect.operation === 'add' && getStatValueType(definition) !== 'number') {
-      throw new BadRequestException('Only numeric stats support add effects');
-    }
-    const target = `${effect.itemId ?? ''}:${reference.assignment.id}`;
-    if (targets.has(target)) {
-      throw new BadRequestException('An interaction can affect each stat target at most once');
-    }
-    targets.add(target);
-    return {
-      statId: reference.assignment.id,
-      ...(effect.itemId ? { itemId: effect.itemId } : {}),
-      operation: effect.operation,
-      value,
-    };
-  });
+  return effects.map((effect) => validateStatEffect(story, effect, targets));
 }
 
-export function buildStatCondition(
-  story: Story,
-  input: {
-    statId: string;
-    itemId?: string;
-    operator: StatComparisonOperator;
-    value?: unknown;
-    comparisonStatId?: string;
-    comparisonItemId?: string;
-    expression?: string;
-  },
-): StatCondition {
+function validateStatEffect(story: Story, effect: StatEffectInput, targets: Set<string>) {
+  if ((effect.value !== undefined) === (effect.expression !== undefined)) {
+    throw new BadRequestException('A stat effect requires one literal value or expression');
+  }
+  const reference = validateStatAssignmentReference(story, effect.statId);
+  assertItemTarget(story, reference, effect.itemId);
+  const definition = findStatDefinition(story, reference.assignment.statDefinitionId);
+  if (effect.expression !== undefined) {
+    return validateExpressionStatEffect({ story, effect, reference, definition, targets });
+  }
+  return validateLiteralStatEffect({ effect, reference, definition, targets });
+}
+
+function validateExpressionStatEffect({
+  story,
+  effect,
+  reference,
+  definition,
+  targets,
+}: {
+  story: Story;
+  effect: StatEffectInput;
+  reference: StatAssignmentReference;
+  definition: StatDefinition;
+  targets: Set<string>;
+}) {
+  const expression = effect.expression;
+  if (expression === undefined) {
+    throw new BadRequestException('A stat effect requires one literal value or expression');
+  }
+  const expressionType = validateExpression(story, expression);
+  const targetType = getStatValueType(definition);
+  if (expressionType !== targetType) {
+    throw new BadRequestException(`Stat expression must evaluate to a ${targetType}`);
+  }
+  assertAddEffectType(effect.operation, targetType);
+  assertUniqueEffectTarget(targets, effect.itemId, reference.assignment.id);
+  return {
+    statId: reference.assignment.id,
+    ...(effect.itemId ? { itemId: effect.itemId } : {}),
+    operation: effect.operation,
+    expression,
+  };
+}
+
+function validateLiteralStatEffect({
+  effect,
+  reference,
+  definition,
+  targets,
+}: {
+  effect: StatEffectInput;
+  reference: StatAssignmentReference;
+  definition: StatDefinition;
+  targets: Set<string>;
+}) {
+  const value = assertStatValue(effect.value, definition);
+  assertAddEffectType(effect.operation, getStatValueType(definition));
+  assertUniqueEffectTarget(targets, effect.itemId, reference.assignment.id);
+  return {
+    statId: reference.assignment.id,
+    ...(effect.itemId ? { itemId: effect.itemId } : {}),
+    operation: effect.operation,
+    value,
+  };
+}
+
+function assertAddEffectType(operation: 'add' | 'set', valueType: StatValueType) {
+  if (operation === 'add' && valueType !== 'number') {
+    throw new BadRequestException('Only numeric stats support add effects');
+  }
+}
+
+function assertUniqueEffectTarget(
+  targets: Set<string>,
+  itemId: string | undefined,
+  statId: string,
+) {
+  const target = `${itemId ?? ''}:${statId}`;
+  if (targets.has(target)) {
+    throw new BadRequestException('An interaction can affect each stat target at most once');
+  }
+  targets.add(target);
+}
+
+type StatConditionContext = {
+  story: Story;
+  input: StatConditionInput;
+  reference: StatAssignmentReference;
+  definition: StatDefinition;
+};
+
+export function buildStatCondition(story: Story, input: StatConditionInput): StatCondition {
   const reference = validateStatAssignmentReference(story, input.statId);
   assertItemTarget(story, reference, input.itemId);
   const definition = findStatDefinition(story, reference.assignment.statDefinitionId);
-  const hasLiteralValue = input.value !== undefined;
-  const hasComparisonTarget = input.comparisonStatId !== undefined;
-  const hasExpression = input.expression !== undefined;
-  if ([hasLiteralValue, hasComparisonTarget, hasExpression].filter(Boolean).length !== 1) {
+  assertStatConditionInput(input);
+  const context = { story, input, reference, definition };
+  if (input.expression !== undefined) {
+    return buildExpressionStatCondition(context, input.expression);
+  }
+  if (input.comparisonStatId !== undefined) {
+    return buildTargetStatCondition(context, input.comparisonStatId);
+  }
+  return buildLiteralStatCondition(context);
+}
+
+function assertStatConditionInput(input: StatConditionInput) {
+  const hasOneComparison =
+    [
+      input.value !== undefined,
+      input.comparisonStatId !== undefined,
+      input.expression !== undefined,
+    ].filter(Boolean).length === 1;
+  if (!hasOneComparison) {
     throw new BadRequestException(
       'A stat condition must compare with one literal value, stat target, or expression',
     );
   }
-  if (input.comparisonItemId !== undefined && !hasComparisonTarget) {
+  if (input.comparisonItemId !== undefined && input.comparisonStatId === undefined) {
     throw new BadRequestException('A comparison item requires a comparison stat target');
   }
-  if (hasExpression) {
-    const expressionType = validateExpression(story, input.expression!);
-    const targetType = getStatValueType(definition);
-    if (expressionType !== targetType) {
-      throw new BadRequestException(`Stat comparison expression must evaluate to a ${targetType}`);
-    }
-    if (targetType !== 'number' && !['eq', 'neq'].includes(input.operator)) {
-      throw new BadRequestException('Boolean and string stats only support equality checks');
-    }
-    return {
-      statId: reference.assignment.id,
-      ...(input.itemId ? { itemId: input.itemId } : {}),
-      operator: input.operator,
-      expression: input.expression!,
-    };
+}
+
+function buildExpressionStatCondition(context: StatConditionContext, expression: string) {
+  const { story, input, reference, definition } = context;
+  const expressionType = validateExpression(story, expression);
+  const targetType = getStatValueType(definition);
+  if (expressionType !== targetType) {
+    throw new BadRequestException(`Stat comparison expression must evaluate to a ${targetType}`);
   }
-  if (getStatValueType(definition) !== 'number' && !['eq', 'neq'].includes(input.operator)) {
-    throw new BadRequestException('Boolean and string stats only support equality checks');
+  assertStatComparisonOperator(input.operator, targetType);
+  return {
+    statId: reference.assignment.id,
+    ...(input.itemId ? { itemId: input.itemId } : {}),
+    operator: input.operator,
+    expression,
+  };
+}
+
+function buildTargetStatCondition(context: StatConditionContext, comparisonStatId: string) {
+  const { story, input, reference, definition } = context;
+  const targetType = getStatValueType(definition);
+  assertStatComparisonOperator(input.operator, targetType);
+  const comparisonReference = validateStatAssignmentReference(story, comparisonStatId);
+  assertItemTarget(story, comparisonReference, input.comparisonItemId);
+  const comparisonDefinition = findStatDefinition(
+    story,
+    comparisonReference.assignment.statDefinitionId,
+  );
+  if (getStatValueType(comparisonDefinition) !== targetType) {
+    throw new BadRequestException('Compared stats must have the same value type');
   }
-  if (hasComparisonTarget) {
-    const comparisonReference = validateStatAssignmentReference(story, input.comparisonStatId!);
-    assertItemTarget(story, comparisonReference, input.comparisonItemId);
-    const comparisonDefinition = findStatDefinition(
-      story,
-      comparisonReference.assignment.statDefinitionId,
-    );
-    if (getStatValueType(comparisonDefinition) !== getStatValueType(definition)) {
-      throw new BadRequestException('Compared stats must have the same value type');
-    }
-    return {
-      statId: reference.assignment.id,
-      ...(input.itemId ? { itemId: input.itemId } : {}),
-      operator: input.operator,
-      comparisonStatId: comparisonReference.assignment.id,
-      ...(input.comparisonItemId ? { comparisonItemId: input.comparisonItemId } : {}),
-    };
-  }
+  return {
+    statId: reference.assignment.id,
+    ...(input.itemId ? { itemId: input.itemId } : {}),
+    operator: input.operator,
+    comparisonStatId: comparisonReference.assignment.id,
+    ...(input.comparisonItemId ? { comparisonItemId: input.comparisonItemId } : {}),
+  };
+}
+
+function buildLiteralStatCondition(context: StatConditionContext) {
+  const { input, reference, definition } = context;
+  assertStatComparisonOperator(input.operator, getStatValueType(definition));
   const value = assertStatValue(input.value, definition);
   return {
     statId: reference.assignment.id,
@@ -275,15 +394,25 @@ export function buildStatCondition(
   };
 }
 
+function assertStatComparisonOperator(operator: StatComparisonOperator, valueType: StatValueType) {
+  if (valueType !== 'number' && !['eq', 'neq'].includes(operator)) {
+    throw new BadRequestException('Boolean and string stats only support equality checks');
+  }
+}
+
 export function findStatDefinition(story: Story, id: string): StatDefinition {
   const definition = (story.statDefinitions ?? []).find((candidate) => candidate.id === id);
-  if (!definition) throw new NotFoundException('Stat definition not found');
+  if (!definition) {
+    throw new NotFoundException('Stat definition not found');
+  }
   return definition;
 }
 
 export function findStatAssignment(story: Story, id: string): StatAssignmentReference {
   const reference = getStatAssignments(story).find(({ assignment }) => assignment.id === id);
-  if (!reference) throw new NotFoundException('Stat assignment not found');
+  if (!reference) {
+    throw new NotFoundException('Stat assignment not found');
+  }
   return reference;
 }
 
@@ -328,32 +457,48 @@ function ownerAssignments(
   ownerId?: string,
 ): StatAssignment[] {
   if (ownerType === 'story') {
-    if (ownerId !== undefined) throw new BadRequestException('Story stats do not use an owner id');
+    if (ownerId !== undefined) {
+      throw new BadRequestException('Story stats do not use an owner id');
+    }
     return (story.stats ??= []);
   }
-  if (!ownerId) throw new BadRequestException('Stat owner id is required');
-  if (ownerType === 'character') {
-    const owner = (story.characters ?? []).find(({ id }) => id === ownerId);
-    if (!owner) throw new BadRequestException('Stat owner must belong to the same story');
-    return (owner.stats ??= []);
+  if (!ownerId) {
+    throw new BadRequestException('Stat owner id is required');
   }
-  if (ownerType === 'location') {
-    const owner = (story.locations ?? []).find(({ id }) => id === ownerId);
-    if (!owner) throw new BadRequestException('Stat owner must belong to the same story');
-    return (owner.stats ??= []);
+  switch (ownerType) {
+    case 'character':
+      return ownerStatAssignments(story.characters, ownerId);
+    case 'location':
+      return ownerStatAssignments(story.locations, ownerId);
+    case 'itemDefinition':
+      return ownerStatAssignments(story.itemDefinitions, ownerId);
   }
-  const owner = (story.itemDefinitions ?? []).find(({ id }) => id === ownerId);
-  if (!owner) throw new BadRequestException('Stat owner must belong to the same story');
+}
+
+function ownerStatAssignments<TOwner extends { id: string; stats?: StatAssignment[] }>(
+  owners: TOwner[] | undefined,
+  ownerId: string,
+) {
+  const owner = (owners ?? []).find(({ id }) => id === ownerId);
+  if (!owner) {
+    throw new BadRequestException('Stat owner must belong to the same story');
+  }
   return (owner.stats ??= []);
 }
 
 function assertItemTarget(story: Story, reference: StatAssignmentReference, itemId?: string) {
   if (reference.ownerType !== 'itemDefinition') {
-    if (itemId) throw new BadRequestException('Only item stats can target an item instance');
+    if (itemId) {
+      throw new BadRequestException('Only item stats can target an item instance');
+    }
     return;
   }
-  if (!itemId) throw new BadRequestException('Item stats require an exact item instance');
-  const item = getStoryItemEntries(story).find(({ item }) => item.id === itemId)?.item;
+  if (!itemId) {
+    throw new BadRequestException('Item stats require an exact item instance');
+  }
+  const item = getStoryItemEntries(story).find(
+    ({ item: candidate }) => candidate.id === itemId,
+  )?.item;
   if (!item || item.itemDefinitionId !== reference.ownerId) {
     throw new BadRequestException('Item stat target must belong to the same definition');
   }
@@ -371,31 +516,48 @@ function assertStatValue(value: unknown, definition: StatDefinition): StatValue 
 
 function removeStatAssignments(story: Story, assignmentIds: ReadonlySet<string>) {
   story.stats = (story.stats ?? []).filter(({ id }) => !assignmentIds.has(id));
-  for (const character of story.characters ?? []) {
-    character.stats = (character.stats ?? []).filter(({ id }) => !assignmentIds.has(id));
-  }
-  for (const location of story.locations ?? []) {
-    location.stats = (location.stats ?? []).filter(({ id }) => !assignmentIds.has(id));
-  }
-  for (const definition of story.itemDefinitions ?? []) {
-    definition.stats = (definition.stats ?? []).filter(({ id }) => !assignmentIds.has(id));
-  }
+  removeAssignmentsFromOwners(story.characters, assignmentIds);
+  removeAssignmentsFromOwners(story.locations, assignmentIds);
+  removeAssignmentsFromOwners(story.itemDefinitions, assignmentIds);
   for (const interaction of story.interactions) {
-    Object.assign(interaction, cleanStatConditionalTextReferences(interaction, assignmentIds));
-    interaction.statEffects = (interaction.statEffects ?? []).filter(
-      ({ statId, expression }) =>
-        !assignmentIds.has(statId) && !expressionReferencesAny(expression, assignmentIds),
-    );
-    for (const trigger of interaction.triggers) {
-      trigger.conditionGroups = getTriggerConditionGroups(trigger).map((group) => ({
-        ...group,
-        conditions: removeStatConditionsReferencing(group.conditions, assignmentIds),
-      }));
-      trigger.appearanceProbability = getTriggerAppearanceProbability(trigger);
-      trigger.timerSeconds = getTriggerTimerSeconds(trigger);
-      delete trigger.conditions;
-    }
+    removeStatReferencesFromInteraction(interaction, assignmentIds);
   }
+}
+
+function removeAssignmentsFromOwners<TOwner extends { stats?: StatAssignment[] }>(
+  owners: TOwner[] | undefined,
+  assignmentIds: ReadonlySet<string>,
+) {
+  for (const owner of owners ?? []) {
+    owner.stats = (owner.stats ?? []).filter(({ id }) => !assignmentIds.has(id));
+  }
+}
+
+function removeStatReferencesFromInteraction(
+  interaction: Story['interactions'][number],
+  assignmentIds: ReadonlySet<string>,
+) {
+  Object.assign(interaction, cleanStatConditionalTextReferences(interaction, assignmentIds));
+  interaction.statEffects = (interaction.statEffects ?? []).filter(
+    ({ statId, expression }) =>
+      !assignmentIds.has(statId) && !expressionReferencesAny(expression, assignmentIds),
+  );
+  for (const trigger of interaction.triggers) {
+    removeStatReferencesFromTrigger(trigger, assignmentIds);
+  }
+}
+
+function removeStatReferencesFromTrigger(
+  trigger: Story['interactions'][number]['triggers'][number],
+  assignmentIds: ReadonlySet<string>,
+) {
+  trigger.conditionGroups = getTriggerConditionGroups(trigger).map((group) => ({
+    ...group,
+    conditions: removeStatConditionsReferencing(group.conditions, assignmentIds),
+  }));
+  trigger.appearanceProbability = getTriggerAppearanceProbability(trigger);
+  trigger.timerSeconds = getTriggerTimerSeconds(trigger);
+  delete trigger.conditions;
 }
 
 function validateExpression(story: Story, expression: string): StatValueType {

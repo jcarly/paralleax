@@ -13,14 +13,18 @@ export function createFormbricksFeedbackClient(
   let setupPromise: Promise<boolean> | undefined;
 
   const setup = (): Promise<boolean> => {
-    if (!config) return Promise.resolve(false);
+    if (!config) {
+      return Promise.resolve(false);
+    }
     if (!setupPromise) {
       setupPromise = sdk
         .setup(config)
         .then(isSdkLoaded)
         .catch(() => false)
         .then((ready) => {
-          if (!ready) setupPromise = undefined;
+          if (!ready) {
+            setupPromise = undefined;
+          }
           return ready;
         });
     }
@@ -39,7 +43,9 @@ export function createFormbricksFeedbackClient(
     isConfigured: config !== null,
     setup,
     async trackFeedback(language: string, hiddenFields: Record<string, string>): Promise<boolean> {
-      if (!(await setup())) return false;
+      if (!(await setup())) {
+        return false;
+      }
       await setLanguage(language);
       try {
         await sdk.track('paralleax_feedback_opened', { hiddenFields });

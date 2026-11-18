@@ -11,13 +11,17 @@ The canvas, simulation mode, reader, filters, future character focus, future
 place focus, and future collaboration tools may expose different perspectives,
 but they must not create separate story structures.
 
-## One Story View
+## Coherent Story Representations
 
-Paralleax should avoid multiplying disconnected editor views.
+Paralleax may offer several ways to read, write, and inspect a Story, but each
+must remain a view of the same canonical model rather than a disconnected editor
+with copied content.
 
-The Story Canvas is the main authoring surface. The interface may filter,
-highlight, collapse, focus, or reframe the canvas, but the author should feel
-they are still working on the same story.
+The Story Canvas is a core authoring surface for structure and relationships.
+Other projections, such as a possible document view for consecutive narrative
+content, should preserve stable Interaction identity, navigation, and access to
+the graph context. Their design must make it clear that authors are still
+editing the same Story.
 
 ## One Inspector
 

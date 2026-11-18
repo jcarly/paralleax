@@ -22,6 +22,8 @@ import { PlayerChoices } from '../features/story-player/components/PlayerChoices
 import { PlayerContextPanels } from '../features/story-player/components/PlayerContextPanels';
 import { PlayerScene } from '../features/story-player/components/PlayerScene';
 import { PlayerToolbar } from '../features/story-player/components/PlayerToolbar';
+import { InteractionEffectsSummary } from '../features/story/InteractionEffectsSummary';
+import { InteractionLabel } from '../features/story/InteractionLabel';
 import { useOnboarding } from '../features/onboarding/onboardingContext';
 import { useReaderProgressPersistence } from '../features/story-player/useReaderProgressPersistence';
 import type { StoryPlayerRuntimeLoadResult } from '../features/story-player/loadStoryPlayerRuntime';
@@ -520,13 +522,19 @@ export function StoryPlayer({
       return;
     }
     const timeout = window.setTimeout(
-      () => setTimerNow(Date.now()),
+      () => {
+        setTimerNow(Date.now());
+      },
       Math.max(1, Math.ceil(nextExpiration) + 20),
     );
-    return () => window.clearTimeout(timeout);
+    return () => {
+      window.clearTimeout(timeout);
+    };
   }, [visibleChoices]);
   useEffect(() => {
-    const synchronizeTimer = () => setTimerNow(Date.now());
+    const synchronizeTimer = () => {
+      setTimerNow(Date.now());
+    };
     window.addEventListener('focus', synchronizeTimer);
     document.addEventListener('visibilitychange', synchronizeTimer);
     return () => {
@@ -924,7 +932,9 @@ export function StoryPlayer({
         authenticated={authenticated}
         progressStatus={progressStatus}
         savesDialogTrigger={savesDialogTrigger}
-        onOpenSaves={() => setSavesOpen(true)}
+        onOpenSaves={() => {
+          setSavesOpen(true);
+        }}
         canStepBack={journey.length > 1}
         onStepBack={stepBack}
         onRestart={restart}
@@ -934,13 +944,41 @@ export function StoryPlayer({
           readerCommentThreads.filter(({ status, deletedAt }) => status === 'open' && !deletedAt)
             .length
         }
-        onToggleComments={() => setCommentsOpen((open) => !open)}
+        onToggleComments={() => {
+          setCommentsOpen((open) => !open);
+        }}
       />
       <article
         aria-hidden={isCurrentInteractionPassingThrough || undefined}
         className={`player-card${isCurrentInteractionPassingThrough ? ' player-card-passing' : ''}`}
         inert={isCurrentInteractionPassingThrough}
       >
+        {current && (playableCharacters.length === 0 || playedCharacter) ? (
+          isSimulationMode ? (
+            <InteractionLabel
+              label={current.title}
+              className="player-interaction-label simulation-title-input"
+              editable={{
+                'aria-label': t('player.currentInteractionTitle'),
+                placeholder: interactionTitlePlaceholder(current, t),
+                value: current.title,
+                onChange: (event) => {
+                  patchCurrentInteraction({ title: event.target.value });
+                },
+                onBlur: (event) => {
+                  void saveCurrentInteraction({ title: event.currentTarget.value });
+                },
+              }}
+            />
+          ) : (
+            <InteractionLabel
+              label={interactionTitleForDisplay(current, t)}
+              className="player-interaction-label"
+              leadingIcon="→"
+              heading
+            />
+          )
+        ) : null}
         <PlayerScene
           location={currentLocation}
           characters={presentCharacters}
@@ -958,7 +996,9 @@ export function StoryPlayer({
                     className="character-choice-card"
                     key={character.id}
                     type="button"
-                    onClick={() => setPlayableCharacterId(character.id)}
+                    onClick={() => {
+                      setPlayableCharacterId(character.id);
+                    }}
                   >
                     {character.imageUrl ? (
                       <img src={character.imageUrl} alt="" />
@@ -976,15 +1016,6 @@ export function StoryPlayer({
             <>
               {isSimulationMode ? (
                 <>
-                  {/* eslint-disable-next-line design-system/require-shared-form-control -- the Simulation title remains a narrative display editor */}
-                  <input
-                    className="simulation-title-input"
-                    aria-label={t('player.currentInteractionTitle')}
-                    placeholder={interactionTitlePlaceholder(current, t)}
-                    value={current.title}
-                    onChange={(event) => patchCurrentInteraction({ title: event.target.value })}
-                    onBlur={(event) => void saveCurrentInteraction({ title: event.target.value })}
-                  />
                   {bodyEditor.editing ? (
                     <div className="simulation-body-editor" onBlurCapture={handleBodyRegionBlur}>
                       <RichTextEditor
@@ -992,7 +1023,7 @@ export function StoryPlayer({
                         interactionId={current.id}
                         story={story}
                         value={current.body}
-                        autoFocus
+                        focusOnMount
                         revealToolbarOnFocus
                         onChange={(body) => {
                           bodyDraftRef.current = { interactionId: current.id, body };
@@ -1064,10 +1095,13 @@ export function StoryPlayer({
                       {t('richText.addContent')}
                     </button>
                   ) : null}
+                  <section className="simulation-current-effects">
+                    <h2>{t('interactionInspector.effects')}</h2>
+                    <InteractionEffectsSummary story={story} interaction={current} />
+                  </section>
                 </>
               ) : (
                 <>
-                  <h1>{interactionTitleForDisplay(current, t)}</h1>
                   <RichTextContent
                     className="story-body"
                     html={current.body}
@@ -1156,7 +1190,9 @@ export function StoryPlayer({
         canDeleteThread={canDeleteSelectedReaderThread}
         deletedLoading={comments.deletedLoading}
         realtimeStatus={comments.realtimeStatus}
-        onClose={() => setCommentsOpen(false)}
+        onClose={() => {
+          setCommentsOpen(false);
+        }}
         onSelect={comments.selectThread}
         onCancelDraft={comments.cancelDraft}
         onCreate={comments.create}

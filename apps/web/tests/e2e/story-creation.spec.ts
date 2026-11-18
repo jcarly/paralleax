@@ -1,5 +1,10 @@
 import { expect, test } from '@playwright/test';
-import { paginated, prepareEditorPage, storyWithOpeningPath } from './editorTestHarness';
+import {
+  openInteractionTitleEditor,
+  paginated,
+  prepareEditorPage,
+  storyWithOpeningPath,
+} from './editorTestHarness';
 
 test('creates a linked opening graph and focuses its root in the editor', async ({ page }) => {
   const createdStory = storyWithOpeningPath();
@@ -24,5 +29,6 @@ test('creates a linked opening graph and focuses its root in the editor', async 
   const rootNode = page.getByTestId('interaction-node').filter({ hasText: 'Start' });
   await expect(rootNode).toHaveClass(/selected/);
   await expect(page.getByRole('complementary', { name: 'Inspector' })).toBeVisible();
-  await expect(page.getByLabel('Title', { exact: true })).toHaveAttribute('placeholder', 'Start');
+  const title = await openInteractionTitleEditor(page, 'Start');
+  await expect(title).toHaveAttribute('placeholder', 'Start');
 });

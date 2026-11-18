@@ -1,12 +1,17 @@
 import { describe, expect, it, vi } from 'vitest';
-import type { StoryFlowNode, TriggerFlowEdge } from '../../../storyGraph';
+import {
+  interactionNodeHeight,
+  interactionNodeWidth,
+  type StoryFlowNode,
+  type TriggerFlowEdge,
+} from '../../../storyGraph';
 import { reconcileStoryFlowEdges, reconcileStoryFlowNodes } from './storyFlowReconciliation';
 
 describe('story Flow reconciliation', () => {
   it('keeps unchanged node references and measured state', () => {
     const onCreateChild = vi.fn();
     const current = interactionNode({
-      measured: { width: 210, height: 116 },
+      measured: { width: interactionNodeWidth, height: interactionNodeHeight },
       data: { title: 'Start', body: '', selected: false, onCreateChild },
     });
     const projected = interactionNode({
@@ -20,7 +25,9 @@ describe('story Flow reconciliation', () => {
 
   it('updates only changed nodes while preserving their measurements', () => {
     const unchanged = interactionNode({ id: 'unchanged' });
-    const current = interactionNode({ measured: { width: 210, height: 116 } });
+    const current = interactionNode({
+      measured: { width: interactionNodeWidth, height: interactionNodeHeight },
+    });
     const projected = interactionNode({ data: { title: 'Renamed', body: '', selected: false } });
 
     const reconciled = reconcileStoryFlowNodes([unchanged, current], [unchanged, projected]);
@@ -28,7 +35,10 @@ describe('story Flow reconciliation', () => {
     expect(reconciled[0]).toBe(unchanged);
     expect(reconciled[1]).not.toBe(current);
     expect(reconciled[1].data.title).toBe('Renamed');
-    expect(reconciled[1].measured).toEqual({ width: 210, height: 116 });
+    expect(reconciled[1].measured).toEqual({
+      width: interactionNodeWidth,
+      height: interactionNodeHeight,
+    });
   });
 
   it('drops removed projected state and nodes', () => {
