@@ -151,9 +151,10 @@ function createRestartHandler(onRestart: (storyId?: string) => void, storyId: st
   };
 }
 
-function GuideCompleteDescription({ didTest }: { didTest: boolean }) {
-  const { t } = useTranslation();
-
+function renderGuideCompleteDescription(
+  t: ReturnType<typeof useTranslation>['t'],
+  didTest: boolean,
+) {
   return (
     <>
       <p>
@@ -188,7 +189,7 @@ function GuideCompleteCard({
         <h2 id="onboarding-title">{t('onboarding.completeTitle')}</h2>
         <GuideCloseButton label={t('onboarding.close')} onPause={onPause} />
       </div>
-      <GuideCompleteDescription didTest={didTest} />
+      {renderGuideCompleteDescription(t, didTest)}
       <div className="onboarding-card-actions">
         <Link className="onboarding-primary" to={`/stories/${storyId}/edit`} onClick={onPause}>
           {t('onboarding.continueCreating')}

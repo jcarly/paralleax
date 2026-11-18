@@ -73,6 +73,14 @@ const storyInteractionIndexes = new WeakMap<
   ReadonlyMap<string, { interaction: Story['interactions'][number]; index: number }>
 >();
 
+type InteractionNodeContext = {
+  selectedId: string | undefined;
+  selectedTrigger: SelectedTrigger | undefined;
+  actions: InteractionNodeActions;
+  locationsById: Map<string, NonNullable<Story['locations']>[number]>;
+  charactersById: Map<string, NonNullable<Story['characters']>[number]>;
+};
+
 export type TriggerPositionUpdate = StoryGraphTriggerPositionUpdate;
 
 export function buildInteractionNodes(
@@ -91,48 +99,22 @@ export function buildInteractionNodes(
     locationsById: new Map((story.locations ?? []).map((location) => [location.id, location])),
     charactersById: new Map((story.characters ?? []).map((character) => [character.id, character])),
   };
-  return story.interactions.map((item, index) => buildInteractionNode({ item, index, ...context }));
+  return story.interactions.map((item, index) => buildInteractionNode(item, index, context));
 }
 
-function buildInteractionNode(options: {
-  item: Story['interactions'][number];
-  index: number;
-  selectedId: string | undefined;
-  selectedTrigger: SelectedTrigger | undefined;
-  actions: InteractionNodeActions;
-  locationsById: Map<string, NonNullable<Story['locations']>[number]>;
-  charactersById: Map<string, NonNullable<Story['characters']>[number]>;
-}): InteractionFlowNode {
-  const { item, index, selectedId, selectedTrigger, actions } = options;
+function buildInteractionNode(
+  item: Story['interactions'][number],
+  index: number,
+  context: InteractionNodeContext,
+): InteractionFlowNode {
   const rootTrigger = item.triggers.find((trigger) => trigger.inputInteractionIds.length === 0);
   const locationId = item.locationId;
   const location =
     typeof locationId === 'string' && locationId.length > 0
-      ? options.locationsById.get(locationId)
+      ? context.locationsById.get(locationId)
       : undefined;
-  const characters = getInteractionCharacters(item.characterIds ?? [], options.charactersById);
-  return {
-    id: item.id,
-    type: 'interaction',
-    position: getInteractionPosition(item, index),
-    data: buildInteractionNodeData({
-      item,
-      selectedId,
-      selectedTrigger,
-      actions,
-      rootTrigger,
-      location,
-      characters,
-    }),
-  };
-}
-
-function getInteractionCharacters(
-  characterIds: string[],
-  charactersById: Map<string, NonNullable<Story['characters']>[number]>,
-): NonNullable<InteractionNodeData['characters']> {
-  return characterIds.flatMap((characterId) => {
-    const character = charactersById.get(characterId);
+  const characters = (item.characterIds ?? []).flatMap((characterId) => {
+    const character = context.charactersById.get(characterId);
     return character
       ? [
           {
@@ -145,18 +127,25 @@ function getInteractionCharacters(
         ]
       : [];
   });
+  return {
+    id: item.id,
+    type: 'interaction',
+    position: getInteractionPosition(item, index),
+    data: buildInteractionNodeData(item, context, rootTrigger, { location, characters }),
+  };
 }
 
-function buildInteractionNodeData(options: {
-  item: Story['interactions'][number];
-  selectedId: string | undefined;
-  selectedTrigger: SelectedTrigger | undefined;
-  actions: InteractionNodeActions;
-  rootTrigger: Trigger | undefined;
-  location: NonNullable<Story['locations']>[number] | undefined;
-  characters: NonNullable<InteractionNodeData['characters']>;
-}): InteractionNodeData {
-  const { item, selectedId, selectedTrigger, actions, rootTrigger, location, characters } = options;
+function buildInteractionNodeData(
+  item: Story['interactions'][number],
+  context: InteractionNodeContext,
+  rootTrigger: Trigger | undefined,
+  nodeData: {
+    location: NonNullable<Story['locations']>[number] | undefined;
+    characters: NonNullable<InteractionNodeData['characters']>;
+  },
+): InteractionNodeData {
+  const { selectedId, selectedTrigger, actions } = context;
+  const { location, characters } = nodeData;
   const statEffectCount = item.statEffects?.length ?? 0;
   const itemEffectCount = item.itemEffects?.length ?? 0;
   const occurrenceCount = actions.occurrenceCounts?.get(item.id) ?? 0;
@@ -177,30 +166,21 @@ function buildInteractionNodeData(options: {
     ...(actions.emphasizedInteractionIds
       ? { dimmed: !actions.emphasizedInteractionIds.has(item.id) }
       : {}),
-    ...getRootTriggerData(item, rootTrigger, selectedTrigger, rootTriggerCommentCount),
+    ...(rootTrigger
+      ? {
+          rootTriggerId: rootTrigger.id,
+          ...(rootTriggerCommentCount > 0 ? { rootTriggerCommentCount } : {}),
+          rootTriggerSelected:
+            selectedTrigger?.interactionId === item.id &&
+            selectedTrigger.triggerId === rootTrigger.id,
+        }
+      : {}),
     ...(actions.onCreateChild ? { onCreateChild: actions.onCreateChild } : {}),
     ...(actions.onCreateParent ? { onCreateParent: actions.onCreateParent } : {}),
     ...(actions.onSelectRootTrigger ? { onSelectRootTrigger: actions.onSelectRootTrigger } : {}),
     ...(commentCount > 0 ? { commentCount } : {}),
     ...(actions.onOpenComments ? { onOpenComments: actions.onOpenComments } : {}),
   };
-}
-
-function getRootTriggerData(
-  item: Story['interactions'][number],
-  rootTrigger: Trigger | undefined,
-  selectedTrigger: SelectedTrigger | undefined,
-  commentCount: number,
-): Pick<InteractionNodeData, 'rootTriggerId' | 'rootTriggerSelected' | 'rootTriggerCommentCount'> {
-  return rootTrigger
-    ? {
-        rootTriggerId: rootTrigger.id,
-        ...(commentCount > 0 ? { rootTriggerCommentCount: commentCount } : {}),
-        rootTriggerSelected:
-          selectedTrigger?.interactionId === item.id &&
-          selectedTrigger.triggerId === rootTrigger.id,
-      }
-    : {};
 }
 
 export function buildTriggerNodes(
@@ -211,50 +191,43 @@ export function buildTriggerNodes(
   if (!story) {
     return [];
   }
-  return story.interactions.flatMap((target, targetIndex) =>
-    getLinkedTriggerGroups(target).map((group, triggerIndex) =>
-      buildTriggerNode({
-        story,
-        target,
-        targetIndex,
-        group,
-        triggerIndex,
-        selectedTrigger,
-        actions,
-      }),
-    ),
-  );
+  return story.interactions.flatMap((target, targetIndex) => {
+    const context = { story, target, targetIndex, selectedTrigger, actions };
+    return getLinkedTriggerGroups(target).map((group, triggerIndex) =>
+      buildTriggerNode(context, group, triggerIndex),
+    );
+  });
 }
 
-function buildTriggerNode(options: {
-  story: Story;
-  target: Story['interactions'][number];
-  targetIndex: number;
-  group: LinkedTriggerGroup;
-  triggerIndex: number;
-  selectedTrigger: SelectedTrigger | undefined;
-  actions: TriggerNodeActions;
-}): TriggerFlowNode {
-  const { story, target, targetIndex, group, triggerIndex, selectedTrigger, actions } = options;
-  const triggerIds = group.triggers.map(({ id }) => id);
+function buildTriggerNode(
+  context: {
+    story: Story;
+    target: Story['interactions'][number];
+    targetIndex: number;
+    selectedTrigger: SelectedTrigger | undefined;
+    actions: TriggerNodeActions;
+  },
+  group: LinkedTriggerGroup,
+  triggerIndex: number,
+): TriggerFlowNode {
+  const { story, target, targetIndex, selectedTrigger, actions } = context;
   return {
     id: getTriggerNodeId(target.id, group.primaryTrigger.id),
     type: 'trigger',
     position: getTriggerNodePosition(story, target, targetIndex, group, triggerIndex),
     draggable: true,
     selectable: true,
-    data: buildTriggerNodeData({ target, group, triggerIds, selectedTrigger, actions }),
+    data: buildTriggerNodeData(target.id, group, selectedTrigger, actions),
   };
 }
 
-function buildTriggerNodeData(options: {
-  target: Story['interactions'][number];
-  group: LinkedTriggerGroup;
-  triggerIds: string[];
-  selectedTrigger: SelectedTrigger | undefined;
-  actions: TriggerNodeActions;
-}): TriggerNodeData {
-  const { target, group, triggerIds, selectedTrigger, actions } = options;
+function buildTriggerNodeData(
+  targetId: string,
+  group: LinkedTriggerGroup,
+  selectedTrigger: SelectedTrigger | undefined,
+  actions: TriggerNodeActions,
+): TriggerNodeData {
+  const triggerIds = group.triggers.map(({ id }) => id);
   const commentCount = triggerIds.reduce(
     (total, triggerId) => total + (actions.commentCounts?.get(triggerId) ?? 0),
     0,
@@ -263,11 +236,11 @@ function buildTriggerNodeData(options: {
     (triggerId) => (actions.commentCounts?.get(triggerId) ?? 0) > 0,
   );
   return {
-    interactionId: target.id,
+    interactionId: targetId,
     triggerId: group.primaryTrigger.id,
     triggerIds,
     selected:
-      selectedTrigger?.interactionId === target.id &&
+      selectedTrigger?.interactionId === targetId &&
       Boolean(selectedTrigger.triggerId && triggerIds.includes(selectedTrigger.triggerId)),
     conditionCount: getTotalConditionCount(group.triggers),
     inputCount: group.inputInteractionIds.length,
