@@ -2,6 +2,21 @@
 
 ## Unreleased
 
+- Reorganized the documentation around its readers. Added an author guide in
+  English and French with a first-Story tutorial, a positioning page naming game
+  studios and visual-novel teams as the first audience, a completed glossary with
+  EN/FR/IT interface labels, and an expanded contributing guide. The README now
+  states the alpha status and labels each capability as shipped, experimental, or
+  planned, and describes shared editing as live synchronisation.
+- Moved the detailed roadmap to `docs/roadmap-history.md` and replaced
+  `docs/roadmap.md` with a short ordered roadmap. Priority decision 2026-11-18:
+  the Story format, native export, and an engine-oriented data export are the
+  next priority after the guided-session work.
+- Fixed user-guide statements about item conditions and effects, the Variables
+  list, and Simulation entry points. Noted in the business model that no licence
+  has been chosen yet and that export is required for authors to control their
+  data.
+
 - Expanded ESLint quality gates for TypeScript, React, accessibility, import
   consistency, and code size. CI now rejects unapproved growth in the historical
   suppression baseline.

@@ -2,70 +2,161 @@
 
 This folder is the product and technical source of truth for Paralleax.
 
-The documentation distinguishes four kinds of information:
+The documentation distinguishes five kinds of information:
 
-- **Vision**: where the product is going.
+- **Vision and positioning**: where the product is going, and for whom first.
 - **Current scope**: what is implemented and supported today.
-- **Historical milestones**: what earlier MVP/version goals established.
-- **Roadmap**: what is planned, incomplete, or intentionally deferred.
+- **Roadmap**: what comes next, in which order.
+- **Milestone detail and history**: milestone goals and exit criteria, earlier
+  delivery queues and decisions.
+- **Reference**: domain, semantics, architecture, operations.
 
 When documents disagree, follow the precedence documented in the repository
-`AGENTS.md`.
+[`AGENTS.md`](../AGENTS.md#sources-of-truth).
 
-## Recommended Reading Order
+## Start here
+
+Pick the path that matches what you want to do.
+
+### I want to write a Story
+
+1. [Author guide](author-guide.md) · [Guide de l'auteur](author-guide.fr.md):
+   concepts and a first tutorial.
+2. [User guide](user-guide.md): every editor control in detail.
+3. [Glossary](glossary.md): terms and interface labels in EN/FR/IT.
+
+### I want to understand the product
 
 1. [Vision](vision.md)
-2. [Current scope](current-scope.md)
-3. [Domain model](domain-model.md)
-4. [Glossary](glossary.md)
-5. [Domain invariants](domain-invariants.md)
-6. [Reader semantics](reader-semantics.md)
-7. [Trigger semantics](triggers.md)
-8. [Architecture](architecture.md)
-9. [AI development workflow](ai-workflow.md)
-10. [AI architecture map](architecture-map-ai.md)
-11. [Agent roles](agent-roles.md)
-12. [User guide](user-guide.md)
-13. [Authoring guide architecture](onboarding.md)
-14. [Design principles](design-principles.md)
-15. [UX principles](ux-principles.md)
-16. [UI direction](ui-direction.md)
-17. [Story Canvas](story-canvas.md)
-18. [Auto layout](auto-layout.md)
-19. [Navigation](navigation.md)
-20. [Simulation](simulation.md)
-21. [Annotations](annotations.md)
-22. [Design system](design-system.md)
-23. [Design-system audit snapshot — 2026-10-22](audits/design-system-2026-10-22.md)
-24. [Mockups](mockups/README.md)
-25. [Business model](business-model.md)
-26. [Hosting and scale](hosting-and-scale.md)
-27. [Production readiness](production-readiness.md)
-28. [Private alpha deployment](operations/alpha-deployment.md)
-29. [Formbricks contextual feedback](operations/formbricks-feedback.md)
-30. [Alpha test notice template](alpha-test-notice.template.md)
-31. [React best practices](react-best-practices.md)
-32. [Non-goals](non-goals.md)
-33. [Test scenarios](test-scenarios.md)
-34. [Roadmap](roadmap.md)
-35. [MVP](mvp.md)
-36. [Open questions](open-questions.md)
-37. [Code quality backlog](code-quality-backlog.md)
-38. [Changelog](../CHANGELOG.md)
+2. [Positioning](positioning.md): priority audience, competitors, product test.
+3. [Current scope](current-scope.md): what exists today.
+4. [Roadmap](roadmap.md): what comes next.
+5. [Non-goals](non-goals.md)
+6. [Business model](business-model.md)
 
-## Important Rules
+### I want to contribute code
+
+1. [Contributing](../CONTRIBUTING.md) and [`AGENTS.md`](../AGENTS.md)
+2. [Domain model](domain-model.md) and [Domain invariants](domain-invariants.md)
+3. [Reader semantics](reader-semantics.md) and [Trigger semantics](triggers.md)
+4. [Architecture](architecture.md) and [AI architecture map](architecture-map-ai.md)
+5. [ADR index](decisions/README.md)
+6. [AI development workflow](ai-workflow.md) and [Agent roles](agent-roles.md)
+
+### I want to deploy or operate Paralleax
+
+1. [Production readiness](production-readiness.md)
+2. [Private alpha deployment](operations/alpha-deployment.md)
+3. [PostgreSQL backup and restore](operations/postgresql-backup-and-restore.md)
+4. [Formbricks contextual feedback](operations/formbricks-feedback.md)
+5. [Hosting and scale](hosting-and-scale.md)
+6. [Alpha test notice template](alpha-test-notice.template.md)
+
+## All pages
+
+### Product
+
+- [Vision](vision.md)
+- [Positioning](positioning.md)
+- [Current scope](current-scope.md)
+- [Roadmap](roadmap.md)
+- [Roadmap history and milestone detail](roadmap-history.md)
+- [MVP](mvp.md) (historical)
+- [Non-goals](non-goals.md)
+- [Business model](business-model.md)
+- [Open questions](open-questions.md)
+- [Product discovery synthesis](product-discovery-synthesis.md)
+- [Workbench product direction](workbench.md)
+
+### Authors
+
+- [Author guide](author-guide.md) · [Guide de l'auteur](author-guide.fr.md)
+- [User guide](user-guide.md)
+- [Glossary](glossary.md)
+- [ChoiceScript import](choicescript-import.md)
+- [QSP import](qsp-import.md)
+
+### Domain and semantics
+
+- [Domain model](domain-model.md)
+- [Domain invariants](domain-invariants.md)
+- [Reader semantics](reader-semantics.md)
+- [Trigger semantics](triggers.md)
+- [Simulation](simulation.md)
+- [Annotations](annotations.md)
+- [Interaction inclusion proposal](interaction-inclusion-proposal.md) (not accepted)
+
+### Architecture and engineering
+
+- [Architecture](architecture.md)
+- [AI architecture map](architecture-map-ai.md)
+- [ADR index](decisions/README.md)
+- [UML diagrams](uml/README.md)
+- [AI development workflow](ai-workflow.md)
+- [Agent roles](agent-roles.md)
+- [React best practices](react-best-practices.md)
+- [Test scenarios](test-scenarios.md)
+- [Code quality backlog](code-quality-backlog.md)
+- [npm warning triage](npm-warning-triage.md)
+- [Large QSP import lessons](large-qsp-import-lessons.md)
+- [Meteor prototype refactor notes](../MIGRATION.md)
+
+### Design and UX
+
+- [Design principles](design-principles.md)
+- [UX principles](ux-principles.md)
+- [UI direction](ui-direction.md)
+- [UI prototype](ui-prototype.md)
+- [Design system](design-system.md)
+- [Story Canvas](story-canvas.md)
+- [Auto layout](auto-layout.md)
+- [Navigation](navigation.md)
+- [Authoring guide architecture](onboarding.md)
+- [Mockups](mockups/README.md)
+
+### Operations
+
+- [Production readiness](production-readiness.md)
+- [Hosting and scale](hosting-and-scale.md)
+- [Private alpha deployment](operations/alpha-deployment.md)
+- [PostgreSQL backup and restore](operations/postgresql-backup-and-restore.md)
+- [Formbricks contextual feedback](operations/formbricks-feedback.md)
+- [Alpha test notice template](alpha-test-notice.template.md)
+
+### Audits (dated snapshots)
+
+Audits record the state at a date. They are evidence, not current behaviour.
+
+- [Design system, 2026-10-22](audits/design-system-2026-10-22.md)
+- [Library reuse, 2026-10-25](audits/library-reuse-2026-10-25.md)
+- [Quality gates, 2026-10-26](audits/2026-10-26-quality-gates.md)
+- [Story persistence, 2026-11-03](audits/2026-11-03-story-persistence.md)
+- [Graph editor, 2026-11-04](audits/2026-11-04-graph-editor.md)
+- [Group validation, 2026-11-04](audits/2026-11-04-group-validation.md)
+- [Reader replay, 2026-11-04](audits/2026-11-04-reader-replay.md)
+- [Secondary debt, 2026-11-04](audits/2026-11-04-secondary-debt.md)
+- [Shared engine, 2026-11-04](audits/2026-11-04-shared-engine.md)
+
+- [Changelog](../CHANGELOG.md)
+
+## Important rules
 
 - `current-scope.md` is the authoritative summary of what exists today.
+- `roadmap.md` decides the order of upcoming work. `roadmap-history.md` keeps
+  milestone detail and earlier decisions; it does not decide priorities.
 - `mvp.md` is historical and must not be used to remove or forbid already
   implemented post-MVP capabilities.
-- `roadmap.md` contains future, incomplete, and incremental work.
-- Domain behavior must remain aligned with `domain-invariants.md`,
+- Domain behaviour must remain aligned with `domain-invariants.md`,
   `reader-semantics.md`, accepted ADRs, and current tests.
-- React Flow is a projection of the story model, not a second canonical model.
+- React Flow is a projection of the Story model, not a second canonical model.
+- Author-facing pages must describe planned capabilities as planned.
 
-## Planning Sources
+## Planning sources
 
-- [Roadmap](roadmap.md) orders user capabilities and durable product milestones.
+- [Roadmap](roadmap.md) orders upcoming work and records dated priority
+  decisions.
+- [Positioning](positioning.md) records the priority audience and the decisions
+  that audience requires.
 - [Product discovery synthesis](product-discovery-synthesis.md) keeps
   anonymized product reflections. Identifiable source records stay in Drive,
   outside this public repository; priorities flow through the roadmap.
@@ -79,13 +170,14 @@ When documents disagree, follow the precedence documented in the repository
 - [Production readiness](production-readiness.md) owns release and operational gates.
 - [Code quality backlog](code-quality-backlog.md) owns implementation debt,
   measurements, dependency watches, and incremental maintainability work.
-- Historical feedback queues remain in the roadmap for context, but completed
-  entries are not an active delivery queue.
 
 ## Maintenance
 
 - Update [the changelog](../CHANGELOG.md) for notable changes.
 - Update [current scope](current-scope.md) when the implemented baseline changes materially.
+- Update the [Author guide](author-guide.md) and its French version together when
+  an author-facing workflow or label changes.
 - Update this index when documentation pages are added, renamed, or moved.
-- Prefer marking old roadmap items as implemented or historical rather than
-  rewriting history.
+- Record priority changes in the [Roadmap](roadmap.md); prefer marking old
+  milestone items as implemented or historical in
+  [roadmap-history.md](roadmap-history.md) rather than rewriting history.

@@ -21,6 +21,21 @@ create, inspect, test, and reuse interactive stories.
 
 This keeps the project useful even outside the hosted platform.
 
+**Current status (2026-11-18):** no licence has been chosen and the repository
+has no `LICENSE` file. Until one is added, the code is not open source in the
+legal sense and no reuse or contribution rights are granted. Choosing a licence
+is a prerequisite for public promotion and outside contributions. Typical
+options range from strong copyleft that also covers hosted use (for example
+AGPL-3.0) to permissive licences (for example Apache-2.0 or MIT); the choice
+depends on how much the hosted platform should be protected from closed
+re-hosting. This is a product and legal decision, not a technical one.
+
+## Data Control
+
+"Authors should be able to keep control of their structured story data" is not
+yet true in practice: there is no export. The documented Story format and native
+export are the next priority in the [Roadmap](roadmap.md#next).
+
 ## Hosted Platform Direction
 
 The hosted platform may later provide:
