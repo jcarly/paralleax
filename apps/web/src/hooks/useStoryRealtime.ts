@@ -63,9 +63,14 @@ function connectStoryInvalidations(
 ) {
   let refreshTimer: ReturnType<typeof setTimeout> | undefined;
   let receivedReady = false;
-  const schedule = createRefreshScheduler(callback, revision, () => refreshTimer, (timer) => {
-    refreshTimer = timer;
-  });
+  const schedule = createRefreshScheduler(
+    callback,
+    revision,
+    () => refreshTimer,
+    (timer) => {
+      refreshTimer = timer;
+    },
+  );
   const ready = () => {
     if (!receivedReady) {
       receivedReady = true;
