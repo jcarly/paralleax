@@ -38,7 +38,6 @@ export function usePendingSaveGuard(shouldBlock: boolean, surface: GuardedSurfac
       [surface],
     ),
   );
-
   useEffect(() => {
     if (blocker.state === 'blocked') {
       stayButton.current?.focus();
@@ -63,14 +62,6 @@ export function usePendingSaveGuard(shouldBlock: boolean, surface: GuardedSurfac
     return null;
   }
   return (
-    <PendingSaveDialog
-      stayButton={stayButton}
-      onStay={() => {
-        blocker.reset();
-      }}
-      onLeave={() => {
-        blocker.proceed();
-      }}
-    />
+    <PendingSaveDialog stayButton={stayButton} onStay={blocker.reset} onLeave={blocker.proceed} />
   );
 }

@@ -195,7 +195,7 @@ async function openEmptyStoryImport(
     await user.selectOptions(screen.getByLabelText('Source format'), 'qsp');
     return screen.getByLabelText('QSP game or location files');
   }
-  return screen.getByLabelText('ChoiceScript scene files');
+  return screen.findByLabelText('ChoiceScript scene files');
 }
 
 function filterStorySummaries(options?: { query?: string; filter?: string }) {
