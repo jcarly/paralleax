@@ -44,6 +44,14 @@ import { DatabaseConnection } from '../database/database.connection';
 import { assertStoryWithinQuotas } from './story-quotas';
 import type { Queryable } from './persistence/stories.persistence.types';
 import {
+  storyAnonymouslyDiscoverableSql,
+  storyCommentableSql,
+  storyDiscoverableSql,
+  storyEditableSql,
+  storyManageableSql,
+  storyReadableSql,
+} from './persistence/story-access-sql';
+import {
   persistStoryDifference,
   replaceStoryGraph,
 } from './persistence/stories.persistence.writer';
@@ -296,19 +304,7 @@ export class StoriesRepository {
        JOIN users AS actor ON actor.id = $1
        LEFT JOIN story_user_permissions AS permission
          ON permission.story_id = stories.id AND permission.user_id = $1
-       WHERE (
-         actor.role = 'admin'
-         OR stories.creator_user_id = $1
-         OR (stories.visibility = 'unlisted' AND permission.user_id IS NOT NULL)
-         OR (
-           stories.visibility <> 'unlisted'
-           AND (
-             stories.visibility IN ('public', 'authenticated')
-             OR stories.edit_policy = 'authenticated'
-             OR (stories.visibility = 'invitation' AND permission.user_id IS NOT NULL)
-           )
-         )
-       )
+       WHERE ${storyDiscoverableSql('$1')}
        AND ($2 = '' OR stories.title ILIKE '%' || $2 || '%')
        AND (${filter})
        ORDER BY ${order}
@@ -340,7 +336,7 @@ export class StoriesRepository {
               COUNT(*) OVER() AS total_count
        FROM stories
        JOIN users AS owner ON owner.id = stories.creator_user_id
-       WHERE stories.visibility = 'public'
+       WHERE ${storyAnonymouslyDiscoverableSql}
          AND ($1 = '' OR stories.title ILIKE '%' || $1 || '%')
        ORDER BY ${order}
        LIMIT $2 OFFSET $3`,
@@ -376,17 +372,7 @@ export class StoriesRepository {
        FROM (
          ${storyAccessSelect}
          WHERE stories.id = $1
-           AND (
-             actor.role = 'admin' OR stories.creator_user_id = $2
-             OR stories.visibility IN ('public', 'unlisted')
-             OR (
-               actor.id IS NOT NULL AND (
-                 stories.visibility = 'authenticated'
-                 OR stories.edit_policy = 'authenticated'
-                 OR (stories.visibility = 'invitation' AND permission.user_id IS NOT NULL)
-               )
-             )
-           )
+           AND ${storyReadableSql('$2')}
        ) AS accessible`,
       [id, userId],
     );
@@ -695,7 +681,7 @@ export class StoriesRepository {
       `DELETE FROM stories
        USING users AS actor
        WHERE stories.id = $1 AND actor.id = $2
-         AND (stories.creator_user_id = $2 OR actor.role = 'admin')`,
+         AND ${storyManageableSql('$2')}`,
       [id, ownerId],
     );
     return (result.rowCount ?? 0) > 0;
@@ -717,12 +703,7 @@ export class StoriesRepository {
        WHERE progress.story_id = $1
          AND progress.user_id = $2
          AND progress.slot_id = $3
-         AND (
-           actor.role = 'admin' OR stories.creator_user_id = $2
-           OR stories.visibility IN ('public', 'authenticated', 'unlisted')
-           OR stories.edit_policy = 'authenticated'
-           OR (stories.visibility = 'invitation' AND permission.user_id IS NOT NULL)
-         )`,
+         AND ${storyReadableSql('$2')}`,
       [storyId, userId, slotId],
     );
     const row = result.rows[0];
@@ -747,12 +728,7 @@ export class StoriesRepository {
          ON permission.story_id = stories.id AND permission.user_id = $2
        WHERE progress.story_id = $1
          AND progress.user_id = $2
-         AND (
-           actor.role = 'admin' OR stories.creator_user_id = $2
-           OR stories.visibility IN ('public', 'authenticated', 'unlisted')
-           OR stories.edit_policy = 'authenticated'
-           OR (stories.visibility = 'invitation' AND permission.user_id IS NOT NULL)
-         )
+         AND ${storyReadableSql('$2')}
        ORDER BY progress.updated_at DESC, progress.slot_id`,
       [storyId, userId],
     );
@@ -774,12 +750,7 @@ export class StoriesRepository {
        LEFT JOIN story_user_permissions AS permission
          ON permission.story_id = stories.id AND permission.user_id = $2
        WHERE stories.id = $1
-         AND (
-           actor.role = 'admin' OR stories.creator_user_id = $2
-           OR stories.visibility IN ('public', 'authenticated', 'unlisted')
-           OR stories.edit_policy = 'authenticated'
-           OR (stories.visibility = 'invitation' AND permission.user_id IS NOT NULL)
-         )
+         AND ${storyReadableSql('$2')}
        ON CONFLICT (user_id, story_id, slot_id) DO UPDATE
        SET name = EXCLUDED.name, state = EXCLUDED.state, updated_at = EXCLUDED.updated_at`,
       [storyId, userId, JSON.stringify(state), updatedAt, slotId, name ?? null, createdAt],
@@ -802,7 +773,7 @@ export class StoriesRepository {
     const story = await this.database.pool.query<StoryRow>(
       `${storyAccessSelect}
        WHERE stories.id = $1
-         AND (stories.creator_user_id = $2 OR actor.role = 'admin')`,
+         AND ${storyManageableSql('$2')}`,
       [id, userId],
     );
     const row = story.rows[0];
@@ -844,7 +815,7 @@ export class StoriesRepository {
        SET visibility = $3, edit_policy = $4, comment_policy = $5, updated_at = now()
        FROM users AS actor
        WHERE stories.id = $1 AND actor.id = $2
-         AND (stories.creator_user_id = $2 OR actor.role = 'admin')`,
+         AND ${storyManageableSql('$2')}`,
       [id, userId, settings.visibility, settings.editPolicy, settings.commentPolicy],
     );
     return (result.rowCount ?? 0) > 0;
@@ -864,7 +835,7 @@ export class StoriesRepository {
        JOIN users AS invited ON invited.email = $3
        WHERE stories.id = $1
          AND invited.id <> stories.creator_user_id
-         AND (stories.creator_user_id = $2 OR actor.role = 'admin')
+         AND ${storyManageableSql('$2')}
        ON CONFLICT (story_id, user_id) DO UPDATE
        SET role = EXCLUDED.role, updated_at = now()`,
       [id, userId, email, role],
@@ -878,7 +849,7 @@ export class StoriesRepository {
        USING stories, users AS actor
        WHERE permission.story_id = $1 AND permission.user_id = $3
          AND stories.id = permission.story_id AND actor.id = $2
-         AND (stories.creator_user_id = $2 OR actor.role = 'admin')`,
+         AND ${storyManageableSql('$2')}`,
       [id, userId, collaboratorId],
     );
     return (result.rowCount ?? 0) > 0;
@@ -892,17 +863,7 @@ export class StoriesRepository {
     const result = await queryable.query<StoryRow>(
       `${storyAccessSelect}
        WHERE stories.id = $1
-         AND (
-           actor.role = 'admin' OR stories.creator_user_id = $2
-           OR stories.visibility IN ('public', 'unlisted')
-           OR (
-             actor.id IS NOT NULL AND (
-               stories.visibility = 'authenticated'
-               OR stories.edit_policy = 'authenticated'
-               OR (stories.visibility = 'invitation' AND permission.user_id IS NOT NULL)
-             )
-           )
-         )`,
+         AND ${storyReadableSql('$2')}`,
       [id, userId ?? null],
     );
     return result.rows[0];
@@ -952,12 +913,7 @@ export class StoriesRepository {
        LEFT JOIN story_user_permissions AS permission
          ON permission.story_id = stories.id AND permission.user_id = $2
        WHERE stories.id = $1
-         AND (
-           actor.role = 'admin'
-           OR stories.creator_user_id = $2
-           OR stories.edit_policy = 'authenticated'
-           OR (stories.visibility <> 'private' AND permission.role = 'editor')
-         )
+         AND ${storyEditableSql('$2')}
        ${lock ? 'FOR UPDATE OF stories' : ''}`,
       [id, userId],
     );
@@ -1659,16 +1615,11 @@ function pageResult<T>(
 }
 
 function authenticatedStoryFilter(filter: StoryListOptions['filter']) {
-  const editable = `(actor.role = 'admin'
-    OR stories.creator_user_id = $1
-    OR stories.edit_policy = 'authenticated'
-    OR (stories.visibility <> 'private' AND permission.role = 'editor'))`;
   if (filter === 'editable') {
-    return editable;
+    return storyEditableSql('$1');
   }
   if (filter === 'commentable') {
-    return `(stories.comment_policy = 'readers'
-      OR (stories.comment_policy = 'editors' AND ${editable}))`;
+    return storyCommentableSql('$1');
   }
   if (filter === 'owned') {
     return `(stories.creator_user_id = $1)`;

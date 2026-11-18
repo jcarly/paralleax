@@ -38,9 +38,9 @@ describe('DesignSystemPage', () => {
       '--color-danger',
     ]) {
       const tokenLabel = screen.getByText(token);
-      expect(tokenLabel.closest('.swatch')?.querySelector('span')).toHaveStyle({
-        background: `var(${token})`,
-      });
+      expect(tokenLabel.closest('.swatch')?.querySelector('span')?.style.background).toBe(
+        `var(${token})`,
+      );
     }
     expect(document.querySelector('.swatch-grid')?.textContent).not.toMatch(/#[\da-f]{3,8}/i);
     expect(

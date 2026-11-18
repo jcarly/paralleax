@@ -3,6 +3,7 @@ import type { Story } from '@paralleax/shared';
 import { Pool } from 'pg';
 import type { DatabaseConnection } from '../database/database.connection';
 import { DatabaseMigrator } from '../database/database.migrator';
+import { resetPostgresTestDatabase } from '../database/postgres-test-database';
 import { StoriesRepository } from '../stories/stories.repository';
 import { CommentsRepository } from './comments.repository';
 
@@ -19,10 +20,7 @@ describePostgres('CommentsRepository PostgreSQL integration', () => {
   const storyId = `comment-story-${randomUUID()}`;
 
   beforeAll(async () => {
-    await waitForPostgres(pool);
-    await pool.query('DROP SCHEMA public CASCADE');
-    await pool.query('CREATE SCHEMA public');
-    await migrator.run();
+    await resetPostgresTestDatabase(pool, migrator);
     await pool.query(
       `INSERT INTO users (id, email, password_hash, role, created_at)
        VALUES ($1, $2, 'test-only', 'user', now())`,
@@ -113,16 +111,3 @@ describePostgres('CommentsRepository PostgreSQL integration', () => {
     });
   });
 });
-
-async function waitForPostgres(pool: Pool) {
-  const startedAt = Date.now();
-  while (Date.now() - startedAt < 30_000) {
-    try {
-      await pool.query('SELECT 1');
-      return;
-    } catch {
-      await new Promise((resolve) => setTimeout(resolve, 250));
-    }
-  }
-  throw new Error('PostgreSQL did not become ready in time');
-}

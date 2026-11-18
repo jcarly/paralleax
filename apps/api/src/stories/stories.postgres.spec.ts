@@ -9,6 +9,7 @@ import {
 import { Pool } from 'pg';
 import type { DatabaseConnection } from '../database/database.connection';
 import { DatabaseMigrator } from '../database/database.migrator';
+import { resetPostgresTestDatabase } from '../database/postgres-test-database';
 import { StoriesRepository } from './stories.repository';
 
 const connectionString = process.env.POSTGRES_TEST_DATABASE_URL;
@@ -72,13 +73,10 @@ describePostgres('StoriesRepository PostgreSQL integration', () => {
 });
 
 async function preparePostgresDatabase() {
-  await waitForPostgres(pool);
   // Always start from a clean dedicated test schema. A previous interrupted
   // migration scenario may otherwise leave historical tables without matching
   // schema_migrations rows.
-  await pool.query('DROP SCHEMA public CASCADE');
-  await pool.query('CREATE SCHEMA public');
-  await migrator.run();
+  await resetPostgresTestDatabase(pool, migrator);
   await pool.query(
     `INSERT INTO users (id, email, password_hash, role, created_at)
      VALUES
@@ -1043,18 +1041,4 @@ async function runDemoCatalogRoundTrip() {
   expect(reloaded[4]?.itemDefinitions?.some((definition) => definition.stats?.length === 2)).toBe(
     true,
   );
-}
-
-async function waitForPostgres(postgresPool: Pool) {
-  let lastError: unknown;
-  for (let attempt = 0; attempt < 30; attempt += 1) {
-    try {
-      await postgresPool.query('SELECT 1');
-      return;
-    } catch (error) {
-      lastError = error;
-      await new Promise((resolve) => setTimeout(resolve, 1_000));
-    }
-  }
-  throw lastError;
 }

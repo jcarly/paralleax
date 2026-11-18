@@ -59,7 +59,7 @@ work. Other UX ideas and library candidates remain discovery inputs until a
 product task promotes them.
 
 The anonymized product discovery proposals are recorded in the
-[roadmap](roadmap.md#product-discovery-follow-up). They remain product
+[roadmap](roadmap-history.md#product-discovery-follow-up). They remain product
 discovery inputs, not code-quality backlog tasks. Their proposed P0 label means
 first exploration and does not meet this backlog's P0 definition without
 observed evidence of a blocked essential path, risk, or scheduled validation.
@@ -398,7 +398,7 @@ items when a row above points to them.
 - **`RichTextEditor` extraction: absorbed by the P1 editor migration.** The
   former custom editor is now a compatibility re-export of the focused Tiptap
   implementation. Do not keep a separate extraction prerequisite or duplicate
-  the active [migration](roadmap.md#p1-tiptap-and-ink-inspired-narrative-content-editing).
+  the active [migration](roadmap-history.md#p1-tiptap-and-ink-inspired-narrative-content-editing).
 - **Shared evaluation context: P1 → P2.** It is a prerequisite only before
   consolidating diagnostics; current Reader and Simulation behavior continues.
 - **Incremental journey-date recalculation: P1 → P2.** Keep ordinary progress
