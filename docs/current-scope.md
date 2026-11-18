@@ -468,7 +468,7 @@ not evidence that its phases are implemented.
 
 ## Historical documents
 
-`docs/mvp.md` and `docs/roadmap.md` are valuable product history, but their original
+`docs/mvp.md` and `docs/roadmap-history.md` are valuable product history, but their original
 version sequencing is not authoritative evidence that already-implemented concepts
 are still out of scope.
 

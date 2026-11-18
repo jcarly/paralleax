@@ -1,4 +1,13 @@
-# Roadmap
+# Roadmap History and Milestone Detail
+
+> **Archived on 2026-11-18.** Active priorities now live in the short
+> [Roadmap](roadmap.md). This file keeps the detailed milestone descriptions
+> (V0.1 to V1.0 and post-V1 directions), the historical delivery queues, and the
+> priority decisions recorded up to 2026-11-05. It remains a useful reference for
+> milestone goals, remaining scope, and exit criteria, but it is no longer the
+> place to decide what comes next. When the two disagree, [Roadmap](roadmap.md)
+> wins for ordering and this file wins for milestone detail until that detail is
+> updated.
 
 This roadmap describes the progression from the validated narrative core to a public Paralleax platform.
 
