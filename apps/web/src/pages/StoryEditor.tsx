@@ -1,3 +1,14 @@
+import { useStoryEditorNodeDragHandlers } from '../features/story-editor/graph/useStoryEditorNodeDragHandlers';
+import { ReviewTargetInspector } from '../features/story-editor/inspectors/ReviewTargetInspector';
+import {
+  useStoryEditorInspectorLayout,
+  type StoryEditorInspectorLayout,
+} from '../features/story-editor/inspectors/useStoryEditorInspectorLayout';
+import {
+  buildCommentPinNodes,
+  type CommentNodeInput,
+} from '../features/story-editor/graph/storyCommentPinNodes';
+import { useStoryEditorEntityActions } from '../features/story-editor/useStoryEditorEntityActions';
 import {
   lazy,
   Suspense,
@@ -32,7 +43,6 @@ import {
   canManageCommentThread as canActorManageCommentThread,
   commentSemanticSlotKey,
   getTriggerConditionGroups,
-  getTriggerConditions,
   isCommentAnchor,
   isCommentAnchorDetached,
   type Character,
@@ -63,17 +73,8 @@ import { StoryGraphSelectionInspector } from '../components/StoryGraphSelectionI
 import { TriggerEdge } from '../components/TriggerEdge';
 import { TriggerNode } from '../components/TriggerNode';
 import { describeTriggerCondition } from '../triggerConditionPresentation';
-import { RichTextContent } from '../components/RichTextContent';
-import {
-  CommentPinNode,
-  type CommentPinFlowNode,
-  type CommentPinNodeData,
-} from '../features/comments/CommentPinNode';
+import { CommentPinNode, type CommentPinFlowNode } from '../features/comments/CommentPinNode';
 import { ContextualCommentsRail } from '../features/comments/ContextualCommentsRail';
-import {
-  InspectorCommentField,
-  type InspectorTextCommentProps,
-} from '../features/comments/InspectorCommentField';
 import { StoryCommentsPanel } from '../features/comments/StoryCommentsPanel';
 import { captureActiveTextSelection } from '../features/comments/textAnchors';
 import { useStoryComments } from '../features/comments/useStoryComments';
@@ -111,12 +112,9 @@ import {
 import { useStoryEditorPersistence } from '../hooks/useStoryEditorPersistence';
 import { usePendingSaveGuard } from '../hooks/usePendingSaveGuard';
 import {
-  applyInteractionMovesEdgePreview,
-  applyInteractionMovesTriggerPreview,
   buildInteractionNodes,
   buildTriggerNodes,
   buildTriggerEdges,
-  getInteractionMovesTriggerPositionUpdates,
   type SelectedTrigger,
   type StoryFlowNode,
   type TriggerFlowEdge,
@@ -148,9 +146,6 @@ const nodeTypes = {
 };
 const edgeTypes = { trigger: TriggerEdge };
 const canvasPanMouseButtons = [1];
-const MIN_INSPECTOR_WIDTH = 280;
-const DEFAULT_INSPECTOR_WIDTH = 340;
-const MAX_INSPECTOR_WIDTH = 720;
 
 type StoryTitleControlProps = {
   story: Story;
@@ -465,16 +460,6 @@ type StoryEditorInspectorModel = {
   actions: StoryEditorInspectorActions;
 };
 
-type StoryEditorInspectorLayout = {
-  width: number;
-  minimum: number;
-  maximum: number;
-  maximized: boolean;
-  onResize: (width: number) => void;
-  onResizePreview: (width: number) => void;
-  onToggleMaximized: () => void;
-};
-
 type StoryEditorInspectorActionsInput = {
   commentActions: ReturnType<typeof bindStoryEditorCommentActions>;
   entityActions: ReturnType<typeof useStoryEditorEntityActions>;
@@ -673,47 +658,59 @@ function StoryCommentsInspector({
           onResizePreview={layout.onResizePreview}
         />
       ) : null}
-      <StoryCommentsPanel
-        open
-        placement="inspector"
-        headerActions={
-          <InspectorMaximizeButton
-            maximized={layout.maximized}
-            maximizeLabel={model.t('editor.maximizeInspector')}
-            restoreLabel={model.t('editor.restoreInspector')}
-            onToggle={layout.onToggleMaximized}
-          />
-        }
-        loading={model.comments.loading}
-        error={model.comments.error}
-        threads={model.projectedCommentThreads}
-        selectedThread={model.comments.selectedThread}
-        canComment={model.story.capabilities?.canComment === true}
-        canManageThread={Boolean(
-          model.comments.selectedThread &&
-          model.canManageCommentThread(model.comments.selectedThread),
-        )}
-        canDeleteThread={Boolean(
-          model.comments.selectedThread &&
-          model.canDeleteCommentThread(model.comments.selectedThread),
-        )}
-        deletedLoading={model.comments.deletedLoading}
-        realtimeStatus={model.comments.realtimeStatus}
-        onClose={() => {
-          model.actions.setCommentsOpen(false);
-        }}
-        onSelect={(threadId) => {
-          selectCommentInspectorThread(model, threadId);
-        }}
-        onCancelDraft={model.comments.cancelDraft}
-        onCreate={model.comments.create}
-        onReply={model.comments.reply}
-        onStatus={model.comments.setStatus}
-        onDelete={model.actions.deleteCommentThread}
-        onRestore={model.actions.restoreCommentThread}
-        onLoadDeleted={model.comments.loadDeleted}
-      />
+      <StoryCommentsInspectorContent model={model} layout={layout} />
     </div>
+  );
+}
+
+function StoryCommentsInspectorContent({
+  model,
+  layout,
+}: {
+  model: StoryEditorInspectorModel;
+  layout: StoryEditorInspectorLayout;
+}) {
+  return (
+    <StoryCommentsPanel
+      open
+      placement="inspector"
+      headerActions={
+        <InspectorMaximizeButton
+          maximized={layout.maximized}
+          maximizeLabel={model.t('editor.maximizeInspector')}
+          restoreLabel={model.t('editor.restoreInspector')}
+          onToggle={layout.onToggleMaximized}
+        />
+      }
+      loading={model.comments.loading}
+      error={model.comments.error}
+      threads={model.projectedCommentThreads}
+      selectedThread={model.comments.selectedThread}
+      canComment={model.story.capabilities?.canComment === true}
+      canManageThread={Boolean(
+        model.comments.selectedThread &&
+        model.canManageCommentThread(model.comments.selectedThread),
+      )}
+      canDeleteThread={Boolean(
+        model.comments.selectedThread &&
+        model.canDeleteCommentThread(model.comments.selectedThread),
+      )}
+      deletedLoading={model.comments.deletedLoading}
+      realtimeStatus={model.comments.realtimeStatus}
+      onClose={() => {
+        model.actions.setCommentsOpen(false);
+      }}
+      onSelect={(threadId) => {
+        selectCommentInspectorThread(model, threadId);
+      }}
+      onCancelDraft={model.comments.cancelDraft}
+      onCreate={model.comments.create}
+      onReply={model.comments.reply}
+      onStatus={model.comments.setStatus}
+      onDelete={model.actions.deleteCommentThread}
+      onRestore={model.actions.restoreCommentThread}
+      onLoadDeleted={model.comments.loadDeleted}
+    />
   );
 }
 
@@ -1113,131 +1110,6 @@ function StoryItemDefinitionContent({ model }: { model: StoryEditorInspectorMode
 }
 
 type StoryEditorSelectionModel = ReturnType<typeof useStoryEditorSelection>;
-type StoryEditorEntityActionInput = {
-  story: Story | undefined;
-  selectedCharacter: Character | undefined;
-  setStory: (story: Story) => void;
-  selectExclusive: (selection?: StoryEditorExclusiveSelection) => void;
-  openContextPanel: () => void;
-  openContextSection: ReturnType<typeof useStoryContextNavigation>['openContextSection'];
-} & Pick<
-  ReturnType<typeof useStoryEditorPersistence>,
-  'createLocation' | 'createCharacter' | 'createStatDefinition' | 'createItemDefinition'
->;
-
-async function addStoryLocation(input: StoryEditorEntityActionInput) {
-  const locationId = await input.createLocation();
-  if (locationId === undefined || locationId.length === 0) {
-    return;
-  }
-  input.selectExclusive({ type: 'location', id: locationId });
-  input.openContextPanel();
-  input.openContextSection('locations');
-}
-
-function updateStoryLocation(input: StoryEditorEntityActionInput, nextLocation: Location) {
-  if (!input.story) {
-    return;
-  }
-  input.setStory({
-    ...input.story,
-    locations: (input.story.locations ?? []).map((location) =>
-      location.id === nextLocation.id ? nextLocation : location,
-    ),
-  });
-}
-
-async function addStoryCharacter(input: StoryEditorEntityActionInput) {
-  const characterId = await input.createCharacter();
-  if (characterId === undefined || characterId.length === 0) {
-    return;
-  }
-  input.selectExclusive({ type: 'character', id: characterId });
-  input.openContextPanel();
-  input.openContextSection('characters');
-}
-
-function addStoryStatDefinition(input: StoryEditorEntityActionInput) {
-  input.selectExclusive({ type: 'statDefinitionCreation' });
-  input.openContextPanel();
-  input.openContextSection('stats');
-}
-
-function updateStoryStatDefinition(
-  input: StoryEditorEntityActionInput,
-  nextDefinition: StatDefinition,
-) {
-  if (!input.story) {
-    return;
-  }
-  input.setStory({
-    ...input.story,
-    statDefinitions: (input.story.statDefinitions ?? []).map((definition) =>
-      definition.id === nextDefinition.id ? nextDefinition : definition,
-    ),
-  });
-}
-
-async function addStoryItemDefinition(input: StoryEditorEntityActionInput) {
-  const itemDefinitionId = await input.createItemDefinition();
-  if (itemDefinitionId === undefined || itemDefinitionId.length === 0) {
-    return;
-  }
-  input.selectExclusive({ type: 'itemDefinition', id: itemDefinitionId });
-  input.openContextPanel();
-  input.openContextSection('items');
-}
-
-function updateStoryItemDefinition(
-  input: StoryEditorEntityActionInput,
-  nextDefinition: ItemDefinition,
-) {
-  if (!input.story) {
-    return;
-  }
-  input.setStory({
-    ...input.story,
-    itemDefinitions: (input.story.itemDefinitions ?? []).map((definition) =>
-      definition.id === nextDefinition.id ? nextDefinition : definition,
-    ),
-  });
-}
-
-function updateStoryCharacter(input: StoryEditorEntityActionInput, patch: Partial<Character>) {
-  if (!input.story || !input.selectedCharacter) {
-    return;
-  }
-  input.setStory({
-    ...input.story,
-    characters: (input.story.characters ?? []).map((character) =>
-      character.id === input.selectedCharacter?.id ? { ...character, ...patch } : character,
-    ),
-  });
-}
-
-function useStoryEditorEntityActions(input: StoryEditorEntityActionInput) {
-  return {
-    addLocation: () => addStoryLocation(input),
-    updateLocalLocation: (location: Location) => {
-      updateStoryLocation(input, location);
-    },
-    addCharacter: () => addStoryCharacter(input),
-    addStatDefinition: () => {
-      addStoryStatDefinition(input);
-    },
-    updateLocalStatDefinition: (definition: StatDefinition) => {
-      updateStoryStatDefinition(input, definition);
-    },
-    addItemDefinition: () => addStoryItemDefinition(input),
-    updateLocalItemDefinition: (definition: ItemDefinition) => {
-      updateStoryItemDefinition(input, definition);
-    },
-    updateLocalCharacter: (patch: Partial<Character>) => {
-      updateStoryCharacter(input, patch);
-    },
-  };
-}
-
 type StoryGraphContextTarget =
   | { kind: 'canvas' }
   | { kind: 'interaction'; interactionId: string }
@@ -1253,7 +1125,7 @@ interface CanvasContextMenuState {
   target: StoryGraphContextTarget;
 }
 
-type IdleCallbackWindow = Window & {
+type IdleCallbackWindow = {
   requestIdleCallback?: (callback: () => void, options?: { timeout?: number }) => number;
   cancelIdleCallback?: (handle: number) => void;
 };
@@ -1630,208 +1502,6 @@ function selectStoryFlowNode(input: StoryNodeSelectionInput) {
   selectSingleGraphNode(input);
 }
 
-type StoryEditorNodeDragInput = {
-  story: Story | undefined;
-  graphSelection: StoryGraphSelection | undefined;
-  selectedGraphNodeIds: ReadonlySet<string>;
-  setNodes: ReturnType<typeof useNodesState<StoryFlowNode>>[1];
-  setEdges: ReturnType<typeof useEdgesState<TriggerFlowEdge>>[1];
-  setElkEdgeRoutes: Dispatch<SetStateAction<TriggerEdgeRoutes>>;
-  closeInspector: () => void;
-  beginLocalEdit: () => void;
-  endLocalEdit: () => void;
-  saveGraphPositions: ReturnType<typeof useStoryEditorPersistence>['saveGraphPositions'];
-  reanchorComment: ReturnType<typeof useStoryComments>['reanchor'];
-};
-
-function getMovedNarrativeNodes(
-  input: Pick<StoryEditorNodeDragInput, 'graphSelection' | 'selectedGraphNodeIds'>,
-  draggedNode: StoryFlowNode,
-  draggedNodes: StoryFlowNode[],
-) {
-  if (!input.graphSelection || !input.selectedGraphNodeIds.has(draggedNode.id)) {
-    return [draggedNode];
-  }
-  const selectedDraggedNodes = draggedNodes.filter(
-    (node) =>
-      input.selectedGraphNodeIds.has(node.id) &&
-      (node.type === 'interaction' || node.type === 'trigger'),
-  );
-  return selectedDraggedNodes.length > 0 ? selectedDraggedNodes : [draggedNode];
-}
-
-function getInteractionPositionOverrides(movedNodes: readonly StoryFlowNode[]) {
-  return new Map(
-    movedNodes.flatMap((node) =>
-      node.type === 'interaction' ? [[node.id, node.position] as const] : [],
-    ),
-  );
-}
-
-function previewStoryNodeMoves(
-  input: Pick<StoryEditorNodeDragInput, 'story' | 'setNodes' | 'setEdges'>,
-  movedNodes: readonly StoryFlowNode[],
-  positionOverrides: ReadonlyMap<string, Position>,
-) {
-  const directlyMovedTriggerNodeIds = new Set(
-    movedNodes.flatMap((node) => (node.type === 'trigger' ? [node.id] : [])),
-  );
-  input.setNodes((current) =>
-    applyInteractionMovesTriggerPreview(
-      current,
-      input.story,
-      positionOverrides,
-      directlyMovedTriggerNodeIds,
-    ),
-  );
-  input.setEdges((current) =>
-    applyInteractionMovesEdgePreview(current, input.story, positionOverrides),
-  );
-}
-
-function startStoryNodeDrag(
-  input: Pick<
-    StoryEditorNodeDragInput,
-    | 'graphSelection'
-    | 'selectedGraphNodeIds'
-    | 'setElkEdgeRoutes'
-    | 'closeInspector'
-    | 'beginLocalEdit'
-  >,
-  node: StoryFlowNode,
-) {
-  input.setElkEdgeRoutes(new Map());
-  if (input.graphSelection && !input.selectedGraphNodeIds.has(node.id)) {
-    input.closeInspector();
-  }
-  input.beginLocalEdit();
-}
-
-function previewDraggedStoryNodes(
-  input: Pick<
-    StoryEditorNodeDragInput,
-    'story' | 'graphSelection' | 'selectedGraphNodeIds' | 'setNodes' | 'setEdges'
-  >,
-  node: StoryFlowNode,
-  draggedNodes: StoryFlowNode[],
-) {
-  const movedNodes = getMovedNarrativeNodes(input, node, draggedNodes);
-  previewStoryNodeMoves(input, movedNodes, getInteractionPositionOverrides(movedNodes));
-}
-
-async function persistStoryNodeDrag(
-  input: StoryEditorNodeDragInput,
-  node: StoryFlowNode,
-  draggedNodes: StoryFlowNode[],
-) {
-  const movedNodes = getMovedNarrativeNodes(input, node, draggedNodes);
-  const positionOverrides = getInteractionPositionOverrides(movedNodes);
-  const movedTriggers = movedNodes.filter(
-    (movedNode): movedNode is Extract<StoryFlowNode, { type: 'trigger' }> =>
-      movedNode.type === 'trigger',
-  );
-  const directlyMovedTriggerIds = new Set(movedTriggers.flatMap(({ data }) => data.triggerIds));
-  const triggerUpdates = getInteractionMovesTriggerPositionUpdates(
-    input.story,
-    positionOverrides,
-  ).filter((update) => update.triggerIds.every((id) => !directlyMovedTriggerIds.has(id)));
-  previewStoryNodeMoves(input, movedNodes, positionOverrides);
-  const interactionUpdates = Array.from(positionOverrides, ([interactionId, position]) => ({
-    interactionId,
-    position,
-  }));
-  const directlyMovedUpdates = movedTriggers.map(({ data, position }) => ({
-    interactionId: data.interactionId,
-    triggerIds: data.triggerIds,
-    position,
-  }));
-
-  try {
-    await input.saveGraphPositions({
-      interactionUpdates,
-      triggerUpdates: [...directlyMovedUpdates, ...triggerUpdates],
-    });
-  } finally {
-    input.endLocalEdit();
-  }
-}
-
-async function persistStoryCommentPinDrag(
-  input: Pick<StoryEditorNodeDragInput, 'reanchorComment' | 'setNodes'>,
-  node: CommentPinFlowNode,
-) {
-  const thread = node.data.thread;
-  if (!thread || !node.data.canManageThread || thread.anchor.kind !== 'canvas') {
-    return;
-  }
-  const originalPosition = thread.anchor.position;
-  const result = await input.reanchorComment(thread.id, {
-    kind: 'canvas',
-    position: node.position,
-  });
-  if (result) {
-    return;
-  }
-  input.setNodes((current) =>
-    current.map((currentNode) =>
-      currentNode.id === node.id ? { ...currentNode, position: originalPosition } : currentNode,
-    ),
-  );
-}
-
-function useStoryEditorNodeDragHandlers(input: StoryEditorNodeDragInput) {
-  const stableInput = useMemo(
-    () => ({
-      story: input.story,
-      graphSelection: input.graphSelection,
-      selectedGraphNodeIds: input.selectedGraphNodeIds,
-      setNodes: input.setNodes,
-      setEdges: input.setEdges,
-      setElkEdgeRoutes: input.setElkEdgeRoutes,
-      closeInspector: input.closeInspector,
-      beginLocalEdit: input.beginLocalEdit,
-      endLocalEdit: input.endLocalEdit,
-      saveGraphPositions: input.saveGraphPositions,
-      reanchorComment: input.reanchorComment,
-    }),
-    [
-      input.beginLocalEdit,
-      input.closeInspector,
-      input.endLocalEdit,
-      input.graphSelection,
-      input.saveGraphPositions,
-      input.selectedGraphNodeIds,
-      input.setEdges,
-      input.setElkEdgeRoutes,
-      input.setNodes,
-      input.reanchorComment,
-      input.story,
-    ],
-  );
-  const handleNodeDragStart = useCallback(
-    (_: MouseEvent | TouchEvent, node: StoryFlowNode) => {
-      startStoryNodeDrag(stableInput, node);
-    },
-    [stableInput],
-  );
-  const handleNodeDrag = useCallback(
-    (_: MouseEvent | TouchEvent, node: StoryFlowNode, draggedNodes: StoryFlowNode[]) => {
-      previewDraggedStoryNodes(stableInput, node, draggedNodes);
-    },
-    [stableInput],
-  );
-  const persistNodeDrag = useCallback(
-    (node: StoryFlowNode, draggedNodes: StoryFlowNode[]) =>
-      persistStoryNodeDrag(stableInput, node, draggedNodes),
-    [stableInput],
-  );
-  const persistCanvasCommentDrag = useCallback(
-    (node: CommentPinFlowNode) => persistStoryCommentPinDrag(stableInput, node),
-    [stableInput],
-  );
-  return { handleNodeDragStart, handleNodeDrag, persistNodeDrag, persistCanvasCommentDrag };
-}
-
 type StoryEditorCommentActionInput = {
   story: Story | undefined;
   comments: ReturnType<typeof useStoryComments>;
@@ -2154,14 +1824,16 @@ function useStoryEditorPointerActions(input: StoryEditorPointerActionInput) {
   };
 }
 
+function selectedInteractionIds(selectedId: string | undefined) {
+  return selectedId !== undefined && selectedId.length > 0 ? [selectedId] : [];
+}
+
 function toggleGraphNodeSelection(input: StoryNodeSelectionInput) {
   const { event, node, reviewOnly, graphSelection, selectedId } = input;
   if (reviewOnly || node.type !== 'interaction' || !(event.ctrlKey || event.metaKey)) {
     return false;
   }
-  const current =
-    graphSelection?.interactionIds ??
-    (selectedId !== undefined && selectedId.length > 0 ? [selectedId] : []);
+  const current = graphSelection?.interactionIds ?? selectedInteractionIds(selectedId);
   const next = current.includes(node.id)
     ? current.filter((id) => id !== node.id)
     : [...current, node.id];
@@ -2333,7 +2005,7 @@ async function runGraphOrganization(input: {
 }
 
 function scheduleIdleWork(callback: () => void) {
-  const idleWindow = window as IdleCallbackWindow;
+  const idleWindow: IdleCallbackWindow = window;
 
   if (idleWindow.requestIdleCallback !== undefined) {
     const handle = idleWindow.requestIdleCallback(callback, { timeout: 2_000 });
@@ -2371,7 +2043,7 @@ function useStoryEditorOnboardingEffects({
     }
   }, [reportStoryDeleted, storyId, storyRouteInaccessible]);
   useEffect(() => {
-    if (loadPhase !== 'ready' || !story || story.id !== storyId) {
+    if (loadPhase !== 'ready' || story?.id !== storyId) {
       return;
     }
     const snapshot = `${storyId}:${story.revision ?? 'loaded'}`;
@@ -2384,8 +2056,7 @@ function useStoryEditorOnboardingEffects({
   useEffect(() => {
     if (
       loadPhase !== 'ready' ||
-      !story ||
-      story.id !== storyId ||
+      story?.id !== storyId ||
       selectedId === undefined ||
       selectedId.length === 0
     ) {
@@ -4631,9 +4302,7 @@ function useStoryEditorFlowEventHandlers(
         void nodeDragHandlers.persistNodeDrag(node, draggedNodes);
         return;
       }
-      if (node.type === 'graphDecoration') {
-        void updateGraphDecoration(node.id, { position: node.position });
-      }
+      void updateGraphDecoration(node.id, { position: node.position });
       endLocalEdit();
     },
     [endLocalEdit, nodeDragHandlers, reviewOnly, updateGraphDecoration],
@@ -5130,60 +4799,6 @@ function StoryEditorWorkspace({
   );
 }
 
-function useStoryEditorInspectorLayout(
-  locationPanelOpen: boolean,
-  onResizePreview: (width: number) => void,
-): StoryEditorInspectorLayout {
-  const [inspectorWidth, setInspectorWidth] = useState(DEFAULT_INSPECTOR_WIDTH);
-  const [inspectorMaximized, setInspectorMaximized] = useState(false);
-  const [viewportWidth, setViewportWidth] = useState(() =>
-    typeof window === 'undefined' ? 1024 : window.innerWidth,
-  );
-  const minimum =
-    viewportWidth <= 800
-      ? Math.min(MIN_INSPECTOR_WIDTH, Math.floor(viewportWidth * 0.75))
-      : MIN_INSPECTOR_WIDTH;
-  const maximum = Math.max(
-    minimum,
-    Math.min(
-      MAX_INSPECTOR_WIDTH,
-      viewportWidth <= 800
-        ? Math.floor(viewportWidth * 0.9)
-        : Math.floor(viewportWidth - (locationPanelOpen ? 260 : 48) - 280),
-    ),
-  );
-  const width = Math.max(minimum, Math.min(maximum, inspectorWidth));
-  const onResize = useCallback(
-    (nextWidth: number) => {
-      setInspectorWidth(Math.max(minimum, Math.min(maximum, nextWidth)));
-    },
-    [maximum, minimum],
-  );
-  const onToggleMaximized = useCallback(() => {
-    setInspectorMaximized((maximized) => !maximized);
-  }, []);
-
-  useEffect(() => {
-    const updateViewportWidth = () => {
-      setViewportWidth(window.innerWidth);
-    };
-    window.addEventListener('resize', updateViewportWidth);
-    return () => {
-      window.removeEventListener('resize', updateViewportWidth);
-    };
-  }, []);
-
-  return {
-    width,
-    minimum,
-    maximum,
-    maximized: inspectorMaximized,
-    onResize,
-    onResizePreview,
-    onToggleMaximized,
-  };
-}
-
 function InspectorMaximizeButton({
   maximized,
   maximizeLabel,
@@ -5291,235 +4906,6 @@ function StoryEditorSettings({
       onSaveStartDateTime={base.persistence.updateStoryStartDateTime}
       onClose={closeStorySettings}
     />
-  );
-}
-
-type CommentNodeInput = {
-  activeCommentThreads: StoryCommentThread[];
-  draftAnchor: CommentAnchor | undefined;
-  selectedThreadId: string | undefined;
-  canComment: boolean;
-  canManageCommentThread: (thread: StoryCommentThread) => boolean;
-  canDeleteCommentThread: (thread: StoryCommentThread) => boolean;
-  selectCommentThread: ReturnType<typeof useStoryComments>['selectThread'];
-  createComment: ReturnType<typeof useStoryComments>['create'];
-  cancelCommentDraft: ReturnType<typeof useStoryComments>['cancelDraft'];
-  replyToComment: ReturnType<typeof useStoryComments>['reply'];
-  setCommentStatus: ReturnType<typeof useStoryComments>['setStatus'];
-  deleteCommentThread: CommentPinNodeData['onDelete'];
-  setCommentsOpen: (open: boolean) => void;
-};
-
-function isCanvasCommentThread(thread: StoryCommentThread): thread is StoryCommentThread & {
-  anchor: Extract<CommentAnchor, { kind: 'canvas' }>;
-} {
-  return thread.anchor.kind === 'canvas';
-}
-
-function buildCommentPinNodes(input: CommentNodeInput): CommentPinFlowNode[] {
-  const threadNodes = input.activeCommentThreads.flatMap((thread) =>
-    isCanvasCommentThread(thread) ? [buildCommentThreadPin(thread, input)] : [],
-  );
-  if (input.draftAnchor?.kind !== 'canvas') {
-    return threadNodes;
-  }
-  return [...threadNodes, buildCommentDraftPin(input.draftAnchor, input)];
-}
-
-function buildCommentThreadPin(
-  thread: StoryCommentThread & {
-    anchor: Extract<CommentAnchor, { kind: 'canvas' }>;
-  },
-  input: CommentNodeInput,
-): CommentPinFlowNode {
-  return {
-    id: 'comment:' + thread.id,
-    type: 'commentPin',
-    position: thread.anchor.position,
-    draggable: input.canManageCommentThread(thread),
-    selectable: false,
-    zIndex: 1_000,
-    data: {
-      thread,
-      expanded: thread.id === input.selectedThreadId,
-      canComment: input.canComment,
-      canManageThread: input.canManageCommentThread(thread),
-      canDeleteThread: input.canDeleteCommentThread(thread),
-      onOpen: (threadId) => {
-        input.selectCommentThread(threadId);
-        input.setCommentsOpen(false);
-      },
-      onCreate: input.createComment,
-      onCancelDraft: input.cancelCommentDraft,
-      onReply: input.replyToComment,
-      onStatus: input.setCommentStatus,
-      onDelete: input.deleteCommentThread,
-    },
-  };
-}
-
-function buildCommentDraftPin(
-  draftAnchor: Extract<CommentAnchor, { kind: 'canvas' }>,
-  input: CommentNodeInput,
-): CommentPinFlowNode {
-  return {
-    id: 'comment:draft',
-    type: 'commentPin',
-    position: draftAnchor.position,
-    draggable: false,
-    selectable: false,
-    zIndex: 1_001,
-    data: {
-      draftAnchor,
-      expanded: true,
-      canComment: input.canComment,
-      canManageThread: false,
-      canDeleteThread: false,
-      onOpen: input.selectCommentThread,
-      onCreate: input.createComment,
-      onCancelDraft: input.cancelCommentDraft,
-      onReply: input.replyToComment,
-      onStatus: input.setCommentStatus,
-      onDelete: input.deleteCommentThread,
-    },
-  };
-}
-
-type ReviewTargetInspectorProps = {
-  interaction?: Interaction;
-  trigger?: Trigger;
-  location?: Location;
-  character?: Character;
-  statDefinition?: StatDefinition;
-  itemDefinition?: ItemDefinition;
-} & InspectorTextCommentProps;
-
-type ReviewCommentDisplayProps = Pick<
-  ReviewTargetInspectorProps,
-  'textCommentCounts' | 'onOpenTextComments'
->;
-
-type ReviewNamedTarget =
-  | { type: 'location'; target: Location }
-  | { type: 'character'; target: Character }
-  | { type: 'stat'; target: StatDefinition }
-  | { type: 'item'; target: ItemDefinition };
-
-function ReviewTargetInspector(props: ReviewTargetInspectorProps) {
-  if (props.interaction) {
-    return (
-      <ReviewInteractionTarget
-        interaction={props.interaction}
-        textCommentCounts={props.textCommentCounts}
-        onOpenTextComments={props.onOpenTextComments}
-      />
-    );
-  }
-  if (props.trigger) {
-    return <ReviewTriggerTarget trigger={props.trigger} />;
-  }
-
-  const target = resolveReviewNamedTarget(props);
-  if (!target) {
-    return null;
-  }
-  return (
-    <ReviewNamedTarget
-      {...target}
-      textCommentCounts={props.textCommentCounts}
-      onOpenTextComments={props.onOpenTextComments}
-    />
-  );
-}
-
-function resolveReviewNamedTarget(
-  props: ReviewTargetInspectorProps,
-): ReviewNamedTarget | undefined {
-  if (props.location) {
-    return { type: 'location', target: props.location };
-  }
-  if (props.character) {
-    return { type: 'character', target: props.character };
-  }
-  if (props.statDefinition) {
-    return { type: 'stat', target: props.statDefinition };
-  }
-  if (props.itemDefinition) {
-    return { type: 'item', target: props.itemDefinition };
-  }
-  return undefined;
-}
-
-function ReviewInteractionTarget({
-  interaction,
-  textCommentCounts,
-  onOpenTextComments,
-}: ReviewCommentDisplayProps & { interaction: Interaction }) {
-  const { t } = useTranslation();
-  return (
-    <div className="review-target-inspector">
-      <InspectorCommentField
-        field="title"
-        label={t('interactionInspector.title')}
-        textCommentCounts={textCommentCounts}
-        onOpenTextComments={onOpenTextComments}
-      >
-        <h2 data-comment-field="title">{interactionTitleForDisplay(interaction, t)}</h2>
-      </InspectorCommentField>
-      <InspectorCommentField
-        field="body"
-        label={t('richText.content')}
-        textCommentCounts={textCommentCounts}
-        onOpenTextComments={onOpenTextComments}
-      >
-        <div data-comment-field="body">
-          <RichTextContent html={interaction.body} />
-        </div>
-      </InspectorCommentField>
-    </div>
-  );
-}
-
-function ReviewTriggerTarget({ trigger }: { trigger: Trigger }) {
-  const { t } = useTranslation();
-  return (
-    <div className="review-target-inspector">
-      <h3>{t('inspector.trigger')}</h3>
-      <p>{t('comments.triggerSummary', { count: getTriggerConditions(trigger).length })}</p>
-    </div>
-  );
-}
-
-function ReviewNamedTarget({
-  type,
-  target,
-  textCommentCounts,
-  onOpenTextComments,
-}: ReviewCommentDisplayProps & ReviewNamedTarget) {
-  const { t } = useTranslation();
-  const description = 'description' in target ? target.description : undefined;
-  return (
-    <div className="review-target-inspector">
-      <h3>{t('inspector.' + type)}</h3>
-      <InspectorCommentField
-        field="name"
-        label={t('inspector.name')}
-        textCommentCounts={textCommentCounts}
-        onOpenTextComments={onOpenTextComments}
-      >
-        <h2 data-comment-field="name">{target.name}</h2>
-      </InspectorCommentField>
-      {description !== undefined && description.length > 0 ? (
-        <InspectorCommentField
-          field="description"
-          label={t('inspector.description')}
-          textCommentCounts={textCommentCounts}
-          onOpenTextComments={onOpenTextComments}
-        >
-          <p data-comment-field="description">{description}</p>
-        </InspectorCommentField>
-      ) : null}
-    </div>
   );
 }
 

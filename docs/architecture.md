@@ -542,6 +542,13 @@ component:
   for transient inspector targets and rectangle-selection gestures. It resolves
   selected entities from the canonical Story and deliberately preserves context
   references only for interaction navigation that requires them.
+- `features/story-editor/graph/useStoryEditorNodeDragHandlers.ts`: graph drag
+  previews and persisted positions, including comment-pin reanchoring.
+- `features/story-editor/graph/storyCommentPinNodes.ts`: canvas comment-pin
+  projection from comment threads and drafts.
+- `features/story-editor/inspectors/`: inspector layout and review target views.
+- `features/story-editor/useStoryEditorEntityActions.ts`: context entity creation
+  and local inspector updates using the existing persistence operations.
 - `features/story-editor/navigation/StoryContextPanel.tsx`: context-panel rendering,
   search controls, entity sections, and group navigation, composed with the
   existing navigation, selection, and persistence actions.

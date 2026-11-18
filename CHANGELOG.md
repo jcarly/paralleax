@@ -3,7 +3,8 @@
 ## Unreleased
 
 - Extracted the Story Editor context panel into its navigation feature module;
-  editor behavior is unchanged.
+  editor behavior is unchanged. Extracted graph drag handling, comment-pin
+  projection, entity actions and inspector utilities into focused modules.
 
 - Reorganized the documentation around its readers. Added an author guide in
   English and French with a first-Story tutorial, a positioning page presenting game
