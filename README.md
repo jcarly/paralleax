@@ -1,34 +1,53 @@
 # Paralleax
 
-Paralleax is an editor and runtime engine for complex interactive scenarios.
+Paralleax is a collaborative web tool for designing and testing interactive
+narratives with rich world state: characters, locations, items, time, and typed
+variables. Its deterministic engine can explain why a scene is or is not
+available, and Stories can be read directly on the platform.
 
-The project started from a deliberately small narrative MVP and has since expanded
-into a broader authoring and execution platform with persisted world context,
-reader state, simulation tools, and production-oriented foundations.
+**Status: guided private alpha.** Use disposable test projects only. Do not rely
+on Paralleax for valuable project data until the backup and restore gates in
+[Production readiness](docs/production-readiness.md) are complete.
 
-## Current Product Scope
+**Audience hypothesis being tested first:** game studios and visual-novel teams.
+See [Positioning](docs/positioning.md).
 
-The authoritative description of what is implemented today lives in
-[Current scope](docs/current-scope.md).
+## Where to start
 
-The current baseline includes:
+- **Writing a Story:** [Author guide](docs/author-guide.md) ·
+  [Guide de l'auteur (français)](docs/author-guide.fr.md)
+- **Understanding the product:** [Vision](docs/vision.md) ·
+  [Positioning](docs/positioning.md) · [Roadmap](docs/roadmap.md)
+- **Contributing code or documentation:** [Contributing](CONTRIBUTING.md) ·
+  [Documentation index](docs/README.md) · [AGENTS.md](AGENTS.md)
 
-- Story authoring and PostgreSQL persistence.
-- Interactions with rich content, graph positions, context, effects, and duration.
-- Triggers with multiple input interactions and typed conditions.
-- Reader execution and persisted authenticated reader progress.
-- Deterministic story-local calendar time.
-- Locations and characters.
-- Reusable character stats and stat effects.
-- Reusable item definitions and exact authored item instances.
-- Recursive item-instance relationships rooted at characters or locations.
-- React Flow graph authoring and simulation-oriented diagnostics.
-- Authentication, sessions, creator ownership, migrations, health/readiness, and
-  production-oriented API error handling.
-- Unit, integration, PostgreSQL, component, and Playwright testing.
+## What exists today
 
-The original MVP remains documented as a historical milestone in
-[MVP](docs/mvp.md). Future work belongs in the [Roadmap](docs/roadmap.md).
+Labels: **Shipped** works in the current alpha. **Partial** works, but an
+important part of the expected capability is missing (the summary says which).
+**Experimental** works on a limited subset and reports what it cannot handle.
+**Planned** is not implemented.
+The authoritative detail is [Current scope](docs/current-scope.md).
+
+| Area                            | Status       | Summary                                                                                                                         |
+| ------------------------------- | ------------ | ------------------------------------------------------------------------------------------------------------------------------- |
+| Story graph editor              | Shipped      | Interactions, Triggers, rich content, auto-layout, nested Groups, search, frames and text, durable undo/redo                    |
+| World state                     | Shipped      | Typed variables and expressions, locations, characters, items with nested instances, story-local calendar                       |
+| Availability rules              | Shipped      | Several inputs per Trigger, OR groups of AND conditions, seeded probability, timers                                             |
+| Simulation Mode                 | Shipped      | Condition diagnostics, forced paths, Back, seeded replay, separate autosave, named saves                                        |
+| Reader                          | Shipped      | Playable character, inventory, saved progress for signed-in readers                                                             |
+| Review                          | Shipped      | Anchored comment threads with replies and resolution, live updates                                                              |
+| Shared editing                  | Partial      | Live synchronisation: other editors' changes reload automatically on the same server. No text merge, presence, or offline queue |
+| Access control                  | Shipped      | Accounts, per-Story visibility (private, unlisted, signed-in, public), reader and editor grants                                 |
+| Interface languages             | Shipped      | English, French, Italian. Story content is not translated                                                                       |
+| Imports                         | Experimental | Small ChoiceScript projects and a QSP subset, with compatibility reports                                                        |
+| Story format, export            | Planned      | Next priority; engine integration to validate, see [Roadmap](docs/roadmap.md#next)                                              |
+| Text source mode                | Planned      | Ink-inspired syntax proposed in [ADR-043](docs/decisions/ADR-043-ink-inspired-narrative-source.md)                              |
+| `Why unavailable?` on the graph | Planned      | [Workbench](docs/workbench.md)                                                                                                  |
+| Immutable publishing            | Planned      | V0.9, see [Roadmap history](docs/roadmap-history.md)                                                                            |
+
+**Licence:** not yet chosen. Until a licence file is added, no reuse rights are
+granted. See [Business model](docs/business-model.md).
 
 ## Architecture
 
@@ -44,39 +63,8 @@ Paralleax model and is never the canonical story representation.
 
 ## Documentation
 
-Start with the documentation index: [docs/README.md](docs/README.md).
-
-Recommended reading order:
-
-1. [Vision](docs/vision.md)
-2. [Current scope](docs/current-scope.md)
-3. [Domain model](docs/domain-model.md)
-4. [Domain invariants](docs/domain-invariants.md)
-5. [Reader semantics](docs/reader-semantics.md)
-6. [Trigger semantics](docs/triggers.md)
-7. [Architecture](docs/architecture.md)
-8. [AI development workflow](docs/ai-workflow.md)
-9. [User guide](docs/user-guide.md)
-10. [Roadmap](docs/roadmap.md)
-11. [MVP](docs/mvp.md)
-12. [Changelog](CHANGELOG.md)
-
-Supporting references:
-
-- [Glossary](docs/glossary.md)
-- [Design principles](docs/design-principles.md)
-- [UX principles](docs/ux-principles.md)
-- [UI direction](docs/ui-direction.md)
-- [Story Canvas](docs/story-canvas.md)
-- [Simulation](docs/simulation.md)
-- [Non-goals](docs/non-goals.md)
-- [Test scenarios](docs/test-scenarios.md)
-- [Production readiness](docs/production-readiness.md)
-- [Private alpha deployment](docs/operations/alpha-deployment.md)
-- [ADR index](docs/decisions/README.md)
-- [UML diagrams](docs/uml/README.md)
-- [Hosting and scale](docs/hosting-and-scale.md)
-- [Meteor prototype refactor notes](MIGRATION.md)
+The [documentation index](docs/README.md) lists every page and its purpose.
+The original MVP is kept as a historical milestone in [MVP](docs/mvp.md).
 
 ## Requirements
 

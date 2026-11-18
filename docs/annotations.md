@@ -46,7 +46,7 @@ Before defining persistence or adding a parallel note system, explore:
 - how to relate an annotation to a threaded review comment without showing both
   as duplicate records or implying that a note can be resolved like a discussion.
 
-The [roadmap](roadmap.md#product-discovery-follow-up) treats this as a
+The [roadmap](roadmap-history.md#product-discovery-follow-up) treats this as a
 P0 product-definition exercise only. The [open questions](open-questions.md#author-notes-and-writing-workflows)
 track decisions that remain unresolved.
 
