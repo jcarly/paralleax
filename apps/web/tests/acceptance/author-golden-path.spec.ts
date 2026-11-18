@@ -161,6 +161,7 @@ test('an author creates, persists, resumes, and simulates a conditional story', 
     inspector.getByRole('button', { name: /^Characters present: Alice$/ }),
   ).toBeVisible();
   await interactionNode(page, 'Gain courage').click();
+  await inspector.locator('.interaction-effect-editor').first().locator('summary').click();
   await expect(selectedEffectTarget).toHaveText(/Courage/);
   await expect(inspector.getByLabel('Variable effect value')).toHaveValue('1');
   await page.getByTestId(`flow-trigger-${final.id}-${finalTriggerId}`).click();
