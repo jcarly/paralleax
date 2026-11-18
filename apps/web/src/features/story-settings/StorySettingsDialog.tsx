@@ -1,3 +1,4 @@
+import { StorySettingsIcon } from './StorySettingsIcon';
 import { useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import { FieldHelpTooltip } from '../../components/FieldHelpTooltip';
@@ -156,14 +157,5 @@ export function StorySettingsDialog({
         </section>
       </div>
     </ModalPortal>
-  );
-}
-
-export function StorySettingsIcon() {
-  return (
-    <svg aria-hidden="true" viewBox="0 0 24 24">
-      <circle cx="12" cy="12" r="3" />
-      <path d="M19.4 15a1.7 1.7 0 0 0 .34 1.88l.06.06-2.86 2.86-.06-.06A1.7 1.7 0 0 0 15 19.4a1.7 1.7 0 0 0-1 .6 1.7 1.7 0 0 0-.4 1.1V21H9.55v-.08A1.7 1.7 0 0 0 8.5 19.4a1.7 1.7 0 0 0-1.88.34l-.06.06-2.86-2.86.06-.06A1.7 1.7 0 0 0 4.1 15a1.7 1.7 0 0 0-.6-1A1.7 1.7 0 0 0 2.4 13H2V9h.08A1.7 1.7 0 0 0 3.6 7.5a1.7 1.7 0 0 0-.34-1.88l-.06-.06L6.06 2.7l.06.06A1.7 1.7 0 0 0 8 3.1a1.7 1.7 0 0 0 1-.6 1.7 1.7 0 0 0 .4-1.1V1h4v.08A1.7 1.7 0 0 0 14.9 2.6a1.7 1.7 0 0 0 1.88-.34l.06-.06 2.86 2.86-.06.06A1.7 1.7 0 0 0 19.3 7a1.7 1.7 0 0 0 .6 1 1.7 1.7 0 0 0 1.1.4h.1v4H21a1.7 1.7 0 0 0-1.6 1.05A1.7 1.7 0 0 0 19.4 15Z" />
-    </svg>
   );
 }
