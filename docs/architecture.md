@@ -674,10 +674,16 @@ JavaScript uses Terser minification to stay within the entry and route budgets. 
 initial JavaScript and stylesheet budgets are 150 KiB and 24 KiB; incremental
 Story Editor and Story Player assets are limited to 146 KiB and 95 KiB. The
 editor budget includes 1 KiB of release-build headroom for metadata-dependent
-bundle changes; the cap remains enforced. The editor preloads its click-creation
-helper and ELK adapter during the existing idle preparation; create and organize
-actions also load them on demand. The interaction inspector loads when an
-interaction is selected. The contract also fails if either route stops being a
+bundle changes; the cap remains enforced. Build variables change chunk hashes
+and so shift compressed sizes by tens of bytes across chunks, so the CI Quality
+build uses the same empty build variables as the production image and both
+measure the same bundle. On 2026-11-18 the editor measured 143.0 KiB in that
+configuration. A budget increase must state in this section what grew and why
+the growth cannot load on demand. The editor preloads its click-creation
+helper, ELK adapter, Story settings dialog, and history panel during the
+existing idle preparation; create and organize actions, the settings button, and
+the history control also load them on demand. The interaction inspector loads
+when an interaction is selected. The contract also fails if either route stops being a
 dynamic entry or becomes a static dependency of the application entry.
 
 ## Automated Architecture Checks

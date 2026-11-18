@@ -102,18 +102,14 @@ import {
   reconcileStoryFlowNodes,
 } from '../features/story-editor/graph/storyFlowReconciliation';
 import { getInitialStoryFitViewOptions } from '../features/story-editor/graph/storyGraphViewport';
-import { StoryHistoryPanel } from '../features/story-editor/history/StoryHistoryPanel';
 import { InspectorResizeHandle } from '../features/story-editor/inspectors/InspectorResizeHandle';
 import { useStoryContextNavigation } from '../features/story-editor/navigation/useStoryContextNavigation';
 import {
   useStoryEditorSelection,
   type StoryEditorExclusiveSelection,
 } from '../features/story-editor/selection/useStoryEditorSelection';
-import {
-  StorySettingsDialog,
-  StorySettingsIcon,
-  type StorySettingsTab,
-} from '../features/story-settings/StorySettingsDialog';
+import type { StorySettingsTab } from '../features/story-settings/StorySettingsDialog';
+import { StorySettingsIcon } from '../features/story-settings/StorySettingsIcon';
 import { useStoryEditorPersistence } from '../hooks/useStoryEditorPersistence';
 import { usePendingSaveGuard } from '../hooks/usePendingSaveGuard';
 import {
@@ -144,6 +140,16 @@ const InteractionInspector = lazy(() =>
   import('../components/InteractionInspector').then((module) => ({
     default: module.InteractionInspector,
   })),
+);
+// Panels that open on demand load outside the editor route budget; idle
+// preparation preloads them once the Story is ready.
+const loadStorySettingsDialog = () => import('../features/story-settings/StorySettingsDialog');
+const loadStoryHistoryPanel = () => import('../features/story-editor/history/StoryHistoryPanel');
+const StorySettingsDialog = lazy(() =>
+  loadStorySettingsDialog().then((module) => ({ default: module.StorySettingsDialog })),
+);
+const StoryHistoryPanel = lazy(() =>
+  loadStoryHistoryPanel().then((module) => ({ default: module.StoryHistoryPanel })),
 );
 
 const nodeTypes = {
@@ -387,13 +393,15 @@ function StoryCanvasConnectionAlert({ open, onClose }: { open: boolean; onClose:
 
 function StoryCanvasHistoryLayer(props: StoryCanvasHistoryProps) {
   return props.open ? (
-    <StoryHistoryPanel
-      history={props.history}
-      busy={props.busy}
-      onUndo={props.onUndo}
-      onRedo={props.onRedo}
-      onClose={props.onClose}
-    />
+    <Suspense fallback={null}>
+      <StoryHistoryPanel
+        history={props.history}
+        busy={props.busy}
+        onUndo={props.onUndo}
+        onRedo={props.onRedo}
+        onClose={props.onClose}
+      />
+    </Suspense>
   ) : null;
 }
 
@@ -4672,6 +4680,8 @@ function useStoryEditorGraphPreparation(
       void Promise.all([
         import('../storyGraphCreationLayout'),
         import('../storyGraphElkLayout').then(({ preloadStoryGraphElk }) => preloadStoryGraphElk()),
+        loadStorySettingsDialog(),
+        loadStoryHistoryPanel(),
       ]).catch(() => undefined);
     });
   }, [loadPhase, storyId]);
@@ -5528,14 +5538,16 @@ function StoryEditorSettings({
     return null;
   }
   return (
-    <StorySettingsDialog
-      storyId={base.storyId}
-      startDateTime={story.startDateTime ?? '2000-01-03T08:00'}
-      initialTab={initialTab}
-      canManageAccess={story.capabilities?.canManage === true}
-      onSaveStartDateTime={base.persistence.updateStoryStartDateTime}
-      onClose={closeStorySettings}
-    />
+    <Suspense fallback={null}>
+      <StorySettingsDialog
+        storyId={base.storyId}
+        startDateTime={story.startDateTime ?? '2000-01-03T08:00'}
+        initialTab={initialTab}
+        canManageAccess={story.capabilities?.canManage === true}
+        onSaveStartDateTime={base.persistence.updateStoryStartDateTime}
+        onClose={closeStorySettings}
+      />
+    </Suspense>
   );
 }
 

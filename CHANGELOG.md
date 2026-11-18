@@ -2,6 +2,12 @@
 
 ## Unreleased
 
+- Restored real headroom under the Story Editor bundle budget: the Story
+  settings dialog and the history panel now load on demand (preloaded during
+  idle preparation), reducing the editor's initial route assets by about 3 KiB
+  compressed. The CI Quality build now uses the same empty build variables as
+  the production image, so both measure the same bundle and a budget overrun
+  fails in the pull request that causes it.
 - Reorganized the documentation around its readers. Added an author guide in
   English and French with a first-Story tutorial, a positioning page presenting game
   studios and visual-novel teams as the first audience hypothesis to test, a completed glossary with

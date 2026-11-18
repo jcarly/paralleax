@@ -183,8 +183,17 @@ jobs:
         if: needs.changes.result == 'success' && needs.changes.outputs.build_api == 'true'
         run: npm run build -w @paralleax/api
 
+      # Match the Dockerfile, which defines these build variables as empty strings.
+      # Their values change chunk hashes and therefore compressed bundle sizes, so
+      # the bundle budget check must see the same inputs as the production image.
       - name: Build web workspace
         if: needs.changes.result == 'success' && needs.changes.outputs.build_web == 'true'
+        env:
+          VITE_FORMBRICKS_WORKSPACE_ID: ''
+          VITE_FORMBRICKS_APP_URL: ''
+          VITE_SENTRY_DSN: ''
+          VITE_SENTRY_RELEASE: ''
+          VITE_SENTRY_TRACES_SAMPLE_RATE: ''
         run: npm run build -w @paralleax/web
 
       - name: Run shared coverage suite
