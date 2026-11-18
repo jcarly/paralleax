@@ -20,7 +20,7 @@ is claimed before a prototype measures it.
 The strongest candidates are small, isolated evaluations rather than a new
 framework layer. The existing rich-text migration initiative remains the largest
 potential simplification, and it already has a detailed compatibility plan in
-the [roadmap](../roadmap.md#deferred-cross-cutting-initiative-rich-text-editor-migration).
+the [roadmap](../roadmap-history.md#deferred-cross-cutting-initiative-rich-text-editor-migration).
 It remains P2 and unscheduled. Guided author sessions, valuable-project safety,
 and the current delivery queue keep their existing priority.
 
