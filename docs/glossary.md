@@ -165,9 +165,11 @@ _Interface:_ "Test from start", "Test from current interaction".
 
 The ordered list of Interactions selected during one reading. Implemented.
 
-Reader results are deterministic from the authored Story, the journey, the run's
-random seed (for appearance probability), and the recorded start time of each
-choice step (for availability timers). A save keeps all four inputs; see
+Reader results are reproducible given the same authored Story revision, journey,
+random seed (for appearance probability), and timing context (choice-step start
+times and the elapsed time at evaluation, for availability timers). Saves
+preserve the journey, random seed, and choice-step start times, but do not
+preserve an immutable snapshot of the authored Story; see
 [Reader semantics](reader-semantics.md).
 
 ### Play Session
