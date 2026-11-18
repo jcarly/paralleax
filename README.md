@@ -9,8 +9,8 @@ available, and Stories can be read directly on the platform.
 on Paralleax for valuable project data until the backup and restore gates in
 [Production readiness](docs/production-readiness.md) are complete.
 
-**Priority audience:** game studios and visual-novel teams. See
-[Positioning](docs/positioning.md).
+**Audience hypothesis being tested first:** game studios and visual-novel teams.
+See [Positioning](docs/positioning.md).
 
 ## Where to start
 
@@ -41,8 +41,7 @@ The authoritative detail is [Current scope](docs/current-scope.md).
 | Access control                  | Shipped      | Accounts, per-Story visibility (private, unlisted, signed-in, public), reader and editor grants                                 |
 | Interface languages             | Shipped      | English, French, Italian. Story content is not translated                                                                       |
 | Imports                         | Experimental | Small ChoiceScript projects and a QSP subset, with compatibility reports                                                        |
-| Story format, export            | Planned      | Next priority, see [Roadmap](docs/roadmap.md#next)                                                                              |
-| Engine integration              | Planned      | Reference integration for one engine after the Story format                                                                     |
+| Story format, export            | Planned      | Next priority; engine integration to validate, see [Roadmap](docs/roadmap.md#next)                                              |
 | Text source mode                | Planned      | Ink-inspired syntax proposed in [ADR-043](docs/decisions/ADR-043-ink-inspired-narrative-source.md)                              |
 | `Why unavailable?` on the graph | Planned      | [Workbench](docs/workbench.md)                                                                                                  |
 | Immutable publishing            | Planned      | V0.9, see [Roadmap history](docs/roadmap-history.md)                                                                            |

@@ -28,7 +28,7 @@ Pick the path that matches what you want to do.
 ### I want to understand the product
 
 1. [Vision](vision.md)
-2. [Positioning](positioning.md): priority audience, competitors, product test.
+2. [Positioning](positioning.md): audience hypothesis, competitors, product test.
 3. [Current scope](current-scope.md): what exists today.
 4. [Roadmap](roadmap.md): what comes next.
 5. [Non-goals](non-goals.md)
@@ -155,7 +155,7 @@ Audits record the state at a date. They are evidence, not current behaviour.
 
 - [Roadmap](roadmap.md) orders upcoming work and records dated priority
   decisions.
-- [Positioning](positioning.md) records the priority audience and the decisions
+- [Positioning](positioning.md) records the audience hypothesis and the decisions
   that audience requires.
 - [Product discovery synthesis](product-discovery-synthesis.md) keeps
   anonymized product reflections. Identifiable source records stay in Drive,

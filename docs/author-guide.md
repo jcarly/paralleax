@@ -137,8 +137,8 @@ anonymous readers do not.
 
 ## What Paralleax cannot do yet
 
-- Export a Story, or send it to a game engine. This is the next priority, see
-  [Roadmap](roadmap.md#next).
+- Export a Story. This is the next priority, see [Roadmap](roadmap.md#next).
+  Sending a Story to a game engine is being evaluated.
 - Merge two people's edits to the same text. When someone else saves, your
   editor reloads their change; avoid editing the same field at the same time.
 - Translate Story content. The interface is available in English, French and

@@ -8,27 +8,24 @@ Milestone goals, remaining scope, and exit criteria (V0.1 to V1.0) are kept in
 [Roadmap history and milestone detail](roadmap-history.md), together with the
 priority decisions recorded before 2026-11-18.
 
-Product positioning, the priority audience, and the competitive context are in
+Product positioning, the audience hypothesis, and the competitive context are in
 [Positioning](positioning.md). Operational gates are in
 [Production readiness](production-readiness.md); implementation debt is in the
 [Code quality backlog](code-quality-backlog.md).
 
 ## Priority decision, 2026-11-18
 
-The first priority audience is **game studios and visual-novel teams** (see
-[Positioning](positioning.md)). For that audience, getting structured Story data
-out of Paralleax and into a game engine is a condition of adoption, not a
-post-V1 extra.
+**The Story format and native export / restore move up to the first "Next"
+priority** (former task 7). They are useful for every audience: authors cannot
+control their data without them (see [Business model](business-model.md#data-control)),
+and they are the prerequisite for any later integration.
 
-Consequence: **engine-oriented data export moves from "Post-V1 direction" to the
-next priority after the current guided-session work.** This does not change the
-[non-goals](non-goals.md): Paralleax exports structured, documented Story data;
-it does not become a game engine, a rendering engine, or a universal export
-runtime. Executable and video exports remain post-V1.
-
-This decision supersedes the "Not Required for V1.0: Unity export" line in the
-[milestone detail](roadmap-history.md#not-required-for-v10) for data export
-only.
+**Engine integration is not part of this decision.** It depends on the audience
+hypothesis in [Positioning](positioning.md#audience-hypothesis) (game studios and
+visual-novel teams), which guided sessions must test first. It stays under
+[Proposed, not yet decided](#proposed-not-yet-decided), and the "Not Required for
+V1.0" list in the [milestone detail](roadmap-history.md#not-required-for-v10) is
+unchanged.
 
 ## Now
 
@@ -48,10 +45,11 @@ dependencies, and acceptance criteria are in
 | 8   | Make import reports durable                           | Before production imports     |
 | 9   | Prepare any open creator alpha from observed evidence | After 4–7 (and 8 for imports) |
 
-Recommended addition to the session brief (task 1): include at least one
-studio or visual-novel participant and one task that follows a Story from the
-editor to the data an engine would consume, even before export exists, to learn
-what that data must contain.
+Recommended addition to the session brief (task 1): test the
+[audience hypothesis](positioning.md#audience-hypothesis). Include at least one
+studio or visual-novel participant alongside other author profiles, and one task
+that follows a Story from the editor to the data an engine would consume, even
+before export exists, to learn what that data must contain.
 
 ## Next
 
@@ -69,26 +67,11 @@ Former task 7, promoted.
   entities or links; invalid input is rejected with diagnostics; the format has a
   version number and a compatibility rule.
 
-### 2. Engine-oriented data export
-
-- Define what an engine needs beyond the backup format: a runtime-oriented
-  projection (flattened availability rules, typed state declarations, content
-  with interpolation markers) or the same format plus a reference evaluator.
-- Ship one reference integration for one engine, as a small example project or
-  loader, not a plugin ecosystem.
-- **Decision required before starting:** which engine first (Unity, Godot, or
-  Ren'Py) and whether the reference evaluator is a port of `packages/shared` or
-  a documented specification. See [Positioning](positioning.md#decisions-required).
-- **Acceptance:** a Story authored in Paralleax runs in the chosen engine sample
-  with the same availability results as Paralleax Simulation for a set of
-  recorded journeys, given the same random seed and the same recorded choice-step
-  start times (probability and timers are otherwise not reproducible).
-
-### 3. Durable Story-level collaboration groundwork
+### 2. Durable Story-level collaboration groundwork
 
 Unchanged from the milestone detail (V0.3 / V0.8): field-scoped concurrency and
 text merging per [ADR-034](decisions/ADR-034-collaborative-offline-authoring.md),
-when guided sessions or studio feedback show that the current invalidate-and-
+when guided sessions show that the current invalidate-and-
 reload model blocks real teams.
 
 ## Proposed, not yet decided
@@ -96,6 +79,21 @@ reload model blocks real teams.
 These items are recommended by the 2026-11-18 documentation review. They need an
 explicit decision before they change the order above.
 
+- **Engine-oriented data export**, to validate with users. If guided sessions
+  confirm the studio and visual-novel hypothesis, it becomes the next priority
+  after the Story format:
+  - define what an engine needs beyond the backup format: a runtime-oriented
+    projection (flattened availability rules, typed state declarations, content
+    with interpolation markers) or the same format plus a reference evaluator;
+  - ship one reference integration for one engine, as a small example project or
+    loader, not a plugin ecosystem;
+  - decide first which engine (Ren'Py, Unity, or Godot) and whether the
+    reference evaluator is a port of `packages/shared` or a documented
+    specification (see [Positioning](positioning.md#decisions-required));
+  - acceptance: a Story authored in Paralleax runs in the engine sample with the
+    same availability results as Paralleax Simulation for recorded journeys,
+    given the same random seed and the same recorded choice-step start times
+    (probability and timers are otherwise not reproducible).
 - **Minimal `Why unavailable?` on the graph.** Reuse the deterministic
   diagnostics that Simulation Mode already computes and show them from the
   authored graph, before the full Workbench projections (currently phase 4 of 5

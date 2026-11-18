@@ -11,17 +11,22 @@ first, against what, and how we will know it works**.
 > Paralleax is a collaborative web tool for designing and testing interactive
 > narratives with rich world state (characters, locations, items, time,
 > variables), with a deterministic engine that can explain why a scene is or is
-> not available, and a documented data format that game engines can consume.
+> not available, and a documented data format that other tools, including game
+> engines, can consume.
 
-The last clause is a commitment, not a shipped feature: see
-[Roadmap → Next](roadmap.md#next).
+The last clause is not shipped. The Story format and native export are the next
+priority ([Roadmap → Next](roadmap.md#next)); engine integration depends on the
+audience hypothesis below.
 
-## Priority audience
+## Audience hypothesis
 
-**First: game studios and visual-novel teams** (narrative designers and writers
-working with programmers who own the engine integration).
+**Hypothesis to test first: game studios and visual-novel teams** (narrative
+designers and writers working with programmers who own the engine integration).
+This is not a validated decision. Professional authoring research so far gives
+partial signals only (see [Product discovery synthesis](product-discovery-synthesis.md)),
+which are not enough to establish this segment as the priority.
 
-Why this audience first:
+Why this audience is the first hypothesis:
 
 - Their stories carry the world state Paralleax already models well: variables,
   inventories, time, locations, characters, probability, timers.
@@ -31,22 +36,33 @@ Why this audience first:
   does not need to replace their engine (consistent with
   [non-goals](non-goals.md)).
 
-**Not first, but kept in view:** authors publishing interactive fiction on the
-web, tabletop game masters, interactive film and storyboarding. The hosted
-reader and publication work (V0.9) serves them later.
+**Alternative audiences to compare in the same sessions:** authors publishing
+interactive fiction on the web, tabletop game masters, interactive film and
+storyboarding. The hosted reader and publication work (V0.9) serves them.
+
+**Consequences if the hypothesis is confirmed**, to weigh before committing:
+more dependence on engine integrations; stronger expectations on localisation,
+collaboration, and version management; more direct competition with articy:draft
+and Arcweave; less weight on publishing and reading on Paralleax itself.
+
+**What would confirm or refute it:** in guided sessions, whether studio and
+visual-novel participants complete the [product test](#product-test) tasks faster
+or with fewer blockers than with their current tool, whether they name engine
+export as a blocker to adoption, and how their results compare with the other
+author profiles.
 
 ## What this audience needs from a narrative tool
 
-| Need                                                  | Paralleax today                                                                                                                            |
-| ----------------------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------ |
-| Structure hundreds of scenes without getting lost     | **Shipped:** graph, auto-layout, nested Groups, search, durable undo/redo                                                                  |
-| Model game state, not only branches                   | **Shipped:** typed variables and expressions, items with nested instances, calendar, probability, timers                                   |
-| Test and debug availability rules                     | **Shipped:** Simulation Mode with condition diagnostics, forced paths, seeded replay, named saves                                          |
-| Understand why a scene is unavailable, from the graph | **Planned:** Workbench `Why unavailable?` ([Workbench](workbench.md))                                                                      |
-| Work as a team                                        | **Partial:** shared editing with live reload on one server, review comments, change history. No text merge, presence, or offline queue yet |
-| Get the data into the engine                          | **Not yet:** no stable format, no export. Now the next priority ([Roadmap](roadmap.md#next))                                               |
-| Ship in several languages                             | **Not yet:** interface is EN/FR/IT; story content translation is undecided                                                                 |
-| Write long dialogue as text                           | **Not yet:** Ink-inspired source mode proposed ([ADR-043](decisions/ADR-043-ink-inspired-narrative-source.md))                             |
+| Need                                                  | Paralleax today                                                                                                                                          |
+| ----------------------------------------------------- | -------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| Structure hundreds of scenes without getting lost     | **Shipped:** graph, auto-layout, nested Groups, search, durable undo/redo                                                                                |
+| Model game state, not only branches                   | **Shipped:** typed variables and expressions, items with nested instances, calendar, probability, timers                                                 |
+| Test and debug availability rules                     | **Shipped:** Simulation Mode with condition diagnostics, forced paths, seeded replay, named saves                                                        |
+| Understand why a scene is unavailable, from the graph | **Planned:** Workbench `Why unavailable?` ([Workbench](workbench.md))                                                                                    |
+| Work as a team                                        | **Partial:** shared editing with live reload on one server, review comments, change history. No text merge, presence, or offline queue yet               |
+| Get the data into the engine                          | **Not yet:** no stable format, no export. Format and native export are the next priority; engine integration is to validate ([Roadmap](roadmap.md#next)) |
+| Ship in several languages                             | **Not yet:** interface is EN/FR/IT; story content translation is undecided                                                                               |
+| Write long dialogue as text                           | **Not yet:** Ink-inspired source mode proposed ([ADR-043](decisions/ADR-043-ink-inspired-narrative-source.md))                                           |
 
 ## Competitive landscape
 
@@ -85,7 +101,22 @@ Three conditions make that true. Only the first is met today:
 1. A deterministic engine with typed world state and diagnostics (shipped).
 2. Explanations visible from the authoring surface, not only during a simulated
    run (planned: Workbench `Why unavailable?`).
-3. A stable, documented export the engine side can trust (next priority).
+3. A stable, documented export the engine side can trust (format and native
+   export: next priority; engine integration: to validate).
+
+## Other differentiation axes to test
+
+Engine integration removes an adoption barrier; it is unlikely to be the core of
+the value proposition on its own. These axes are hypotheses, not demonstrated
+advantages:
+
+- modelling a dynamic narrative world (typed state, items, time, characters);
+- complex conditions and interactions without code;
+- simulation and diagnostics;
+- accessibility to non-developers;
+- several representations of the same Story (graph, simulation, later Workbench
+  views and a text mode);
+- collaboration and review.
 
 ## Product test
 

@@ -153,8 +153,9 @@ conservent leur progression, les lecteurs anonymes non.
 
 ## Ce que Paralleax ne sait pas encore faire
 
-- Exporter une histoire ou l'envoyer vers un moteur de jeu. C'est la prochaine
-  priorité, voir la [Roadmap](roadmap.md#next).
+- Exporter une histoire. C'est la prochaine priorité, voir la
+  [Roadmap](roadmap.md#next). L'envoi d'une histoire vers un moteur de jeu est
+  à l'étude.
 - Fusionner les modifications de deux personnes sur un même texte. Quand
   quelqu'un d'autre enregistre, votre éditeur recharge sa modification : évitez
   de modifier le même champ en même temps.
