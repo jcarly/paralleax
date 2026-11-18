@@ -1,33 +1,23 @@
+import type { StatTarget, Story } from '@paralleax/shared';
 import {
-  getStatTargets,
-  groupItemInstancesByParent,
-  type ItemInstance,
-  type StatTarget,
-  type Story,
-} from '@paralleax/shared';
-import { useMemo, useState } from 'react';
+  useEffect,
+  useMemo,
+  useRef,
+  useState,
+  type ChangeEvent,
+  type Dispatch,
+  type SetStateAction,
+} from 'react';
 import { useTranslation } from 'react-i18next';
-import { statTargetPathLabel } from '../storyStats';
+import {
+  buildVariableTree,
+  findVariablePath,
+  getVisibleLevels,
+  type VariablePickerLevel,
+  type VariablePickerNode,
+} from './variablePickerTree';
 
-interface VariableBranch {
-  id: string;
-  kind: 'branch';
-  name: string;
-  label: string;
-  children: VariablePickerNode[];
-}
-
-interface VariableLeaf {
-  id: string;
-  kind: 'variable';
-  name: string;
-  label: string;
-  displayLabel: string;
-  reference: string;
-  target: StatTarget;
-}
-
-export type VariablePickerNode = VariableBranch | VariableLeaf;
+export type { VariablePickerNode } from './variablePickerTree';
 
 export interface VariablePickerSelection {
   target: StatTarget;
@@ -35,15 +25,7 @@ export interface VariablePickerSelection {
   label: string;
 }
 
-export function VariablePicker({
-  story,
-  selectedTarget,
-  onSelect,
-  onSelectionClear,
-  autoFocus = false,
-  filter,
-  density = 'compact',
-}: {
+interface VariablePickerProps {
   story: Story;
   selectedTarget?: StatTarget;
   onSelect: (selection: VariablePickerSelection) => void;
@@ -51,7 +33,28 @@ export function VariablePicker({
   autoFocus?: boolean;
   filter?: (target: StatTarget) => boolean;
   density?: 'standard' | 'compact';
-}) {
+}
+
+interface VariablePickerNavigation {
+  sourceKey: string;
+  path: string[];
+}
+
+interface VariablePickerChangeOptions {
+  nodes: VariablePickerNode[];
+  depth: number;
+  selectedPath: string[];
+  sourceKey: string;
+  setNavigation: Dispatch<SetStateAction<VariablePickerNavigation>>;
+  onSelect: (selection: VariablePickerSelection) => void;
+  onSelectionClear?: () => void;
+}
+
+function useVariablePickerModel(
+  story: Story,
+  selectedTarget: StatTarget | undefined,
+  filter: ((target: StatTarget) => boolean) | undefined,
+) {
   const { t } = useTranslation();
   const roots = useMemo(
     () =>
@@ -70,7 +73,7 @@ export function VariablePicker({
     [story, t, filter],
   );
   const sourceKey = `${selectedTarget?.assignment.id ?? ''}:${selectedTarget?.itemId ?? ''}`;
-  const [navigation, setNavigation] = useState(() => ({
+  const [navigation, setNavigation] = useState<VariablePickerNavigation>(() => ({
     sourceKey,
     path: findVariablePath(roots, selectedTarget) ?? [],
   }));
@@ -78,7 +81,29 @@ export function VariablePicker({
     navigation.sourceKey === sourceKey
       ? navigation.path
       : (findVariablePath(roots, selectedTarget) ?? []);
-  const levels = getVisibleLevels(roots, selectedPath);
+  return {
+    t,
+    sourceKey,
+    selectedPath,
+    levels: getVisibleLevels(roots, selectedPath),
+    setNavigation,
+  };
+}
+
+export function VariablePicker({
+  story,
+  selectedTarget,
+  onSelect,
+  onSelectionClear,
+  autoFocus = false,
+  filter,
+  density = 'compact',
+}: VariablePickerProps) {
+  const { t, sourceKey, selectedPath, levels, setNavigation } = useVariablePickerModel(
+    story,
+    selectedTarget,
+    filter,
+  );
 
   return (
     <div
@@ -86,246 +111,111 @@ export function VariablePicker({
       className="rich-text-variable-picker"
       role="group"
     >
-      {levels.map(({ nodes, parent }, depth) => {
-        const selectedId = selectedPath[depth] ?? '';
-        const label = parent
-          ? t('richText.variableOrItemFor', { name: parent.name })
-          : t('richText.variableOwner');
-        return (
-          <label
-            className={`form-field form-field--${density} rich-text-variable-field`}
-            key={parent?.id ?? 'owner'}
-          >
-            <select
-              className={`form-control form-control--${density}`}
-              aria-label={label}
-              autoFocus={autoFocus && depth === 0}
-              data-modal-autofocus={autoFocus && depth === 0 ? '' : undefined}
-              value={selectedId}
-              onChange={(event) => {
-                const selected = nodes.find(({ id }) => id === event.target.value);
-                if (!selected) return;
-                if (selected.kind === 'variable') {
-                  setNavigation({
-                    sourceKey,
-                    path: [...selectedPath.slice(0, depth), selected.id],
-                  });
-                  onSelect({
-                    target: selected.target,
-                    reference: selected.reference,
-                    label: selected.displayLabel,
-                  });
-                  return;
-                }
-                setNavigation({
-                  sourceKey,
-                  path: [...selectedPath.slice(0, depth), selected.id],
-                });
-                onSelectionClear?.();
-              }}
-            >
-              <option value="" disabled>
-                {parent ? t('richText.chooseVariableOrItem') : t('richText.chooseVariableOwner')}
-              </option>
-              {nodes.map((node) => (
-                <option key={node.id} value={node.id}>
-                  {node.label}
-                </option>
-              ))}
-            </select>
-          </label>
-        );
-      })}
+      {levels.map((level, depth) => (
+        <VariablePickerLevelSelect
+          key={level.parent?.id ?? 'owner'}
+          level={level}
+          depth={depth}
+          selectedPath={selectedPath}
+          sourceKey={sourceKey}
+          density={density}
+          focusWhenOpened={autoFocus}
+          onSelect={onSelect}
+          onSelectionClear={onSelectionClear}
+          setNavigation={setNavigation}
+        />
+      ))}
     </div>
   );
 }
 
-interface VariableTreeLabels {
-  story: (name: string) => string;
-  storyPath: string;
-  character: (name: string) => string;
-  location: (name: string) => string;
-  item: (name: string) => string;
-  variable: (name: string) => string;
-}
-
-function buildVariableTree(
-  story: Story,
-  labels: VariableTreeLabels,
-  filter?: (target: StatTarget) => boolean,
-): VariableBranch[] {
-  const targets = getStatTargets(story).filter((target) => !filter || filter(target));
-  const itemDefinitions = new Map(
-    (story.itemDefinitions ?? []).map((definition) => [definition.id, definition]),
-  );
-
-  const createVariableLeaf = (target: StatTarget, referenceParts: string[]): VariableLeaf => {
-    const name = target.definition?.name ?? target.assignment.statDefinitionId;
-    return {
-      id: `variable:${target.itemId ?? target.ownerType}:${target.assignment.id}`,
-      kind: 'variable',
-      name,
-      label: labels.variable(name),
-      displayLabel: statTargetPathLabel(target, labels.storyPath),
-      reference: [...referenceParts, name].join('.'),
-      target,
-    };
-  };
-
-  const createOwnerBranch = (
-    kind: 'character' | 'location',
-    owner: NonNullable<Story['characters']>[number] | NonNullable<Story['locations']>[number],
-  ): VariableBranch | undefined => {
-    const directVariables = targets
-      .filter((target) => target.ownerType === kind && target.ownerId === owner.id)
-      .map((target) => createVariableLeaf(target, [owner.name]));
-    const items = owner.items ?? [];
-    const itemIds = new Set(items.map(({ id }) => id));
-    const childrenByParent = groupItemInstancesByParent(items);
-    const itemBranches = items
-      .filter(({ parentItemId }) => !parentItemId || !itemIds.has(parentItemId))
-      .map((item) =>
-        createItemBranch(
-          item,
-          items,
-          childrenByParent,
-          itemDefinitions,
-          targets,
-          labels,
-          new Set(),
-        ),
-      )
-      .filter((branch): branch is VariableBranch => Boolean(branch));
-    const children = [...directVariables, ...itemBranches];
-    if (children.length === 0) return undefined;
-    return {
-      id: `owner:${kind}:${owner.id}`,
-      kind: 'branch',
-      name: owner.name,
-      label: labels[kind](owner.name),
-      children,
-    };
-  };
-
-  const storyVariables = targets
-    .filter(({ ownerType }) => ownerType === 'story')
-    .map((target) => createVariableLeaf(target, ['story']));
-  const storyBranch: VariableBranch | undefined =
-    storyVariables.length > 0
-      ? {
-          id: `owner:story:${story.id}`,
-          kind: 'branch',
-          name: story.title,
-          label: labels.story(story.title),
-          children: storyVariables,
-        }
-      : undefined;
-
-  return [
-    ...(storyBranch ? [storyBranch] : []),
-    ...(story.characters ?? []).flatMap((character) => {
-      const branch = createOwnerBranch('character', character);
-      return branch ? [branch] : [];
-    }),
-    ...(story.locations ?? []).flatMap((location) => {
-      const branch = createOwnerBranch('location', location);
-      return branch ? [branch] : [];
-    }),
-  ];
-}
-
-function createItemBranch(
-  item: ItemInstance,
-  ownerItems: ItemInstance[],
-  childrenByParent: Map<string, ItemInstance[]>,
-  itemDefinitions: Map<string, NonNullable<Story['itemDefinitions']>[number]>,
-  targets: StatTarget[],
-  labels: VariableTreeLabels,
-  ancestors: ReadonlySet<string>,
-): VariableBranch | undefined {
-  if (ancestors.has(item.id)) return undefined;
-  const definition = itemDefinitions.get(item.itemDefinitionId);
-  const sameDefinitionItems = ownerItems.filter(
-    ({ itemDefinitionId }) => itemDefinitionId === item.itemDefinitionId,
-  );
-  const copyNumber =
-    sameDefinitionItems.length > 1
-      ? ` #${sameDefinitionItems.findIndex(({ id }) => id === item.id) + 1}`
-      : '';
-  const name = `${definition?.name ?? item.itemDefinitionId}${copyNumber}`;
-  const variables = targets
-    .filter((target) => target.itemId === item.id)
-    .map((target) => {
-      const variableName = target.definition?.name ?? target.assignment.statDefinitionId;
-      return {
-        id: `variable:${item.id}:${target.assignment.id}`,
-        kind: 'variable' as const,
-        name: variableName,
-        label: labels.variable(variableName),
-        displayLabel: statTargetPathLabel(target, labels.storyPath),
-        reference: `${item.id}.${variableName}`,
-        target,
-      };
-    });
-  const nextAncestors = new Set([...ancestors, item.id]);
-  const nestedItems = (childrenByParent.get(item.id) ?? [])
-    .map((child) =>
-      createItemBranch(
-        child,
-        ownerItems,
-        childrenByParent,
-        itemDefinitions,
-        targets,
-        labels,
-        nextAncestors,
-      ),
-    )
-    .filter((branch): branch is VariableBranch => Boolean(branch));
-  const children = [...variables, ...nestedItems];
-  if (children.length === 0) return undefined;
-  return {
-    id: `item:${item.id}`,
-    kind: 'branch',
-    name,
-    label: labels.item(name),
-    children,
-  };
-}
-
-function getVisibleLevels(
-  roots: VariableBranch[],
-  selectedPath: string[],
-): Array<{ nodes: VariablePickerNode[]; parent?: VariableBranch }> {
-  const levels: Array<{ nodes: VariablePickerNode[]; parent?: VariableBranch }> = [];
-  let nodes: VariablePickerNode[] = roots;
-  let parent: VariableBranch | undefined;
-  for (let depth = 0; nodes.length > 0; depth += 1) {
-    levels.push({ nodes, parent });
-    const selected = nodes.find(({ id }) => id === selectedPath[depth]);
-    if (!selected || selected.kind === 'variable') break;
-    parent = selected;
-    nodes = selected.children;
-  }
-  return levels;
-}
-
-function findVariablePath(
-  nodes: VariablePickerNode[],
-  selectedTarget?: StatTarget,
-): string[] | undefined {
-  if (!selectedTarget) return undefined;
-  for (const node of nodes) {
-    if (node.kind === 'variable') {
-      if (
-        node.target.assignment.id === selectedTarget.assignment.id &&
-        node.target.itemId === selectedTarget.itemId
-      ) {
-        return [node.id];
-      }
-      continue;
+function VariablePickerLevelSelect({
+  level,
+  depth,
+  selectedPath,
+  sourceKey,
+  density,
+  focusWhenOpened,
+  onSelect,
+  onSelectionClear,
+  setNavigation,
+}: {
+  level: VariablePickerLevel;
+  depth: number;
+  selectedPath: string[];
+  sourceKey: string;
+  density: 'standard' | 'compact';
+  focusWhenOpened: boolean;
+  onSelect: (selection: VariablePickerSelection) => void;
+  onSelectionClear?: () => void;
+  setNavigation: Dispatch<SetStateAction<VariablePickerNavigation>>;
+}) {
+  const { t } = useTranslation();
+  const selectRef = useRef<HTMLSelectElement>(null);
+  const selectedId = selectedPath[depth] ?? '';
+  const label = level.parent
+    ? t('richText.variableOrItemFor', { name: level.parent.name })
+    : t('richText.variableOwner');
+  useEffect(() => {
+    if (focusWhenOpened && depth === 0) {
+      selectRef.current?.focus();
     }
-    const childPath = findVariablePath(node.children, selectedTarget);
-    if (childPath) return [node.id, ...childPath];
+  }, [focusWhenOpened, depth]);
+  return (
+    <label
+      className={`form-field form-field--${density} rich-text-variable-field`}
+      key={level.parent?.id ?? 'owner'}
+    >
+      <select
+        ref={selectRef}
+        className={`form-control form-control--${density}`}
+        aria-label={label}
+        data-modal-autofocus={focusWhenOpened && depth === 0 ? '' : undefined}
+        value={selectedId}
+        onChange={(event) => {
+          handleVariablePickerChange(event, {
+            nodes: level.nodes,
+            depth,
+            selectedPath,
+            sourceKey,
+            setNavigation,
+            onSelect,
+            onSelectionClear,
+          });
+        }}
+      >
+        <option value="" disabled>
+          {level.parent ? t('richText.chooseVariableOrItem') : t('richText.chooseVariableOwner')}
+        </option>
+        {level.nodes.map((node) => (
+          <option key={node.id} value={node.id}>
+            {node.label}
+          </option>
+        ))}
+      </select>
+    </label>
+  );
+}
+
+function handleVariablePickerChange(
+  event: ChangeEvent<HTMLSelectElement>,
+  options: VariablePickerChangeOptions,
+) {
+  const { nodes, depth, selectedPath, sourceKey, setNavigation, onSelect, onSelectionClear } =
+    options;
+  const selected = nodes.find(({ id }) => id === event.target.value);
+  if (!selected) {
+    return;
   }
-  return undefined;
+  const path = [...selectedPath.slice(0, depth), selected.id];
+  setNavigation({ sourceKey, path });
+  if (selected.kind === 'variable') {
+    onSelect({
+      target: selected.target,
+      reference: selected.reference,
+      label: selected.displayLabel,
+    });
+    return;
+  }
+  onSelectionClear?.();
 }

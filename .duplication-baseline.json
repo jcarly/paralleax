@@ -1,23 +1,4 @@
 {
-  "apps/web/src/pages/DesignSystemPage.tsx -> apps/web/src/pages/ParalleaxPrototypePages.tsx": {
-    "bb2c45abd85399524263ec1656d1b660671479b46fa98836d2a83362a8e17397": {
-      "count": 1
-    },
-    "6783bda66d6e6f12009672a5fceefa70e1e81293fc79d0b7522d1f167ae76321": {
-      "count": 1
-    },
-    "099e3e277fee0d8ebc2a3d144610060a07e685348ff6120657ec6a449135cb50": {
-      "count": 1
-    }
-  },
-  "apps/web/src/storyGraph.ts -> apps/web/src/storyGraph.ts": {
-    "b2216cc453aedf2a382fe78e131affc9f6175949b28a97da8fa71852fb933c4a": {
-      "count": 1
-    },
-    "44e4623f203ac09b5de655ffe8aa18aa7ba5d8e5d5d20300014969e0587d528e": {
-      "count": 1
-    }
-  },
   "apps/api/src/stories/dto/stories.dto.ts -> apps/api/src/stories/dto/stories.dto.ts": {
     "279d6e5950d0c9d7550fdba36d79533e0cee85712e79f871be99cd6576e80e99": {
       "count": 1

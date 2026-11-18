@@ -1,4 +1,11 @@
-import { useRef, useState, type FormEvent } from 'react';
+import {
+  useRef,
+  useState,
+  type Dispatch,
+  type FormEvent,
+  type MutableRefObject,
+  type SetStateAction,
+} from 'react';
 import { useTranslation } from 'react-i18next';
 import { Link } from 'react-router-dom';
 import { serializeQspLocationBundle } from '@paralleax/shared';
@@ -30,15 +37,41 @@ type StoryImportRequestError = {
 };
 type QspImportProgressSession = { progressId?: string; close: () => void };
 
-export function StoryImportDialog({
-  isAdministrator,
-  onClose,
-  onImported,
-}: {
+interface StoryImportDialogProps {
   isAdministrator: boolean;
   onClose: () => void;
   onImported: (story: StorySummary) => void;
-}) {
+}
+
+interface StoryImportController {
+  isAdministrator: boolean;
+  onClose: () => void;
+  format: StoryImportFormat;
+  setFormat: Dispatch<SetStateAction<StoryImportFormat>>;
+  files: File[];
+  setFiles: Dispatch<SetStateAction<File[]>>;
+  sourceSize: number;
+  selectionError: string;
+  requestError?: StoryImportRequestError;
+  setRequestError: Dispatch<SetStateAction<StoryImportRequestError | undefined>>;
+  pending: boolean;
+  progress?: StoryImportProgress;
+  outcome?: StoryImportOutcome;
+  runImport: (event: FormEvent) => Promise<void>;
+  requestImport: (confirmWarnings: boolean) => Promise<void>;
+  cancelImport: () => void;
+}
+
+export function StoryImportDialog(props: StoryImportDialogProps) {
+  const controller = useStoryImportController(props);
+  return <StoryImportDialogView controller={controller} />;
+}
+
+function useStoryImportController({
+  isAdministrator,
+  onClose,
+  onImported,
+}: StoryImportDialogProps): StoryImportController {
   const { t } = useTranslation();
   const [format, setFormat] = useState<StoryImportFormat>('choicescript');
   const [files, setFiles] = useState<File[]>([]);
@@ -50,72 +83,28 @@ export function StoryImportDialog({
   const sourceSize = files.reduce((total, file) => total + file.size, 0);
   const selectionError = importSelectionError(format, files, sourceSize, isAdministrator, t);
 
-  async function runImport(event: FormEvent) {
-    event.preventDefault();
-    if (pending || files.length === 0 || selectionError) return;
-    await requestImport(false);
+  async function requestImport(confirmWarnings: boolean) {
+    await submitStoryImport({
+      format,
+      files,
+      isAdministrator,
+      confirmWarnings,
+      setProgress,
+      setRequestError,
+      setPending,
+      setOutcome,
+      importAbort,
+      onImported,
+      t,
+    });
   }
 
-  async function requestImport(confirmWarnings: boolean) {
-    const controller = new AbortController();
-    let progressSession: QspImportProgressSession | undefined;
-    try {
-      setRequestError(undefined);
-      setPending(true);
-      importAbort.current = controller;
-      setProgress(
-        format === 'qsp' && isAdministrator
-          ? { phase: 'uploading', percentage: 0 }
-          : { phase: 'processing' },
-      );
-      let result: StoryImportOutcome;
-      if (format === 'qsp') {
-        progressSession = await openQspImportProgress((qspProgress) => {
-          setProgress({ phase: 'qsp-analysis', progress: qspProgress });
-        }, controller?.signal);
-        result = await importQspFiles(
-          files,
-          isAdministrator,
-          (percentage) => {
-            setProgress(
-              percentage >= 100 ? { phase: 'processing' } : { phase: 'uploading', percentage },
-            );
-          },
-          confirmWarnings,
-          progressSession.progressId,
-          controller?.signal,
-        );
-      } else {
-        result = await api.importChoiceScript(
-          await Promise.all(
-            files.map(async (file) => ({ name: file.name, content: await file.text() })),
-          ),
-          confirmWarnings,
-          controller.signal,
-        );
-      }
-      setOutcome(result);
-      if (result.status === 'imported') onImported(result.story);
-    } catch (caught) {
-      if (isImportRequestCancelled(caught)) return;
-      const report = storyImportFailureReport(caught);
-      const reportAvailable = storyImportReportAvailable(caught);
-      setRequestError({
-        summary: apiErrorMessage(
-          caught,
-          t,
-          t(format === 'qsp' ? 'library.import.qsp.failed' : 'library.import.failed'),
-        ),
-        report,
-        importId: storyImportFailureId(caught),
-        reportAvailable,
-      });
-    } finally {
-      progressSession?.close();
-      if (importAbort.current === controller) importAbort.current = undefined;
-      setPending(false);
-      setProgress(undefined);
+  async function runImport(event: FormEvent) {
+    event.preventDefault();
+    if (pending || files.length === 0 || selectionError) {
+      return;
     }
+    await requestImport(false);
   }
 
   function cancelImport() {
@@ -123,6 +112,148 @@ export function StoryImportDialog({
     onClose();
   }
 
+  return {
+    isAdministrator,
+    onClose,
+    format,
+    setFormat,
+    files,
+    setFiles,
+    sourceSize,
+    selectionError,
+    requestError,
+    setRequestError,
+    pending,
+    progress,
+    outcome,
+    runImport,
+    requestImport,
+    cancelImport,
+  };
+}
+
+interface StoryImportRequestOptions {
+  format: StoryImportFormat;
+  files: File[];
+  isAdministrator: boolean;
+  confirmWarnings: boolean;
+  setProgress: Dispatch<SetStateAction<StoryImportProgress | undefined>>;
+  setRequestError: Dispatch<SetStateAction<StoryImportRequestError | undefined>>;
+  setPending: Dispatch<SetStateAction<boolean>>;
+  setOutcome: Dispatch<SetStateAction<StoryImportOutcome | undefined>>;
+  importAbort: MutableRefObject<AbortController | undefined>;
+  onImported: (story: StorySummary) => void;
+  t: ReturnType<typeof useTranslation>['t'];
+}
+
+async function submitStoryImport(options: StoryImportRequestOptions) {
+  const controller = new AbortController();
+  let progressSession: QspImportProgressSession | undefined;
+  options.setRequestError(undefined);
+  options.setPending(true);
+  options.importAbort.current = controller;
+  options.setProgress(
+    options.format === 'qsp' && options.isAdministrator
+      ? { phase: 'uploading', percentage: 0 }
+      : { phase: 'processing' },
+  );
+  try {
+    const request = await performStoryImport(options, controller.signal);
+    progressSession = request.progressSession;
+    options.setOutcome(request.outcome);
+    if (request.outcome.status === 'imported') {
+      options.onImported(request.outcome.story);
+    }
+  } catch (caught) {
+    if (!isImportRequestCancelled(caught)) {
+      options.setRequestError(createStoryImportError(caught, options.format, options.t));
+    }
+  } finally {
+    progressSession?.close();
+    if (options.importAbort.current === controller) {
+      options.importAbort.current = undefined;
+    }
+    options.setPending(false);
+    options.setProgress(undefined);
+  }
+}
+
+async function performStoryImport(options: StoryImportRequestOptions, signal: AbortSignal) {
+  if (options.format !== 'qsp') {
+    const sources = await Promise.all(
+      options.files.map(async (file) => ({ name: file.name, content: await file.text() })),
+    );
+    return {
+      outcome: await api.importChoiceScript(sources, options.confirmWarnings, signal),
+    };
+  }
+  const progressSession = await openQspImportProgress((progress) => {
+    options.setProgress({ phase: 'qsp-analysis', progress });
+  }, signal);
+  try {
+    const outcome = await importQspFiles(
+      options.files,
+      options.isAdministrator,
+      (percentage) => {
+        setUploadProgress(options.setProgress, percentage);
+      },
+      options.confirmWarnings,
+      progressSession.progressId,
+      signal,
+    );
+    return { outcome, progressSession };
+  } catch (caught) {
+    progressSession.close();
+    throw caught;
+  }
+}
+
+function setUploadProgress(
+  setProgress: Dispatch<SetStateAction<StoryImportProgress | undefined>>,
+  percentage: number,
+) {
+  setProgress(percentage >= 100 ? { phase: 'processing' } : { phase: 'uploading', percentage });
+}
+
+function createStoryImportError(
+  caught: unknown,
+  format: StoryImportFormat,
+  t: ReturnType<typeof useTranslation>['t'],
+): StoryImportRequestError {
+  return {
+    summary: apiErrorMessage(
+      caught,
+      t,
+      t(format === 'qsp' ? 'library.import.qsp.failed' : 'library.import.failed'),
+    ),
+    report: storyImportFailureReport(caught),
+    importId: storyImportFailureId(caught),
+    reportAvailable: storyImportReportAvailable(caught),
+  };
+}
+
+type StoryImportTitleKey =
+  | 'library.import.reviewTitle'
+  | 'library.import.qsp.resultTitle'
+  | 'library.import.resultTitle'
+  | 'library.import.qsp.title'
+  | 'library.import.title';
+
+function storyImportTitleKey(
+  format: StoryImportFormat,
+  outcome: StoryImportOutcome | undefined,
+): StoryImportTitleKey {
+  if (outcome?.status === 'confirmation_required') {
+    return 'library.import.reviewTitle';
+  }
+  if (outcome) {
+    return format === 'qsp' ? 'library.import.qsp.resultTitle' : 'library.import.resultTitle';
+  }
+  return format === 'qsp' ? 'library.import.qsp.title' : 'library.import.title';
+}
+
+function StoryImportDialogView({ controller }: { controller: StoryImportController }) {
+  const title = storyImportTitleKey(controller.format, controller.outcome);
   return (
     <ModalPortal>
       <div className="modal-backdrop product-page" role="presentation">
@@ -133,155 +264,199 @@ export function StoryImportDialog({
           aria-labelledby="story-import-title"
           onKeyDown={(event) => {
             handleModalDialogKeyDown(event, () => {
-              if (!pending) onClose();
+              if (!controller.pending) {
+                controller.onClose();
+              }
             });
           }}
         >
-          <div className="dialog-icon" aria-hidden="true">
-            ⇧
-          </div>
-          <span className="product-eyebrow">{t('library.import.eyebrow')}</span>
-          <h2 id="story-import-title">
-            {t(
-              outcome?.status === 'confirmation_required'
-                ? 'library.import.reviewTitle'
-                : outcome
-                  ? format === 'qsp'
-                    ? 'library.import.qsp.resultTitle'
-                    : 'library.import.resultTitle'
-                  : format === 'qsp'
-                    ? 'library.import.qsp.title'
-                    : 'library.import.title',
-            )}
-          </h2>
-          {outcome ? (
+          <ImportDialogHeader title={title} />
+          {controller.outcome ? (
             <StoryImportReportView
-              key={outcome.status}
-              mode={outcome.status === 'imported' ? 'imported' : 'review'}
-              report={outcome.report}
-              importId={outcome.importId}
+              key={controller.outcome.status}
+              mode={controller.outcome.status === 'imported' ? 'imported' : 'review'}
+              report={controller.outcome.report}
+              importId={controller.outcome.importId}
             />
           ) : (
-            <>
-              <label className="form-field form-field--standard">
-                <span>{t('library.import.formatLabel')}</span>
-                <select
-                  className="form-control form-control--standard"
-                  value={format}
-                  onChange={(event) => {
-                    setFormat(event.currentTarget.value as StoryImportFormat);
-                    setFiles([]);
-                    setRequestError(undefined);
-                  }}
-                >
-                  <option value="choicescript">{t('library.import.formats.choicescript')}</option>
-                  <option value="qsp">{t('library.import.formats.qsp')}</option>
-                </select>
-              </label>
-              <p>
-                {t(
-                  format === 'qsp'
-                    ? 'library.import.qsp.description'
-                    : 'library.import.description',
-                )}
-              </p>
-              <form onSubmit={(event) => void runImport(event)}>
-                <label className="form-field form-field--standard choicescript-file-field">
-                  <span>
-                    {t(
-                      format === 'qsp'
-                        ? 'library.import.qsp.filesLabel'
-                        : 'library.import.filesLabel',
-                    )}
-                  </span>
-                  <input
-                    key={format}
-                    autoFocus
-                    data-modal-autofocus
-                    multiple
-                    accept={
-                      format === 'qsp'
-                        ? '.qsp,.gam,.qsps,.qsp-txt,.txt-qsp,.qsrc'
-                        : '.txt,text/plain'
-                    }
-                    type="file"
-                    onChange={(event) => {
-                      setFiles(Array.from(event.currentTarget.files ?? []));
-                      setRequestError(undefined);
-                    }}
-                  />
-                </label>
-                {files.length > 0 ? (
-                  <div className="choicescript-file-summary" aria-live="polite">
-                    <b>{t('library.import.selected', { count: files.length })}</b>
-                    <span>{summarizeFileNames(files, t)}</span>
-                    <small>
-                      {t(
-                        format === 'qsp'
-                          ? isAdministrator
-                            ? 'library.import.qsp.sizeAdministrator'
-                            : 'library.import.qsp.size'
-                          : 'library.import.size',
-                        { size: Math.ceil(sourceSize / 1024) },
-                      )}
-                    </small>
-                  </div>
-                ) : null}
-                {selectionError || requestError ? (
-                  <ImportRequestError selectionError={selectionError} error={requestError} />
-                ) : null}
-                <p className="choicescript-import-notice">
-                  {t(format === 'qsp' ? 'library.import.qsp.notice' : 'library.import.notice')}
-                </p>
-                {pending && progress ? <ImportProgress progress={progress} /> : null}
-                <div className="dialog-actions">
-                  <button className="product-secondary" type="button" onClick={cancelImport}>
-                    {t('library.import.cancel')}
-                  </button>
-                  <button
-                    className="product-primary"
-                    type="submit"
-                    disabled={files.length === 0 || Boolean(selectionError) || pending}
-                  >
-                    {t(pending ? 'library.import.importing' : 'library.import.submit')}
-                  </button>
-                </div>
-              </form>
-            </>
+            <StoryImportForm controller={controller} />
           )}
-          {outcome ? (
-            <>
-              {requestError ? <ImportRequestError error={requestError} /> : null}
-              {pending && progress ? <ImportProgress progress={progress} /> : null}
-              <div className="dialog-actions">
-                <button className="product-secondary" type="button" onClick={cancelImport}>
-                  {t('library.import.close')}
-                </button>
-                {outcome.status === 'confirmation_required' ? (
-                  <button
-                    className="product-primary"
-                    type="button"
-                    disabled={pending}
-                    onClick={() => void requestImport(true)}
-                  >
-                    {t(pending ? 'library.import.importing' : 'library.import.confirm')}
-                  </button>
-                ) : (
-                  <Link
-                    className="product-primary"
-                    to={`/stories/${outcome.story.id}/edit`}
-                    onMouseEnter={() => void loadStoryEditor()}
-                    onFocus={() => void loadStoryEditor()}
-                  >
-                    {t('library.import.open')}
-                  </Link>
-                )}
-              </div>
-            </>
-          ) : null}
+          {controller.outcome ? <ImportOutcomeActions controller={controller} /> : null}
         </section>
       </div>
     </ModalPortal>
+  );
+}
+
+function ImportDialogHeader({ title }: { title: StoryImportTitleKey }) {
+  const { t } = useTranslation();
+  return (
+    <>
+      <div className="dialog-icon" aria-hidden="true">
+        â‡§
+      </div>
+      <span className="product-eyebrow">{t('library.import.eyebrow')}</span>
+      <h2 id="story-import-title">{t(title)}</h2>
+    </>
+  );
+}
+
+function StoryImportForm({ controller }: { controller: StoryImportController }) {
+  const { t } = useTranslation();
+  return (
+    <>
+      <p>
+        {t(
+          controller.format === 'qsp'
+            ? 'library.import.qsp.description'
+            : 'library.import.description',
+        )}
+      </p>
+      <form
+        onSubmit={(event) => {
+          void controller.runImport(event);
+        }}
+      >
+        <ImportFormatSelect controller={controller} />
+        <ImportFileSelect controller={controller} />
+        {controller.files.length > 0 ? <ImportFileSummary controller={controller} /> : null}
+        {controller.selectionError || controller.requestError ? (
+          <ImportRequestError
+            selectionError={controller.selectionError}
+            error={controller.requestError}
+          />
+        ) : null}
+        <p className="choicescript-import-notice">
+          {t(controller.format === 'qsp' ? 'library.import.qsp.notice' : 'library.import.notice')}
+        </p>
+        {controller.pending && controller.progress ? (
+          <ImportProgress progress={controller.progress} />
+        ) : null}
+        <ImportFormActions controller={controller} />
+      </form>
+    </>
+  );
+}
+
+function ImportFormatSelect({ controller }: { controller: StoryImportController }) {
+  const { t } = useTranslation();
+  return (
+    <label className="form-field form-field--standard">
+      <span>{t('library.import.formatLabel')}</span>
+      <select
+        className="form-control form-control--standard"
+        value={controller.format}
+        onChange={(event) => {
+          controller.setFormat(event.currentTarget.value as StoryImportFormat);
+          controller.setFiles([]);
+          controller.setRequestError(undefined);
+        }}
+      >
+        <option value="choicescript">{t('library.import.formats.choicescript')}</option>
+        <option value="qsp">{t('library.import.formats.qsp')}</option>
+      </select>
+    </label>
+  );
+}
+
+function ImportFileSelect({ controller }: { controller: StoryImportController }) {
+  const { t } = useTranslation();
+  const isQsp = controller.format === 'qsp';
+  return (
+    <label className="form-field form-field--standard choicescript-file-field">
+      <span>{t(isQsp ? 'library.import.qsp.filesLabel' : 'library.import.filesLabel')}</span>
+      <input
+        key={controller.format}
+        autoFocus
+        data-modal-autofocus
+        multiple
+        accept={isQsp ? '.qsp,.gam,.qsps,.qsp-txt,.txt-qsp,.qsrc' : '.txt,text/plain'}
+        type="file"
+        onChange={(event) => {
+          controller.setFiles(Array.from(event.currentTarget.files ?? []));
+          controller.setRequestError(undefined);
+        }}
+      />
+    </label>
+  );
+}
+
+function ImportFileSummary({ controller }: { controller: StoryImportController }) {
+  const { t } = useTranslation();
+  const sizeLabel =
+    controller.format === 'qsp'
+      ? controller.isAdministrator
+        ? 'library.import.qsp.sizeAdministrator'
+        : 'library.import.qsp.size'
+      : 'library.import.size';
+  return (
+    <div className="choicescript-file-summary" aria-live="polite">
+      <b>{t('library.import.selected', { count: controller.files.length })}</b>
+      <span>{summarizeFileNames(controller.files, t)}</span>
+      <small>{t(sizeLabel, { size: Math.ceil(controller.sourceSize / 1024) })}</small>
+    </div>
+  );
+}
+
+function ImportFormActions({ controller }: { controller: StoryImportController }) {
+  const { t } = useTranslation();
+  return (
+    <div className="dialog-actions">
+      <button className="product-secondary" type="button" onClick={controller.cancelImport}>
+        {t('library.import.cancel')}
+      </button>
+      <button
+        className="product-primary"
+        type="submit"
+        disabled={
+          controller.files.length === 0 || Boolean(controller.selectionError) || controller.pending
+        }
+      >
+        {t(controller.pending ? 'library.import.importing' : 'library.import.submit')}
+      </button>
+    </div>
+  );
+}
+
+function ImportOutcomeActions({ controller }: { controller: StoryImportController }) {
+  const { t } = useTranslation();
+  const outcome = controller.outcome;
+  if (!outcome) {
+    return null;
+  }
+  return (
+    <>
+      {controller.requestError ? <ImportRequestError error={controller.requestError} /> : null}
+      {controller.pending && controller.progress ? (
+        <ImportProgress progress={controller.progress} />
+      ) : null}
+      <div className="dialog-actions">
+        <button className="product-secondary" type="button" onClick={controller.cancelImport}>
+          {t('library.import.close')}
+        </button>
+        {outcome.status === 'confirmation_required' ? (
+          <button
+            className="product-primary"
+            type="button"
+            disabled={controller.pending}
+            onClick={() => {
+              void controller.requestImport(true);
+            }}
+          >
+            {t(controller.pending ? 'library.import.importing' : 'library.import.confirm')}
+          </button>
+        ) : (
+          <Link
+            className="product-primary"
+            to={`/stories/${outcome.story.id}/edit`}
+            onMouseEnter={() => void loadStoryEditor()}
+            onFocus={() => void loadStoryEditor()}
+          >
+            {t('library.import.open')}
+          </Link>
+        )}
+      </div>
+    </>
   );
 }
 
@@ -436,21 +611,33 @@ function importSelectionError(
 ) {
   if (format === 'qsp') {
     const locationFiles = files.filter(({ name }) => /\.qsrc$/i.test(name));
-    if (files.length > 1 && locationFiles.length !== files.length)
+    if (files.length > 1 && locationFiles.length !== files.length) {
       return t('library.import.qsp.incompatibleFiles');
-    if (files.some(({ name }) => !/\.(?:qsp|gam|qsps|qsp-txt|txt-qsp|qsrc)$/i.test(name)))
+    }
+    if (files.some(({ name }) => !/\.(?:qsp|gam|qsps|qsp-txt|txt-qsp|qsrc)$/i.test(name))) {
       return t('library.import.qsp.invalidFile');
-    if (!isAdministrator && sourceSize > 80 * 1024) return t('library.import.qsp.tooLarge');
+    }
+    if (!isAdministrator && sourceSize > 80 * 1024) {
+      return t('library.import.qsp.tooLarge');
+    }
     return '';
   }
-  if (files.length > 50) return t('library.import.tooManyFiles');
-  if (files.some(({ size }) => size > 65_536)) return t('library.import.fileTooLarge');
-  if (sourceSize > 96 * 1024) return t('library.import.tooLarge');
+  if (files.length > 50) {
+    return t('library.import.tooManyFiles');
+  }
+  if (files.some(({ size }) => size > 65_536)) {
+    return t('library.import.fileTooLarge');
+  }
+  if (sourceSize > 96 * 1024) {
+    return t('library.import.tooLarge');
+  }
   return '';
 }
 
 function qspFormatForFileName(name: string): QspSourceFormat {
-  if (/\.(?:qsp|gam)$/i.test(name)) return 'binary';
+  if (/\.(?:qsp|gam)$/i.test(name)) {
+    return 'binary';
+  }
   return /\.qsrc$/i.test(name) ? 'locations' : 'text';
 }
 
@@ -458,27 +645,27 @@ async function openQspImportProgress(
   onProgress: (progress: QspImportProgress) => void,
   signal?: AbortSignal,
 ): Promise<QspImportProgressSession> {
-  if (typeof EventSource === 'undefined') return { close: () => undefined };
-  if (signal?.aborted) throw new DOMException('The QSP import was cancelled.', 'AbortError');
+  if (typeof EventSource === 'undefined') {
+    return { close: () => undefined };
+  }
+  if (signal?.aborted) {
+    throw new DOMException('The QSP import was cancelled.', 'AbortError');
+  }
 
   const progressId = crypto.randomUUID();
   const stream = new EventSource(`/api/stories/imports/qsp/progress/${progressId}`);
 
   return new Promise((resolve, reject) => {
     let ready = false;
-    const close = () => {
-      signal?.removeEventListener('abort', abort);
-      stream.removeEventListener('ready', receiveReady);
-      stream.removeEventListener('progress', receiveProgress);
-      stream.removeEventListener('error', rejectUnavailableStream);
-      stream.close();
-    };
+    let close: () => void = () => {};
     const abort = () => {
       close();
       reject(new DOMException('The QSP import was cancelled.', 'AbortError'));
     };
     const receiveReady = () => {
-      if (ready) return;
+      if (ready) {
+        return;
+      }
 
       ready = true;
       signal?.removeEventListener('abort', abort);
@@ -487,28 +674,91 @@ async function openQspImportProgress(
       resolve({ progressId, close });
     };
     const receiveProgress = (event: Event) => {
-      try {
-        onProgress(JSON.parse((event as MessageEvent<string>).data) as QspImportProgress);
-      } catch {
-        // Ignore malformed transient progress events; the import response remains authoritative.
-      }
+      reportQspProgress(event, onProgress);
     };
     const rejectUnavailableStream = () => {
-      if (ready) return;
+      if (ready) {
+        return;
+      }
 
       close();
       resolve({ close: () => undefined });
     };
+    close = createQspProgressCloser({
+      stream,
+      signal,
+      abort,
+      receiveReady,
+      receiveProgress,
+      rejectUnavailableStream,
+    });
 
-    if (signal?.aborted) {
-      abort();
-      return;
-    }
-    stream.addEventListener('ready', receiveReady);
-    stream.addEventListener('progress', receiveProgress);
-    stream.addEventListener('error', rejectUnavailableStream);
-    signal?.addEventListener('abort', abort, { once: true });
+    registerQspProgressListeners({
+      stream,
+      signal,
+      abort,
+      receiveReady,
+      receiveProgress,
+      rejectUnavailableStream,
+    });
   });
+}
+
+function registerQspProgressListeners({
+  stream,
+  signal,
+  abort,
+  receiveReady,
+  receiveProgress,
+  rejectUnavailableStream,
+}: {
+  stream: EventSource;
+  signal?: AbortSignal;
+  abort: () => void;
+  receiveReady: EventListener;
+  receiveProgress: EventListener;
+  rejectUnavailableStream: EventListener;
+}) {
+  if (signal?.aborted) {
+    abort();
+    return;
+  }
+  stream.addEventListener('ready', receiveReady);
+  stream.addEventListener('progress', receiveProgress);
+  stream.addEventListener('error', rejectUnavailableStream);
+  signal?.addEventListener('abort', abort, { once: true });
+}
+
+function reportQspProgress(event: Event, onProgress: (progress: QspImportProgress) => void) {
+  try {
+    onProgress(JSON.parse((event as MessageEvent<string>).data) as QspImportProgress);
+  } catch {
+    // Ignore malformed transient progress events; the import response remains authoritative.
+  }
+}
+
+function createQspProgressCloser({
+  stream,
+  signal,
+  abort,
+  receiveReady,
+  receiveProgress,
+  rejectUnavailableStream,
+}: {
+  stream: EventSource;
+  signal?: AbortSignal;
+  abort: () => void;
+  receiveReady: EventListener;
+  receiveProgress: EventListener;
+  rejectUnavailableStream: EventListener;
+}) {
+  return () => {
+    signal?.removeEventListener('abort', abort);
+    stream.removeEventListener('ready', receiveReady);
+    stream.removeEventListener('progress', receiveProgress);
+    stream.removeEventListener('error', rejectUnavailableStream);
+    stream.close();
+  };
 }
 
 async function importQspFiles(
@@ -540,7 +790,9 @@ async function prepareQspSource(files: File[]): Promise<{
   content: Blob;
 }> {
   const format = qspFormatForFileName(files[0].name);
-  if (format !== 'locations') return { name: files[0].name, format, content: files[0] };
+  if (format !== 'locations') {
+    return { name: files[0].name, format, content: files[0] };
+  }
   const sources = await Promise.all(
     files.map(async (file) => ({
       name: file.webkitRelativePath || file.name,
@@ -573,13 +825,19 @@ function summarizeFileNames(files: File[], t: ReturnType<typeof useTranslation>[
 async function readBlobAsBase64(file: Blob) {
   const bytes = new Uint8Array(await file.arrayBuffer());
   let binary = '';
-  for (const byte of bytes) binary += String.fromCharCode(byte);
+  for (const byte of bytes) {
+    binary += String.fromCharCode(byte);
+  }
   return btoa(binary);
 }
 
 function storyImportFailureReport(caught: unknown): StoryImportReport | undefined {
-  if (!isStoryImportFailure(caught)) return undefined;
-  if (!isRecord(caught.details) || !isRecord(caught.details.report)) return undefined;
+  if (!isStoryImportFailure(caught)) {
+    return undefined;
+  }
+  if (!isRecord(caught.details) || !isRecord(caught.details.report)) {
+    return undefined;
+  }
   const report = caught.details.report;
   if (
     (report.format !== 'choicescript' && report.format !== 'qsp') ||
@@ -592,13 +850,19 @@ function storyImportFailureReport(caught: unknown): StoryImportReport | undefine
 }
 
 function storyImportReportAvailable(caught: unknown) {
-  if (!isStoryImportFailure(caught) || !isRecord(caught.details)) return false;
+  if (!isStoryImportFailure(caught) || !isRecord(caught.details)) {
+    return false;
+  }
   return caught.details.reportAvailable === true || storyImportFailureReport(caught) !== undefined;
 }
 
 function storyImportFailureId(caught: unknown) {
-  if (!isStoryImportFailure(caught) || !storyImportReportAvailable(caught)) return undefined;
-  if (!isRecord(caught.details) || typeof caught.details.importId !== 'string') return undefined;
+  if (!isStoryImportFailure(caught) || !storyImportReportAvailable(caught)) {
+    return undefined;
+  }
+  if (!isRecord(caught.details) || typeof caught.details.importId !== 'string') {
+    return undefined;
+  }
   return caught.details.importId;
 }
 

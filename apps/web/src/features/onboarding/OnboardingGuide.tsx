@@ -145,6 +145,12 @@ function GuidePromptCard({
   );
 }
 
+function createRestartHandler(onRestart: (storyId?: string) => void, storyId: string) {
+  return () => {
+    onRestart(storyId);
+  };
+}
+
 function GuideCompleteCard({
   storyId,
   didTest,
@@ -169,9 +175,7 @@ function GuideCompleteCard({
         <h2 id="onboarding-title">{t('onboarding.completeTitle')}</h2>
         <GuideCloseButton label={t('onboarding.close')} onPause={onPause} />
       </div>
-      <p>
-        {t(didTest ? 'onboarding.completeDescription' : 'onboarding.completeSkippedDescription')}
-      </p>
+      <p>{t(didTest ? 'onboarding.completeDescription' : 'onboarding.completeSkippedDescription')}</p>
       {didTest ? <p>{t('onboarding.completeAccessDescription')}</p> : null}
       <div className="onboarding-card-actions">
         <Link className="onboarding-primary" to={`/stories/${storyId}/edit`} onClick={onPause}>
@@ -186,7 +190,11 @@ function GuideCompleteCard({
             {t('onboarding.shareForTesting')}
           </Link>
         ) : null}
-        <button className="onboarding-secondary" type="button" onClick={() => onRestart(storyId)}>
+        <button
+          className="onboarding-secondary"
+          type="button"
+          onClick={createRestartHandler(onRestart, storyId)}
+        >
           {t('onboarding.restart')}
         </button>
       </div>
@@ -229,7 +237,11 @@ function GuideStepCard({
         <button className="onboarding-secondary" type="button" onClick={onSkip}>
           {t('onboarding.skipStep')}
         </button>
-        <button className="onboarding-secondary" type="button" onClick={() => onRestart(storyId)}>
+        <button
+          className="onboarding-secondary"
+          type="button"
+          onClick={createRestartHandler(onRestart, storyId)}
+        >
           {t('onboarding.restart')}
         </button>
       </div>

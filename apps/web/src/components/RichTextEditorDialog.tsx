@@ -1,4 +1,4 @@
-import { useId, type ReactNode } from 'react';
+import { useId, type MouseEvent, type ReactNode } from 'react';
 import { handleModalDialogKeyDown } from './modalDialogKeyboard';
 import { ModalPortal } from './ModalPortal';
 
@@ -29,8 +29,8 @@ export function RichTextEditorDialog({
           aria-modal="true"
           className={`modal-dialog rich-text-editor-dialog${className ? ` ${className}` : ''}`}
           role="dialog"
-          onKeyDown={(event) => handleModalDialogKeyDown(event, onCancel)}
-          onMouseDown={(event) => event.stopPropagation()}
+          onKeyDown={createDialogKeyDownHandler(onCancel)}
+          onMouseDown={stopDialogMouseDown}
         >
           <header className="rich-text-dialog-header">
             <div>
@@ -52,4 +52,14 @@ export function RichTextEditorDialog({
       </div>
     </ModalPortal>
   );
+}
+
+function createDialogKeyDownHandler(onCancel: () => void) {
+  return (event: Parameters<typeof handleModalDialogKeyDown>[0]) => {
+    handleModalDialogKeyDown(event, onCancel);
+  };
+}
+
+function stopDialogMouseDown(event: MouseEvent<HTMLElement>) {
+  event.stopPropagation();
 }

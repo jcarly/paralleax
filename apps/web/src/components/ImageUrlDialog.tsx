@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useState, type ChangeEvent } from 'react';
 import { useTranslation } from 'react-i18next';
 import { RichTextEditorDialog } from './RichTextEditorDialog';
 
@@ -13,6 +13,9 @@ export function ImageUrlDialog({
 }) {
   const { t } = useTranslation();
   const [nextImageUrl, setNextImageUrl] = useState(imageUrl ?? '');
+  const handleImageChange = (event: ChangeEvent<HTMLInputElement>) => {
+    setNextImageUrl(event.currentTarget.value);
+  };
 
   return (
     <RichTextEditorDialog
@@ -28,18 +31,11 @@ export function ImageUrlDialog({
           onSave(nextImageUrl.trim());
         }}
       >
-        <label className="form-field form-field--standard">
-          {t('inspector.imageUrl')}
-          <input
-            className="form-control form-control--standard"
-            autoFocus
-            data-modal-autofocus
-            placeholder="https://example.com/image.png"
-            type="url"
-            value={nextImageUrl}
-            onChange={(event) => setNextImageUrl(event.target.value)}
-          />
-        </label>
+        <ImageUrlField
+          label={t('inspector.imageUrl')}
+          value={nextImageUrl}
+          onChange={handleImageChange}
+        />
         {nextImageUrl ? (
           <img className="image-url-dialog-preview" src={nextImageUrl} alt="" />
         ) : null}
@@ -51,5 +47,30 @@ export function ImageUrlDialog({
         </div>
       </form>
     </RichTextEditorDialog>
+  );
+}
+
+function ImageUrlField({
+  label,
+  value,
+  onChange,
+}: {
+  label: string;
+  value: string;
+  onChange: (event: ChangeEvent<HTMLInputElement>) => void;
+}) {
+  return (
+    <label className="form-field form-field--standard">
+      {label}
+      <input
+        className="form-control form-control--standard"
+        autoFocus
+        data-modal-autofocus
+        placeholder="https://example.com/image.png"
+        type="url"
+        value={value}
+        onChange={onChange}
+      />
+    </label>
   );
 }

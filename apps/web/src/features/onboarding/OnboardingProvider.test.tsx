@@ -10,35 +10,43 @@ afterEach(cleanup);
 function OnboardingProbe() {
   const onboarding = useOnboarding();
   const step = currentOnboardingStep(onboarding.progress);
+  const actions = [
+    { label: 'Begin', onClick: bindAction(onboarding.beginForStory, 'story-1') },
+    {
+      label: 'Select interaction',
+      onClick: bindAction(onboarding.reportStepComplete, 'story-1', 'discover-interactions'),
+    },
+    {
+      label: 'Report existing content',
+      onClick: bindAction(onboarding.reportStoryState, 'story-1', true, true),
+    },
+    {
+      label: 'Complete test',
+      onClick: bindAction(onboarding.reportStepComplete, 'story-1', 'test-story'),
+    },
+    { label: 'Close', onClick: onboarding.pause },
+    { label: 'Help', onClick: bindAction(onboarding.openHelp, 'story-1') },
+    { label: 'Delete story', onClick: bindAction(onboarding.reportStoryDeleted, 'story-1') },
+  ];
   return (
     <div>
       <p role="status">{`${onboarding.progress.status}:${step ?? 'done'}`}</p>
-      <button type="button" onClick={() => onboarding.beginForStory('story-1')}>
-        Begin
-      </button>
-      <button
-        type="button"
-        onClick={() => onboarding.reportStepComplete('story-1', 'discover-interactions')}
-      >
-        Select interaction
-      </button>
-      <button type="button" onClick={() => onboarding.reportStoryState('story-1', true, true)}>
-        Report existing content
-      </button>
-      <button type="button" onClick={() => onboarding.reportStepComplete('story-1', 'test-story')}>
-        Complete test
-      </button>
-      <button type="button" onClick={onboarding.pause}>
-        Close
-      </button>
-      <button type="button" onClick={() => onboarding.openHelp('story-1')}>
-        Help
-      </button>
-      <button type="button" onClick={() => onboarding.reportStoryDeleted('story-1')}>
-        Delete story
-      </button>
+      {actions.map(({ label, onClick }) => (
+        <button key={label} type="button" onClick={onClick}>
+          {label}
+        </button>
+      ))}
     </div>
   );
+}
+
+function bindAction<Arguments extends unknown[]>(
+  action: (...args: Arguments) => void,
+  ...args: Arguments
+) {
+  return () => {
+    action(...args);
+  };
 }
 
 function renderOnboarding() {
@@ -50,7 +58,9 @@ function renderOnboarding() {
 }
 
 describe('OnboardingProvider', () => {
-  beforeEach(() => window.localStorage.clear());
+  beforeEach(() => {
+    window.localStorage.clear();
+  });
 
   it('starts from a created story and advances from reported actions', async () => {
     const user = userEvent.setup();

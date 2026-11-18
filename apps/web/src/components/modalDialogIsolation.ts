@@ -9,14 +9,20 @@ let bodyOverflowPriority = '';
 function updateIsolation() {
   const active = portals.at(-1);
   for (const child of document.body.children) {
-    if (!(child instanceof HTMLElement)) continue;
-    if (!originalInert.has(child)) originalInert.set(child, child.hasAttribute('inert'));
+    if (!(child instanceof HTMLElement)) {
+      continue;
+    }
+    if (!originalInert.has(child)) {
+      originalInert.set(child, child.hasAttribute('inert'));
+    }
     child.toggleAttribute('inert', child !== active || originalInert.get(child) === true);
   }
 }
 
 function focusPortal(portal: HTMLElement) {
-  if (portal.contains(document.activeElement)) return;
+  if (portal.contains(document.activeElement)) {
+    return;
+  }
   const focusTargets = getModalDialogFocusTargets(portal);
   const preferredTarget = portal.querySelector<HTMLElement>('[data-modal-autofocus]');
   const initialTarget =
@@ -26,7 +32,51 @@ function focusPortal(portal: HTMLElement) {
 
 function containFocus() {
   const active = portals.at(-1);
-  if (active) focusPortal(active);
+  if (active) {
+    focusPortal(active);
+  }
+}
+
+function restorePageIsolation() {
+  observer?.disconnect();
+  observer = undefined;
+  document.removeEventListener('focusin', containFocus);
+  for (const [element, inert] of originalInert) {
+    element.toggleAttribute('inert', inert);
+  }
+  originalInert.clear();
+  if (bodyOverflow) {
+    document.body.style.setProperty('overflow', bodyOverflow, bodyOverflowPriority);
+  } else {
+    document.body.style.removeProperty('overflow');
+  }
+}
+
+function releasePortal(portal: HTMLElement, opener: Element | null) {
+  const wasActive = portals.at(-1) === portal;
+  const index = portals.indexOf(portal);
+  if (index !== -1) {
+    portals.splice(index, 1);
+  }
+  const active = portals.at(-1);
+  if (active) {
+    updateIsolation();
+  } else {
+    restorePageIsolation();
+  }
+  if (!wasActive) {
+    return;
+  }
+  if (
+    opener instanceof HTMLElement &&
+    opener.isConnected &&
+    !opener.closest('[inert]') &&
+    (!active || active.contains(opener))
+  ) {
+    opener.focus({ preventScroll: true });
+  } else if (active) {
+    focusPortal(active);
+  }
 }
 
 export function isolateModalDialog(portal: HTMLElement, opener: Element | null) {
@@ -44,33 +94,13 @@ export function isolateModalDialog(portal: HTMLElement, opener: Element | null) 
   }
   portals.push(portal);
   updateIsolation();
-  if (initialFocus?.isConnected) initialFocus.focus({ preventScroll: true });
-  else focusPortal(portal);
+  if (initialFocus?.isConnected) {
+    initialFocus.focus({ preventScroll: true });
+  } else {
+    focusPortal(portal);
+  }
 
   return () => {
-    const wasActive = portals.at(-1) === portal;
-    const index = portals.indexOf(portal);
-    if (index !== -1) portals.splice(index, 1);
-    const active = portals.at(-1);
-    if (active) updateIsolation();
-    else {
-      observer?.disconnect();
-      observer = undefined;
-      document.removeEventListener('focusin', containFocus);
-      for (const [element, inert] of originalInert) element.toggleAttribute('inert', inert);
-      originalInert.clear();
-      if (bodyOverflow)
-        document.body.style.setProperty('overflow', bodyOverflow, bodyOverflowPriority);
-      else document.body.style.removeProperty('overflow');
-    }
-    if (!wasActive) return;
-    if (
-      opener instanceof HTMLElement &&
-      opener.isConnected &&
-      !opener.closest('[inert]') &&
-      (!active || active.contains(opener))
-    ) {
-      opener.focus({ preventScroll: true });
-    } else if (active) focusPortal(active);
+    releasePortal(portal, opener);
   };
 }

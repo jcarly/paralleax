@@ -68,18 +68,18 @@ export abstract class AbortableImportWorkerService implements OnModuleDestroy {
       removeAbortListener();
       action();
     };
-    const fail = (error: Error) => settle(() => rejectPromise(error));
-    const succeed = (result: TResult) => settle(() => resolvePromise(result));
-
-    abort = () => {
-      if (settled) {
-        return;
-      }
-      void worker
-        .terminate()
-        .catch(() => undefined)
-        .finally(() => fail(new Error(`${options.name} worker cancelled.`)));
+    const fail = (error: Error) => {
+      settle(() => {
+        rejectPromise(error);
+      });
     };
+    const succeed = (result: TResult) => {
+      settle(() => {
+        resolvePromise(result);
+      });
+    };
+
+    abort = createWorkerAbortHandler(worker, options.name, () => settled, fail);
     options.abortSignal?.addEventListener('abort', abort, { once: true });
     observeWorkerMessages(worker, options, {
       isSettled: () => settled,
@@ -94,6 +94,25 @@ export abstract class AbortableImportWorkerService implements OnModuleDestroy {
       }
     });
   }
+}
+
+function createWorkerAbortHandler(
+  worker: Worker,
+  workerName: string,
+  isSettled: () => boolean,
+  fail: (error: Error) => void,
+): () => void {
+  return () => {
+    if (isSettled()) {
+      return;
+    }
+    void worker
+      .terminate()
+      .catch(() => undefined)
+      .finally(() => {
+        fail(new Error(`${workerName} worker cancelled.`));
+      });
+  };
 }
 
 function observeWorkerMessages<TProgress, TResult>(

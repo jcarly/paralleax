@@ -2,6 +2,10 @@ import { Link } from 'react-router-dom';
 import type { ReactNode } from 'react';
 import { InteractionEffectCard } from '../components/InteractionEffectCard';
 import { ContextEntityRow } from '../components/StoryContextList';
+import {
+  DesignPrinciplesGrid,
+  DesignSystemSectionLinks,
+} from '../components/DesignSystemReference';
 import './ProductPages.css';
 import '../features/story-editor/graph/storyGraph.css';
 
@@ -50,15 +54,7 @@ export function DesignSystemPage() {
           <b>Design system</b>
           <small>Living reference · 0.3</small>
         </div>
-        <nav aria-label="Design system sections">
-          <a href="#principles">Principles</a>
-          <a href="#foundations">Foundations</a>
-          <a href="#actions">Actions</a>
-          <a href="#forms">Forms</a>
-          <a href="#navigation">Navigation</a>
-          <a href="#narrative">Narrative UI</a>
-          <a href="#feedback">Feedback</a>
-        </nav>
+        <DesignSystemSectionLinks />
         <Link className="product-secondary" to="/">
           Browse stories <span aria-hidden="true">→</span>
         </Link>
@@ -98,23 +94,7 @@ export function DesignSystemPage() {
           title="Product principles"
           description="The interface reduces cognitive load without hiding narrative structure."
         >
-          <div className="principle-grid">
-            <article>
-              <span>01</span>
-              <h3>Story first</h3>
-              <p>The graph is a view of the narrative model, never the model itself.</p>
-            </article>
-            <article>
-              <span>02</span>
-              <h3>Reveal relationships</h3>
-              <p>Targets, effects, conditions, and ownership stay visible and explicit.</p>
-            </article>
-            <article>
-              <span>03</span>
-              <h3>Quiet by default</h3>
-              <p>Neutral surfaces carry the work. Color communicates state and meaning.</p>
-            </article>
-          </div>
+          <DesignPrinciplesGrid className="principle-grid" />
         </ReferenceSection>
 
         <ReferenceSection

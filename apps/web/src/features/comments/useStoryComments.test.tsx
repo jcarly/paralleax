@@ -1,5 +1,5 @@
 import { act, renderHook, waitFor } from '@testing-library/react';
-import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
+import { afterEach, beforeEach, expect, it, vi } from 'vitest';
 import type { StoryCommentThread } from '@paralleax/shared';
 import { api } from '../../api';
 import { useStoryComments } from './useStoryComments';
@@ -57,59 +57,67 @@ const thread: StoryCommentThread = {
   messages: [],
 };
 
-describe('useStoryComments realtime updates', () => {
-  beforeEach(() => {
-    vi.resetAllMocks();
-    FakeEventSource.instances = [];
-    vi.stubGlobal('EventSource', FakeEventSource);
-    vi.mocked(api.listCommentThreads).mockResolvedValue([]);
+beforeEach(() => {
+  vi.resetAllMocks();
+  FakeEventSource.instances = [];
+  vi.stubGlobal('EventSource', FakeEventSource);
+  vi.mocked(api.listCommentThreads).mockResolvedValue([]);
+});
+
+afterEach(() => vi.unstubAllGlobals());
+
+it('reloads comments after an SSE change and reconnect signal', async () => {
+  const { result, unmount } = renderHook(() => useStoryComments('story-1', true));
+  await waitFor(() => {
+    expect(api.listCommentThreads).toHaveBeenCalledOnce();
   });
+  const source = FakeEventSource.instances[0];
+  expect(source.url).toBe('/api/stories/story-1/comment-threads/events');
 
-  afterEach(() => vi.unstubAllGlobals());
+  act(() => source.onopen?.(new Event('open')));
+  expect(result.current.realtimeStatus).toBe('live');
 
-  it('reloads comments after an SSE change and reconnect signal', async () => {
-    const { result, unmount } = renderHook(() => useStoryComments('story-1', true));
-    await waitFor(() => expect(api.listCommentThreads).toHaveBeenCalledOnce());
-    const source = FakeEventSource.instances[0];
-    expect(source.url).toBe('/api/stories/story-1/comment-threads/events');
-
-    act(() => source.onopen?.(new Event('open')));
-    expect(result.current.realtimeStatus).toBe('live');
-
-    vi.mocked(api.listCommentThreads).mockResolvedValue([thread]);
-    act(() => source.emit('comments-changed'));
-    await waitFor(() => expect(result.current.threads).toEqual([thread]));
-
-    act(() => source.onerror?.(new Event('error')));
-    expect(result.current.realtimeStatus).toBe('reconnecting');
-    unmount();
-    expect(source.closed).toBe(true);
+  vi.mocked(api.listCommentThreads).mockResolvedValue([thread]);
+  act(() => {
+    source.emit('comments-changed');
   });
-
-  it('loads the recoverable trash and updates a whole thread on delete and restore', async () => {
-    const deletedThread = {
-      ...thread,
-      deletedBy: thread.createdBy,
-      deletedAt: '2026-09-22T09:00:00.000Z',
-    };
-    vi.mocked(api.deleteCommentThread).mockResolvedValue(deletedThread);
-    vi.mocked(api.restoreCommentThread).mockResolvedValue(thread);
-    const { result } = renderHook(() => useStoryComments('story-1', true));
-    await waitFor(() => expect(api.listCommentThreads).toHaveBeenCalledOnce());
-
-    vi.mocked(api.listCommentThreads).mockResolvedValue([deletedThread]);
-    await act(() => result.current.loadDeleted());
-    expect(api.listCommentThreads).toHaveBeenLastCalledWith('story-1', true);
-    expect(result.current.deletedLoaded).toBe(true);
-    expect(result.current.threads).toEqual([deletedThread]);
-
-    act(() => result.current.selectThread(thread.id));
-    await act(() => result.current.deleteThread(thread.id));
-    expect(api.deleteCommentThread).toHaveBeenCalledWith('story-1', thread.id);
-    expect(result.current.selectedThreadId).toBeUndefined();
-
-    await act(() => result.current.restoreThread(thread.id));
-    expect(api.restoreCommentThread).toHaveBeenCalledWith('story-1', thread.id);
+  await waitFor(() => {
     expect(result.current.threads).toEqual([thread]);
   });
+
+  act(() => source.onerror?.(new Event('error')));
+  expect(result.current.realtimeStatus).toBe('reconnecting');
+  unmount();
+  expect(source.closed).toBe(true);
+});
+
+it('loads the recoverable trash and updates a whole thread on delete and restore', async () => {
+  const deletedThread = {
+    ...thread,
+    deletedBy: thread.createdBy,
+    deletedAt: '2026-09-22T09:00:00.000Z',
+  };
+  vi.mocked(api.deleteCommentThread).mockResolvedValue(deletedThread);
+  vi.mocked(api.restoreCommentThread).mockResolvedValue(thread);
+  const { result } = renderHook(() => useStoryComments('story-1', true));
+  await waitFor(() => {
+    expect(api.listCommentThreads).toHaveBeenCalledOnce();
+  });
+
+  vi.mocked(api.listCommentThreads).mockResolvedValue([deletedThread]);
+  await act(() => result.current.loadDeleted());
+  expect(api.listCommentThreads).toHaveBeenLastCalledWith('story-1', true);
+  expect(result.current.deletedLoaded).toBe(true);
+  expect(result.current.threads).toEqual([deletedThread]);
+
+  act(() => {
+    result.current.selectThread(thread.id);
+  });
+  await act(() => result.current.deleteThread(thread.id));
+  expect(api.deleteCommentThread).toHaveBeenCalledWith('story-1', thread.id);
+  expect(result.current.selectedThreadId).toBeUndefined();
+
+  await act(() => result.current.restoreThread(thread.id));
+  expect(api.restoreCommentThread).toHaveBeenCalledWith('story-1', thread.id);
+  expect(result.current.threads).toEqual([thread]);
 });

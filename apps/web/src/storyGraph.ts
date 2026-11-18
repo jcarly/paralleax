@@ -81,76 +81,126 @@ export function buildInteractionNodes(
   selectedTrigger?: SelectedTrigger,
   actions: InteractionNodeActions = {},
 ): InteractionFlowNode[] {
-  if (!story) return [];
-  const locationsById = new Map((story.locations ?? []).map((location) => [location.id, location]));
-  const charactersById = new Map(
-    (story.characters ?? []).map((character) => [character.id, character]),
-  );
+  if (!story) {
+    return [];
+  }
+  const context = {
+    selectedId,
+    selectedTrigger,
+    actions,
+    locationsById: new Map((story.locations ?? []).map((location) => [location.id, location])),
+    charactersById: new Map((story.characters ?? []).map((character) => [character.id, character])),
+  };
+  return story.interactions.map((item, index) => buildInteractionNode({ item, index, ...context }));
+}
 
-  return story.interactions.map((item, index) => {
-    const rootTrigger = item.triggers.find((trigger) => trigger.inputInteractionIds.length === 0);
-    const locationId = item.locationId;
-    const location =
-      typeof locationId === 'string' && locationId.length > 0
-        ? locationsById.get(locationId)
-        : undefined;
-    const characters = (item.characterIds ?? []).flatMap((characterId) => {
-      const character = charactersById.get(characterId);
-      return character
-        ? [
-            {
-              id: character.id,
-              name: character.name,
-              ...(character.imageUrl !== undefined && character.imageUrl.length > 0
-                ? { imageUrl: character.imageUrl }
-                : {}),
-            },
-          ]
-        : [];
-    });
-    const statEffectCount = item.statEffects?.length ?? 0;
-    const itemEffectCount = item.itemEffects?.length ?? 0;
-    const occurrenceCount = actions.occurrenceCounts?.get(item.id) ?? 0;
-    const commentCount = actions.commentCounts?.get(item.id) ?? 0;
-    const rootTriggerCommentCount = rootTrigger
-      ? (actions.commentCounts?.get(rootTrigger.id) ?? 0)
-      : 0;
-    return {
-      id: item.id,
-      type: 'interaction',
-      position: getInteractionPosition(item, index),
-      data: {
-        title: item.title,
-        body: item.body,
-        ...(statEffectCount > 0 ? { statEffectCount } : {}),
-        ...(itemEffectCount > 0 ? { itemEffectCount } : {}),
-        selected: item.id === selectedId,
-        ...(actions.onboardingBranchSourceId === item.id ? { onboardingBranchAdd: true } : {}),
-        ...(location ? { location: { id: location.id, name: location.name } } : {}),
-        ...(characters.length > 0 ? { characters } : {}),
-        ...(occurrenceCount > 0 ? { occurrenceCount } : {}),
-        ...(actions.emphasizedInteractionIds
-          ? { dimmed: !actions.emphasizedInteractionIds.has(item.id) }
-          : {}),
-        ...(rootTrigger
-          ? {
-              rootTriggerId: rootTrigger.id,
-              ...(rootTriggerCommentCount > 0 ? { rootTriggerCommentCount } : {}),
-              rootTriggerSelected:
-                selectedTrigger?.interactionId === item.id &&
-                selectedTrigger.triggerId === rootTrigger.id,
-            }
-          : {}),
-        ...(actions.onCreateChild ? { onCreateChild: actions.onCreateChild } : {}),
-        ...(actions.onCreateParent ? { onCreateParent: actions.onCreateParent } : {}),
-        ...(actions.onSelectRootTrigger
-          ? { onSelectRootTrigger: actions.onSelectRootTrigger }
-          : {}),
-        ...(commentCount > 0 ? { commentCount } : {}),
-        ...(actions.onOpenComments ? { onOpenComments: actions.onOpenComments } : {}),
-      },
-    };
+function buildInteractionNode(options: {
+  item: Story['interactions'][number];
+  index: number;
+  selectedId: string | undefined;
+  selectedTrigger: SelectedTrigger | undefined;
+  actions: InteractionNodeActions;
+  locationsById: Map<string, NonNullable<Story['locations']>[number]>;
+  charactersById: Map<string, NonNullable<Story['characters']>[number]>;
+}): InteractionFlowNode {
+  const { item, index, selectedId, selectedTrigger, actions } = options;
+  const rootTrigger = item.triggers.find((trigger) => trigger.inputInteractionIds.length === 0);
+  const locationId = item.locationId;
+  const location =
+    typeof locationId === 'string' && locationId.length > 0
+      ? options.locationsById.get(locationId)
+      : undefined;
+  const characters = getInteractionCharacters(item.characterIds ?? [], options.charactersById);
+  return {
+    id: item.id,
+    type: 'interaction',
+    position: getInteractionPosition(item, index),
+    data: buildInteractionNodeData({
+      item,
+      selectedId,
+      selectedTrigger,
+      actions,
+      rootTrigger,
+      location,
+      characters,
+    }),
+  };
+}
+
+function getInteractionCharacters(
+  characterIds: string[],
+  charactersById: Map<string, NonNullable<Story['characters']>[number]>,
+): NonNullable<InteractionNodeData['characters']> {
+  return characterIds.flatMap((characterId) => {
+    const character = charactersById.get(characterId);
+    return character
+      ? [
+          {
+            id: character.id,
+            name: character.name,
+            ...(character.imageUrl !== undefined && character.imageUrl.length > 0
+              ? { imageUrl: character.imageUrl }
+              : {}),
+          },
+        ]
+      : [];
   });
+}
+
+function buildInteractionNodeData(options: {
+  item: Story['interactions'][number];
+  selectedId: string | undefined;
+  selectedTrigger: SelectedTrigger | undefined;
+  actions: InteractionNodeActions;
+  rootTrigger: Trigger | undefined;
+  location: NonNullable<Story['locations']>[number] | undefined;
+  characters: NonNullable<InteractionNodeData['characters']>;
+}): InteractionNodeData {
+  const { item, selectedId, selectedTrigger, actions, rootTrigger, location, characters } = options;
+  const statEffectCount = item.statEffects?.length ?? 0;
+  const itemEffectCount = item.itemEffects?.length ?? 0;
+  const occurrenceCount = actions.occurrenceCounts?.get(item.id) ?? 0;
+  const commentCount = actions.commentCounts?.get(item.id) ?? 0;
+  const rootTriggerCommentCount = rootTrigger
+    ? (actions.commentCounts?.get(rootTrigger.id) ?? 0)
+    : 0;
+  return {
+    title: item.title,
+    body: item.body,
+    ...(statEffectCount > 0 ? { statEffectCount } : {}),
+    ...(itemEffectCount > 0 ? { itemEffectCount } : {}),
+    selected: item.id === selectedId,
+    ...(actions.onboardingBranchSourceId === item.id ? { onboardingBranchAdd: true } : {}),
+    ...(location ? { location: { id: location.id, name: location.name } } : {}),
+    ...(characters.length > 0 ? { characters } : {}),
+    ...(occurrenceCount > 0 ? { occurrenceCount } : {}),
+    ...(actions.emphasizedInteractionIds
+      ? { dimmed: !actions.emphasizedInteractionIds.has(item.id) }
+      : {}),
+    ...getRootTriggerData(item, rootTrigger, selectedTrigger, rootTriggerCommentCount),
+    ...(actions.onCreateChild ? { onCreateChild: actions.onCreateChild } : {}),
+    ...(actions.onCreateParent ? { onCreateParent: actions.onCreateParent } : {}),
+    ...(actions.onSelectRootTrigger ? { onSelectRootTrigger: actions.onSelectRootTrigger } : {}),
+    ...(commentCount > 0 ? { commentCount } : {}),
+    ...(actions.onOpenComments ? { onOpenComments: actions.onOpenComments } : {}),
+  };
+}
+
+function getRootTriggerData(
+  item: Story['interactions'][number],
+  rootTrigger: Trigger | undefined,
+  selectedTrigger: SelectedTrigger | undefined,
+  commentCount: number,
+): Pick<InteractionNodeData, 'rootTriggerId' | 'rootTriggerSelected' | 'rootTriggerCommentCount'> {
+  return rootTrigger
+    ? {
+        rootTriggerId: rootTrigger.id,
+        ...(commentCount > 0 ? { rootTriggerCommentCount: commentCount } : {}),
+        rootTriggerSelected:
+          selectedTrigger?.interactionId === item.id &&
+          selectedTrigger.triggerId === rootTrigger.id,
+      }
+    : {};
 }
 
 export function buildTriggerNodes(
@@ -158,55 +208,78 @@ export function buildTriggerNodes(
   selectedTrigger?: SelectedTrigger,
   actions: TriggerNodeActions = {},
 ): TriggerFlowNode[] {
-  return (
-    story?.interactions.flatMap((target, targetIndex) =>
-      getLinkedTriggerGroups(target).map((group, triggerIndex) => {
-        const position = getTriggerNodePosition(story, target, targetIndex, group, triggerIndex);
-        const triggerIds = group.triggers.map((trigger) => trigger.id);
-        const selected =
-          selectedTrigger?.interactionId === target.id &&
-          Boolean(selectedTrigger.triggerId && triggerIds.includes(selectedTrigger.triggerId));
-
-        const commentTargetId = triggerIds.find(
-          (triggerId) => (actions.commentCounts?.get(triggerId) ?? 0) > 0,
-        );
-
-        return {
-          id: getTriggerNodeId(target.id, group.primaryTrigger.id),
-          type: 'trigger',
-          position,
-          draggable: true,
-          selectable: true,
-          data: {
-            interactionId: target.id,
-            triggerId: group.primaryTrigger.id,
-            triggerIds,
-            selected,
-            conditionCount: getTotalConditionCount(group.triggers),
-            inputCount: group.inputInteractionIds.length,
-            orGroupCount: group.triggers.length,
-            ...(actions.conditionSummary
-              ? { conditionSummary: actions.conditionSummary(group.triggers) }
-              : {}),
-            ...(triggerIds.reduce(
-              (total, triggerId) => total + (actions.commentCounts?.get(triggerId) ?? 0),
-              0,
-            ) > 0
-              ? {
-                  commentCount: triggerIds.reduce(
-                    (total, triggerId) => total + (actions.commentCounts?.get(triggerId) ?? 0),
-                    0,
-                  ),
-                }
-              : {}),
-            ...(commentTargetId !== undefined ? { commentTargetId } : {}),
-            ...(actions.onSelectTrigger ? { onSelectTrigger: actions.onSelectTrigger } : {}),
-            ...(actions.onOpenComments ? { onOpenComments: actions.onOpenComments } : {}),
-          },
-        };
+  if (!story) {
+    return [];
+  }
+  return story.interactions.flatMap((target, targetIndex) =>
+    getLinkedTriggerGroups(target).map((group, triggerIndex) =>
+      buildTriggerNode({
+        story,
+        target,
+        targetIndex,
+        group,
+        triggerIndex,
+        selectedTrigger,
+        actions,
       }),
-    ) ?? []
+    ),
   );
+}
+
+function buildTriggerNode(options: {
+  story: Story;
+  target: Story['interactions'][number];
+  targetIndex: number;
+  group: LinkedTriggerGroup;
+  triggerIndex: number;
+  selectedTrigger: SelectedTrigger | undefined;
+  actions: TriggerNodeActions;
+}): TriggerFlowNode {
+  const { story, target, targetIndex, group, triggerIndex, selectedTrigger, actions } = options;
+  const triggerIds = group.triggers.map(({ id }) => id);
+  return {
+    id: getTriggerNodeId(target.id, group.primaryTrigger.id),
+    type: 'trigger',
+    position: getTriggerNodePosition(story, target, targetIndex, group, triggerIndex),
+    draggable: true,
+    selectable: true,
+    data: buildTriggerNodeData({ target, group, triggerIds, selectedTrigger, actions }),
+  };
+}
+
+function buildTriggerNodeData(options: {
+  target: Story['interactions'][number];
+  group: LinkedTriggerGroup;
+  triggerIds: string[];
+  selectedTrigger: SelectedTrigger | undefined;
+  actions: TriggerNodeActions;
+}): TriggerNodeData {
+  const { target, group, triggerIds, selectedTrigger, actions } = options;
+  const commentCount = triggerIds.reduce(
+    (total, triggerId) => total + (actions.commentCounts?.get(triggerId) ?? 0),
+    0,
+  );
+  const commentTargetId = triggerIds.find(
+    (triggerId) => (actions.commentCounts?.get(triggerId) ?? 0) > 0,
+  );
+  return {
+    interactionId: target.id,
+    triggerId: group.primaryTrigger.id,
+    triggerIds,
+    selected:
+      selectedTrigger?.interactionId === target.id &&
+      Boolean(selectedTrigger.triggerId && triggerIds.includes(selectedTrigger.triggerId)),
+    conditionCount: getTotalConditionCount(group.triggers),
+    inputCount: group.inputInteractionIds.length,
+    orGroupCount: group.triggers.length,
+    ...(actions.conditionSummary
+      ? { conditionSummary: actions.conditionSummary(group.triggers) }
+      : {}),
+    ...(commentCount > 0 ? { commentCount } : {}),
+    ...(commentTargetId !== undefined ? { commentTargetId } : {}),
+    ...(actions.onSelectTrigger ? { onSelectTrigger: actions.onSelectTrigger } : {}),
+    ...(actions.onOpenComments ? { onOpenComments: actions.onOpenComments } : {}),
+  };
 }
 
 export function applyInteractionDragTriggerPreview(
@@ -231,38 +304,93 @@ export function applyInteractionMovesTriggerPreview(
   ) {
     return nodes;
   }
+  const previewPositions = getTriggerPreviewPositions(
+    story,
+    positionOverrides,
+    directlyMovedTriggerNodeIds,
+  );
+  return applyTriggerPreviewPositions(nodes, previewPositions);
+}
 
-  const previewPositions = new Map<string, { x: number; y: number }>();
-
+function getTriggerPreviewPositions(
+  story: Story,
+  positionOverrides: ReadonlyMap<string, { x: number; y: number }>,
+  directlyMovedTriggerNodeIds: ReadonlySet<string>,
+) {
+  const positions = new Map<string, { x: number; y: number }>();
   story.interactions.forEach((target, targetIndex) => {
-    const affectsTarget =
-      positionOverrides.has(target.id) ||
-      target.triggers.some((trigger) =>
-        trigger.inputInteractionIds.some((inputId) => positionOverrides.has(inputId)),
-      );
-    if (!affectsTarget) return;
-
-    getLinkedTriggerGroups(target).forEach((group, triggerIndex) => {
-      if (
-        !positionOverrides.has(target.id) &&
-        !group.inputInteractionIds.some((inputId) => positionOverrides.has(inputId))
-      ) {
-        return;
-      }
-      const triggerNodeId = getTriggerNodeId(target.id, group.primaryTrigger.id);
-      if (directlyMovedTriggerNodeIds.has(triggerNodeId)) return;
-      previewPositions.set(
-        triggerNodeId,
-        getTriggerNodePosition(story, target, targetIndex, group, triggerIndex, positionOverrides),
-      );
+    collectTargetTriggerPreviewPositions({
+      story,
+      target,
+      targetIndex,
+      positionOverrides,
+      directlyMovedTriggerNodeIds,
+      positions,
     });
   });
+  return positions;
+}
 
+function collectTargetTriggerPreviewPositions(options: {
+  story: Story;
+  target: Story['interactions'][number];
+  targetIndex: number;
+  positionOverrides: ReadonlyMap<string, { x: number; y: number }>;
+  directlyMovedTriggerNodeIds: ReadonlySet<string>;
+  positions: Map<string, { x: number; y: number }>;
+}) {
+  const { story, target, targetIndex, positionOverrides, directlyMovedTriggerNodeIds, positions } =
+    options;
+  if (!isTargetAffectedByMoves(target, positionOverrides)) {
+    return;
+  }
+  getLinkedTriggerGroups(target).forEach((group, triggerIndex) => {
+    if (!isTriggerGroupAffectedByMoves(target, group, positionOverrides)) {
+      return;
+    }
+    const triggerNodeId = getTriggerNodeId(target.id, group.primaryTrigger.id);
+    if (directlyMovedTriggerNodeIds.has(triggerNodeId)) {
+      return;
+    }
+    positions.set(
+      triggerNodeId,
+      getTriggerNodePosition(story, target, targetIndex, group, triggerIndex, positionOverrides),
+    );
+  });
+}
+
+function isTargetAffectedByMoves(
+  target: Story['interactions'][number],
+  positionOverrides: ReadonlyMap<string, { x: number; y: number }>,
+) {
+  return (
+    positionOverrides.has(target.id) ||
+    target.triggers.some((trigger) =>
+      trigger.inputInteractionIds.some((inputId) => positionOverrides.has(inputId)),
+    )
+  );
+}
+
+function isTriggerGroupAffectedByMoves(
+  target: Story['interactions'][number],
+  group: LinkedTriggerGroup,
+  positionOverrides: ReadonlyMap<string, { x: number; y: number }>,
+) {
+  return (
+    positionOverrides.has(target.id) ||
+    group.inputInteractionIds.some((inputId) => positionOverrides.has(inputId))
+  );
+}
+
+function applyTriggerPreviewPositions(
+  nodes: StoryFlowNode[],
+  previewPositions: ReadonlyMap<string, { x: number; y: number }>,
+) {
   let changed = false;
   const nextNodes = nodes.map((node) => {
-    if (node.type !== 'trigger') return node;
     const nextPosition = previewPositions.get(node.id);
     if (
+      node.type !== 'trigger' ||
       !nextPosition ||
       (node.position.x === nextPosition.x && node.position.y === nextPosition.y)
     ) {
@@ -271,7 +399,6 @@ export function applyInteractionMovesTriggerPreview(
     changed = true;
     return { ...node, position: nextPosition };
   });
-
   return changed ? nextNodes : nodes;
 }
 
@@ -296,65 +423,107 @@ export function applyInteractionMovesEdgePreview(
   ) {
     return edges;
   }
+  const previewHandles = collectPreviewEdgeHandles(story, positionOverrides);
+  return applyPreviewEdgeHandles(edges, previewHandles);
+}
 
+function collectPreviewEdgeHandles(
+  story: Story,
+  positionOverrides: ReadonlyMap<string, { x: number; y: number }>,
+) {
   const previewHandles = new Map<string, Pick<TriggerFlowEdge, 'sourceHandle' | 'targetHandle'>>();
-
   story.interactions.forEach((target, targetIndex) => {
-    const affectsTarget =
-      positionOverrides.has(target.id) ||
-      target.triggers.some((trigger) =>
-        trigger.inputInteractionIds.some((inputId) => positionOverrides.has(inputId)),
-      );
-    if (!affectsTarget) return;
-
+    if (!isTargetAffectedByMoves(target, positionOverrides)) {
+      return;
+    }
     getLinkedTriggerGroups(target).forEach((group, triggerIndex) => {
-      if (
-        !positionOverrides.has(target.id) &&
-        !group.inputInteractionIds.some((inputId) => positionOverrides.has(inputId))
-      ) {
+      if (!isTriggerGroupAffectedByMoves(target, group, positionOverrides)) {
         return;
       }
-      const triggerNodeId = getTriggerNodeId(target.id, group.primaryTrigger.id);
-      const triggerPosition = getTriggerNodePosition(
+      collectTriggerGroupPreviewHandles({
         story,
         target,
         targetIndex,
         group,
         triggerIndex,
         positionOverrides,
-      );
-      const triggerCenter = {
-        x: triggerPosition.x + triggerNodeSize / 2,
-        y: triggerPosition.y + triggerNodeSize / 2,
-      };
-
-      group.inputInteractionIds.forEach((sourceId) => {
-        const sourceEntry = getIndexedStoryInteraction(story, sourceId);
-        if (!sourceEntry) return;
-        const { interaction: source, index: sourceIndex } = sourceEntry;
-        previewHandles.set(
-          `${triggerNodeId}-${sourceId}`,
-          constrainInteractionOutputHandle(
-            getRoutingHandleIds(
-              getInteractionCenter(source, sourceIndex, positionOverrides.get(source.id)),
-              triggerCenter,
-            ),
-          ),
-        );
+        previewHandles,
       });
-
-      previewHandles.set(
-        `${triggerNodeId}-output`,
-        constrainInteractionInputHandle(
-          getRoutingHandleIds(
-            triggerCenter,
-            getInteractionCenter(target, targetIndex, positionOverrides.get(target.id)),
-          ),
-        ),
-      );
     });
   });
+  return previewHandles;
+}
 
+function collectTriggerGroupPreviewHandles(options: {
+  story: Story;
+  target: Story['interactions'][number];
+  targetIndex: number;
+  group: LinkedTriggerGroup;
+  triggerIndex: number;
+  positionOverrides: ReadonlyMap<string, { x: number; y: number }>;
+  previewHandles: Map<string, Pick<TriggerFlowEdge, 'sourceHandle' | 'targetHandle'>>;
+}) {
+  const { story, target, targetIndex, group, triggerIndex, positionOverrides, previewHandles } =
+    options;
+  const triggerNodeId = getTriggerNodeId(target.id, group.primaryTrigger.id);
+  const triggerPosition = getTriggerNodePosition(
+    story,
+    target,
+    targetIndex,
+    group,
+    triggerIndex,
+    positionOverrides,
+  );
+  const triggerCenter = {
+    x: triggerPosition.x + triggerNodeSize / 2,
+    y: triggerPosition.y + triggerNodeSize / 2,
+  };
+  group.inputInteractionIds.forEach((sourceId) => {
+    setPreviewInputHandle({
+      story,
+      sourceId,
+      triggerNodeId,
+      triggerCenter,
+      positionOverrides,
+      previewHandles,
+    });
+  });
+  const targetCenter = getInteractionCenter(target, targetIndex, positionOverrides.get(target.id));
+  previewHandles.set(
+    `${triggerNodeId}-output`,
+    constrainInteractionInputHandle(getRoutingHandleIds(triggerCenter, targetCenter)),
+  );
+}
+
+function setPreviewInputHandle(options: {
+  story: Story;
+  sourceId: string;
+  triggerNodeId: string;
+  triggerCenter: { x: number; y: number };
+  positionOverrides: ReadonlyMap<string, { x: number; y: number }>;
+  previewHandles: Map<string, Pick<TriggerFlowEdge, 'sourceHandle' | 'targetHandle'>>;
+}) {
+  const { story, sourceId, triggerNodeId, triggerCenter, positionOverrides, previewHandles } =
+    options;
+  const sourceEntry = getIndexedStoryInteraction(story, sourceId);
+  if (!sourceEntry) {
+    return;
+  }
+  const sourceCenter = getInteractionCenter(
+    sourceEntry.interaction,
+    sourceEntry.index,
+    positionOverrides.get(sourceId),
+  );
+  previewHandles.set(
+    `${triggerNodeId}-${sourceId}`,
+    constrainInteractionOutputHandle(getRoutingHandleIds(sourceCenter, triggerCenter)),
+  );
+}
+
+function applyPreviewEdgeHandles(
+  edges: TriggerFlowEdge[],
+  previewHandles: ReadonlyMap<string, Pick<TriggerFlowEdge, 'sourceHandle' | 'targetHandle'>>,
+) {
   let changed = false;
   const nextEdges = edges.map((edge) => {
     const nextHandles = previewHandles.get(edge.id);
@@ -393,42 +562,48 @@ export function getInteractionMovesTriggerPositionUpdates(
   }
 
   const updates: TriggerPositionUpdate[] = [];
-
   story.interactions.forEach((target, targetIndex) => {
-    const affectsTarget =
-      positionOverrides.has(target.id) ||
-      target.triggers.some((trigger) =>
-        trigger.inputInteractionIds.some((inputId) => positionOverrides.has(inputId)),
-      );
-    if (!affectsTarget) return;
+    collectTargetTriggerPositionUpdates({ story, target, targetIndex, positionOverrides, updates });
+  });
+  return updates;
+}
 
-    getLinkedTriggerGroups(target).forEach((group, triggerIndex) => {
-      if (
-        !positionOverrides.has(target.id) &&
-        !group.inputInteractionIds.some((inputId) => positionOverrides.has(inputId))
-      ) {
-        return;
-      }
-      const savedPosition = getSavedTriggerNodePosition(group);
-      if (!savedPosition) return;
-      const nextPosition = getTriggerNodePosition(
-        story,
-        target,
-        targetIndex,
-        group,
-        triggerIndex,
-        positionOverrides,
-      );
-      if (nextPosition.x === savedPosition.x && nextPosition.y === savedPosition.y) return;
-      updates.push({
-        interactionId: target.id,
-        triggerIds: group.triggers.map((trigger) => trigger.id),
-        position: nextPosition,
-      });
+function collectTargetTriggerPositionUpdates(options: {
+  story: Story;
+  target: Story['interactions'][number];
+  targetIndex: number;
+  positionOverrides: ReadonlyMap<string, { x: number; y: number }>;
+  updates: TriggerPositionUpdate[];
+}) {
+  const { story, target, targetIndex, positionOverrides, updates } = options;
+  if (!isTargetAffectedByMoves(target, positionOverrides)) {
+    return;
+  }
+  getLinkedTriggerGroups(target).forEach((group, triggerIndex) => {
+    if (!isTriggerGroupAffectedByMoves(target, group, positionOverrides)) {
+      return;
+    }
+    const savedPosition = getSavedTriggerNodePosition(group);
+    if (!savedPosition) {
+      return;
+    }
+    const nextPosition = getTriggerNodePosition(
+      story,
+      target,
+      targetIndex,
+      group,
+      triggerIndex,
+      positionOverrides,
+    );
+    if (nextPosition.x === savedPosition.x && nextPosition.y === savedPosition.y) {
+      return;
+    }
+    updates.push({
+      interactionId: target.id,
+      triggerIds: group.triggers.map(({ id }) => id),
+      position: nextPosition,
     });
   });
-
-  return updates;
 }
 
 function getInteractionPosition(interaction: Story['interactions'][number], index: number) {
@@ -447,6 +622,27 @@ function getInteractionPosition(interaction: Story['interactions'][number], inde
   };
 }
 
+interface TriggerEdgeBuildContext {
+  onSelectTrigger?: (trigger: SelectedTrigger) => void;
+  onDeleteTriggerInput?: (
+    interactionId: string,
+    triggerId: string,
+    inputInteractionId: string,
+  ) => void;
+  edgeRoutes?: TriggerEdgeRoutes;
+}
+
+interface TriggerTargetEdgeOptions extends TriggerEdgeBuildContext {
+  story: Story;
+  target: Story['interactions'][number];
+  targetIndex: number;
+}
+
+interface TriggerGroupEdgeOptions extends TriggerTargetEdgeOptions {
+  group: LinkedTriggerGroup;
+  triggerIndex: number;
+}
+
 export function buildTriggerEdges(
   story: Story | undefined,
   onSelectTrigger?: (trigger: SelectedTrigger) => void,
@@ -457,88 +653,160 @@ export function buildTriggerEdges(
   ) => void,
   edgeRoutes?: TriggerEdgeRoutes,
 ): TriggerFlowEdge[] {
-  const edges =
-    story?.interactions.flatMap((target, targetIndex) =>
-      getLinkedTriggerGroups(target).flatMap((group, triggerIndex) => {
-        const triggerNodeId = getTriggerNodeId(target.id, group.primaryTrigger.id);
-        const triggerPosition = getTriggerNodePosition(
-          story,
-          target,
-          targetIndex,
-          group,
-          triggerIndex,
-        );
-        const triggerCenter = {
-          x: triggerPosition.x + triggerNodeSize / 2,
-          y: triggerPosition.y + triggerNodeSize / 2,
-        };
-        const triggerIds = group.triggers.map((trigger) => trigger.id);
-        const conditionCount = getTotalConditionCount(group.triggers);
-        const inputEdges = group.inputInteractionIds.map((source) => {
-          const edgeId = `${triggerNodeId}-${source}`;
-          const sourceEntry = getIndexedStoryInteraction(story, source);
-          const sourceCenter = sourceEntry
-            ? getInteractionCenter(sourceEntry.interaction, sourceEntry.index)
-            : triggerCenter;
-          const handles = constrainInteractionOutputHandle(
-            getRoutingHandleIds(sourceCenter, triggerCenter),
-          );
-          return {
-            id: edgeId,
-            type: 'trigger',
-            source,
-            sourceHandle: handles.sourceHandle,
-            target: triggerNodeId,
-            targetHandle: handles.targetHandle,
-            markerStart: triggerOutputMarker,
-            markerEnd: triggerOutputMarker,
-            className: 'trigger-edge',
-            data: {
-              interactionId: target.id,
-              triggerId: group.primaryTrigger.id,
-              triggerIds,
-              inputInteractionId: source,
-              selected: false,
-              conditionCount,
-              ...(edgeRoutes?.get(edgeId) ? { elkRoute: edgeRoutes.get(edgeId) } : {}),
-              ...(onSelectTrigger ? { onSelectTrigger } : {}),
-              ...(onDeleteTriggerInput ? { onDeleteTriggerInput } : {}),
-            },
-          };
-        });
-        const targetCenter = getInteractionCenter(target, targetIndex);
-        const outputHandles = constrainInteractionInputHandle(
-          getRoutingHandleIds(triggerCenter, targetCenter),
-        );
-        const outputEdgeId = `${triggerNodeId}-output`;
-        const outputEdge: TriggerFlowEdge = {
-          id: outputEdgeId,
-          type: 'trigger',
-          source: triggerNodeId,
-          sourceHandle: outputHandles.sourceHandle,
-          target: target.id,
-          targetHandle: outputHandles.targetHandle,
-          markerStart: triggerOutputMarker,
-          markerEnd: triggerOutputMarker,
-          className: 'trigger-edge',
-          data: {
-            interactionId: target.id,
-            triggerId: group.primaryTrigger.id,
-            triggerIds,
-            selected: false,
-            conditionCount,
-            ...(edgeRoutes?.get(outputEdgeId) ? { elkRoute: edgeRoutes.get(outputEdgeId) } : {}),
-            ...(onSelectTrigger ? { onSelectTrigger } : {}),
-          },
-        };
-        return [...inputEdges, outputEdge];
-      }),
-    ) ?? [];
+  const actions = { onSelectTrigger, onDeleteTriggerInput, edgeRoutes };
+  const edges = story
+    ? story.interactions.flatMap((target, targetIndex) =>
+        buildTargetTriggerEdges({ story, target, targetIndex, ...actions }),
+      )
+    : [];
   return assignRoutingLanes(story, edges);
 }
 
+function buildTargetTriggerEdges(options: TriggerTargetEdgeOptions) {
+  return getLinkedTriggerGroups(options.target).flatMap((group, triggerIndex) =>
+    buildTriggerGroupEdges({ ...options, group, triggerIndex }),
+  );
+}
+
+function buildTriggerGroupEdges(options: TriggerGroupEdgeOptions): TriggerFlowEdge[] {
+  const { story, target, targetIndex, group, triggerIndex } = options;
+  const triggerNodeId = getTriggerNodeId(target.id, group.primaryTrigger.id);
+  const position = getTriggerNodePosition(story, target, targetIndex, group, triggerIndex);
+  const triggerCenter = {
+    x: position.x + triggerNodeSize / 2,
+    y: position.y + triggerNodeSize / 2,
+  };
+  const triggerIds = group.triggers.map(({ id }) => id);
+  const conditionCount = getTotalConditionCount(group.triggers);
+  const inputEdges = group.inputInteractionIds.map((source) =>
+    buildTriggerInputEdge({
+      ...options,
+      source,
+      triggerNodeId,
+      triggerCenter,
+      triggerIds,
+      conditionCount,
+    }),
+  );
+  const outputEdge = buildTriggerOutputEdge({
+    ...options,
+    triggerNodeId,
+    triggerCenter,
+    triggerIds,
+    conditionCount,
+  });
+  return [...inputEdges, outputEdge];
+}
+
+function buildTriggerInputEdge(
+  options: TriggerGroupEdgeOptions & {
+    source: string;
+    triggerNodeId: string;
+    triggerCenter: { x: number; y: number };
+    triggerIds: string[];
+    conditionCount: number;
+  },
+): TriggerFlowEdge {
+  const {
+    story,
+    target,
+    group,
+    source,
+    triggerNodeId,
+    triggerCenter,
+    triggerIds,
+    conditionCount,
+    edgeRoutes,
+    onSelectTrigger,
+    onDeleteTriggerInput,
+  } = options;
+  const edgeId = `${triggerNodeId}-${source}`;
+  const sourceEntry = getIndexedStoryInteraction(story, source);
+  const sourceCenter = sourceEntry
+    ? getInteractionCenter(sourceEntry.interaction, sourceEntry.index)
+    : triggerCenter;
+  const handles = constrainInteractionOutputHandle(
+    getRoutingHandleIds(sourceCenter, triggerCenter),
+  );
+  return {
+    id: edgeId,
+    type: 'trigger',
+    source,
+    sourceHandle: handles.sourceHandle,
+    target: triggerNodeId,
+    targetHandle: handles.targetHandle,
+    markerStart: triggerOutputMarker,
+    markerEnd: triggerOutputMarker,
+    className: 'trigger-edge',
+    data: {
+      interactionId: target.id,
+      triggerId: group.primaryTrigger.id,
+      triggerIds,
+      inputInteractionId: source,
+      selected: false,
+      conditionCount,
+      ...(edgeRoutes?.get(edgeId) ? { elkRoute: edgeRoutes.get(edgeId) } : {}),
+      ...(onSelectTrigger ? { onSelectTrigger } : {}),
+      ...(onDeleteTriggerInput ? { onDeleteTriggerInput } : {}),
+    },
+  };
+}
+
+function buildTriggerOutputEdge(
+  options: TriggerGroupEdgeOptions & {
+    triggerNodeId: string;
+    triggerCenter: { x: number; y: number };
+    triggerIds: string[];
+    conditionCount: number;
+  },
+): TriggerFlowEdge {
+  const {
+    target,
+    targetIndex,
+    group,
+    triggerNodeId,
+    triggerCenter,
+    triggerIds,
+    conditionCount,
+    edgeRoutes,
+    onSelectTrigger,
+  } = options;
+  const edgeId = `${triggerNodeId}-output`;
+  const targetCenter = getInteractionCenter(target, targetIndex);
+  const handles = constrainInteractionInputHandle(getRoutingHandleIds(triggerCenter, targetCenter));
+  return {
+    id: edgeId,
+    type: 'trigger',
+    source: triggerNodeId,
+    sourceHandle: handles.sourceHandle,
+    target: target.id,
+    targetHandle: handles.targetHandle,
+    markerStart: triggerOutputMarker,
+    markerEnd: triggerOutputMarker,
+    className: 'trigger-edge',
+    data: {
+      interactionId: target.id,
+      triggerId: group.primaryTrigger.id,
+      triggerIds,
+      selected: false,
+      conditionCount,
+      ...(edgeRoutes?.get(edgeId) ? { elkRoute: edgeRoutes.get(edgeId) } : {}),
+      ...(onSelectTrigger ? { onSelectTrigger } : {}),
+    },
+  };
+}
+
 function assignRoutingLanes(story: Story | undefined, edges: TriggerFlowEdge[]) {
-  if (!story || edges.length < 2) return edges;
+  if (!story || edges.length < 2) {
+    return edges;
+  }
+  const centers = getRoutingCenters(story);
+  const groups = groupEdgesByRoutingLane(edges, centers);
+  const lanes = getRoutingLaneAssignments(groups);
+  return lanes.size === 0 ? edges : applyRoutingLaneAssignments(edges, lanes);
+}
+
+function getRoutingCenters(story: Story) {
   const centers = new Map<string, { x: number; y: number }>();
   story.interactions.forEach((interaction, index) => {
     centers.set(interaction.id, getInteractionCenter(interaction, index));
@@ -550,19 +818,26 @@ function assignRoutingLanes(story: Story | undefined, edges: TriggerFlowEdge[]) 
       });
     });
   });
+  return centers;
+}
 
-  const groups = new Map<
-    string,
-    Array<{
-      edge: TriggerFlowEdge;
-      source: { x: number; y: number };
-      target: { x: number; y: number };
-    }>
-  >();
+type RoutingLaneEdge = {
+  edge: TriggerFlowEdge;
+  source: { x: number; y: number };
+  target: { x: number; y: number };
+};
+
+function groupEdgesByRoutingLane(
+  edges: TriggerFlowEdge[],
+  centers: ReadonlyMap<string, { x: number; y: number }>,
+) {
+  const groups = new Map<string, RoutingLaneEdge[]>();
   for (const edge of edges) {
     const source = centers.get(edge.source);
     const target = centers.get(edge.target);
-    if (!source || !target) continue;
+    if (!source || !target) {
+      continue;
+    }
     const key = [
       Math.round(source.y / routingLaneBandSize),
       Math.round(target.y / routingLaneBandSize),
@@ -576,10 +851,15 @@ function assignRoutingLanes(story: Story | undefined, edges: TriggerFlowEdge[]) 
       groups.set(key, [{ edge, source, target }]);
     }
   }
+  return groups;
+}
 
+function getRoutingLaneAssignments(groups: ReadonlyMap<string, RoutingLaneEdge[]>) {
   const lanes = new Map<string, { index: number; count: number }>();
   for (const group of groups.values()) {
-    if (group.length < 2) continue;
+    if (group.length < 2) {
+      continue;
+    }
     group.sort(
       (left, right) =>
         Math.min(left.source.x, left.target.x) - Math.min(right.source.x, right.target.x) ||
@@ -588,8 +868,13 @@ function assignRoutingLanes(story: Story | undefined, edges: TriggerFlowEdge[]) 
     );
     group.forEach(({ edge }, index) => lanes.set(edge.id, { index, count: group.length }));
   }
+  return lanes;
+}
 
-  if (lanes.size === 0) return edges;
+function applyRoutingLaneAssignments(
+  edges: TriggerFlowEdge[],
+  lanes: ReadonlyMap<string, { index: number; count: number }>,
+) {
   return edges.map((edge) => {
     const lane = lanes.get(edge.id);
     return lane && edge.data
@@ -627,7 +912,9 @@ export function getTriggerNodePosition(
 ) {
   const savedPosition = getSavedTriggerNodePosition(group);
   if (!interactionPositionOverrides || interactionPositionOverrides.size === 0) {
-    if (savedPosition) return savedPosition;
+    if (savedPosition) {
+      return savedPosition;
+    }
   }
 
   const automaticPosition = getAutomaticTriggerNodePosition(
@@ -638,7 +925,9 @@ export function getTriggerNodePosition(
     triggerIndex,
     interactionPositionOverrides,
   );
-  if (!savedPosition) return automaticPosition;
+  if (!savedPosition) {
+    return automaticPosition;
+  }
 
   const originalAutomaticPosition = getAutomaticTriggerNodePosition(
     story,
@@ -647,11 +936,21 @@ export function getTriggerNodePosition(
     group,
     triggerIndex,
   );
+  return followSavedTriggerPosition(savedPosition, automaticPosition, originalAutomaticPosition);
+}
+
+function followSavedTriggerPosition(
+  savedPosition: { x: number; y: number },
+  automaticPosition: { x: number; y: number },
+  originalAutomaticPosition: { x: number; y: number },
+) {
   const automaticDelta = {
     x: automaticPosition.x - originalAutomaticPosition.x,
     y: automaticPosition.y - originalAutomaticPosition.y,
   };
-  if (automaticDelta.x === 0 && automaticDelta.y === 0) return savedPosition;
+  if (automaticDelta.x === 0 && automaticDelta.y === 0) {
+    return savedPosition;
+  }
 
   const manualOffsetDistance = Math.hypot(
     savedPosition.x - originalAutomaticPosition.x,
