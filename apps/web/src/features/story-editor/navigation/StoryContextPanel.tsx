@@ -6,6 +6,7 @@ import type {
   useStoryEditorSelection,
   StoryEditorExclusiveSelection,
 } from '../selection/useStoryEditorSelection';
+import type { useStoryEditorEntityActions } from '../useStoryEditorEntityActions';
 import type { useStoryContextNavigation } from './useStoryContextNavigation';
 import { StoryGroupsPanel } from './StoryGroupsPanel';
 import {
@@ -14,8 +15,6 @@ import {
   LocationContextSection,
   StatDefinitionContextSection,
 } from './StoryContextEntitySections';
-
-type StoryEditorTranslate = ReturnType<typeof useTranslation>['t'];
 
 type StoryEditorSelectionModel = ReturnType<typeof useStoryEditorSelection>;
 type StoryContextNavigationModel = ReturnType<typeof useStoryContextNavigation>;
@@ -39,13 +38,11 @@ type StoryContextPanelProps = {
   openCommentsForTarget: (targetType: CommentTargetType, targetId: string) => void;
   focusInteractions: (ids: string[]) => void;
   groupActions: StoryGroupActions;
-  entityActions: {
-    addStatDefinition: () => void;
-    addItemDefinition: () => Promise<void>;
-    addCharacter: () => Promise<void>;
-    addLocation: () => Promise<void>;
-  };
-  t: StoryEditorTranslate;
+  entityActions: Pick<
+    ReturnType<typeof useStoryEditorEntityActions>,
+    'addStatDefinition' | 'addItemDefinition' | 'addCharacter' | 'addLocation'
+  >;
+  t: ReturnType<typeof useTranslation>['t'];
 };
 
 export function StoryContextPanel(props: StoryContextPanelProps) {

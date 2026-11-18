@@ -15,8 +15,8 @@ import { useStoryEditorEntityActions } from '../useStoryEditorEntityActions';
 import type {
   useStoryEditorPersistenceModel,
   useStoryEditorLocalUiState,
-  useStoryEditorCanvasState,
-} from './useStoryEditorBaseRuntime';
+} from '../runtime/useStoryEditorBaseRuntime';
+import type { useStoryEditorCanvasState } from './useStoryEditorCanvasState';
 import {
   useStoryEditorDeleteShortcut,
   useStoryEditorGraphDeletion,

@@ -3,25 +3,25 @@ import { useStoryEditorSelectionModel } from '../selection/useStoryEditorSelecti
 import {
   useStoryEditorConnectionRuntime,
   useStoryEditorRootCreation,
-} from './useStoryEditorConnectionRuntime';
+} from '../graph/useStoryEditorConnectionRuntime';
 import { useStoryEditorCommentStateRuntime } from '../../comments/useStoryEditorCommentState';
 import {
   useStoryEditorCanvasCommentNodes,
   useStoryEditorCommentActionsRuntime,
   useStoryEditorNodeSelection,
-} from './useStoryEditorInteractionActions';
-import { useStoryEditorNarrativeProjection } from './useStoryEditorNarrativeProjection';
-import { useStoryEditorEdgeModel } from './useStoryEditorFlowSynchronization';
-import { useStoryEditorNodeDragHandlers } from './useStoryEditorNodeDragHandlers';
-import { useStoryEditorActionModel } from './useStoryEditorActionModel';
+} from '../graph/useStoryEditorInteractionActions';
+import { useStoryEditorNarrativeProjection } from '../graph/useStoryEditorNarrativeProjection';
+import { useStoryEditorEdgeModel } from '../graph/useStoryEditorFlowSynchronization';
+import { useStoryEditorNodeDragHandlers } from '../graph/useStoryEditorNodeDragHandlers';
+import { useStoryEditorActionModel } from '../graph/useStoryEditorActionModel';
 import {
   useStoryEditorFlowEventHandlers,
   type StoryEditorFlowModelInput,
-} from './storyEditorFlowProps';
+} from '../graph/storyEditorFlowProps';
 import {
   useStoryEditorGraphPreparation,
   useStoryEditorSettingsClose,
-} from './useStoryEditorPageEffects';
+} from '../graph/useStoryEditorPageEffects';
 import { useStoryEditorHistoryShortcuts } from '../history/useStoryEditorHistoryShortcuts';
 
 export type StoryEditorBaseRuntime = ReturnType<typeof useStoryEditorBaseRuntime>;

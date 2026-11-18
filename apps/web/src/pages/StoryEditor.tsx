@@ -10,12 +10,12 @@ import {
 import {
   buildStoryEditorCanvasModel,
   buildStoryEditorInspectorModelForPage,
-} from '../features/story-editor/graph/storyEditorPageModels';
-import { useStoryEditorBaseRuntime } from '../features/story-editor/graph/useStoryEditorBaseRuntime';
+} from '../features/story-editor/runtime/storyEditorPageModels';
+import { useStoryEditorBaseRuntime } from '../features/story-editor/runtime/useStoryEditorBaseRuntime';
 import {
   useStoryEditorRuntime,
   type StoryEditorBaseRuntime,
-} from '../features/story-editor/graph/useStoryEditorRuntime';
+} from '../features/story-editor/runtime/useStoryEditorRuntime';
 import { StoryEditorInspector } from '../features/story-editor/inspectors/StoryEditorInspector';
 import type { StoryEditorInspectorModel } from '../features/story-editor/inspectors/storyEditorInspectorModel';
 import { useStoryEditorInspectorLayout } from '../features/story-editor/inspectors/useStoryEditorInspectorLayout';
@@ -70,19 +70,16 @@ function StoryEditorRoute({ base, runtime, currentUserId }: StoryEditorRouteProp
   if (persistence.story.capabilities?.canEdit !== true) {
     return <Navigate to={`/stories/${storyId}/play`} replace />;
   }
-  return <StoryEditorPage base={base} runtime={runtime} />;
+  return <StoryEditorPage base={base} runtime={runtime} story={persistence.story} />;
 }
 
-function StoryEditorPage({ base, runtime }: Pick<StoryEditorRouteProps, 'base' | 'runtime'>) {
-  const story = base.persistence.story;
-  if (!story) {
-    return <main className="page">{base.persistence.error || base.t('editor.loading')}</main>;
-  }
-  const canvasModel = buildStoryEditorCanvasModel(base, runtime);
-  const inspectorModel = buildStoryEditorInspectorModelForPage(base, runtime);
-  if (!canvasModel || !inspectorModel) {
-    return null;
-  }
+function StoryEditorPage({
+  base,
+  runtime,
+  story,
+}: Pick<StoryEditorRouteProps, 'base' | 'runtime'> & { story: Story }) {
+  const canvasModel = buildStoryEditorCanvasModel(base, runtime, story);
+  const inspectorModel = buildStoryEditorInspectorModelForPage(base, runtime, story);
   return (
     <main
       className="editor-page"

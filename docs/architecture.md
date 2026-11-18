@@ -542,15 +542,21 @@ component:
   for transient inspector targets and rectangle-selection gestures. It resolves
   selected entities from the canonical Story and deliberately preserves context
   references only for interaction navigation that requires them.
-- `features/story-editor/graph/useStoryEditorRuntime.ts`: composition of the
-  editor's focused graph, comment, selection, and action controllers. The graph
-  directory also owns canvas state, projections, pointer handling, layout,
-  synchronization, and canvas rendering.
+- `features/story-editor/runtime/`: page composition root.
+  `useStoryEditorBaseRuntime.ts` owns route, persistence, and local UI state and
+  composes the React Flow canvas state from `graph/useStoryEditorCanvasState.ts`;
+  `useStoryEditorRuntime.ts` composes the focused graph, comment,
+  selection, and action controllers; `storyEditorPageModels.ts` builds the
+  canvas and inspector view models from the loaded Story. React Flow imports stay
+  in `graph/` (`react-flow-only-in-graph`).
+- `features/story-editor/graph/`: canvas state, projections, pointer handling,
+  layout, synchronization, canvas rendering, and canvas comment navigation.
 - `features/story-editor/inspectors/StoryEditorInspector.tsx`: inspector and
   contextual comment composition; `StoryInspectorContent.tsx` renders the
   selected authoring or review target.
-- `features/comments/`: editor comment projections, permissions, and actions
-  reuse the existing comment state and persistence hooks.
+- `features/comments/`: editor comment projections, permissions, actions, and
+  thread focus/target navigation reuse the existing comment state and
+  persistence hooks.
 - `features/story-editor/graph/useStoryEditorNodeDragHandlers.ts`: graph drag
   previews and persisted positions, including comment-pin reanchoring.
 - `features/story-editor/graph/storyCommentPinNodes.ts`: canvas comment-pin

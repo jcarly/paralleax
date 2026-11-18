@@ -1,10 +1,11 @@
+import type { Story } from '@paralleax/shared';
 import type { StoryEditorBaseRuntime, useStoryEditorRuntime } from './useStoryEditorRuntime';
-import type { StoryEditorCanvasViewModel } from './StoryEditorCanvasContent';
+import type { StoryEditorCanvasViewModel } from '../graph/StoryEditorCanvasContent';
 import {
   buildStoryEditorCanvasMenuActions,
   buildStoryEditorCanvasToolbarProps,
-} from './storyEditorCanvasActions';
-import { buildStoryEditorFlowProps } from './storyEditorFlowProps';
+} from '../graph/storyEditorCanvasActions';
+import { buildStoryEditorFlowProps } from '../graph/storyEditorFlowProps';
 import {
   buildStoryEditorInspectorActions,
   buildStoryEditorInspectorModel,
@@ -37,11 +38,8 @@ function buildStoryEditorInspectorActionsForPage(
 export function buildStoryEditorInspectorModelForPage(
   base: StoryEditorBaseRuntime,
   runtime: ReturnType<typeof useStoryEditorRuntime>,
+  story: Story,
 ) {
-  const story = base.persistence.story;
-  if (!story) {
-    return undefined;
-  }
   return buildStoryEditorInspectorModel({
     story,
     storyId: base.storyId,
@@ -105,12 +103,9 @@ function buildStoryEditorCanvasContextMenu(
 export function buildStoryEditorCanvasModel(
   base: StoryEditorBaseRuntime,
   runtime: ReturnType<typeof useStoryEditorRuntime>,
-): StoryEditorCanvasViewModel | undefined {
+  story: Story,
+): StoryEditorCanvasViewModel {
   const { persistence, canvasState, uiState } = base;
-  const story = persistence.story;
-  if (!story) {
-    return undefined;
-  }
   const { reviewOnly } = runtime.comments;
   const { selectedLayoutTargets, organizeGraph, addGraphDecoration } = runtime.actions;
   const createToolbarProps = buildStoryEditorCanvasToolbarProps({

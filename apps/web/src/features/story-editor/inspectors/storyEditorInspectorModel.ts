@@ -5,6 +5,7 @@ import type {
 } from '../../comments/useStoryEditorCommentProjection';
 import type { useStoryContextNavigation } from '../navigation/useStoryContextNavigation';
 import type { useStoryEditorEntityActions } from '../useStoryEditorEntityActions';
+import type { useStoryEditorRelatedCreation } from '../graph/useStoryEditorConnectionRuntime';
 import type { Dispatch, SetStateAction } from 'react';
 import type { useTranslation } from 'react-i18next';
 import type {
@@ -14,7 +15,6 @@ import type {
   CommentTextField,
   ItemDefinition,
   Location,
-  Position,
   StatDefinition,
   Story,
   StoryCommentThread,
@@ -28,7 +28,6 @@ import type {
 } from '../selection/useStoryEditorSelection';
 
 type StoryEditorSelectionModel = ReturnType<typeof useStoryEditorSelection>;
-type StoryEditorTranslate = ReturnType<typeof useTranslation>['t'];
 type StoryGraphElementContextTarget =
   | { kind: 'interaction'; interactionId: string }
   | { kind: 'trigger'; interactionId: string; triggerId: string }
@@ -72,7 +71,7 @@ export type StoryEditorInspectorActions = Pick<
     ids: string[],
     parentGroupId?: string,
   ) => Promise<string | false>;
-  createChildAndFocus: (interactionId: string, position?: Position) => Promise<void>;
+  createChildAndFocus: ReturnType<typeof useStoryEditorRelatedCreation>['createChildAndFocus'];
   selectExclusive: (selection?: StoryEditorExclusiveSelection) => void;
   updateLocalStatDefinition: (definition: StatDefinition) => void;
   updateLocalLocation: (location: Location) => void;
@@ -84,7 +83,7 @@ export type StoryEditorInspectorActions = Pick<
 export type StoryEditorInspectorModel = {
   story: Story;
   storyId: string;
-  t: StoryEditorTranslate;
+  t: ReturnType<typeof useTranslation>['t'];
   reviewOnly: boolean;
   commentsOpen: boolean;
   hasInspectorSelection: boolean;
@@ -190,7 +189,7 @@ function buildStoryEditorPersistenceInspectorActions(
 type StoryEditorInspectorModelInput = {
   story: Story;
   storyId: string;
-  t: StoryEditorTranslate;
+  t: ReturnType<typeof useTranslation>['t'];
   reviewOnly: boolean;
   commentsOpen: boolean;
   hasInspectorSelection: boolean;
