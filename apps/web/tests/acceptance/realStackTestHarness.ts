@@ -209,6 +209,10 @@ export function interactionBodyPreview(inspector: Locator) {
   return inspector.locator('.interaction-content-preview');
 }
 
+export function interactionBodyContent(inspector: Locator) {
+  return interactionBodyPreview(inspector).locator('.story-body');
+}
+
 export async function openInteractionBodyEditor(inspector: Locator) {
   const contentField = inspector.getByRole('textbox', { name: 'Content', exact: true });
   if (await contentField.count()) {

@@ -6,8 +6,8 @@ import {
   editInteraction,
   editorSyncIndicator,
   expectSuccessful,
+  interactionBodyContent,
   interactionNode,
-  interactionBodyPreview,
   registerAndCreateStory,
   requestApiJson,
   waitForApiResponse,
@@ -100,6 +100,7 @@ test('an author creates, persists, resumes, and simulates a conditional story', 
     .getByRole('button', { name: 'Variable' })
     .click();
   await expectSuccessful(effectCreation);
+  await inspector.locator('.interaction-effect-editor').first().locator('summary').click();
   const selectedEffectTarget = inspector
     .getByLabel('Variable effect target')
     .getByRole('combobox')
@@ -154,7 +155,7 @@ test('an author creates, persists, resumes, and simulates a conditional story', 
   await page.getByRole('button', { name: 'Collapse story context' }).click();
   await page.getByRole('button', { name: 'Fit View' }).click();
   await interactionNode(page, 'Opening').click();
-  await expect(interactionBodyPreview(inspector)).toHaveText('Alice enters the atrium.');
+  await expect(interactionBodyContent(inspector)).toHaveText('Alice enters the atrium.');
   await expect(inspector.getByRole('button', { name: /^Location: Atrium$/ })).toBeVisible();
   await expect(
     inspector.getByRole('button', { name: /^Characters present: Alice$/ }),

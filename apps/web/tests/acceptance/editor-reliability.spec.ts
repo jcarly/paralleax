@@ -4,7 +4,7 @@ import {
   editorSyncIndicator,
   editInteraction,
   expectSuccessful,
-  interactionBodyPreview,
+  interactionBodyContent,
   interactionNode,
   openInteractionBodyEditor,
   openInteractionTitleEditor,
@@ -38,12 +38,12 @@ test('undo and redo remain durable after full editor reloads', async ({ page }) 
   );
   await page.getByRole('button', { name: 'Undo last Story change' }).click();
   await expectSuccessful(undo);
-  await expect(interactionBodyPreview(inspector)).toHaveText('First durable version.');
+  await expect(interactionBodyContent(inspector)).toHaveText('First durable version.');
 
   await page.reload();
   await expect(interactionNode(page, 'Opening')).toBeVisible();
   await interactionNode(page, 'Opening').click();
-  await expect(interactionBodyPreview(inspector)).toHaveText('First durable version.');
+  await expect(interactionBodyContent(inspector)).toHaveText('First durable version.');
 
   const redoButton = page.getByRole('button', { name: 'Redo Story change' });
   await expect(redoButton).toBeEnabled();
@@ -54,12 +54,12 @@ test('undo and redo remain durable after full editor reloads', async ({ page }) 
   );
   await redoButton.click();
   await expectSuccessful(redo);
-  await expect(interactionBodyPreview(inspector)).toHaveText('Second durable version.');
+  await expect(interactionBodyContent(inspector)).toHaveText('Second durable version.');
 
   await page.reload();
   await expect(interactionNode(page, 'Opening')).toBeVisible();
   await interactionNode(page, 'Opening').click();
-  await expect(interactionBodyPreview(inspector)).toHaveText('Second durable version.');
+  await expect(interactionBodyContent(inspector)).toHaveText('Second durable version.');
 });
 
 test('a network failure is visible, blocks navigation, and can be recovered safely', async ({
@@ -111,7 +111,7 @@ test('a network failure is visible, blocks navigation, and can be recovered safe
   await page.reload();
   await expect(interactionNode(page, 'Recovered interaction')).toBeVisible();
   await interactionNode(page, 'Recovered interaction').click();
-  await expect(interactionBodyPreview(inspector)).toHaveText('Persisted content.');
+  await expect(interactionBodyContent(inspector)).toHaveText('Persisted content.');
 });
 
 test('slow reordered saves preserve graph creation, movement, and deletion across reloads', async ({
