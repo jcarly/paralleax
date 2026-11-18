@@ -2,6 +2,11 @@ import { Pool } from 'pg';
 import type { DatabaseConnection } from './database.connection';
 import { databaseMigrations } from './database.migrations';
 import { DatabaseMigrator } from './database.migrator';
+import {
+  clearPostgresTestSchema,
+  resetPostgresTestDatabase,
+  waitForPostgres,
+} from './postgres-test-database';
 
 const connectionString = process.env.POSTGRES_TEST_DATABASE_URL;
 const describePostgres = connectionString ? describe : describe.skip;
@@ -17,15 +22,12 @@ describePostgres('Database migrations PostgreSQL upgrade', () => {
     // Migration scenarios intentionally construct partial historical schemas.
     // Restore a current schema so another PostgreSQL suite can safely reuse the
     // dedicated test database regardless of Jest's file execution order.
-    await pool.query('DROP SCHEMA public CASCADE');
-    await pool.query('CREATE SCHEMA public');
-    await new DatabaseMigrator({ pool } as DatabaseConnection).run();
+    await resetPostgresTestDatabase(pool, new DatabaseMigrator({ pool } as DatabaseConnection));
     await pool.end();
   }, 60_000);
 
   it('upgrades literal effects and enforces exactly one expression or literal value', async () => {
-    await pool.query('DROP SCHEMA public CASCADE');
-    await pool.query('CREATE SCHEMA public');
+    await clearPostgresTestSchema(pool);
     await pool.query(`CREATE TABLE interaction_stat_effects (
       value jsonb NOT NULL,
       CONSTRAINT interaction_stat_effects_primitive_value
@@ -55,8 +57,7 @@ describePostgres('Database migrations PostgreSQL upgrade', () => {
   });
 
   it('upgrades flat Groups without losing membership or changing existing Stories', async () => {
-    await pool.query('DROP SCHEMA public CASCADE');
-    await pool.query('CREATE SCHEMA public');
+    await clearPostgresTestSchema(pool);
     const groupUpgradeIndex = databaseMigrations.findIndex(
       ({ id }) => id === '202610190042_nested_story_groups',
     );
@@ -85,8 +86,7 @@ describePostgres('Database migrations PostgreSQL upgrade', () => {
   });
 
   it('keeps the first persisted Group membership regardless of depth and enforces uniqueness', async () => {
-    await pool.query('DROP SCHEMA public CASCADE');
-    await pool.query('CREATE SCHEMA public');
+    await clearPostgresTestSchema(pool);
     await pool.query(`CREATE TABLE schema_migrations (
       id text PRIMARY KEY, applied_at timestamptz NOT NULL DEFAULT now()
     )`);
@@ -149,8 +149,7 @@ describePostgres('Database migrations PostgreSQL upgrade', () => {
   });
 
   it('preserves a legacy JSON story, graph, conditions, and owner', async () => {
-    await pool.query('DROP SCHEMA public CASCADE');
-    await pool.query('CREATE SCHEMA public');
+    await clearPostgresTestSchema(pool);
     await pool.query(`
       CREATE TABLE schema_migrations (
         id text PRIMARY KEY,
@@ -296,8 +295,7 @@ describePostgres('Database migrations PostgreSQL upgrade', () => {
   }, 30_000);
 
   it('migrates removed comment policies and enforces the editor default', async () => {
-    await pool.query('DROP SCHEMA public CASCADE');
-    await pool.query('CREATE SCHEMA public');
+    await clearPostgresTestSchema(pool);
 
     const readerCommentsMigrationIndex = databaseMigrations.findIndex(
       ({ id }) => id === '202608160030_reader_comments',
@@ -352,8 +350,7 @@ describePostgres('Database migrations PostgreSQL upgrade', () => {
   }, 30_000);
 
   it('moves existing character items and exact effects to item instances without changing ids', async () => {
-    await pool.query('DROP SCHEMA public CASCADE');
-    await pool.query('CREATE SCHEMA public');
+    await clearPostgresTestSchema(pool);
 
     const itemInstancesMigrationIndex = databaseMigrations.findIndex(
       ({ id }) => id === '202608020021_item_instances',
@@ -448,8 +445,7 @@ describePostgres('Database migrations PostgreSQL upgrade', () => {
   }, 30_000);
 
   it('removes location item trees while preserving character item trees and valid references', async () => {
-    await pool.query('DROP SCHEMA public CASCADE');
-    await pool.query('CREATE SCHEMA public');
+    await clearPostgresTestSchema(pool);
 
     const removalMigrationIndex = databaseMigrations.findIndex(
       ({ id }) => id === '202608090023_remove_location_item_roots',
@@ -647,8 +643,7 @@ describePostgres('Database migrations PostgreSQL upgrade', () => {
   }, 30_000);
 
   it('restores constrained location roots in a forward migration', async () => {
-    await pool.query('DROP SCHEMA public CASCADE');
-    await pool.query('CREATE SCHEMA public');
+    await clearPostgresTestSchema(pool);
 
     for (const migration of databaseMigrations) {
       await pool.query(migration.sql);
@@ -720,8 +715,7 @@ describePostgres('Database migrations PostgreSQL upgrade', () => {
   }, 30_000);
 
   it('generalizes legacy character and item stats into typed owner assignments', async () => {
-    await pool.query('DROP SCHEMA public CASCADE');
-    await pool.query('CREATE SCHEMA public');
+    await clearPostgresTestSchema(pool);
 
     const typedStatsMigrationIndex = databaseMigrations.findIndex(
       ({ id }) => id === '202608220031_typed_stats',
@@ -875,8 +869,7 @@ describePostgres('Database migrations PostgreSQL upgrade', () => {
   }, 30_000);
 
   it('adds private display identities without deriving them from account emails', async () => {
-    await pool.query('DROP SCHEMA public CASCADE');
-    await pool.query('CREATE SCHEMA public');
+    await clearPostgresTestSchema(pool);
     const migrationIndex = databaseMigrations.findIndex(
       ({ id }) => id === '202609120038_user_display_names',
     );
@@ -912,8 +905,7 @@ describePostgres('Database migrations PostgreSQL upgrade', () => {
   }, 30_000);
 
   it('marks upgraded accounts verified and constrains one-use account actions', async () => {
-    await pool.query('DROP SCHEMA public CASCADE');
-    await pool.query('CREATE SCHEMA public');
+    await clearPostgresTestSchema(pool);
     const accountSecurityMigrationIndex = databaseMigrations.findIndex(
       ({ id }) => id === '202609300040_account_security_actions',
     );
@@ -962,9 +954,7 @@ describePostgres('Database migrations PostgreSQL upgrade', () => {
   }, 30_000);
 
   it('adds recoverable deletion metadata to existing comment threads', async () => {
-    await pool.query('DROP SCHEMA public CASCADE');
-    await pool.query('CREATE SCHEMA public');
-    await new DatabaseMigrator({ pool } as DatabaseConnection).run();
+    await resetPostgresTestDatabase(pool, new DatabaseMigrator({ pool } as DatabaseConnection));
 
     await expect(
       pool.query(
@@ -992,17 +982,3 @@ describePostgres('Database migrations PostgreSQL upgrade', () => {
     ).resolves.toMatchObject({ rowCount: 1 });
   }, 30_000);
 });
-
-async function waitForPostgres(pool: Pool) {
-  let lastError: unknown;
-  for (let attempt = 0; attempt < 20; attempt += 1) {
-    try {
-      await pool.query('SELECT 1');
-      return;
-    } catch (error) {
-      lastError = error;
-      await new Promise((resolve) => setTimeout(resolve, 250));
-    }
-  }
-  throw lastError;
-}

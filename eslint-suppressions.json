@@ -146,7 +146,7 @@
       "count": 1
     },
     "max-lines-per-function": {
-      "count": 8
+      "count": 7
     }
   },
   "apps/api/src/database/database.migrations.ts": {

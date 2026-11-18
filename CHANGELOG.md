@@ -17,6 +17,15 @@
   list, and Simulation entry points. Noted in the business model that no licence
   has been chosen yet and that export is required for authors to control their
   data.
+- Centralized the API's SQL story access predicates in one module derived from
+  the shared access rules, replacing fourteen hand-copied conditions, including
+  anonymous public discovery. A new PostgreSQL parity spec checks reads, library
+  discovery and filters, edits, reader progress (including saves that predate a
+  loss of access), and every access-management operation (settings,
+  collaborator invitation, role change and removal, story deletion, with the
+  stored state verified after each refusal) against `resolveStoryAccess` and
+  `canDiscoverStory` for every policy combination. PostgreSQL integration specs
+  share one test database reset helper. Access behavior is unchanged.
 
 - Expanded ESLint quality gates for TypeScript, React, accessibility, import
   consistency, and code size. CI now rejects unapproved growth in the historical
