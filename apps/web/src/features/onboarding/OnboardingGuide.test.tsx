@@ -11,30 +11,46 @@ afterEach(cleanup);
 
 function BeginGuide() {
   const { beginForStory, openHelp, progress, reportStepComplete } = useOnboarding();
+  const actions = [
+    { label: 'Open library guide', onClick: bindAction(openHelp) },
+    { label: 'Start guide', onClick: bindAction(beginForStory, 'story-1') },
+    {
+      label: 'Mark first step',
+      onClick: bindAction(reportStepComplete, 'story-1', 'discover-interactions'),
+    },
+    {
+      label: 'Mark scene saved',
+      onClick: bindAction(reportStepComplete, 'story-1', 'write-scene'),
+    },
+    {
+      label: 'Mark branch created',
+      onClick: bindAction(reportStepComplete, 'story-1', 'create-branch'),
+    },
+    {
+      label: 'Mark test complete',
+      onClick: bindAction(reportStepComplete, 'story-1', 'test-story'),
+    },
+  ];
   return (
     <>
-      <button type="button" onClick={() => openHelp()}>
-        Open library guide
-      </button>
-      <button type="button" onClick={() => beginForStory('story-1')}>
-        Start guide
-      </button>
-      <button type="button" onClick={() => reportStepComplete('story-1', 'discover-interactions')}>
-        Mark first step
-      </button>
-      <button type="button" onClick={() => reportStepComplete('story-1', 'write-scene')}>
-        Mark scene saved
-      </button>
-      <button type="button" onClick={() => reportStepComplete('story-1', 'create-branch')}>
-        Mark branch created
-      </button>
-      <button type="button" onClick={() => reportStepComplete('story-1', 'test-story')}>
-        Mark test complete
-      </button>
+      {actions.map(({ label, onClick }) => (
+        <button key={label} type="button" onClick={onClick}>
+          {label}
+        </button>
+      ))}
       <output data-testid="guide-status">{progress.status}</output>
       <Link to="/stories/story-1/play?mode=simulation">Go to Simulation</Link>
     </>
   );
+}
+
+function bindAction<Arguments extends unknown[]>(
+  action: (...args: Arguments) => void,
+  ...args: Arguments
+) {
+  return () => {
+    action(...args);
+  };
 }
 
 function renderGuide(path = '/') {
@@ -82,9 +98,9 @@ it('highlights the new-story action when opened from the library', async () => {
   await user.click(screen.getByRole('button', { name: 'Open library guide' }));
 
   expect(screen.getByRole('region', { name: 'Create and test a story' })).toBeInTheDocument();
-  await waitFor(() =>
-    expect(screen.getByText('New story target')).toHaveClass('onboarding-target-highlight'),
-  );
+  await waitFor(() => {
+    expect(screen.getByText('New story target')).toHaveClass('onboarding-target-highlight');
+  });
 });
 
 it('highlights the interaction and inspector without trapping focus', async () => {
@@ -93,9 +109,9 @@ it('highlights the interaction and inspector without trapping focus', async () =
   await user.click(screen.getByRole('button', { name: 'Start guide' }));
 
   expect(screen.getByRole('heading', { name: 'Explore the graph' })).toBeInTheDocument();
-  await waitFor(() =>
-    expect(screen.getByText('Interaction target')).toHaveClass('onboarding-target-highlight'),
-  );
+  await waitFor(() => {
+    expect(screen.getByText('Interaction target')).toHaveClass('onboarding-target-highlight');
+  });
   const guideCard = screen.getByRole('region', { name: 'Explore the graph' });
   expect(guideCard.parentElement).toHaveClass('onboarding-guide-positioner');
   const guideLayer = guideCard.parentElement?.parentElement;
@@ -105,9 +121,9 @@ it('highlights the interaction and inspector without trapping focus', async () =
   await user.click(screen.getByRole('button', { name: 'Mark first step' }));
   expect(screen.getByRole('heading', { name: 'Write a scene' })).toBeInTheDocument();
   expect(screen.getByRole('button', { name: 'Skip step' })).toBeInTheDocument();
-  await waitFor(() =>
-    expect(screen.getByText('Inspector target')).toHaveClass('onboarding-target-highlight'),
-  );
+  await waitFor(() => {
+    expect(screen.getByText('Inspector target')).toHaveClass('onboarding-target-highlight');
+  });
   expect(screen.getByText('Interaction target')).not.toHaveClass('onboarding-target-highlight');
 
   await user.click(screen.getByRole('button', { name: 'Close guide' }));
@@ -120,19 +136,19 @@ it('moves the highlight through branching and Simulation', async () => {
   await user.click(screen.getByRole('button', { name: 'Start guide' }));
   await user.click(screen.getByRole('button', { name: 'Mark first step' }));
   await user.click(screen.getByRole('button', { name: 'Mark scene saved' }));
-  await waitFor(() =>
-    expect(screen.getByText('Branch target')).toHaveClass('onboarding-target-highlight'),
-  );
+  await waitFor(() => {
+    expect(screen.getByText('Branch target')).toHaveClass('onboarding-target-highlight');
+  });
   await user.click(screen.getByRole('button', { name: 'Mark branch created' }));
-  await waitFor(() =>
-    expect(screen.getByText('Simulation target')).toHaveClass('onboarding-target-highlight'),
-  );
+  await waitFor(() => {
+    expect(screen.getByText('Simulation target')).toHaveClass('onboarding-target-highlight');
+  });
   await user.click(screen.getByRole('link', { name: 'Go to Simulation' }));
-  await waitFor(() =>
+  await waitFor(() => {
     expect(screen.getByText('Simulation choices target')).toHaveClass(
       'onboarding-target-highlight',
-    ),
-  );
+    );
+  });
 
   await user.click(screen.getByRole('button', { name: 'Close guide' }));
   expect(screen.queryByRole('heading', { name: 'Test your story' })).not.toBeInTheDocument();

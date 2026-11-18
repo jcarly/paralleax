@@ -1,5 +1,16 @@
-import { useMemo, useState, type FormEvent, type ReactNode } from 'react';
+import {
+  useMemo,
+  useState,
+  type Dispatch,
+  type FormEvent,
+  type ReactNode,
+  type SetStateAction,
+} from 'react';
 import { prototypeRoutes, type PrototypeRoute } from './ParalleaxPrototypeRoutes';
+import {
+  DesignPrinciplesGrid,
+  DesignSystemSectionLinks,
+} from '../components/DesignSystemReference';
 import './ParalleaxPrototypePages.css';
 
 interface PrototypePageProps {
@@ -11,7 +22,9 @@ function Brand({ onNavigate }: PrototypePageProps) {
     <button
       className="pp-portal-brand"
       type="button"
-      onClick={() => onNavigate(prototypeRoutes.stories)}
+      onClick={() => {
+        onNavigate(prototypeRoutes.stories);
+      }}
     >
       <span aria-hidden="true">P</span>
       <b>Paralleax</b>
@@ -30,14 +43,18 @@ function PortalHeader({
         <button
           className={current === 'stories' ? 'active' : ''}
           type="button"
-          onClick={() => onNavigate(prototypeRoutes.stories)}
+          onClick={() => {
+            onNavigate(prototypeRoutes.stories);
+          }}
         >
           Stories
         </button>
         <button
           className={current === 'design-system' ? 'active' : ''}
           type="button"
-          onClick={() => onNavigate(prototypeRoutes.designSystem)}
+          onClick={() => {
+            onNavigate(prototypeRoutes.designSystem);
+          }}
         >
           Design system
         </button>
@@ -57,7 +74,9 @@ function PortalHeader({
       <button
         className="pp-portal-signout"
         type="button"
-        onClick={() => onNavigate(prototypeRoutes.login)}
+        onClick={() => {
+          onNavigate(prototypeRoutes.login);
+        }}
       >
         Sign out
       </button>
@@ -115,114 +134,240 @@ export function PrototypeAuthPage({
     }
   }
 
+  const props = {
+    isRegister,
+    onNavigate,
+    email,
+    setEmail,
+    password,
+    setPassword,
+    confirmation,
+    setConfirmation,
+    showPassword,
+    setShowPassword,
+    canSubmit,
+    submit,
+  };
   return (
     <main className="pp-prototype-portal pp-auth-page">
-      <section className="pp-auth-showcase">
-        <Brand onNavigate={onNavigate} />
-        <div className="pp-auth-message">
-          <span className="pp-portal-eyebrow">Interactive narrative design</span>
-          <h1>Every path stays visible.</h1>
-          <p>
-            Shape branching stories, test their rules, and keep characters, places, items, and time
-            in one coherent workspace.
-          </p>
-        </div>
-        <MiniStoryGraph />
-        <p className="pp-auth-quote">
-          “The graph helps you see the story. The model keeps every path reliable.”
-        </p>
-      </section>
-      <section className="pp-auth-panel">
-        <div className="pp-auth-card">
-          <div className="pp-auth-mobile-brand">
-            <Brand onNavigate={onNavigate} />
-          </div>
-          <span className="pp-portal-eyebrow">
-            {isRegister ? 'Start creating' : 'Welcome back'}
-          </span>
-          <h2>{isRegister ? 'Create your account' : 'Sign in to Paralleax'}</h2>
-          <p>
-            {isRegister
-              ? 'Create a private workspace for your interactive stories.'
-              : 'Continue working on your stories and simulations.'}
-          </p>
-          <form onSubmit={submit}>
-            <label className="pp-portal-field">
-              <span>Email address</span>
-              <input
-                autoComplete="email"
-                type="email"
-                placeholder="you@example.com"
-                value={email}
-                onChange={(event) => setEmail(event.target.value)}
-              />
-            </label>
-            <label className="pp-portal-field">
-              <span>Password</span>
-              <span className="pp-password-field">
-                <input
-                  autoComplete={isRegister ? 'new-password' : 'current-password'}
-                  type={showPassword ? 'text' : 'password'}
-                  placeholder={isRegister ? 'At least 8 characters' : 'Enter your password'}
-                  value={password}
-                  onChange={(event) => setPassword(event.target.value)}
-                />
-                <button type="button" onClick={() => setShowPassword((current) => !current)}>
-                  {showPassword ? 'Hide' : 'Show'}
-                </button>
-              </span>
-            </label>
-            {isRegister ? (
-              <label className="pp-portal-field">
-                <span>Confirm password</span>
-                <input
-                  autoComplete="new-password"
-                  type={showPassword ? 'text' : 'password'}
-                  placeholder="Repeat your password"
-                  value={confirmation}
-                  onChange={(event) => setConfirmation(event.target.value)}
-                />
-                {confirmation && password !== confirmation ? (
-                  <small className="pp-field-error">Passwords do not match.</small>
-                ) : null}
-              </label>
-            ) : (
-              <div className="pp-auth-options">
-                <label>
-                  <input type="checkbox" /> Keep me signed in
-                </label>
-                <button type="button">Forgot password?</button>
-              </div>
-            )}
-            <button
-              className="pp-portal-primary pp-auth-submit"
-              type="submit"
-              disabled={!canSubmit}
-            >
-              {isRegister ? 'Create account' : 'Sign in'}
-              <span aria-hidden="true">→</span>
-            </button>
-          </form>
-          <div className="pp-auth-switch">
-            <span>{isRegister ? 'Already have an account?' : 'New to Paralleax?'}</span>
-            <button
-              type="button"
-              onClick={() =>
-                onNavigate(isRegister ? prototypeRoutes.login : prototypeRoutes.register)
-              }
-            >
-              {isRegister ? 'Sign in' : 'Create an account'}
-            </button>
-          </div>
-          <small className="pp-prototype-note">
-            Prototype only — no account data is submitted.
-          </small>
-        </div>
-      </section>
+      <AuthShowcase onNavigate={onNavigate} />
+      <AuthPagePanel {...props} />
     </main>
   );
 }
 
+interface AuthPageProps {
+  isRegister: boolean;
+  onNavigate: PrototypePageProps['onNavigate'];
+  email: string;
+  setEmail: (value: string) => void;
+  password: string;
+  setPassword: (value: string) => void;
+  confirmation: string;
+  setConfirmation: (value: string) => void;
+  showPassword: boolean;
+  setShowPassword: (update: (current: boolean) => boolean) => void;
+  canSubmit: boolean;
+  submit: (event: FormEvent) => void;
+}
+
+function AuthShowcase({ onNavigate }: PrototypePageProps) {
+  return (
+    <section className="pp-auth-showcase">
+      <Brand onNavigate={onNavigate} />
+      <div className="pp-auth-message">
+        <span className="pp-portal-eyebrow">Interactive narrative design</span>
+        <h1>Every path stays visible.</h1>
+        <p>
+          Shape branching stories, test their rules, and keep characters, places, items, and time in
+          one coherent workspace.
+        </p>
+      </div>
+      <MiniStoryGraph />
+      <p className="pp-auth-quote">
+        “The graph helps you see the story. The model keeps every path reliable.”
+      </p>
+    </section>
+  );
+}
+
+function AuthPagePanel(props: AuthPageProps) {
+  const { isRegister, onNavigate } = props;
+  return (
+    <section className="pp-auth-panel">
+      <div className="pp-auth-card">
+        <div className="pp-auth-mobile-brand">
+          <Brand onNavigate={onNavigate} />
+        </div>
+        <span className="pp-portal-eyebrow">{isRegister ? 'Start creating' : 'Welcome back'}</span>
+        <h2>{isRegister ? 'Create your account' : 'Sign in to Paralleax'}</h2>
+        <p>
+          {isRegister
+            ? 'Create a private workspace for your interactive stories.'
+            : 'Continue working on your stories and simulations.'}
+        </p>
+        <AuthCredentialForm {...props} />
+        <AuthPageFooter isRegister={isRegister} onNavigate={onNavigate} />
+      </div>
+    </section>
+  );
+}
+
+function AuthCredentialForm(props: AuthPageProps) {
+  const {
+    isRegister,
+    email,
+    setEmail,
+    password,
+    setPassword,
+    confirmation,
+    setConfirmation,
+    showPassword,
+    setShowPassword,
+    canSubmit,
+    submit,
+  } = props;
+  return (
+    <form onSubmit={submit}>
+      <AuthEmailField email={email} setEmail={setEmail} />
+      <AuthPasswordField
+        isRegister={isRegister}
+        password={password}
+        setPassword={setPassword}
+        showPassword={showPassword}
+        setShowPassword={setShowPassword}
+      />
+      <AuthConditionalFields
+        isRegister={isRegister}
+        password={password}
+        confirmation={confirmation}
+        setConfirmation={setConfirmation}
+        showPassword={showPassword}
+      />
+      <button className="pp-portal-primary pp-auth-submit" type="submit" disabled={!canSubmit}>
+        {isRegister ? 'Create account' : 'Sign in'}
+        <span aria-hidden="true">→</span>
+      </button>
+    </form>
+  );
+}
+
+function AuthEmailField({ email, setEmail }: Pick<AuthPageProps, 'email' | 'setEmail'>) {
+  return (
+    <label className="pp-portal-field">
+      <span>Email address</span>
+      <input
+        autoComplete="email"
+        type="email"
+        placeholder="you@example.com"
+        value={email}
+        onChange={(event) => {
+          setEmail(event.target.value);
+        }}
+      />
+    </label>
+  );
+}
+
+function AuthPasswordField({
+  isRegister,
+  password,
+  setPassword,
+  showPassword,
+  setShowPassword,
+}: Pick<
+  AuthPageProps,
+  'isRegister' | 'password' | 'setPassword' | 'showPassword' | 'setShowPassword'
+>) {
+  return (
+    <label className="pp-portal-field">
+      <span>Password</span>
+      <span className="pp-password-field">
+        <input
+          autoComplete={isRegister ? 'new-password' : 'current-password'}
+          type={showPassword ? 'text' : 'password'}
+          placeholder={isRegister ? 'At least 8 characters' : 'Enter your password'}
+          value={password}
+          onChange={(event) => {
+            setPassword(event.target.value);
+          }}
+        />
+        <button
+          type="button"
+          onClick={() => {
+            setShowPassword((current) => !current);
+          }}
+        >
+          {showPassword ? 'Hide' : 'Show'}
+        </button>
+      </span>
+    </label>
+  );
+}
+
+function AuthConditionalFields({
+  isRegister,
+  password,
+  confirmation,
+  setConfirmation,
+  showPassword,
+}: Pick<
+  AuthPageProps,
+  'isRegister' | 'password' | 'confirmation' | 'setConfirmation' | 'showPassword'
+>) {
+  return (
+    <>
+      {isRegister ? (
+        <label className="pp-portal-field">
+          <span>Confirm password</span>
+          <input
+            autoComplete="new-password"
+            type={showPassword ? 'text' : 'password'}
+            placeholder="Repeat your password"
+            value={confirmation}
+            onChange={(event) => {
+              setConfirmation(event.target.value);
+            }}
+          />
+          {confirmation && password !== confirmation ? (
+            <small className="pp-field-error">Passwords do not match.</small>
+          ) : null}
+        </label>
+      ) : (
+        <div className="pp-auth-options">
+          <label>
+            <input type="checkbox" /> Keep me signed in
+          </label>
+          <button type="button">Forgot password?</button>
+        </div>
+      )}
+    </>
+  );
+}
+
+function AuthPageFooter({
+  isRegister,
+  onNavigate,
+}: Pick<AuthPageProps, 'isRegister' | 'onNavigate'>) {
+  return (
+    <>
+      <div className="pp-auth-switch">
+        <span>{isRegister ? 'Already have an account?' : 'New to Paralleax?'}</span>
+        <button
+          type="button"
+          onClick={() => {
+            onNavigate(isRegister ? prototypeRoutes.login : prototypeRoutes.register);
+          }}
+        >
+          {isRegister ? 'Sign in' : 'Create an account'}
+        </button>
+      </div>
+      <small className="pp-prototype-note">
+        Prototype only — no account data is submitted.
+      </small>{' '}
+    </>
+  );
+}
 type StoryTone = 'glasshouse' | 'harbor' | 'embers' | 'blank';
 type StoryFilter = 'all' | 'recent' | 'empty';
 
@@ -338,148 +483,325 @@ export function PrototypeStoryList({ onNavigate }: PrototypePageProps) {
   const [view, setView] = useState<'grid' | 'list'>('grid');
   const [creating, setCreating] = useState(false);
   const [newTitle, setNewTitle] = useState('');
-
-  const visibleStories = useMemo(() => {
-    const normalizedQuery = query.trim().toLocaleLowerCase();
-    const filtered = stories.filter((story) => {
-      if (filter === 'recent' && !['12 minutes ago', 'Yesterday'].includes(story.updated)) {
-        return false;
-      }
-      if (filter === 'empty' && story.interactions !== 0) {
-        return false;
-      }
-      return `${story.title} ${story.description}`.toLocaleLowerCase().includes(normalizedQuery);
-    });
-    return filtered.sort((left, right) =>
-      sort === 'title' ? left.title.localeCompare(right.title) : left.id - right.id,
-    );
-  }, [filter, query, sort, stories]);
-
-  function createStory(event: FormEvent) {
-    event.preventDefault();
-    const title = newTitle.trim();
-    if (!title) {
-      return;
-    }
-    setStories((current) => [
-      {
-        id: Math.max(...current.map(({ id }) => id), 0) + 1,
-        title,
-        description: 'A new story waiting for its first interaction.',
-        interactions: 0,
-        characters: 0,
-        updated: 'Just now',
-        tone: 'blank',
-        private: true,
-      },
-      ...current,
-    ]);
-    setNewTitle('');
-    setCreating(false);
-    setFilter('all');
-  }
+  const visibleStories = useMemo(
+    () => filterPrototypeStories({ stories, query, filter, sort }),
+    [filter, query, sort, stories],
+  );
+  const onCreateStory = (event: FormEvent) => {
+    submitPrototypeStory(event, { newTitle, setStories, setNewTitle, setCreating, setFilter });
+  };
+  const toolbarProps = { query, setQuery, filter, setFilter, sort, setSort, view, setView };
 
   return (
     <div className="pp-prototype-portal pp-library-page">
       <PortalHeader current="stories" onNavigate={onNavigate} />
       <main className="pp-library-main">
-        <section className="pp-library-heading">
-          <div>
-            <span className="pp-portal-eyebrow">Your workspace</span>
-            <h1>Stories</h1>
-            <p>Create, organize, and return to every interactive narrative.</p>
-          </div>
-          <button className="pp-portal-primary" type="button" onClick={() => setCreating(true)}>
-            <span aria-hidden="true">＋</span> New story
-          </button>
-        </section>
-
-        <section className="pp-library-toolbar" aria-label="Story filters">
-          <label className="pp-library-search">
-            <span aria-hidden="true">⌕</span>
-            <span className="pp-portal-sr-only">Search stories</span>
-            <input
-              aria-label="Search stories"
-              type="search"
-              placeholder="Search stories…"
-              value={query}
-              onChange={(event) => setQuery(event.target.value)}
-            />
-            <kbd>⌘ K</kbd>
-          </label>
-          <div className="pp-library-filters">
-            {(
-              [
-                ['all', 'All stories'],
-                ['recent', 'Recently edited'],
-                ['empty', 'Empty'],
-              ] as const
-            ).map(([value, label]) => (
-              <button
-                aria-pressed={filter === value}
-                className={filter === value ? 'active' : ''}
-                key={value}
-                type="button"
-                onClick={() => setFilter(value)}
-              >
-                {label}
-              </button>
-            ))}
-          </div>
-          <label className="pp-library-sort">
-            <span>Sort by</span>
-            <select value={sort} onChange={(event) => setSort(event.target.value as typeof sort)}>
-              <option value="updated">Last edited</option>
-              <option value="title">Title</option>
-            </select>
-          </label>
-          <div className="pp-view-toggle" aria-label="Story layout">
-            <button
-              aria-label="Grid view"
-              aria-pressed={view === 'grid'}
-              className={view === 'grid' ? 'active' : ''}
-              type="button"
-              onClick={() => setView('grid')}
-            >
-              ▦
-            </button>
-            <button
-              aria-label="List view"
-              aria-pressed={view === 'list'}
-              className={view === 'list' ? 'active' : ''}
-              type="button"
-              onClick={() => setView('list')}
-            >
-              ☷
-            </button>
-          </div>
-        </section>
-
-        <div className="pp-library-count">
-          <b>{visibleStories.length}</b> {visibleStories.length === 1 ? 'story' : 'stories'}
-        </div>
-        {visibleStories.length ? (
-          <section className={`pp-story-grid ${view === 'list' ? 'list' : ''}`}>
-            {visibleStories.map((story) => (
-              <StoryCard
-                key={story.id}
-                story={story}
-                onOpen={() => onNavigate(prototypeRoutes.editor)}
-              />
-            ))}
-          </section>
-        ) : (
-          <section className="pp-library-empty">
-            <span aria-hidden="true">◇</span>
-            <h2>No stories found</h2>
-            <p>Try another search or create a new story.</p>
-            <button className="pp-portal-secondary" type="button" onClick={() => setQuery('')}>
-              Clear search
-            </button>
-          </section>
-        )}
+        <StoryListHeading
+          onCreate={() => {
+            setCreating(true);
+          }}
+        />
+        <StoryListToolbar {...toolbarProps} />
+        <StoryListResults
+          visibleStories={visibleStories}
+          view={view}
+          onNavigate={onNavigate}
+          setQuery={setQuery}
+        />
       </main>
+      <StoryCreationDialog
+        creating={creating}
+        newTitle={newTitle}
+        setNewTitle={setNewTitle}
+        setCreating={setCreating}
+        onCreateStory={onCreateStory}
+      />
+    </div>
+  );
+}
 
+function filterPrototypeStories({
+  stories,
+  query,
+  filter,
+  sort,
+}: {
+  stories: PrototypeStory[];
+  query: string;
+  filter: StoryFilter;
+  sort: 'updated' | 'title';
+}) {
+  const normalizedQuery = query.trim().toLocaleLowerCase();
+  const filtered = stories.filter((story) => {
+    if (filter === 'recent' && !['12 minutes ago', 'Yesterday'].includes(story.updated)) {
+      return false;
+    }
+    if (filter === 'empty' && story.interactions !== 0) {
+      return false;
+    }
+    return `${story.title} ${story.description}`.toLocaleLowerCase().includes(normalizedQuery);
+  });
+  return filtered.sort((left, right) =>
+    sort === 'title' ? left.title.localeCompare(right.title) : left.id - right.id,
+  );
+}
+
+function submitPrototypeStory(
+  event: FormEvent,
+  options: {
+    newTitle: string;
+    setStories: Dispatch<SetStateAction<PrototypeStory[]>>;
+    setNewTitle: Dispatch<SetStateAction<string>>;
+    setCreating: Dispatch<SetStateAction<boolean>>;
+    setFilter: Dispatch<SetStateAction<StoryFilter>>;
+  },
+) {
+  event.preventDefault();
+  const title = options.newTitle.trim();
+  if (!title) {
+    return;
+  }
+  options.setStories((current) => [
+    {
+      id: Math.max(...current.map(({ id }) => id), 0) + 1,
+      title,
+      description: 'A new story waiting for its first interaction.',
+      interactions: 0,
+      characters: 0,
+      updated: 'Just now',
+      tone: 'blank',
+      private: true,
+    },
+    ...current,
+  ]);
+  options.setNewTitle('');
+  options.setCreating(false);
+  options.setFilter('all');
+}
+interface StoryListViewProps {
+  query: string;
+  setQuery: Dispatch<SetStateAction<string>>;
+  filter: StoryFilter;
+  setFilter: Dispatch<SetStateAction<StoryFilter>>;
+  sort: 'updated' | 'title';
+  setSort: Dispatch<SetStateAction<'updated' | 'title'>>;
+  view: 'grid' | 'list';
+  setView: Dispatch<SetStateAction<'grid' | 'list'>>;
+}
+
+function StoryListHeading({ onCreate }: { onCreate: () => void }) {
+  return (
+    <section className="pp-library-heading">
+      <div>
+        <span className="pp-portal-eyebrow">Your workspace</span>
+        <h1>Stories</h1>
+        <p>Create, organize, and return to every interactive narrative.</p>
+      </div>
+      <button
+        className="pp-portal-primary"
+        type="button"
+        onClick={() => {
+          onCreate();
+        }}
+      >
+        <span aria-hidden="true">＋</span> New story
+      </button>
+    </section>
+  );
+}
+
+function StoryListToolbar(props: StoryListViewProps) {
+  const { query, setQuery, filter, setFilter, sort, setSort, view, setView } = props;
+  return (
+    <section className="pp-library-toolbar" aria-label="Story filters">
+      <StorySearchControl query={query} setQuery={setQuery} />
+      <StoryFilterControl filter={filter} setFilter={setFilter} />
+      <StoryViewControls sort={sort} setSort={setSort} view={view} setView={setView} />
+    </section>
+  );
+}
+
+function StorySearchControl({ query, setQuery }: Pick<StoryListViewProps, 'query' | 'setQuery'>) {
+  return (
+    <label className="pp-library-search">
+      <span aria-hidden="true">⌕</span>
+      <span className="pp-portal-sr-only">Search stories</span>
+      <input
+        aria-label="Search stories"
+        type="search"
+        placeholder="Search stories…"
+        value={query}
+        onChange={(event) => {
+          setQuery(event.target.value);
+        }}
+      />
+      <kbd>⌘ K</kbd>
+    </label>
+  );
+}
+
+function StoryFilterControl({
+  filter,
+  setFilter,
+}: Pick<StoryListViewProps, 'filter' | 'setFilter'>) {
+  return (
+    <div className="pp-library-filters">
+      {(
+        [
+          ['all', 'All stories'],
+          ['recent', 'Recently edited'],
+          ['empty', 'Empty'],
+        ] as const
+      ).map(([value, label]) => (
+        <button
+          aria-pressed={filter === value}
+          className={filter === value ? 'active' : ''}
+          key={value}
+          type="button"
+          onClick={() => {
+            setFilter(value);
+          }}
+        >
+          {label}
+        </button>
+      ))}
+    </div>
+  );
+}
+
+function StoryViewControls({
+  sort,
+  setSort,
+  view,
+  setView,
+}: Pick<StoryListViewProps, 'sort' | 'setSort' | 'view' | 'setView'>) {
+  return (
+    <>
+      <label className="pp-library-sort">
+        <span>Sort by</span>
+        <select
+          value={sort}
+          onChange={(event) => {
+            setSort(event.target.value as typeof sort);
+          }}
+        >
+          <option value="updated">Last edited</option>
+          <option value="title">Title</option>
+        </select>
+      </label>
+      <div className="pp-view-toggle" aria-label="Story layout">
+        <button
+          aria-label="Grid view"
+          aria-pressed={view === 'grid'}
+          className={view === 'grid' ? 'active' : ''}
+          type="button"
+          onClick={() => {
+            setView('grid');
+          }}
+        >
+          ▦
+        </button>
+        <button
+          aria-label="List view"
+          aria-pressed={view === 'list'}
+          className={view === 'list' ? 'active' : ''}
+          type="button"
+          onClick={() => {
+            setView('list');
+          }}
+        >
+          ☷
+        </button>
+      </div>
+    </>
+  );
+}
+
+interface StoryListResultsProps {
+  visibleStories: PrototypeStory[];
+  view: 'grid' | 'list';
+  onNavigate: PrototypePageProps['onNavigate'];
+  setQuery: StoryListViewProps['setQuery'];
+}
+
+function StoryListResults({
+  visibleStories,
+  view,
+  onNavigate,
+  setQuery,
+}: {
+  visibleStories: PrototypeStory[];
+  view: StoryListViewProps['view'];
+  onNavigate: PrototypePageProps['onNavigate'];
+  setQuery: StoryListViewProps['setQuery'];
+}) {
+  return (
+    <>
+      <div className="pp-library-count">
+        <b>{visibleStories.length}</b> {visibleStories.length === 1 ? 'story' : 'stories'}
+      </div>{' '}
+      {visibleStories.length ? (
+        <StoryCards visibleStories={visibleStories} view={view} onNavigate={onNavigate} />
+      ) : (
+        <StoryEmptyState setQuery={setQuery} />
+      )}
+    </>
+  );
+}
+
+function StoryCards({
+  visibleStories,
+  view,
+  onNavigate,
+}: Pick<StoryListResultsProps, 'visibleStories' | 'view' | 'onNavigate'>) {
+  return (
+    <section className={`pp-story-grid ${view === 'list' ? 'list' : ''}`}>
+      {visibleStories.map((story) => (
+        <StoryCard
+          key={story.id}
+          story={story}
+          onOpen={() => {
+            onNavigate(prototypeRoutes.editor);
+          }}
+        />
+      ))}
+    </section>
+  );
+}
+
+function StoryEmptyState({ setQuery }: { setQuery: StoryListViewProps['setQuery'] }) {
+  return (
+    <section className="pp-library-empty">
+      <span aria-hidden="true">◇</span>
+      <h2>No stories found</h2>
+      <p>Try another search or create a new story.</p>
+      <button
+        className="pp-portal-secondary"
+        type="button"
+        onClick={() => {
+          setQuery('');
+        }}
+      >
+        Clear search
+      </button>
+    </section>
+  );
+}
+function StoryCreationDialog({
+  creating,
+  newTitle,
+  setNewTitle,
+  setCreating,
+  onCreateStory,
+}: {
+  creating: boolean;
+  newTitle: string;
+  setNewTitle: Dispatch<SetStateAction<string>>;
+  setCreating: Dispatch<SetStateAction<boolean>>;
+  onCreateStory: (event: FormEvent) => void;
+}) {
+  return (
+    <>
       {creating ? (
         <div className="pp-modal-backdrop" role="presentation">
           <section
@@ -496,21 +818,25 @@ export function PrototypeStoryList({ onNavigate }: PrototypePageProps) {
             <p>
               Start with a private, empty story. You can add its first interaction in the editor.
             </p>
-            <form onSubmit={createStory}>
+            <form onSubmit={onCreateStory}>
               <label className="pp-portal-field">
                 <span>Story title</span>
                 <input
                   autoFocus
                   placeholder="Untitled story"
                   value={newTitle}
-                  onChange={(event) => setNewTitle(event.target.value)}
+                  onChange={(event) => {
+                    setNewTitle(event.target.value);
+                  }}
                 />
               </label>
               <div className="pp-dialog-actions">
                 <button
                   className="pp-portal-secondary"
                   type="button"
-                  onClick={() => setCreating(false)}
+                  onClick={() => {
+                    setCreating(false);
+                  }}
                 >
                   Cancel
                 </button>
@@ -522,10 +848,9 @@ export function PrototypeStoryList({ onNavigate }: PrototypePageProps) {
           </section>
         </div>
       ) : null}
-    </div>
+    </>
   );
 }
-
 function ReferenceSection({
   id,
   eyebrow,
@@ -562,443 +887,430 @@ const swatches = [
   ['Danger', '#a5453f', '--pp-danger'],
 ];
 
+function DesignSystemSidebar({ onNavigate }: PrototypePageProps) {
+  return (
+    <aside className="pp-design-nav">
+      <div>
+        <span className="pp-portal-eyebrow">Reference</span>
+        <b>Design system</b>
+        <small>Prototype · 0.2</small>
+      </div>
+      <DesignSystemSectionLinks />
+      <button
+        className="pp-portal-secondary"
+        type="button"
+        onClick={() => {
+          onNavigate(prototypeRoutes.editor);
+        }}
+      >
+        Open editor <span aria-hidden="true">↗</span>
+      </button>
+    </aside>
+  );
+}
+
+const designSystemHero = (
+  <section className="pp-design-hero">
+    <span className="pp-portal-badge accent">Living reference</span>
+    <h1>A calm interface for complex stories.</h1>
+    <p>
+      These foundations and components are the visual source of truth for the Paralleax prototype.
+      Product screens should compose them before inventing a new pattern.
+    </p>
+    <dl>
+      <div>
+        <dt>Base unit</dt>
+        <dd>4 px</dd>
+      </div>
+      <div>
+        <dt>Body type</dt>
+        <dd>Inter</dd>
+      </div>
+      <div>
+        <dt>Display type</dt>
+        <dd>Newsreader</dd>
+      </div>
+      <div>
+        <dt>Contrast</dt>
+        <dd>WCAG AA</dd>
+      </div>
+    </dl>
+  </section>
+);
+
+const designSystemReferenceSections = (
+  <>
+    {' '}
+    <ReferenceSection
+      id="principles"
+      eyebrow="01 · Direction"
+      title="Product principles"
+      description="The interface should reduce cognitive load without hiding narrative structure."
+    >
+      <DesignPrinciplesGrid className="pp-principle-grid" />
+    </ReferenceSection>
+    <ReferenceSection
+      id="foundations"
+      eyebrow="02 · Foundations"
+      title="Color, type, and shape"
+      description="Warm neutrals support long authoring sessions; moss marks primary action and amber belongs to triggers."
+    >
+      <div className="pp-reference-card">
+        <div className="pp-reference-card-head">
+          <h3>Core palette</h3>
+          <code>CSS custom properties</code>
+        </div>
+        <div className="pp-swatch-grid">
+          {swatches.map(([name, color, token]) => (
+            <div className="pp-swatch" key={token}>
+              <span style={{ background: color }} />
+              <b>{name}</b>
+              <small>{color}</small>
+              <code>{token}</code>
+            </div>
+          ))}
+        </div>
+      </div>
+      <div className="pp-reference-split">
+        <div className="pp-reference-card pp-type-samples">
+          <div className="pp-reference-card-head">
+            <h3>Typography</h3>
+            <code>1.25 scale</code>
+          </div>
+          <div className="display">
+            <span>Display</span>
+            <b>
+              Stories branch.
+              <br />
+              Ideas connect.
+            </b>
+            <small>48 / 52 · Newsreader</small>
+          </div>
+          <div className="heading">
+            <span>Heading</span>
+            <b>The Archive Below</b>
+            <small>24 / 30 · Inter Semibold</small>
+          </div>
+          <div className="body">
+            <span>Body</span>
+            <p>A calm, readable rhythm keeps dense tools approachable.</p>
+            <small>14 / 22 · Inter Regular</small>
+          </div>
+          <div className="caption">
+            <span>Caption</span>
+            <b>EDITED 12 MINUTES AGO</b>
+            <small>11 / 16 · Inter Medium</small>
+          </div>
+        </div>
+        <div className="pp-reference-card">
+          <div className="pp-reference-card-head">
+            <h3>Shape & elevation</h3>
+            <code>4 px base</code>
+          </div>
+          <div className="pp-shape-samples">
+            <div>
+              <span className="radius-small" />
+              <b>Control</b>
+              <small>8 px radius</small>
+            </div>
+            <div>
+              <span className="radius-card" />
+              <b>Card</b>
+              <small>12 px radius</small>
+            </div>
+            <div>
+              <span className="radius-round" />
+              <b>Avatar</b>
+              <small>Fully round</small>
+            </div>
+            <div>
+              <span className="elevation" />
+              <b>Floating</b>
+              <small>Layer 2 shadow</small>
+            </div>
+          </div>
+        </div>
+      </div>
+    </ReferenceSection>
+    <ReferenceSection
+      id="actions"
+      eyebrow="03 · Components"
+      title="Actions"
+      description="Use one clear primary action per surface. Secondary and ghost actions preserve hierarchy."
+    >
+      <div className="pp-reference-card">
+        <div className="pp-component-row">
+          <div>
+            <button className="pp-portal-primary" type="button">
+              Primary action <span>→</span>
+            </button>
+            <code>Primary</code>
+          </div>
+          <div>
+            <button className="pp-portal-secondary" type="button">
+              Secondary
+            </button>
+            <code>Secondary</code>
+          </div>
+          <div>
+            <button className="pp-portal-ghost" type="button">
+              Ghost action
+            </button>
+            <code>Ghost</code>
+          </div>
+          <div>
+            <button className="pp-portal-danger" type="button">
+              Delete story
+            </button>
+            <code>Danger</code>
+          </div>
+          <div>
+            <button className="pp-portal-primary" type="button" disabled>
+              Unavailable
+            </button>
+            <code>Disabled</code>
+          </div>
+          <div>
+            <button className="pp-icon-button" type="button" aria-label="More actions">
+              •••
+            </button>
+            <code>Icon</code>
+          </div>
+        </div>
+      </div>
+    </ReferenceSection>
+    <ReferenceSection
+      id="forms"
+      eyebrow="04 · Components"
+      title="Forms and selection"
+      description="Labels remain visible. Searchable targets are separate from the property being changed."
+    >
+      <div className="pp-reference-card pp-form-reference">
+        <label className="pp-portal-field">
+          <span>Story title</span>
+          <input defaultValue="The Archive Below" />
+          <small>Use a specific, recognizable title.</small>
+        </label>
+        <label className="pp-portal-field">
+          <span>Location</span>
+          <select defaultValue="glasshouse">
+            <option value="glasshouse">The Glasshouse</option>
+            <option>Lower archive</option>
+          </select>
+        </label>
+        <label className="pp-portal-field error">
+          <span>Required field</span>
+          <input placeholder="Add a value" />
+          <small>This field cannot be empty.</small>
+        </label>
+        <label className="pp-portal-field">
+          <span>Searchable target</span>
+          <input list="pp-design-targets" defaultValue="Mara Venn" />
+          <datalist id="pp-design-targets">
+            <option value="Mara Venn" />
+            <option value="Ivo Hale" />
+          </datalist>
+        </label>
+        <fieldset>
+          <legend>Choice controls</legend>
+          <label>
+            <input type="checkbox" defaultChecked /> Force unavailable options
+          </label>
+          <label>
+            <input name="route-style" type="radio" defaultChecked /> Show all routes
+          </label>
+          <label>
+            <input name="route-style" type="radio" /> Focus current route
+          </label>
+        </fieldset>
+      </div>
+    </ReferenceSection>
+    <ReferenceSection
+      id="navigation"
+      eyebrow="05 · Patterns"
+      title="Navigation and content"
+      description="Rows combine a compact visual anchor, a primary label, and one useful line of metadata."
+    >
+      <div className="pp-reference-split">
+        <div className="pp-reference-card">
+          <div className="pp-reference-card-head">
+            <h3>Context rows</h3>
+            <code>Sidebar</code>
+          </div>
+          <div className="pp-context-reference">
+            <button className="selected" type="button">
+              <span className="avatar moss">MV</span>
+              <span>
+                <b>Mara Venn</b>
+                <small>Playable character</small>
+              </span>
+              <i>›</i>
+            </button>
+            <button type="button">
+              <span className="avatar blue">IH</span>
+              <span>
+                <b>Ivo Hale</b>
+                <small>3 interactions</small>
+              </span>
+              <i>›</i>
+            </button>
+            <button type="button">
+              <span className="avatar image">⌖</span>
+              <span>
+                <b>The Glasshouse</b>
+                <small>Location</small>
+              </span>
+              <i>›</i>
+            </button>
+          </div>
+        </div>
+        <div className="pp-reference-card">
+          <div className="pp-reference-card-head">
+            <h3>Status & identity</h3>
+            <code>Metadata</code>
+          </div>
+          <div className="pp-identity-reference">
+            <span className="avatar large moss">MV</span>
+            <span className="avatar large blue">IH</span>
+            <span className="avatar large amber">K</span>
+            <span className="avatar large image">⌖</span>
+          </div>
+          <div className="pp-badge-reference">
+            <span className="pp-portal-badge accent">Saved</span>
+            <span className="pp-portal-badge neutral">Private</span>
+            <span className="pp-portal-badge warning">Condition</span>
+            <span className="pp-portal-badge danger">Failed</span>
+          </div>
+        </div>
+      </div>
+    </ReferenceSection>
+    <ReferenceSection
+      id="narrative"
+      eyebrow="06 · Product patterns"
+      title="Narrative components"
+      description="These patterns carry domain meaning and should stay consistent across editor, inspectors, and simulation."
+    >
+      <div className="pp-narrative-reference">
+        <article className="pp-design-interaction">
+          <span className="handle top" />
+          <small>START</small>
+          <h3>The hidden passage</h3>
+          <p>A loose tile reveals a stairway beneath the garden.</p>
+          <footer>
+            <span>⌖ The Glasshouse</span>
+            <span>
+              <i>MV</i>
+              <i>IH</i>
+            </span>
+          </footer>
+          <span className="handle bottom" />
+        </article>
+        <div className="pp-design-connector">
+          <span />
+          <i aria-label="Empty trigger marker" />
+          <span />
+        </div>
+        <article className="pp-design-effect">
+          <header>
+            <b>Stat change 1</b>
+            <button type="button" aria-label="Remove stat effect">
+              ×
+            </button>
+          </header>
+          <div>
+            <label>
+              Target
+              <input defaultValue="Mara Venn" />
+            </label>
+            <label>
+              Stat
+              <select>
+                <option>Trust</option>
+              </select>
+            </label>
+            <label>
+              Operation
+              <select>
+                <option>Increase by</option>
+              </select>
+            </label>
+            <label>
+              Value
+              <input type="number" defaultValue="2" />
+            </label>
+          </div>
+        </article>
+      </div>
+      <div className="pp-pattern-notes">
+        <div>
+          <b>Interaction cards</b>
+          <p>
+            Show title, a short excerpt, location, and present characters. Do not repeat
+            “Interaction”.
+          </p>
+        </div>
+        <div>
+          <b>Trigger markers</b>
+          <p>
+            Use an empty diamond between cards. The marker is selectable; connecting lines are not.
+          </p>
+        </div>
+        <div>
+          <b>Effect cards</b>
+          <p>Choose a searchable target first, then a separate stat or item field.</p>
+        </div>
+      </div>
+    </ReferenceSection>
+    <ReferenceSection
+      id="feedback"
+      eyebrow="07 · States"
+      title="Feedback and empty states"
+      description="State messages explain what happened and, when useful, give one clear recovery action."
+    >
+      <div className="pp-feedback-grid">
+        <div className="pp-feedback success">
+          <span>✓</span>
+          <div>
+            <b>All changes saved</b>
+            <p>Your latest edits are stored.</p>
+          </div>
+        </div>
+        <div className="pp-feedback progress">
+          <span className="spinner" />
+          <div>
+            <b>Saving changes</b>
+            <p>Keep this page open for a moment.</p>
+          </div>
+        </div>
+        <div className="pp-feedback failure">
+          <span>!</span>
+          <div>
+            <b>Could not save</b>
+            <p>Check your connection, then try again.</p>
+            <button type="button">Retry</button>
+          </div>
+        </div>
+        <div className="pp-feedback empty">
+          <span>◇</span>
+          <div>
+            <b>No items yet</b>
+            <p>Add an item definition to use inventory effects.</p>
+            <button type="button">Add item</button>
+          </div>
+        </div>
+      </div>
+    </ReferenceSection>{' '}
+  </>
+);
 export function PrototypeDesignSystem({ onNavigate }: PrototypePageProps) {
   return (
     <div className="pp-prototype-portal pp-design-page">
       <PortalHeader current="design-system" onNavigate={onNavigate} />
-      <aside className="pp-design-nav">
-        <div>
-          <span className="pp-portal-eyebrow">Reference</span>
-          <b>Design system</b>
-          <small>Prototype · 0.2</small>
-        </div>
-        <nav aria-label="Design system sections">
-          <a href="#principles">Principles</a>
-          <a href="#foundations">Foundations</a>
-          <a href="#actions">Actions</a>
-          <a href="#forms">Forms</a>
-          <a href="#navigation">Navigation</a>
-          <a href="#narrative">Narrative UI</a>
-          <a href="#feedback">Feedback</a>
-        </nav>
-        <button
-          className="pp-portal-secondary"
-          type="button"
-          onClick={() => onNavigate(prototypeRoutes.editor)}
-        >
-          Open editor <span aria-hidden="true">↗</span>
-        </button>
-      </aside>
+      <DesignSystemSidebar onNavigate={onNavigate} />
       <main className="pp-design-main">
-        <section className="pp-design-hero">
-          <span className="pp-portal-badge accent">Living reference</span>
-          <h1>A calm interface for complex stories.</h1>
-          <p>
-            These foundations and components are the visual source of truth for the Paralleax
-            prototype. Product screens should compose them before inventing a new pattern.
-          </p>
-          <dl>
-            <div>
-              <dt>Base unit</dt>
-              <dd>4 px</dd>
-            </div>
-            <div>
-              <dt>Body type</dt>
-              <dd>Inter</dd>
-            </div>
-            <div>
-              <dt>Display type</dt>
-              <dd>Newsreader</dd>
-            </div>
-            <div>
-              <dt>Contrast</dt>
-              <dd>WCAG AA</dd>
-            </div>
-          </dl>
-        </section>
+        {designSystemHero}
 
-        <ReferenceSection
-          id="principles"
-          eyebrow="01 · Direction"
-          title="Product principles"
-          description="The interface should reduce cognitive load without hiding narrative structure."
-        >
-          <div className="pp-principle-grid">
-            <article>
-              <span>01</span>
-              <h3>Story first</h3>
-              <p>The graph is a view of the narrative model, never the model itself.</p>
-            </article>
-            <article>
-              <span>02</span>
-              <h3>Reveal relationships</h3>
-              <p>Targets, effects, conditions, and ownership stay visible and explicit.</p>
-            </article>
-            <article>
-              <span>03</span>
-              <h3>Quiet by default</h3>
-              <p>Neutral surfaces carry the work. Color communicates state and meaning.</p>
-            </article>
-          </div>
-        </ReferenceSection>
-
-        <ReferenceSection
-          id="foundations"
-          eyebrow="02 · Foundations"
-          title="Color, type, and shape"
-          description="Warm neutrals support long authoring sessions; moss marks primary action and amber belongs to triggers."
-        >
-          <div className="pp-reference-card">
-            <div className="pp-reference-card-head">
-              <h3>Core palette</h3>
-              <code>CSS custom properties</code>
-            </div>
-            <div className="pp-swatch-grid">
-              {swatches.map(([name, color, token]) => (
-                <div className="pp-swatch" key={token}>
-                  <span style={{ background: color }} />
-                  <b>{name}</b>
-                  <small>{color}</small>
-                  <code>{token}</code>
-                </div>
-              ))}
-            </div>
-          </div>
-          <div className="pp-reference-split">
-            <div className="pp-reference-card pp-type-samples">
-              <div className="pp-reference-card-head">
-                <h3>Typography</h3>
-                <code>1.25 scale</code>
-              </div>
-              <div className="display">
-                <span>Display</span>
-                <b>
-                  Stories branch.
-                  <br />
-                  Ideas connect.
-                </b>
-                <small>48 / 52 · Newsreader</small>
-              </div>
-              <div className="heading">
-                <span>Heading</span>
-                <b>The Archive Below</b>
-                <small>24 / 30 · Inter Semibold</small>
-              </div>
-              <div className="body">
-                <span>Body</span>
-                <p>A calm, readable rhythm keeps dense tools approachable.</p>
-                <small>14 / 22 · Inter Regular</small>
-              </div>
-              <div className="caption">
-                <span>Caption</span>
-                <b>EDITED 12 MINUTES AGO</b>
-                <small>11 / 16 · Inter Medium</small>
-              </div>
-            </div>
-            <div className="pp-reference-card">
-              <div className="pp-reference-card-head">
-                <h3>Shape & elevation</h3>
-                <code>4 px base</code>
-              </div>
-              <div className="pp-shape-samples">
-                <div>
-                  <span className="radius-small" />
-                  <b>Control</b>
-                  <small>8 px radius</small>
-                </div>
-                <div>
-                  <span className="radius-card" />
-                  <b>Card</b>
-                  <small>12 px radius</small>
-                </div>
-                <div>
-                  <span className="radius-round" />
-                  <b>Avatar</b>
-                  <small>Fully round</small>
-                </div>
-                <div>
-                  <span className="elevation" />
-                  <b>Floating</b>
-                  <small>Layer 2 shadow</small>
-                </div>
-              </div>
-            </div>
-          </div>
-        </ReferenceSection>
-
-        <ReferenceSection
-          id="actions"
-          eyebrow="03 · Components"
-          title="Actions"
-          description="Use one clear primary action per surface. Secondary and ghost actions preserve hierarchy."
-        >
-          <div className="pp-reference-card">
-            <div className="pp-component-row">
-              <div>
-                <button className="pp-portal-primary" type="button">
-                  Primary action <span>→</span>
-                </button>
-                <code>Primary</code>
-              </div>
-              <div>
-                <button className="pp-portal-secondary" type="button">
-                  Secondary
-                </button>
-                <code>Secondary</code>
-              </div>
-              <div>
-                <button className="pp-portal-ghost" type="button">
-                  Ghost action
-                </button>
-                <code>Ghost</code>
-              </div>
-              <div>
-                <button className="pp-portal-danger" type="button">
-                  Delete story
-                </button>
-                <code>Danger</code>
-              </div>
-              <div>
-                <button className="pp-portal-primary" type="button" disabled>
-                  Unavailable
-                </button>
-                <code>Disabled</code>
-              </div>
-              <div>
-                <button className="pp-icon-button" type="button" aria-label="More actions">
-                  •••
-                </button>
-                <code>Icon</code>
-              </div>
-            </div>
-          </div>
-        </ReferenceSection>
-
-        <ReferenceSection
-          id="forms"
-          eyebrow="04 · Components"
-          title="Forms and selection"
-          description="Labels remain visible. Searchable targets are separate from the property being changed."
-        >
-          <div className="pp-reference-card pp-form-reference">
-            <label className="pp-portal-field">
-              <span>Story title</span>
-              <input defaultValue="The Archive Below" />
-              <small>Use a specific, recognizable title.</small>
-            </label>
-            <label className="pp-portal-field">
-              <span>Location</span>
-              <select defaultValue="glasshouse">
-                <option value="glasshouse">The Glasshouse</option>
-                <option>Lower archive</option>
-              </select>
-            </label>
-            <label className="pp-portal-field error">
-              <span>Required field</span>
-              <input placeholder="Add a value" />
-              <small>This field cannot be empty.</small>
-            </label>
-            <label className="pp-portal-field">
-              <span>Searchable target</span>
-              <input list="pp-design-targets" defaultValue="Mara Venn" />
-              <datalist id="pp-design-targets">
-                <option value="Mara Venn" />
-                <option value="Ivo Hale" />
-              </datalist>
-            </label>
-            <fieldset>
-              <legend>Choice controls</legend>
-              <label>
-                <input type="checkbox" defaultChecked /> Force unavailable options
-              </label>
-              <label>
-                <input name="route-style" type="radio" defaultChecked /> Show all routes
-              </label>
-              <label>
-                <input name="route-style" type="radio" /> Focus current route
-              </label>
-            </fieldset>
-          </div>
-        </ReferenceSection>
-
-        <ReferenceSection
-          id="navigation"
-          eyebrow="05 · Patterns"
-          title="Navigation and content"
-          description="Rows combine a compact visual anchor, a primary label, and one useful line of metadata."
-        >
-          <div className="pp-reference-split">
-            <div className="pp-reference-card">
-              <div className="pp-reference-card-head">
-                <h3>Context rows</h3>
-                <code>Sidebar</code>
-              </div>
-              <div className="pp-context-reference">
-                <button className="selected" type="button">
-                  <span className="avatar moss">MV</span>
-                  <span>
-                    <b>Mara Venn</b>
-                    <small>Playable character</small>
-                  </span>
-                  <i>›</i>
-                </button>
-                <button type="button">
-                  <span className="avatar blue">IH</span>
-                  <span>
-                    <b>Ivo Hale</b>
-                    <small>3 interactions</small>
-                  </span>
-                  <i>›</i>
-                </button>
-                <button type="button">
-                  <span className="avatar image">⌖</span>
-                  <span>
-                    <b>The Glasshouse</b>
-                    <small>Location</small>
-                  </span>
-                  <i>›</i>
-                </button>
-              </div>
-            </div>
-            <div className="pp-reference-card">
-              <div className="pp-reference-card-head">
-                <h3>Status & identity</h3>
-                <code>Metadata</code>
-              </div>
-              <div className="pp-identity-reference">
-                <span className="avatar large moss">MV</span>
-                <span className="avatar large blue">IH</span>
-                <span className="avatar large amber">K</span>
-                <span className="avatar large image">⌖</span>
-              </div>
-              <div className="pp-badge-reference">
-                <span className="pp-portal-badge accent">Saved</span>
-                <span className="pp-portal-badge neutral">Private</span>
-                <span className="pp-portal-badge warning">Condition</span>
-                <span className="pp-portal-badge danger">Failed</span>
-              </div>
-            </div>
-          </div>
-        </ReferenceSection>
-
-        <ReferenceSection
-          id="narrative"
-          eyebrow="06 · Product patterns"
-          title="Narrative components"
-          description="These patterns carry domain meaning and should stay consistent across editor, inspectors, and simulation."
-        >
-          <div className="pp-narrative-reference">
-            <article className="pp-design-interaction">
-              <span className="handle top" />
-              <small>START</small>
-              <h3>The hidden passage</h3>
-              <p>A loose tile reveals a stairway beneath the garden.</p>
-              <footer>
-                <span>⌖ The Glasshouse</span>
-                <span>
-                  <i>MV</i>
-                  <i>IH</i>
-                </span>
-              </footer>
-              <span className="handle bottom" />
-            </article>
-            <div className="pp-design-connector">
-              <span />
-              <i aria-label="Empty trigger marker" />
-              <span />
-            </div>
-            <article className="pp-design-effect">
-              <header>
-                <b>Stat change 1</b>
-                <button type="button" aria-label="Remove stat effect">
-                  ×
-                </button>
-              </header>
-              <div>
-                <label>
-                  Target
-                  <input defaultValue="Mara Venn" />
-                </label>
-                <label>
-                  Stat
-                  <select>
-                    <option>Trust</option>
-                  </select>
-                </label>
-                <label>
-                  Operation
-                  <select>
-                    <option>Increase by</option>
-                  </select>
-                </label>
-                <label>
-                  Value
-                  <input type="number" defaultValue="2" />
-                </label>
-              </div>
-            </article>
-          </div>
-          <div className="pp-pattern-notes">
-            <div>
-              <b>Interaction cards</b>
-              <p>
-                Show title, a short excerpt, location, and present characters. Do not repeat
-                “Interaction”.
-              </p>
-            </div>
-            <div>
-              <b>Trigger markers</b>
-              <p>
-                Use an empty diamond between cards. The marker is selectable; connecting lines are
-                not.
-              </p>
-            </div>
-            <div>
-              <b>Effect cards</b>
-              <p>Choose a searchable target first, then a separate stat or item field.</p>
-            </div>
-          </div>
-        </ReferenceSection>
-
-        <ReferenceSection
-          id="feedback"
-          eyebrow="07 · States"
-          title="Feedback and empty states"
-          description="State messages explain what happened and, when useful, give one clear recovery action."
-        >
-          <div className="pp-feedback-grid">
-            <div className="pp-feedback success">
-              <span>✓</span>
-              <div>
-                <b>All changes saved</b>
-                <p>Your latest edits are stored.</p>
-              </div>
-            </div>
-            <div className="pp-feedback progress">
-              <span className="spinner" />
-              <div>
-                <b>Saving changes</b>
-                <p>Keep this page open for a moment.</p>
-              </div>
-            </div>
-            <div className="pp-feedback failure">
-              <span>!</span>
-              <div>
-                <b>Could not save</b>
-                <p>Check your connection, then try again.</p>
-                <button type="button">Retry</button>
-              </div>
-            </div>
-            <div className="pp-feedback empty">
-              <span>◇</span>
-              <div>
-                <b>No items yet</b>
-                <p>Add an item definition to use inventory effects.</p>
-                <button type="button">Add item</button>
-              </div>
-            </div>
-          </div>
-        </ReferenceSection>
+        {designSystemReferenceSections}
       </main>
     </div>
   );

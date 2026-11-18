@@ -1,6 +1,6 @@
 import { screen, waitFor } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
-import { describe, expect, it, vi } from 'vitest';
+import { expect, it, vi } from 'vitest';
 import {
   api,
   renderPlayer,
@@ -13,507 +13,526 @@ vi.mock('../api', async () => {
   return { api: createStoryApiMock() };
 });
 
-describe('StoryPlayer runtime state', () => {
-  setupStoryPlayerTestSuite();
+setupStoryPlayerTestSuite();
 
-  it('resumes a saved reader journey with materialized state', async () => {
-    vi.mocked(api.getReaderProgress).mockResolvedValueOnce({
-      state: {
-        version: 1,
-        journeyInteractionIds: ['start'],
-        currentInteractionId: 'start',
-        visitedInteractionIds: ['start'],
-        currentDateTime: '2000-01-03T08:00',
-        currentLocationId: null,
-        statValues: {},
-        ownedItemIds: ['key-1'],
+it('resumes a saved reader journey with materialized state', async () => {
+  vi.mocked(api.getReaderProgress).mockResolvedValueOnce({
+    state: {
+      version: 1,
+      journeyInteractionIds: ['start'],
+      currentInteractionId: 'start',
+      visitedInteractionIds: ['start'],
+      currentDateTime: '2000-01-03T08:00',
+      currentLocationId: null,
+      statValues: {},
+      ownedItemIds: ['key-1'],
+    },
+    updatedAt: '2026-07-27T09:00:00.000Z',
+  });
+
+  await renderPlayer();
+
+  expect(await screen.findByRole('heading', { name: 'Start' })).toBeInTheDocument();
+  expect(await screen.findByRole('button', { name: 'Next' })).toBeInTheDocument();
+  expect(screen.getByText('Progress saved')).toBeInTheDocument();
+});
+
+it('deletes saved progress when restarting', async () => {
+  const user = userEvent.setup();
+  await renderPlayer();
+  await user.click(screen.getByRole('button', { name: 'Restart' }));
+
+  expect(api.deleteReaderProgress).toHaveBeenCalledWith('story-1', 'reader');
+  expect(await screen.findByRole('heading', { name: 'Start' })).toBeInTheDocument();
+});
+
+it('reports a reader progress save failure', async () => {
+  vi.mocked(api.saveReaderProgress).mockRejectedValueOnce(new Error('offline'));
+  await renderPlayer();
+
+  expect(await screen.findByText('Progress save failed')).toBeInTheDocument();
+});
+
+it('uses a dedicated autosave for author simulation', async () => {
+  const user = userEvent.setup();
+  await renderPlayer('/stories/story-1/play?mode=simulation');
+
+  expect(screen.getByRole('heading', { name: /Start the story/ })).toBeInTheDocument();
+  expect(screen.getByRole('button', { name: 'Start' })).toBeInTheDocument();
+  await user.click(screen.getByRole('button', { name: 'Start' }));
+  await user.click(screen.getByRole('button', { name: 'Restart' }));
+
+  expect(api.getReaderProgress).toHaveBeenCalledWith('story-1', 'simulation');
+  expect(api.saveReaderProgress).toHaveBeenCalledWith(
+    'story-1',
+    expect.objectContaining({ journeyInteractionIds: ['start'] }),
+    'simulation',
+  );
+  expect(api.deleteReaderProgress).toHaveBeenCalledWith('story-1', 'simulation');
+});
+
+it('focuses and closes the save dialog without losing its opening control', async () => {
+  const user = userEvent.setup();
+  await renderPlayer();
+  const openingControl = screen.getByRole('button', { name: 'Saves' });
+
+  await user.click(openingControl);
+
+  expect(await screen.findByRole('textbox', { name: 'Save name' })).toHaveFocus();
+  await user.keyboard('{Escape}');
+
+  expect(screen.queryByRole('dialog', { name: 'Manage saves' })).not.toBeInTheDocument();
+  await waitFor(() => {
+    expect(openingControl).toHaveFocus();
+  });
+});
+
+it('isolates the save dialog above the application header', async () => {
+  const user = userEvent.setup();
+  await renderPlayer();
+  const openingControl = screen.getByRole('button', { name: 'Saves' });
+  await user.click(openingControl);
+
+  const dialog = screen.getByRole('dialog', { name: 'Manage saves' });
+  expect(dialog.closest('.modal-portal')?.parentElement).toBe(document.body);
+  expect(openingControl.closest('[inert]')).not.toBeNull();
+  expect(screen.getByRole('textbox', { name: 'Save name' })).toHaveFocus();
+  await user.keyboard('{Escape}');
+  expect(openingControl.closest('[inert]')).toBeNull();
+  await waitFor(() => {
+    expect(openingControl).toHaveFocus();
+  });
+});
+
+it('shows failed Trigger probability rolls in simulation and allows forcing the path', async () => {
+  const user = userEvent.setup();
+  const probabilityStory = structuredClone(story);
+  probabilityStory.interactions.push({
+    id: 'rare',
+    title: 'Rare path',
+    body: 'A rare event.',
+    position: { x: 300, y: 0 },
+    triggers: [
+      {
+        id: 'rare-trigger',
+        inputInteractionIds: ['start'],
+        conditionGroups: [{ id: 'always', conditions: [] }],
+        appearanceProbability: 0,
       },
-      updatedAt: '2026-07-27T09:00:00.000Z',
-    });
+    ],
+  });
+  await renderPlayer('/stories/story-1/play?mode=simulation', probabilityStory);
 
-    await renderPlayer();
+  await user.click(screen.getByRole('button', { name: 'Start' }));
+  const rare = screen.getByRole('button', { name: /Rare path/ });
+  expect(rare).toBeDisabled();
+  expect(screen.getByText(/0% chance; deterministic roll/)).toBeInTheDocument();
 
-    expect(await screen.findByRole('heading', { name: 'Start' })).toBeInTheDocument();
-    expect(await screen.findByRole('button', { name: 'Next' })).toBeInTheDocument();
-    expect(screen.getByText('Progress saved')).toBeInTheDocument();
+  await user.click(screen.getByRole('checkbox', { name: /Force unavailable options/ }));
+  await user.click(rare);
+  expect(await screen.findByDisplayValue('Rare path')).toBeInTheDocument();
+});
+
+it('shows a draining bar above an available timed option', async () => {
+  const timedStory = structuredClone(story);
+  timedStory.interactions[1].triggers[0].timerSeconds = 10;
+
+  await renderPlayer('/stories/story-1/play', timedStory);
+
+  expect(await screen.findByRole('heading', { name: 'Start' })).toBeInTheDocument();
+  expect(await screen.findByRole('button', { name: 'Next' })).toBeInTheDocument();
+  const timer = screen.getByRole('progressbar', {
+    name: 'Time remaining for this option',
+  });
+  expect(timer).toHaveAttribute('aria-valuemax', '10');
+  expect(timer).toHaveAttribute('aria-valuenow', '10');
+});
+
+it('keeps an expired option visible but disabled in simulation', async () => {
+  const user = userEvent.setup();
+  const timedStory = structuredClone(story);
+  timedStory.interactions[1].triggers[0].timerSeconds = 0;
+
+  await renderPlayer('/stories/story-1/play?mode=simulation', timedStory);
+  await user.click(screen.getByRole('button', { name: 'Start' }));
+
+  expect(screen.getByRole('button', { name: /Next/ })).toBeDisabled();
+  expect(screen.getByText('The Trigger timer expired after 0 seconds.')).toBeInTheDocument();
+  expect(
+    screen.getByRole('progressbar', { name: 'Time remaining for this option' }),
+  ).toHaveAttribute('aria-valuenow', '0');
+});
+
+it('autosaves an interaction used as the explicit simulation start', async () => {
+  await renderPlayer('/stories/story-1/play?mode=simulation&startInteractionId=next');
+
+  await waitFor(() => {
+    expect(api.saveReaderProgress).toHaveBeenCalledWith(
+      'story-1',
+      expect.objectContaining({ journeyInteractionIds: ['next'] }),
+      'simulation',
+    );
+  });
+});
+
+it('restores an expired timer after stepping backward in simulation', async () => {
+  const user = userEvent.setup();
+  const timedStory = structuredClone(story);
+  timedStory.interactions.push({
+    id: 'timed-path',
+    title: 'Timed path',
+    body: 'Too late.',
+    position: { x: 300, y: 0 },
+    triggers: [
+      {
+        id: 'timed-path-trigger',
+        inputInteractionIds: ['start'],
+        conditionGroups: [{ id: 'timed-path-group', conditions: [] }],
+        appearanceProbability: 100,
+        timerSeconds: 1,
+      },
+    ],
   });
 
-  it('deletes saved progress when restarting', async () => {
-    const user = userEvent.setup();
-    await renderPlayer();
-    await user.click(screen.getByRole('button', { name: 'Restart' }));
+  await renderPlayer('/stories/story-1/play?mode=simulation', timedStory);
+  await user.click(screen.getByRole('button', { name: 'Start' }));
+  expect(screen.getByRole('button', { name: 'Timed path' })).toBeEnabled();
+  await waitFor(
+    () => {
+      expect(screen.getByRole('button', { name: /Timed path/ })).toBeDisabled();
+    },
+    {
+      timeout: 2_000,
+    },
+  );
 
-    expect(api.deleteReaderProgress).toHaveBeenCalledWith('story-1', 'reader');
-    expect(await screen.findByRole('heading', { name: 'Start' })).toBeInTheDocument();
+  await user.click(screen.getByRole('button', { name: 'Next' }));
+  await user.click(screen.getByRole('button', { name: 'Back' }));
+
+  expect(screen.getByRole('button', { name: /Timed path/ })).toBeDisabled();
+  expect(screen.getByText('The Trigger timer expired after 1 second.')).toBeInTheDocument();
+});
+
+it('loads a reader save into simulation and continues in the simulation autosave', async () => {
+  const user = userEvent.setup();
+  await renderPlayer('/stories/story-1/play?mode=simulation');
+  const updatedAt = '2026-08-27T09:00:00.000Z';
+  vi.mocked(api.listReaderSaves).mockResolvedValueOnce([
+    {
+      id: 'reader-autosave',
+      kind: 'reader-autosave',
+      currentInteractionId: 'start',
+      journeyLength: 1,
+      createdAt: updatedAt,
+      updatedAt,
+    },
+  ]);
+  vi.mocked(api.getReaderSave).mockResolvedValueOnce({
+    id: 'reader-autosave',
+    kind: 'reader-autosave',
+    state: {
+      version: 2,
+      journeyInteractionIds: ['start'],
+      currentInteractionId: 'start',
+      visitedInteractionIds: ['start'],
+      currentDateTime: '2000-01-03T08:00',
+      currentLocationId: null,
+      statValues: {},
+      ownedItemIds: [],
+      itemStatValues: {},
+    },
+    createdAt: updatedAt,
+    updatedAt,
   });
 
-  it('reports a reader progress save failure', async () => {
-    vi.mocked(api.saveReaderProgress).mockRejectedValueOnce(new Error('offline'));
-    await renderPlayer();
+  await user.click(screen.getByRole('button', { name: 'Saves' }));
+  expect(await screen.findByRole('dialog', { name: 'Manage saves' })).toBeInTheDocument();
+  await user.click(screen.getByRole('button', { name: 'Load' }));
 
-    expect(await screen.findByText('Progress save failed')).toBeInTheDocument();
-  });
-
-  it('uses a dedicated autosave for author simulation', async () => {
-    const user = userEvent.setup();
-    await renderPlayer('/stories/story-1/play?mode=simulation');
-
-    expect(screen.getByRole('heading', { name: /Start the story/ })).toBeInTheDocument();
-    expect(screen.getByRole('button', { name: 'Start' })).toBeInTheDocument();
-    await user.click(screen.getByRole('button', { name: 'Start' }));
-    await user.click(screen.getByRole('button', { name: 'Restart' }));
-
-    expect(api.getReaderProgress).toHaveBeenCalledWith('story-1', 'simulation');
+  expect(await screen.findByDisplayValue('Start')).toBeInTheDocument();
+  await waitFor(() => {
     expect(api.saveReaderProgress).toHaveBeenCalledWith(
       'story-1',
       expect.objectContaining({ journeyInteractionIds: ['start'] }),
       'simulation',
     );
-    expect(api.deleteReaderProgress).toHaveBeenCalledWith('story-1', 'simulation');
   });
+});
 
-  it('focuses and closes the save dialog without losing its opening control', async () => {
-    const user = userEvent.setup();
-    await renderPlayer();
-    const openingControl = screen.getByRole('button', { name: 'Saves' });
+it('starts the unique opening after loading a saved empty reader journey', async () => {
+  const user = userEvent.setup();
+  mockEmptyReaderJourneySave();
 
-    await user.click(openingControl);
-
-    expect(await screen.findByRole('textbox', { name: 'Save name' })).toHaveFocus();
-    await user.keyboard('{Escape}');
-
-    expect(screen.queryByRole('dialog', { name: 'Manage saves' })).not.toBeInTheDocument();
-    await waitFor(() => expect(openingControl).toHaveFocus());
+  await renderPlayer();
+  expect(await screen.findByRole('heading', { name: 'Start' })).toBeInTheDocument();
+  await waitFor(() => {
+    expect(api.saveReaderProgress).toHaveBeenCalledTimes(1);
   });
+  const userSaveControl = screen.getByRole('button', { name: 'Saves' });
+  await user.click(userSaveControl);
+  expect(await screen.findByRole('dialog', { name: 'Manage saves' })).toBeInTheDocument();
+  await user.click(screen.getByRole('button', { name: 'Load' }));
 
-  it('isolates the save dialog above the application header', async () => {
-    const user = userEvent.setup();
-    await renderPlayer();
-    const openingControl = screen.getByRole('button', { name: 'Saves' });
-    await user.click(openingControl);
-
-    const dialog = screen.getByRole('dialog', { name: 'Manage saves' });
-    expect(dialog.closest('.modal-portal')?.parentElement).toBe(document.body);
-    expect(openingControl.closest('[inert]')).not.toBeNull();
-    expect(screen.getByRole('textbox', { name: 'Save name' })).toHaveFocus();
-    await user.keyboard('{Escape}');
-    expect(openingControl.closest('[inert]')).toBeNull();
-    await waitFor(() => expect(openingControl).toHaveFocus());
+  expect(await screen.findByRole('heading', { name: 'Start' })).toBeInTheDocument();
+  await waitFor(() => {
+    expect(api.getReaderSave).toHaveBeenCalledWith('story-1', 'manual-save-before-start');
   });
-
-  it('shows failed Trigger probability rolls in simulation and allows forcing the path', async () => {
-    const user = userEvent.setup();
-    const probabilityStory = structuredClone(story);
-    probabilityStory.interactions.push({
-      id: 'rare',
-      title: 'Rare path',
-      body: 'A rare event.',
-      position: { x: 300, y: 0 },
-      triggers: [
-        {
-          id: 'rare-trigger',
-          inputInteractionIds: ['start'],
-          conditionGroups: [{ id: 'always', conditions: [] }],
-          appearanceProbability: 0,
-        },
-      ],
-    });
-    await renderPlayer('/stories/story-1/play?mode=simulation', probabilityStory);
-
-    await user.click(screen.getByRole('button', { name: 'Start' }));
-    const rare = screen.getByRole('button', { name: /Rare path/ });
-    expect(rare).toBeDisabled();
-    expect(screen.getByText(/0% chance; deterministic roll/)).toBeInTheDocument();
-
-    await user.click(screen.getByRole('checkbox', { name: /Force unavailable options/ }));
-    await user.click(rare);
-    expect(await screen.findByDisplayValue('Rare path')).toBeInTheDocument();
+  await waitFor(() => {
+    expect(api.saveReaderProgress).toHaveBeenCalledTimes(3);
   });
+  expect(api.saveReaderProgress).toHaveBeenLastCalledWith(
+    'story-1',
+    expect.objectContaining({ journeyInteractionIds: ['start'] }),
+    'reader',
+  );
+});
 
-  it('shows a draining bar above an available timed option', async () => {
-    const timedStory = structuredClone(story);
-    timedStory.interactions[1].triggers[0].timerSeconds = 10;
+it('creates, overwrites, and deletes a named manual save', async () => {
+  const user = userEvent.setup();
+  mockManualSaveResponses();
+  const confirm = vi.spyOn(window, 'confirm').mockReturnValue(true);
 
-    await renderPlayer('/stories/story-1/play', timedStory);
+  await renderPlayer();
+  await user.click(screen.getByRole('button', { name: 'Saves' }));
+  await user.type(screen.getByRole('textbox', { name: 'Save name' }), 'Before the gate');
+  await user.click(screen.getByRole('button', { name: 'Create save' }));
 
-    expect(await screen.findByRole('heading', { name: 'Start' })).toBeInTheDocument();
-    expect(await screen.findByRole('button', { name: 'Next' })).toBeInTheDocument();
-    const timer = screen.getByRole('progressbar', {
-      name: 'Time remaining for this option',
-    });
-    expect(timer).toHaveAttribute('aria-valuemax', '10');
-    expect(timer).toHaveAttribute('aria-valuenow', '10');
-  });
+  expect(api.createReaderSave).toHaveBeenCalledWith(
+    'story-1',
+    expect.objectContaining({ name: 'Before the gate', journeyInteractionIds: ['start'] }),
+  );
+  expect(await screen.findByText('Before the gate')).toBeInTheDocument();
 
-  it('keeps an expired option visible but disabled in simulation', async () => {
-    const user = userEvent.setup();
-    const timedStory = structuredClone(story);
-    timedStory.interactions[1].triggers[0].timerSeconds = 0;
-
-    await renderPlayer('/stories/story-1/play?mode=simulation', timedStory);
-    await user.click(screen.getByRole('button', { name: 'Start' }));
-
-    expect(screen.getByRole('button', { name: /Next/ })).toBeDisabled();
-    expect(screen.getByText('The Trigger timer expired after 0 seconds.')).toBeInTheDocument();
-    expect(
-      screen.getByRole('progressbar', { name: 'Time remaining for this option' }),
-    ).toHaveAttribute('aria-valuenow', '0');
-  });
-
-  it('autosaves an interaction used as the explicit simulation start', async () => {
-    await renderPlayer('/stories/story-1/play?mode=simulation&startInteractionId=next');
-
-    await waitFor(() =>
-      expect(api.saveReaderProgress).toHaveBeenCalledWith(
-        'story-1',
-        expect.objectContaining({ journeyInteractionIds: ['next'] }),
-        'simulation',
-      ),
+  await user.click(screen.getByRole('button', { name: 'Overwrite' }));
+  await waitFor(() => {
+    expect(api.updateReaderSave).toHaveBeenCalledWith(
+      'story-1',
+      'manual-save-1',
+      expect.objectContaining({ name: 'Before the gate', journeyInteractionIds: ['start'] }),
     );
   });
-
-  it('restores an expired timer after stepping backward in simulation', async () => {
-    const user = userEvent.setup();
-    const timedStory = structuredClone(story);
-    timedStory.interactions.push({
-      id: 'timed-path',
-      title: 'Timed path',
-      body: 'Too late.',
-      position: { x: 300, y: 0 },
-      triggers: [
-        {
-          id: 'timed-path-trigger',
-          inputInteractionIds: ['start'],
-          conditionGroups: [{ id: 'timed-path-group', conditions: [] }],
-          appearanceProbability: 100,
-          timerSeconds: 1,
-        },
-      ],
-    });
-
-    await renderPlayer('/stories/story-1/play?mode=simulation', timedStory);
-    await user.click(screen.getByRole('button', { name: 'Start' }));
-    expect(screen.getByRole('button', { name: 'Timed path' })).toBeEnabled();
-    await waitFor(() => expect(screen.getByRole('button', { name: /Timed path/ })).toBeDisabled(), {
-      timeout: 2_000,
-    });
-
-    await user.click(screen.getByRole('button', { name: 'Next' }));
-    await user.click(screen.getByRole('button', { name: 'Back' }));
-
-    expect(screen.getByRole('button', { name: /Timed path/ })).toBeDisabled();
-    expect(screen.getByText('The Trigger timer expired after 1 second.')).toBeInTheDocument();
+  await waitFor(() => {
+    expect(screen.getByRole('button', { name: 'Delete' })).toBeEnabled();
   });
 
-  it('loads a reader save into simulation and continues in the simulation autosave', async () => {
-    const user = userEvent.setup();
-    await renderPlayer('/stories/story-1/play?mode=simulation');
-    const updatedAt = '2026-08-27T09:00:00.000Z';
-    vi.mocked(api.listReaderSaves).mockResolvedValueOnce([
-      {
-        id: 'reader-autosave',
-        kind: 'reader-autosave',
-        currentInteractionId: 'start',
-        journeyLength: 1,
-        createdAt: updatedAt,
-        updatedAt,
-      },
-    ]);
-    vi.mocked(api.getReaderSave).mockResolvedValueOnce({
-      id: 'reader-autosave',
-      kind: 'reader-autosave',
-      state: {
-        version: 2,
-        journeyInteractionIds: ['start'],
-        currentInteractionId: 'start',
-        visitedInteractionIds: ['start'],
-        currentDateTime: '2000-01-03T08:00',
-        currentLocationId: null,
-        statValues: {},
-        ownedItemIds: [],
-        itemStatValues: {},
-      },
-      createdAt: updatedAt,
-      updatedAt,
-    });
+  await user.click(screen.getByRole('button', { name: 'Delete' }));
+  expect(confirm).toHaveBeenCalled();
+  expect(api.deleteReaderSave).toHaveBeenCalledWith('story-1', 'manual-save-1');
+  expect(await screen.findByText('No save exists yet.')).toBeInTheDocument();
+  confirm.mockRestore();
+});
 
-    await user.click(screen.getByRole('button', { name: 'Saves' }));
-    expect(await screen.findByRole('dialog', { name: 'Manage saves' })).toBeInTheDocument();
-    await user.click(screen.getByRole('button', { name: 'Load' }));
-
-    expect(await screen.findByDisplayValue('Start')).toBeInTheDocument();
-    await waitFor(() =>
-      expect(api.saveReaderProgress).toHaveBeenCalledWith(
-        'story-1',
-        expect.objectContaining({ journeyInteractionIds: ['start'] }),
-        'simulation',
-      ),
-    );
-  });
-
-  it('starts the unique opening after loading a saved empty reader journey', async () => {
-    const user = userEvent.setup();
-    const updatedAt = '2026-08-27T09:00:00.000Z';
-    vi.mocked(api.listReaderSaves).mockResolvedValueOnce([
-      {
-        id: 'manual-save-before-start',
-        kind: 'manual',
-        name: 'Before starting',
-        currentInteractionId: null,
-        journeyLength: 0,
-        createdAt: updatedAt,
-        updatedAt,
-      },
-    ]);
-    vi.mocked(api.getReaderSave).mockResolvedValueOnce({
+function mockEmptyReaderJourneySave() {
+  const updatedAt = '2026-08-27T09:00:00.000Z';
+  vi.mocked(api.listReaderSaves).mockResolvedValueOnce([
+    {
       id: 'manual-save-before-start',
       kind: 'manual',
       name: 'Before starting',
-      state: {
-        version: 2,
-        journeyInteractionIds: [],
-        currentInteractionId: null,
-        visitedInteractionIds: [],
-        currentDateTime: '2000-01-03T08:00',
-        currentLocationId: null,
-        statValues: {},
-        ownedItemIds: [],
-        itemStatValues: {},
-      },
+      currentInteractionId: null,
+      journeyLength: 0,
       createdAt: updatedAt,
       updatedAt,
-    });
-
-    await renderPlayer();
-    expect(await screen.findByRole('heading', { name: 'Start' })).toBeInTheDocument();
-    await waitFor(() => expect(api.saveReaderProgress).toHaveBeenCalledTimes(1));
-    const userSaveControl = screen.getByRole('button', { name: 'Saves' });
-    await user.click(userSaveControl);
-    expect(await screen.findByRole('dialog', { name: 'Manage saves' })).toBeInTheDocument();
-    await user.click(screen.getByRole('button', { name: 'Load' }));
-
-    expect(await screen.findByRole('heading', { name: 'Start' })).toBeInTheDocument();
-    await waitFor(() =>
-      expect(api.getReaderSave).toHaveBeenCalledWith('story-1', 'manual-save-before-start'),
-    );
-    await waitFor(() => expect(api.saveReaderProgress).toHaveBeenCalledTimes(3));
-    expect(api.saveReaderProgress).toHaveBeenLastCalledWith(
-      'story-1',
-      expect.objectContaining({ journeyInteractionIds: ['start'] }),
-      'reader',
-    );
+    },
+  ]);
+  vi.mocked(api.getReaderSave).mockResolvedValueOnce({
+    id: 'manual-save-before-start',
+    kind: 'manual',
+    name: 'Before starting',
+    state: {
+      version: 2,
+      journeyInteractionIds: [],
+      currentInteractionId: null,
+      visitedInteractionIds: [],
+      currentDateTime: '2000-01-03T08:00',
+      currentLocationId: null,
+      statValues: {},
+      ownedItemIds: [],
+      itemStatValues: {},
+    },
+    createdAt: updatedAt,
+    updatedAt,
   });
+}
 
-  it('creates, overwrites, and deletes a named manual save', async () => {
-    const user = userEvent.setup();
-    const updatedAt = '2026-08-27T09:00:00.000Z';
-    const manualSave = {
-      id: 'manual-save-1',
-      kind: 'manual' as const,
-      name: 'Before the gate',
-      state: {
-        version: 2 as const,
-        journeyInteractionIds: ['start'],
-        currentInteractionId: 'start',
-        visitedInteractionIds: ['start'],
-        currentDateTime: '2000-01-03T08:00',
-        currentLocationId: null,
-        statValues: {},
-        ownedItemIds: [],
-        itemStatValues: {},
+function mockManualSaveResponses() {
+  const updatedAt = '2026-08-27T09:00:00.000Z';
+  const manualSave = {
+    id: 'manual-save-1',
+    kind: 'manual' as const,
+    name: 'Before the gate',
+    state: {
+      version: 2 as const,
+      journeyInteractionIds: ['start'],
+      currentInteractionId: 'start',
+      visitedInteractionIds: ['start'],
+      currentDateTime: '2000-01-03T08:00',
+      currentLocationId: null,
+      statValues: {},
+      ownedItemIds: [],
+      itemStatValues: {},
+    },
+    createdAt: updatedAt,
+    updatedAt,
+  };
+  vi.mocked(api.createReaderSave).mockResolvedValueOnce(manualSave);
+  vi.mocked(api.updateReaderSave).mockResolvedValueOnce({
+    ...manualSave,
+    updatedAt: '2026-08-27T09:05:00.000Z',
+  });
+  vi.mocked(api.deleteReaderSave).mockResolvedValueOnce(undefined);
+}
+
+it('replays item effects when simulation starts from an interaction', async () => {
+  const itemStory = structuredClone(story);
+  itemStory.characters = [{ id: 'mira', name: 'Mira', description: '', isPlayable: true }];
+  itemStory.itemDefinitions = [{ id: 'key', name: 'Key', description: '' }];
+  itemStory.interactions[1].itemEffects = [
+    { itemDefinitionId: 'key', characterId: 'mira', operation: 'obtain' },
+  ];
+
+  await renderPlayer('/stories/story-1/play?mode=simulation&startInteractionId=next', itemStory);
+
+  expect(screen.getByText('Key')).toBeInTheDocument();
+});
+
+it('advances the story clock before evaluating temporal choices', async () => {
+  const timedStory = structuredClone(story);
+  timedStory.startDateTime = '2026-07-27T09:00';
+  timedStory.interactions[0].durationMinutes = 60;
+  timedStory.interactions[1].triggers[0].conditions = [
+    {
+      temporal: {
+        weekdays: ['monday'],
+        timeSlots: [{ startTime: '10:00', endTime: '11:00' }],
       },
-      createdAt: updatedAt,
-      updatedAt,
-    };
-    vi.mocked(api.createReaderSave).mockResolvedValueOnce(manualSave);
-    vi.mocked(api.updateReaderSave).mockResolvedValueOnce({
-      ...manualSave,
-      updatedAt: '2026-08-27T09:05:00.000Z',
-    });
-    vi.mocked(api.deleteReaderSave).mockResolvedValueOnce(undefined);
-    const confirm = vi.spyOn(window, 'confirm').mockReturnValue(true);
+    },
+  ];
 
-    await renderPlayer();
-    await user.click(screen.getByRole('button', { name: 'Saves' }));
-    await user.type(screen.getByRole('textbox', { name: 'Save name' }), 'Before the gate');
-    await user.click(screen.getByRole('button', { name: 'Create save' }));
+  await renderPlayer('/stories/story-1/play', timedStory);
+  expect(await screen.findByText('2026-07-27 10:00')).toBeInTheDocument();
+  expect(await screen.findByRole('button', { name: 'Next' })).toBeInTheDocument();
+});
 
-    expect(api.createReaderSave).toHaveBeenCalledWith(
-      'story-1',
-      expect.objectContaining({ name: 'Before the gate', journeyInteractionIds: ['start'] }),
-    );
-    expect(await screen.findByText('Before the gate')).toBeInTheDocument();
+it('updates and preserves current location while evaluating choices', async () => {
+  const user = userEvent.setup();
+  const locatedStory = structuredClone(story);
+  locatedStory.locations = [{ id: 'harbor', name: 'Harbor', description: '' }];
+  locatedStory.interactions[0].locationId = 'harbor';
+  locatedStory.interactions[2].triggers[0].conditions = [
+    { locationId: 'harbor', isCurrentLocation: true },
+  ];
 
-    await user.click(screen.getByRole('button', { name: 'Overwrite' }));
-    await waitFor(() =>
-      expect(api.updateReaderSave).toHaveBeenCalledWith(
-        'story-1',
-        'manual-save-1',
-        expect.objectContaining({ name: 'Before the gate', journeyInteractionIds: ['start'] }),
-      ),
-    );
-    await waitFor(() => expect(screen.getByRole('button', { name: 'Delete' })).toBeEnabled());
+  await renderPlayer('/stories/story-1/play', locatedStory);
+  expect(await screen.findByRole('heading', { name: 'Start' })).toBeInTheDocument();
+  expect(screen.getByText('Harbor')).toBeInTheDocument();
+  await user.click(await screen.findByRole('button', { name: 'Next' }));
 
-    await user.click(screen.getByRole('button', { name: 'Delete' }));
-    expect(confirm).toHaveBeenCalled();
-    expect(api.deleteReaderSave).toHaveBeenCalledWith('story-1', 'manual-save-1');
-    expect(await screen.findByText('No save exists yet.')).toBeInTheDocument();
-    confirm.mockRestore();
-  });
+  expect(screen.getByRole('button', { name: 'Secret' })).toBeInTheDocument();
+});
 
-  it('replays item effects when simulation starts from an interaction', async () => {
-    const itemStory = structuredClone(story);
-    itemStory.characters = [{ id: 'mira', name: 'Mira', description: '', isPlayable: true }];
-    itemStory.itemDefinitions = [{ id: 'key', name: 'Key', description: '' }];
-    itemStory.interactions[1].itemEffects = [
-      { itemDefinitionId: 'key', characterId: 'mira', operation: 'obtain' },
-    ];
+it('evaluates character conditions from the current interaction cast', async () => {
+  const characterStory = structuredClone(story);
+  characterStory.characters = [{ id: 'mira', name: 'Mira', description: '' }];
+  characterStory.interactions[0].characterIds = ['mira'];
+  characterStory.interactions[1].triggers[0].conditions = [
+    { characterId: 'mira', isPresent: true },
+  ];
 
-    await renderPlayer('/stories/story-1/play?mode=simulation&startInteractionId=next', itemStory);
+  await renderPlayer('/stories/story-1/play', characterStory);
 
-    expect(screen.getByText('Key')).toBeInTheDocument();
-  });
+  expect(await screen.findByRole('button', { name: 'Next' })).toBeInTheDocument();
+});
 
-  it('advances the story clock before evaluating temporal choices', async () => {
-    const timedStory = structuredClone(story);
-    timedStory.startDateTime = '2026-07-27T09:00';
-    timedStory.interactions[0].durationMinutes = 60;
-    timedStory.interactions[1].triggers[0].conditions = [
-      {
-        temporal: {
-          weekdays: ['monday'],
-          timeSlots: [{ startTime: '10:00', endTime: '11:00' }],
-        },
-      },
-    ];
+it('selects the playable character and shows player and encounter panels', async () => {
+  const user = userEvent.setup();
+  const characterStory = structuredClone(story);
+  characterStory.statDefinitions = [{ id: 'trust-definition', name: 'Trust' }];
+  characterStory.characters = [
+    {
+      id: 'player',
+      name: 'Ari',
+      description: 'The protagonist.',
+      imageUrl: 'https://images.example/ari.png',
+      isPlayable: true,
+      stats: [{ id: 'trust', statDefinitionId: 'trust-definition', initialValue: 4 }],
+    },
+    {
+      id: 'mira',
+      name: 'Mira',
+      description: 'A new acquaintance.',
+      imageUrl: 'https://images.example/mira.png',
+    },
+  ];
+  characterStory.interactions[0].characterIds = ['mira'];
 
-    await renderPlayer('/stories/story-1/play', timedStory);
-    expect(await screen.findByText('2026-07-27 10:00')).toBeInTheDocument();
-    expect(await screen.findByRole('button', { name: 'Next' })).toBeInTheDocument();
-  });
+  await renderPlayer('/stories/story-1/play', characterStory);
+  expect(screen.getByRole('heading', { name: 'Choose your character' })).toBeInTheDocument();
+  expect(screen.queryByRole('button', { name: 'Start' })).not.toBeInTheDocument();
 
-  it('updates and preserves current location while evaluating choices', async () => {
-    const user = userEvent.setup();
-    const locatedStory = structuredClone(story);
-    locatedStory.locations = [{ id: 'harbor', name: 'Harbor', description: '' }];
-    locatedStory.interactions[0].locationId = 'harbor';
-    locatedStory.interactions[2].triggers[0].conditions = [
-      { locationId: 'harbor', isCurrentLocation: true },
-    ];
+  await user.click(screen.getByRole('button', { name: /Ari/ }));
+  expect(screen.getByRole('complementary', { name: 'Played character' })).toHaveTextContent(
+    'Trust: 4',
+  );
+  expect(await screen.findByRole('heading', { name: 'Start' })).toBeInTheDocument();
+  expect(screen.getByRole('complementary', { name: 'Encountered characters' })).toHaveTextContent(
+    'Mira',
+  );
+});
 
-    await renderPlayer('/stories/story-1/play', locatedStory);
-    expect(await screen.findByRole('heading', { name: 'Start' })).toBeInTheDocument();
-    expect(screen.getByText('Harbor')).toBeInTheDocument();
-    await user.click(await screen.findByRole('button', { name: 'Next' }));
+it('hides location-blocked options in simulation mode', async () => {
+  const user = userEvent.setup();
+  const locatedStory = structuredClone(story);
+  locatedStory.locations = [{ id: 'harbor', name: 'Harbor', description: '' }];
+  locatedStory.interactions[1].triggers[0].conditions = [
+    { locationId: 'harbor', isCurrentLocation: true },
+  ];
 
-    expect(screen.getByRole('button', { name: 'Secret' })).toBeInTheDocument();
-  });
+  await renderPlayer('/stories/story-1/play?mode=simulation', locatedStory);
+  await user.click(screen.getByRole('button', { name: 'Start' }));
 
-  it('evaluates character conditions from the current interaction cast', async () => {
-    const characterStory = structuredClone(story);
-    characterStory.characters = [{ id: 'mira', name: 'Mira', description: '' }];
-    characterStory.interactions[0].characterIds = ['mira'];
-    characterStory.interactions[1].triggers[0].conditions = [
-      { characterId: 'mira', isPresent: true },
-    ];
+  expect(screen.queryByRole('button', { name: 'Next' })).not.toBeInTheDocument();
+});
 
-    await renderPlayer('/stories/story-1/play', characterStory);
+it('applies time-based and explicit stat changes before evaluating choices', async () => {
+  const statStory = structuredClone(story);
+  statStory.characters = [
+    {
+      id: 'mira',
+      name: 'Mira',
+      description: '',
+      stats: [{ id: 'trust', statDefinitionId: 'trust-definition', initialValue: 1 }],
+    },
+  ];
+  statStory.statDefinitions = [{ id: 'trust-definition', name: 'Trust', changePerHour: 1 }];
+  statStory.interactions[0].durationMinutes = 60;
+  statStory.interactions[0].statEffects = [{ statId: 'trust', operation: 'add', value: 1 }];
+  statStory.interactions[1].triggers[0].conditions = [
+    { statId: 'trust', operator: 'gte', value: 3 },
+  ];
 
-    expect(await screen.findByRole('button', { name: 'Next' })).toBeInTheDocument();
-  });
+  await renderPlayer('/stories/story-1/play', statStory);
 
-  it('selects the playable character and shows player and encounter panels', async () => {
-    const user = userEvent.setup();
-    const characterStory = structuredClone(story);
-    characterStory.statDefinitions = [{ id: 'trust-definition', name: 'Trust' }];
-    characterStory.characters = [
-      {
-        id: 'player',
-        name: 'Ari',
-        description: 'The protagonist.',
-        imageUrl: 'https://images.example/ari.png',
-        isPlayable: true,
-        stats: [{ id: 'trust', statDefinitionId: 'trust-definition', initialValue: 4 }],
-      },
-      {
-        id: 'mira',
-        name: 'Mira',
-        description: 'A new acquaintance.',
-        imageUrl: 'https://images.example/mira.png',
-      },
-    ];
-    characterStory.interactions[0].characterIds = ['mira'];
+  expect(await screen.findByRole('button', { name: 'Next' })).toBeInTheDocument();
+});
 
-    await renderPlayer('/stories/story-1/play', characterStory);
-    expect(screen.getByRole('heading', { name: 'Choose your character' })).toBeInTheDocument();
-    expect(screen.queryByRole('button', { name: 'Start' })).not.toBeInTheDocument();
+it('replays typed variable effects for conditions and rich-text interpolation', async () => {
+  const variableStory = structuredClone(story);
+  variableStory.statDefinitions = [{ id: 'score-definition', name: 'Score', valueType: 'number' }];
+  variableStory.stats = [
+    { id: 'score-assignment', statDefinitionId: 'score-definition', initialValue: 1 },
+  ];
+  variableStory.interactions[0].body =
+    '<p>Score: <span data-stat-value="score-assignment"></span></p>';
+  variableStory.interactions[0].statEffects = [
+    { statId: 'score-assignment', operation: 'add', value: 2 },
+  ];
+  variableStory.interactions[1].triggers[0].conditions = [
+    { statId: 'score-assignment', operator: 'gte', value: 3 },
+  ];
 
-    await user.click(screen.getByRole('button', { name: /Ari/ }));
-    expect(screen.getByRole('complementary', { name: 'Played character' })).toHaveTextContent(
-      'Trust: 4',
-    );
-    expect(await screen.findByRole('heading', { name: 'Start' })).toBeInTheDocument();
-    expect(screen.getByRole('complementary', { name: 'Encountered characters' })).toHaveTextContent(
-      'Mira',
-    );
-  });
+  await renderPlayer('/stories/story-1/play', variableStory);
 
-  it('hides location-blocked options in simulation mode', async () => {
-    const user = userEvent.setup();
-    const locatedStory = structuredClone(story);
-    locatedStory.locations = [{ id: 'harbor', name: 'Harbor', description: '' }];
-    locatedStory.interactions[1].triggers[0].conditions = [
-      { locationId: 'harbor', isCurrentLocation: true },
-    ];
-
-    await renderPlayer('/stories/story-1/play?mode=simulation', locatedStory);
-    await user.click(screen.getByRole('button', { name: 'Start' }));
-
-    expect(screen.queryByRole('button', { name: 'Next' })).not.toBeInTheDocument();
-  });
-
-  it('applies time-based and explicit stat changes before evaluating choices', async () => {
-    const statStory = structuredClone(story);
-    statStory.characters = [
-      {
-        id: 'mira',
-        name: 'Mira',
-        description: '',
-        stats: [{ id: 'trust', statDefinitionId: 'trust-definition', initialValue: 1 }],
-      },
-    ];
-    statStory.statDefinitions = [{ id: 'trust-definition', name: 'Trust', changePerHour: 1 }];
-    statStory.interactions[0].durationMinutes = 60;
-    statStory.interactions[0].statEffects = [{ statId: 'trust', operation: 'add', value: 1 }];
-    statStory.interactions[1].triggers[0].conditions = [
-      { statId: 'trust', operator: 'gte', value: 3 },
-    ];
-
-    await renderPlayer('/stories/story-1/play', statStory);
-
-    expect(await screen.findByRole('button', { name: 'Next' })).toBeInTheDocument();
-  });
-
-  it('replays typed variable effects for conditions and rich-text interpolation', async () => {
-    const variableStory = structuredClone(story);
-    variableStory.statDefinitions = [
-      { id: 'score-definition', name: 'Score', valueType: 'number' },
-    ];
-    variableStory.stats = [
-      { id: 'score-assignment', statDefinitionId: 'score-definition', initialValue: 1 },
-    ];
-    variableStory.interactions[0].body =
-      '<p>Score: <span data-stat-value="score-assignment"></span></p>';
-    variableStory.interactions[0].statEffects = [
-      { statId: 'score-assignment', operation: 'add', value: 2 },
-    ];
-    variableStory.interactions[1].triggers[0].conditions = [
-      { statId: 'score-assignment', operator: 'gte', value: 3 },
-    ];
-
-    await renderPlayer('/stories/story-1/play', variableStory);
-
-    expect(await screen.findByText('3', { selector: '[data-stat-value]' })).toBeInTheDocument();
-    expect(await screen.findByRole('button', { name: 'Next' })).toBeInTheDocument();
-  });
+  expect(await screen.findByText('3', { selector: '[data-stat-value]' })).toBeInTheDocument();
+  expect(await screen.findByRole('button', { name: 'Next' })).toBeInTheDocument();
 });

@@ -48,6 +48,12 @@ function getInitials(name: string) {
     .toLocaleUpperCase();
 }
 
+function createEntityClickHandler(handler: (id: string) => void, id: string) {
+  return () => {
+    handler(id);
+  };
+}
+
 export function LocationContextSection(props: EntitySectionProps<Location>) {
   const { t } = useTranslation();
 
@@ -78,12 +84,16 @@ export function LocationContextSection(props: EntitySectionProps<Location>) {
               fallback="⌖"
               selected={location.id === props.selectedId}
               metadata={countLabel(t, props.referenceCounts.get(location.id) ?? 0, 'interaction')}
-              onSelect={() => props.onSelect(location.id)}
+              onSelect={() => {
+                props.onSelect(location.id);
+              }}
               action={
                 <ContextCommentButton
                   count={props.commentCounts.get(`location:${location.id}`) ?? 0}
                   entityName={location.name}
-                  onClick={() => props.onOpenComments(location.id)}
+                  onClick={() => {
+                    props.onOpenComments(location.id);
+                  }}
                 />
               }
             />
@@ -129,12 +139,12 @@ export function CharacterContextSection(props: EntitySectionProps<Character>) {
                   {countLabel(t, props.referenceCounts.get(character.id) ?? 0, 'interaction')}
                 </>
               }
-              onSelect={() => props.onSelect(character.id)}
+              onSelect={createEntityClickHandler(props.onSelect, character.id)}
               action={
                 <ContextCommentButton
                   count={props.commentCounts.get(`character:${character.id}`) ?? 0}
                   entityName={character.name}
-                  onClick={() => props.onOpenComments(character.id)}
+                  onClick={createEntityClickHandler(props.onOpenComments, character.id)}
                 />
               }
             />
@@ -180,12 +190,12 @@ export function StatDefinitionContextSection(props: EntitySectionProps<StatDefin
                   {countLabel(t, props.referenceCounts.get(definition.id) ?? 0, 'assignment')}
                 </>
               }
-              onSelect={() => props.onSelect(definition.id)}
+              onSelect={createEntityClickHandler(props.onSelect, definition.id)}
               action={
                 <ContextCommentButton
                   count={props.commentCounts.get(`statDefinition:${definition.id}`) ?? 0}
                   entityName={definition.name}
-                  onClick={() => props.onOpenComments(definition.id)}
+                  onClick={createEntityClickHandler(props.onOpenComments, definition.id)}
                 />
               }
             />
@@ -226,12 +236,16 @@ export function ItemDefinitionContextSection(props: EntitySectionProps<ItemDefin
               fallback="▣"
               selected={definition.id === props.selectedId}
               metadata={countLabel(t, props.referenceCounts.get(definition.id) ?? 0, 'instance')}
-              onSelect={() => props.onSelect(definition.id)}
+              onSelect={() => {
+                props.onSelect(definition.id);
+              }}
               action={
                 <ContextCommentButton
                   count={props.commentCounts.get(`itemDefinition:${definition.id}`) ?? 0}
                   entityName={definition.name}
-                  onClick={() => props.onOpenComments(definition.id)}
+                  onClick={() => {
+                    props.onOpenComments(definition.id);
+                  }}
                 />
               }
             />

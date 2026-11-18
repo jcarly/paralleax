@@ -13,18 +13,20 @@ vi.mock('../api', () => ({
   },
 }));
 
-describe('AccountActionPage', () => {
-  const authenticated = {
-    id: 'user-1',
-    email: 'author@example.com',
-    displayName: 'Author',
-    role: 'user' as const,
-    createdAt: '2026-01-01T00:00:00.000Z',
-    emailVerifiedAt: '2026-01-01T00:00:00.000Z',
-  };
+const authenticated = {
+  id: 'user-1',
+  email: 'author@example.com',
+  displayName: 'Author',
+  role: 'user' as const,
+  createdAt: '2026-01-01T00:00:00.000Z',
+  emailVerifiedAt: '2026-01-01T00:00:00.000Z',
+};
 
+describe('AccountActionPage', () => {
   beforeEach(() => vi.resetAllMocks());
-  afterEach(() => cleanup());
+  afterEach(() => {
+    cleanup();
+  });
 
   it('verifies an email token and returns the authenticated account', async () => {
     const user = userEvent.setup();
@@ -71,7 +73,9 @@ describe('AccountActionPage', () => {
 
 describe('AccountActionPage authenticated transition errors', () => {
   beforeEach(() => vi.resetAllMocks());
-  afterEach(() => cleanup());
+  afterEach(() => {
+    cleanup();
+  });
 
   it('shows an error when the authenticated transition fails', async () => {
     const user = userEvent.setup();
@@ -103,7 +107,9 @@ describe('AccountActionPage authenticated transition errors', () => {
 
 describe('AccountActionPage sign-in navigation errors', () => {
   beforeEach(() => vi.resetAllMocks());
-  afterEach(() => cleanup());
+  afterEach(() => {
+    cleanup();
+  });
 
   it('shows an error when returning to sign in fails', async () => {
     const user = userEvent.setup();
@@ -129,7 +135,9 @@ describe('AccountActionPage sign-in navigation errors', () => {
 
 describe('AccountActionPage pending transitions', () => {
   beforeEach(() => vi.resetAllMocks());
-  afterEach(() => cleanup());
+  afterEach(() => {
+    cleanup();
+  });
 
   it('keeps verification pending until its parent transition finishes', async () => {
     const user = userEvent.setup();
@@ -158,7 +166,9 @@ describe('AccountActionPage pending transitions', () => {
     );
 
     await user.click(screen.getByRole('button', { name: 'Verify and sign in' }));
-    await waitFor(() => expect(onAuthenticated).toHaveBeenCalledOnce());
+    await waitFor(() => {
+      expect(onAuthenticated).toHaveBeenCalledOnce();
+    });
 
     const submit = screen.getByRole('button', { name: 'Please wait…' });
     expect(submit).toBeDisabled();
@@ -166,8 +176,8 @@ describe('AccountActionPage pending transitions', () => {
     expect(api.verifyEmail).toHaveBeenCalledOnce();
 
     resolveTransition?.();
-    await waitFor(() =>
-      expect(screen.getByRole('button', { name: 'Verify and sign in' })).toBeEnabled(),
-    );
+    await waitFor(() => {
+      expect(screen.getByRole('button', { name: 'Verify and sign in' })).toBeEnabled();
+    });
   });
 });
