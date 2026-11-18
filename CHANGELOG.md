@@ -2,12 +2,20 @@
 
 ## Unreleased
 
-- Restored real headroom under the Story Editor bundle budget: the Story
-  settings dialog and the history panel now load on demand (preloaded during
-  idle preparation), reducing the editor's initial route assets by about 3 KiB
-  compressed. The CI Quality build now uses the same empty build variables as
-  the production image, so both measure the same bundle and a budget overrun
-  fails in the pull request that causes it.
+- Fixed the Story settings toolbar button rendering without its styles until
+  the settings dialog was first opened: the button styles now load with the
+  icon instead of with the on-demand dialog. The CI Quality build now uses the same
+  empty build variables as the production image, so both measure the same
+  bundle and a budget overrun fails in the pull request that causes it.
+- Split the Story Editor page into focused canvas, inspector, navigation,
+  comment, and orchestration modules without changing editor behavior. Removed
+  the page's remaining ESLint baseline entry. Story settings now load on demand
+  to keep the editor within its existing bundle budget.
+
+- Extracted the Story Editor context panel into its navigation feature module;
+  editor behavior is unchanged. Extracted graph drag handling, comment-pin
+  projection, entity actions and inspector utilities into focused modules.
+
 - Reorganized the documentation around its readers. Added an author guide in
   English and French with a first-Story tutorial, a positioning page presenting game
   studios and visual-novel teams as the first audience hypothesis to test, a completed glossary with

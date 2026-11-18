@@ -1,7 +1,6 @@
-// Kept apart from StorySettingsDialog so the editor toolbar can render the
-// settings button without loading the dialog, which is split into its own chunk.
-// The stylesheet also styles that toolbar button.
-import './storySettings.css';
+// The editor toolbar renders this icon while StorySettingsDialog loads on demand,
+// so the toolbar button styles must load with the icon, not with the dialog.
+import './storySettingsIcon.css';
 
 export function StorySettingsIcon() {
   return (

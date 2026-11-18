@@ -1,10 +1,10 @@
+import { StorySettingsIcon } from './StorySettingsIcon';
 import { useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import { FieldHelpTooltip } from '../../components/FieldHelpTooltip';
 import { handleModalDialogKeyDown } from '../../components/modalDialogKeyboard';
 import { ModalPortal } from '../../components/ModalPortal';
 import { StoryAccessSettings } from './StoryAccessSettings';
-import { StorySettingsIcon } from './StorySettingsIcon';
 import '../../pages/ProductPages.css';
 import './storySettings.css';
 

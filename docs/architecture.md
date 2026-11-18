@@ -542,6 +542,31 @@ component:
   for transient inspector targets and rectangle-selection gestures. It resolves
   selected entities from the canonical Story and deliberately preserves context
   references only for interaction navigation that requires them.
+- `features/story-editor/runtime/`: page composition root.
+  `useStoryEditorBaseRuntime.ts` owns route, persistence, and local UI state and
+  composes the React Flow canvas state from `graph/useStoryEditorCanvasState.ts`;
+  `useStoryEditorRuntime.ts` composes the focused graph, comment,
+  selection, and action controllers; `storyEditorPageModels.ts` builds the
+  canvas and inspector view models from the loaded Story. React Flow imports stay
+  in `graph/` (`react-flow-only-in-graph`).
+- `features/story-editor/graph/`: canvas state, projections, pointer handling,
+  layout, synchronization, canvas rendering, and canvas comment navigation.
+- `features/story-editor/inspectors/StoryEditorInspector.tsx`: inspector and
+  contextual comment composition; `StoryInspectorContent.tsx` renders the
+  selected authoring or review target.
+- `features/comments/`: editor comment projections, permissions, actions, and
+  thread focus/target navigation reuse the existing comment state and
+  persistence hooks.
+- `features/story-editor/graph/useStoryEditorNodeDragHandlers.ts`: graph drag
+  previews and persisted positions, including comment-pin reanchoring.
+- `features/story-editor/graph/storyCommentPinNodes.ts`: canvas comment-pin
+  projection from comment threads and drafts.
+- `features/story-editor/inspectors/`: inspector layout and review target views.
+- `features/story-editor/useStoryEditorEntityActions.ts`: context entity creation
+  and local inspector updates using the existing persistence operations.
+- `features/story-editor/navigation/StoryContextPanel.tsx`: context-panel rendering,
+  search controls, entity sections, and group navigation, composed with the
+  existing navigation, selection, and persistence actions.
 - `features/story-editor/navigation/useStoryContextNavigation.ts`: context-panel
   visibility, section state, entity filters and categories, reference summaries,
   text occurrences, and previous/next interaction focus. It consumes the pure
@@ -677,14 +702,14 @@ editor budget includes 1 KiB of release-build headroom for metadata-dependent
 bundle changes; the cap remains enforced. Build variables change chunk hashes
 and so shift compressed sizes by tens of bytes across chunks, so the CI Quality
 build uses the same empty build variables as the production image and both
-measure the same bundle. On 2026-11-18 the editor measured 143.0 KiB in that
+measure the same bundle. On 2026-11-18 the editor measured 143.5 KiB in that
 configuration. A budget increase must state in this section what grew and why
 the growth cannot load on demand. The editor preloads its click-creation
-helper, ELK adapter, Story settings dialog, and history panel during the
-existing idle preparation; create and organize actions, the settings button, and
-the history control also load them on demand. The interaction inspector loads
-when an interaction is selected. The contract also fails if either route stops being a
-dynamic entry or becomes a static dependency of the application entry.
+helper and ELK adapter during the existing idle preparation; create and organize
+actions also load them on demand. The Story settings dialog loads when it
+opens; the styles of its always-visible toolbar button load with the icon.
+The interaction inspector loads when an interaction is selected. The contract
+also fails if either route stops being a dynamic entry or becomes a static dependency of the application entry.
 
 ## Automated Architecture Checks
 

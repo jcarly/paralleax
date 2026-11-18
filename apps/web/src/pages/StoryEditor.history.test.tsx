@@ -72,8 +72,7 @@ describe('Story editor history', () => {
     await waitFor(() => {
       expect(api.getStoryHistory).toHaveBeenCalledTimes(2);
     });
-    // The history panel loads on demand, outside the editor route bundle.
-    expect(await screen.findByRole('complementary', { name: 'History' })).toBeInTheDocument();
+    expect(screen.getByRole('complementary', { name: 'History' })).toBeInTheDocument();
     expect(screen.getByText('Interaction created')).toBeInTheDocument();
     expect(screen.getByText('Alice')).toBeInTheDocument();
   });
