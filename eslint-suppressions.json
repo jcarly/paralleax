@@ -1628,11 +1628,6 @@
       "count": 4
     }
   },
-  "apps/web/src/features/story-editor/persistence/storyContextPersistence.ts": {
-    "max-lines-per-function": {
-      "count": 1
-    }
-  },
   "apps/web/src/features/story-editor/persistence/storyEditorLoader.test.ts": {
     "max-lines-per-function": {
       "count": 2

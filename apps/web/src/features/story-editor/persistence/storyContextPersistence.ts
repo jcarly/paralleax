@@ -38,9 +38,21 @@ interface StoryContextPersistenceDependencies {
   trackSave: TrackStorySave;
 }
 
-export function useStoryContextPersistence({
+export function useStoryContextPersistence(dependencies: StoryContextPersistenceDependencies) {
+  return {
+    ...createStoryLocationActions(dependencies),
+    ...createStoryCharacterActions(dependencies),
+    ...createStoryCharacterStatCreateActions(dependencies),
+    ...createStoryCharacterStatMutationActions(dependencies),
+    ...createStoryStatDefinitionActions(dependencies),
+    ...createStoryItemDefinitionActions(dependencies),
+    ...createStoryCharacterItemActions(dependencies),
+    ...createStoryItemMoveActions(dependencies),
+  };
+}
+
+function createStoryLocationActions({
   storyId,
-  story,
   setStory,
   trackSave,
 }: StoryContextPersistenceDependencies) {
@@ -66,6 +78,14 @@ export function useStoryContextPersistence({
     );
   }
 
+  return { createLocation, updateLocation };
+}
+
+function createStoryCharacterActions({
+  storyId,
+  setStory,
+  trackSave,
+}: StoryContextPersistenceDependencies) {
   async function createCharacter() {
     const result = await trackSave(() =>
       api.createCharacter(storyId, { name: 'New character', description: '' }),
@@ -88,6 +108,15 @@ export function useStoryContextPersistence({
     );
   }
 
+  return { createCharacter, updateCharacter };
+}
+
+function createStoryCharacterStatCreateActions({
+  storyId,
+  story,
+  setStory,
+  trackSave,
+}: StoryContextPersistenceDependencies) {
   async function createCharacterStat(characterId: string, statDefinitionId: string) {
     const definition = story?.statDefinitions?.find(({ id }) => id === statDefinitionId);
     const valueType = definition ? getStatValueType(definition) : 'number';
@@ -103,6 +132,14 @@ export function useStoryContextPersistence({
     setStory((current) => (current ? applyCharacterStatResult(current, result) : current));
   }
 
+  return { createCharacterStat };
+}
+
+function createStoryCharacterStatMutationActions({
+  storyId,
+  setStory,
+  trackSave,
+}: StoryContextPersistenceDependencies) {
   async function updateCharacterStat(
     characterId: string,
     statId: string,
@@ -142,6 +179,14 @@ export function useStoryContextPersistence({
     );
   }
 
+  return { updateCharacterStat, deleteCharacterStat };
+}
+
+function createStoryStatDefinitionActions({
+  storyId,
+  setStory,
+  trackSave,
+}: StoryContextPersistenceDependencies) {
   async function createStatDefinition(input: CreateStatDefinitionInput) {
     const result = await trackSave(() => api.createStatDefinition(storyId, input));
     if (!result) {
@@ -168,6 +213,14 @@ export function useStoryContextPersistence({
     setStory((current) => (current ? applyStoryMutationMetadata(current, result) : current));
   }
 
+  return { createStatDefinition, updateStatDefinition };
+}
+
+function createStoryItemDefinitionActions({
+  storyId,
+  setStory,
+  trackSave,
+}: StoryContextPersistenceDependencies) {
   async function createItemDefinition() {
     const result = await trackSave(() =>
       api.createItemDefinition(storyId, { name: 'New item', description: '' }),
@@ -196,6 +249,14 @@ export function useStoryContextPersistence({
     setStory((current) => (current ? applyStoryMutationMetadata(current, result) : current));
   }
 
+  return { createItemDefinition, updateItemDefinition };
+}
+
+function createStoryCharacterItemActions({
+  storyId,
+  setStory,
+  trackSave,
+}: StoryContextPersistenceDependencies) {
   async function createCharacterItem(characterId: string, itemDefinitionId: string) {
     const result = await trackSave(() =>
       api.createCharacterItem(storyId, characterId, { itemDefinitionId }),
@@ -218,6 +279,14 @@ export function useStoryContextPersistence({
     );
   }
 
+  return { createCharacterItem, deleteCharacterItem };
+}
+
+function createStoryItemMoveActions({
+  storyId,
+  setStory,
+  trackSave,
+}: StoryContextPersistenceDependencies) {
   async function moveItemInstance(itemId: string, placement: MoveItemInstanceInput) {
     const result = await trackSave(() => api.moveItemInstance(storyId, itemId, placement));
     if (!result) {
@@ -226,20 +295,5 @@ export function useStoryContextPersistence({
     setStory((current) => (current ? mergeServerStory(current, result) : current));
   }
 
-  return {
-    createLocation,
-    updateLocation,
-    createCharacter,
-    updateCharacter,
-    createStatDefinition,
-    updateStatDefinition,
-    createItemDefinition,
-    updateItemDefinition,
-    createCharacterStat,
-    updateCharacterStat,
-    deleteCharacterStat,
-    createCharacterItem,
-    deleteCharacterItem,
-    moveItemInstance,
-  };
+  return { moveItemInstance };
 }
