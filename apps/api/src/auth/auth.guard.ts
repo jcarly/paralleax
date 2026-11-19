@@ -42,7 +42,9 @@ export class SessionGuard implements CanActivate {
       displayName: user.displayName,
       role: user.role,
       createdAt: user.createdAt,
-      ...(user.emailVerifiedAt ? { emailVerifiedAt: user.emailVerifiedAt } : {}),
+      ...(typeof user.emailVerifiedAt === 'string' && user.emailVerifiedAt !== ''
+        ? { emailVerifiedAt: user.emailVerifiedAt }
+        : {}),
     };
     return true;
   }
