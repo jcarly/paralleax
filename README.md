@@ -162,7 +162,7 @@ npm run test:postgres -w @paralleax/api
 Create `paralleax_test` only once; `createdb` reports that it already exists on
 later runs. Never point `POSTGRES_TEST_DATABASE_URL` at the development database:
 the suites deliberately rebuild the tested `public` schema and empty its tables,
-and refuse a database whose name does not contain `test`.
+and refuse a database whose name does not end with `_test`.
 
 Run the opt-in large-story stress test against the same isolated database:
 

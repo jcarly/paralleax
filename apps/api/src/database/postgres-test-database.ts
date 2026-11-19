@@ -33,18 +33,20 @@ export async function waitForPostgres(pool: Pool) {
 }
 
 /**
- * Refuses destructive test setup unless the connected database is named as a
- * test database, so a misconfigured POSTGRES_TEST_DATABASE_URL cannot erase
- * development or production data.
+ * Refuses destructive test setup unless the connected database name ends with
+ * `_test`, so a misconfigured POSTGRES_TEST_DATABASE_URL cannot erase
+ * development or production data (a name such as `paralleax_latest` is refused).
  */
-export async function assertDedicatedTestDatabase(pool: Pool) {
+export async function assertDedicatedTestDatabase(pool: Pick<Pool, 'query'>) {
   const result = await pool.query<{ name: string }>('SELECT current_database() AS name');
-  const name = result.rows[0]?.name ?? '';
-  if (!/test/i.test(name)) {
-    throw new Error(
-      `Refusing to reset "${name}": test databases must include "test" in their name.`,
-    );
+  const name = result.rows.at(0)?.name ?? '';
+  if (!isDedicatedTestDatabaseName(name)) {
+    throw new Error(`Refusing to reset "${name}": test database names must end with "_test".`);
   }
+}
+
+export function isDedicatedTestDatabaseName(name: string): boolean {
+  return /_test$/i.test(name);
 }
 
 /** Replaces the public schema with an empty one, without running migrations. */

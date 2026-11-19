@@ -77,3 +77,12 @@ export function projectTriggers(
       : {}),
   }));
 }
+
+/**
+ * Stored Interactions without a location are projected without `locationId`,
+ * matching authored Interactions. History deltas compare against this form, so
+ * every read path must use it.
+ */
+export function projectInteractionLocationId(locationId: string | null): { locationId?: string } {
+  return locationId === null ? {} : { locationId };
+}

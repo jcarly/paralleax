@@ -311,6 +311,63 @@ it('undoes and redoes clearing an Interaction location', async () => {
   const redone = await revertHistory(story.id, 'redo');
   expect(responseObjectAt(redone, 'interactions', 0)).not.toHaveProperty('locationId');
 });
+async function recordLegacyLocationClear(
+  storyId: string,
+  interactionId: string,
+  locationId: string,
+) {
+  // Before Interactions without a location were read back without locationId,
+  // clearing a location stored `after: null`; such events remain in production.
+  const changes = {
+    kind: 'object',
+    fields: {
+      interactions: {
+        kind: 'entities',
+        entries: {
+          [interactionId]: {
+            before: { index: 0 },
+            after: { index: 0 },
+            delta: {
+              kind: 'object',
+              fields: {
+                locationId: {
+                  kind: 'value',
+                  beforeExists: true,
+                  before: locationId,
+                  afterExists: true,
+                  after: null,
+                },
+              },
+            },
+          },
+        },
+      },
+    },
+  };
+  await pool.query('UPDATE interactions SET location_id = NULL WHERE id = $1', [interactionId]);
+  const revision = await pool.query<{ revision: number }>(
+    'UPDATE stories SET revision = revision + 1 WHERE id = $1 RETURNING revision',
+    [storyId],
+  );
+  await pool.query(
+    `INSERT INTO story_change_events
+       (story_id, actor_user_id, revision, kind, operation, changes, created_at)
+     VALUES ($1, 'test-user', $2, 'change', 'interaction.updated', $3::jsonb, now())`,
+    [storyId, revision.rows[0].revision, JSON.stringify(changes)],
+  );
+}
+it('undoes and redoes a location clear recorded in the legacy null format', async () => {
+  const story = await createStory();
+  const interactionId = (await createInteraction(story.id)).interactions[0].id;
+  const created = await postApi(`/api/stories/${story.id}/locations`, { name: 'Harbor' }, 201);
+  const locationId = responseStringAt(parseResponse(created), 'location', 'id');
+  await patchApi(`/api/stories/${story.id}/interactions/${interactionId}`, { locationId }, 200);
+  await recordLegacyLocationClear(story.id, interactionId, locationId);
+  const undone = await revertHistory(story.id, 'undo');
+  expect(responseObjectAt(undone, 'interactions', 0)).toHaveProperty('locationId', locationId);
+  const redone = await revertHistory(story.id, 'redo');
+  expect(responseObjectAt(redone, 'interactions', 0)).not.toHaveProperty('locationId');
+});
 it('refuses to undo over a later overlapping collaborator change', async () => {
   const ownerCookie = 'paralleax_session=user-one';
   const collaboratorCookie = 'paralleax_session=user-two';

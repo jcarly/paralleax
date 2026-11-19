@@ -923,8 +923,12 @@ undo/redo availability share one history read query after the repository's
 access check. A position-only delta persists all existing interaction positions
 and all existing Trigger positions through at most two JSON-backed bulk updates.
 Undo and redo store the directly inverted source delta, avoiding both a complete
-second diff and a second relational assembly. The editor ignores initial SSE
-readiness and change events whose revision is already local, preventing a second
+second diff and a second relational assembly. Deltas compare exactly with the
+assembled Story, so every read path projects a stored Interaction without a
+location without `locationId`. Events recorded before that projection stored
+the missing location as `null`; `story-history-compatibility.ts` reads those
+values as absent when it loads an undo or redo candidate, without rewriting the
+persisted events. The editor ignores initial SSE readiness and change events whose revision is already local, preventing a second
 full Story reload after its own inverse. Graph projection indexes interactions by
 id once per immutable Story object so trigger placement and edge routing remain
 linear instead of repeatedly scanning every interaction. After a successful local
@@ -1252,7 +1256,7 @@ classes directly.
 - PostgreSQL integration: Jest against PostgreSQL 17, including persistence
   across repository instances and concurrent row mutation coverage. Specs that
   need PostgreSQL are skipped when `POSTGRES_TEST_DATABASE_URL` is unset, and
-  destructive setup refuses a database whose name does not contain `test`.
+  destructive setup refuses a database whose name does not end with `_test`.
 - Web: Vitest and Testing Library.
 - Shared: Vitest for narrative rules and pure story operations.
 - Functional UI: fast Playwright suites with controlled API responses.

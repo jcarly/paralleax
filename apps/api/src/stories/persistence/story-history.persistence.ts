@@ -4,6 +4,7 @@ import {
   type StoryHistoryEntry,
   type StoryHistoryEventKind,
 } from '@paralleax/shared';
+import { normalizeLegacyStoryHistoryDelta } from './story-history-compatibility';
 import type { Queryable } from './stories.persistence.types';
 
 export interface StoryHistoryEventRow {
@@ -82,7 +83,10 @@ export async function findStoryHistoryCandidate(
      LIMIT 1`,
     [storyId, actorUserId, kinds],
   );
-  return result.rows[0];
+  const event = result.rows.at(0);
+  return event === undefined
+    ? undefined
+    : { ...event, changes: normalizeLegacyStoryHistoryDelta(event.changes) };
 }
 
 export async function readStoryHistory(

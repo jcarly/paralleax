@@ -53,7 +53,9 @@ it.each([
   const row = historyRow();
   query.mockResolvedValue({ rows: [row] });
 
-  await expect(findStoryHistoryCandidate(client, 'story-1', 'user-1', action)).resolves.toBe(row);
+  await expect(findStoryHistoryCandidate(client, 'story-1', 'user-1', action)).resolves.toEqual(
+    row,
+  );
   expect(query).toHaveBeenCalledWith(expect.stringContaining('NOT EXISTS'), [
     'story-1',
     'user-1',

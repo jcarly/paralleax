@@ -7,10 +7,15 @@
   with the fake comments repository. Validation, body-limit, rate-limit and 404
   checks moved to a fast HTTP boundary spec that needs no database and uses a
   per-request repository stub. API coverage now runs in the PostgreSQL CI job.
+  Destructive test setup refuses any database whose name does not end with
+  `_test`.
 - Fixed undo and redo of an Interaction creation, and of clearing an
   Interaction location, which PostgreSQL refused as a conflict: stored
   Interactions without a location are now read back without `locationId`, and
-  clearing a location removes the field, matching authored Interactions.
+  clearing a location removes the field, matching authored Interactions. The
+  editor and runtime projections use the same form, and history events recorded
+  before this change, which store a missing location as `null`, are read in the
+  current form so they can still be undone and redone.
 - Split the Story Editor page into focused canvas, inspector, navigation,
   comment, and orchestration modules without changing editor behavior. Removed
   the page's remaining ESLint baseline entry. Story settings now load on demand
