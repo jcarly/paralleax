@@ -333,11 +333,6 @@
       "count": 1
     }
   },
-  "apps/api/src/stories/application/choicescript-import-worker.service.ts": {
-    "@typescript-eslint/strict-boolean-expressions": {
-      "count": 1
-    }
-  },
   "apps/api/src/stories/application/qsp-import-progress.service.ts": {
     "@typescript-eslint/prefer-optional-chain": {
       "count": 2
