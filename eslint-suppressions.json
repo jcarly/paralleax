@@ -323,14 +323,6 @@
       "count": 1
     }
   },
-  "apps/api/src/stories/application/qsp-import-progress.service.ts": {
-    "@typescript-eslint/prefer-optional-chain": {
-      "count": 2
-    },
-    "@typescript-eslint/strict-boolean-expressions": {
-      "count": 2
-    }
-  },
   "apps/api/src/stories/application/qsp-import-worker.service.spec.ts": {
     "@typescript-eslint/no-unnecessary-condition": {
       "count": 1
