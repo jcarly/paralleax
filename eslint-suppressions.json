@@ -2087,11 +2087,6 @@
       "count": 1
     }
   },
-  "apps/web/src/main.tsx": {
-    "@typescript-eslint/no-non-null-assertion": {
-      "count": 1
-    }
-  },
   "apps/web/src/observability/sentry.ts": {
     "@typescript-eslint/strict-boolean-expressions": {
       "count": 4
