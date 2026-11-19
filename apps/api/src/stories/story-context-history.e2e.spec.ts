@@ -1,4 +1,5 @@
 import 'reflect-metadata';
+import type { StoryChangeDelta } from '@paralleax/shared';
 import { Pool } from 'pg';
 import * as request from 'supertest';
 import { DatabaseMigrator } from '../database/database.migrator';
@@ -10,6 +11,7 @@ import {
   sharedPostgresTestConnection,
   truncatePostgresTestTables,
 } from '../database/postgres-test-database';
+import { normalizeLegacyStoryHistoryDelta } from './persistence/story-history-compatibility';
 import {
   parseResponse,
   responseObjectArrayAt,
@@ -60,6 +62,21 @@ async function revertHistory(storyId: string, action: 'undo' | 'redo'): Promise<
   return responseObjectAt(parseResponse(response), 'story');
 }
 
+async function latestEventChanges(storyId: string): Promise<StoryChangeDelta> {
+  const result = await pool.query<{ changes: StoryChangeDelta }>(
+    'SELECT changes FROM story_change_events WHERE story_id = $1 ORDER BY id DESC LIMIT 1',
+    [storyId],
+  );
+  return result.rows[0].changes;
+}
+
+// New events must already be in the read-back form: the compatibility read that
+// undo applies to events recorded before this fix must find nothing to change.
+async function expectStoredFormEvent(storyId: string) {
+  const changes = await latestEventChanges(storyId);
+  expect(normalizeLegacyStoryHistoryDelta(changes)).toEqual(changes);
+}
+
 const creations = [
   { name: 'a Location', path: 'locations', field: 'locations', body: { name: 'Harbor' } },
   { name: 'a Character', path: 'characters', field: 'characters', body: { name: 'Ann' } },
@@ -81,6 +98,7 @@ for (const creation of creations) {
   it(`undoes and redoes the creation of ${creation.name}`, async () => {
     const storyId = await createStoryId();
     await postApi(`/api/stories/${storyId}/${creation.path}`, creation.body, 201);
+    await expectStoredFormEvent(storyId);
 
     expect(responseObjectArrayAt(await revertHistory(storyId, 'undo'), creation.field)).toEqual([]);
     expect(responseObjectArrayAt(await revertHistory(storyId, 'redo'), creation.field)).toEqual([
@@ -96,6 +114,7 @@ it('undoes and redoes clearing a Location image', async () => {
   const imageUrl = 'https://images.example/harbor.png';
   await patchApi(path, { imageUrl }, 200);
   await patchApi(path, { imageUrl: '' }, 200);
+  await expectStoredFormEvent(storyId);
 
   const undone = await revertHistory(storyId, 'undo');
   expect(responseObjectAt(undone, 'locations', 0)).toHaveProperty('imageUrl', imageUrl);
@@ -112,6 +131,7 @@ it('undoes and redoes making a Character non-playable', async () => {
   );
   const characterId = responseStringAt(parseResponse(created), 'character', 'id');
   await patchApi(`/api/stories/${storyId}/characters/${characterId}`, { isPlayable: false }, 200);
+  await expectStoredFormEvent(storyId);
 
   const undone = await revertHistory(storyId, 'undo');
   expect(responseObjectAt(undone, 'characters', 0)).toHaveProperty('isPlayable', true);
