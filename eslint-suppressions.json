@@ -212,11 +212,6 @@
       "count": 1
     }
   },
-  "apps/api/src/imports/import-job.service.ts": {
-    "@typescript-eslint/prefer-optional-chain": {
-      "count": 1
-    }
-  },
   "apps/api/src/imports/import-report-storage.spec.ts": {
     "@typescript-eslint/no-non-null-assertion": {
       "count": 1
