@@ -1,3 +1,7 @@
+// The editor toolbar renders this icon while StorySettingsDialog loads on demand,
+// so the toolbar button styles must load with the icon, not with the dialog.
+import './storySettingsIcon.css';
+
 export function StorySettingsIcon() {
   return (
     <svg aria-hidden="true" viewBox="0 0 24 24">
