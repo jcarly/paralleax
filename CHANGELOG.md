@@ -2,6 +2,12 @@
 
 ## Unreleased
 
+- Accepted ADR-046, the target project structure: narrative invariants move
+  from API services to `packages/shared`, application services use error classes
+  mapped to HTTP by one exception filter, persistence ports are introduced when
+  an area is touched (never with an in-memory twin), foreign-format importers
+  move to a `packages/importers` workspace, and each layer has an explicit test
+  strategy. Migration is incremental and tracked in the code quality backlog.
 - Fixed undo and redo of creating a Location, a Character or an Item
   definition, of clearing an image URL, and of making a Character non-playable,
   which PostgreSQL refused as a conflict. History events now record the

@@ -1739,6 +1739,40 @@ versions and runtime requirements when a task is scheduled.
       when the measured tradeoff is negative. This is not a prerequisite for
       extending importer support.
 
+## ADR-046 Migration (2026-11-19)
+
+Incremental steps of
+[ADR-046](decisions/ADR-046-target-project-structure.md). Each step ships with
+its tests and the matching lint or dependency rule; none blocks product work.
+Take a step when its area is touched, in this order when there is a choice.
+
+- [ ] **P1 — Application errors.** Add application and domain error classes and
+      map them in the API exception filter to the existing
+      `{ status, code, message }` body. Convert one application area first, then
+      the others when touched. **Acceptance:** API responses are unchanged; the
+      converted area imports no NestJS HTTP exception; an ESLint
+      `no-restricted-imports` rule keeps it that way per converted folder.
+- [ ] **P1 — Narrative invariants in `shared`.** Move one family at a time from
+      API application services to `packages/shared`, with shared unit tests:
+      same-Story references, then stats and effects, then condition validity.
+      **Acceptance:** the API calls the shared rule and keeps no copy of it.
+- [ ] **P2 — `packages/importers` workspace.** Move the QSP and ChoiceScript
+      importers and `@qsp/converters` out of `packages/shared` when the native
+      Story format work starts; keep the import report contract in `shared`.
+      **Acceptance:** dependency-cruiser forbids `shared` → `importers`; the web
+      bundle still excludes importer code.
+- [ ] **P2 — Persistence ports and module split.** When the Story or comment
+      persistence is next touched, introduce its port (an abstract class used as
+      the injection token) and split the repository and writer by
+      responsibility. **Acceptance:** application services no longer import
+      `stories.repository.ts`; no in-memory implementation of the port exists.
+- [ ] **P2 — Web features first.** Move root graph modules to
+      `features/story-editor/graph/` and feature inspectors out of `components/`
+      when touched. **Acceptance:** the React Flow allowlist shrinks accordingly.
+- [ ] **P2 — Replace SQL-text stubs.** Replace unit specs that stub PostgreSQL by
+      matching SQL text (`stories.repository.spec.ts` and three persistence
+      specs) with PostgreSQL specs when their module is touched.
+
 ## Delivery Notes
 
 - Perform module extraction in behavior-preserving slices, not a broad rewrite.

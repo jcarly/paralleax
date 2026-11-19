@@ -49,7 +49,7 @@ This folder records accepted architecture and product-shaping decisions.
 - [ADR-042 - Tiptap and CodeMirror for Rich Text Authoring](ADR-042-tiptap-and-codemirror-rich-text-authoring.md)
 - [ADR-044 - Railway App Services as a Named IaC Partial](ADR-044-railway-apps-partial-iac.md)
 - [ADR-045 - Shared Interaction Presentation Across Authoring and Reading Views](ADR-045-shared-interaction-presentation.md)
-- [ADR-046 - Target Project Structure: Pragmatic Ports and Adapters](ADR-046-target-project-structure.md) (proposed)
+- [ADR-046 - Target Project Structure: Pragmatic Ports and Adapters](ADR-046-target-project-structure.md)
 
 ## Proposals
 

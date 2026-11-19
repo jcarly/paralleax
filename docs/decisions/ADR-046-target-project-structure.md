@@ -1,7 +1,7 @@
 # ADR-046 - Target Project Structure: Pragmatic Ports and Adapters
 
-**Status:** Proposed  
-**Date:** 2026-11-19
+**Status:** Accepted  
+**Date:** 2026-11-19 (proposed and accepted the same day)
 
 ## Context
 
@@ -47,7 +47,7 @@ A textbook hexagonal architecture would add a port interface and an in-memory
 adapter for every dependency. The last finding is the reason this ADR does not:
 a second implementation of persistence is exactly what failed.
 
-## Decision (proposed)
+## Decision
 
 Adopt a pragmatic ports-and-adapters structure: one pure domain, use cases that
 know only the domain and the ports they own, adapters at the edges, and no
@@ -169,12 +169,14 @@ Each step is a backlog entry with its own tests; none blocks product work:
 - **Full hexagonal: ports and in-memory adapters everywhere.** Rejected: it
   recreates the parallel persistence implementation that hid real bugs, and
   adds interfaces with a single implementation.
-- **Importers as a `@paralleax/shared/import` sub-export.** Cheaper, but the
-  dependency and code still ship with the engine package; kept as a fallback if
-  a workspace is not worth it.
-- **Result types instead of error classes.** More explicit, but a larger change
-  across every service and controller; error classes fit the existing NestJS
-  exception filter.
+- **Importers as a `@paralleax/shared/import` sub-export.** Rejected: cheaper,
+  but the code and `@qsp/converters` would still ship with the engine package.
+- **Result types instead of error classes.** Rejected: more explicit, but a
+  larger change across every service and controller; error classes fit the
+  existing NestJS exception filter.
+- **Persistence ports only once a second adapter exists.** Rejected: the point
+  of a port here is the dependency direction, not substitution. Ports are
+  introduced when their area is next touched (section 2).
 
 ## Consequences
 
@@ -186,11 +188,10 @@ Each step is a backlog entry with its own tests; none blocks product work:
 - Unchanged: the domain invariants, the HTTP API contract, persisted data, and
   ADR-003's engine boundary.
 
-## Open questions
+## Resolved questions
 
-To settle before this ADR is accepted:
+Settled by the author on 2026-11-19:
 
-1. `packages/importers` workspace, or the sub-export fallback?
-2. Error classes, or result types?
-3. Introduce persistence ports when touched, or not before a second adapter
-   exists?
+1. Importers: a separate `packages/importers` workspace.
+2. Errors: application and domain error classes, mapped by one exception filter.
+3. Persistence ports: introduced when their area is next touched.

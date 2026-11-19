@@ -63,6 +63,11 @@ orchestration, transactions, migrations, and persistence.
 
 Do not duplicate narrative rules here when they belong in `packages/shared`.
 
+Application services throw application or domain errors, mapped to HTTP by the
+exception filter; they do not throw NestJS HTTP exceptions. Depend on a port
+rather than a concrete repository when an area is next touched, and never add a
+complete in-memory implementation of a port. See ADR-046.
+
 ### `apps/web`
 
 Owns rendering, browser behavior, React state, React Flow projection, selection,
@@ -356,7 +361,8 @@ source parser
   → import
 ```
 
-Keep source-specific code outside the narrative engine.
+Keep source-specific code outside the narrative engine: new importer code
+targets the `packages/importers` workspace (ADR-046).
 
 ## Prohibited agent behavior
 
