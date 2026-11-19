@@ -50,7 +50,9 @@ Consequences:
   absence of negative feedback is not evidence that the editor is clear; task 10
   reads feedback together with simple activity counts.
 - The 2026-11-18 decision (Story format and native export first in "Next") is
-  unchanged.
+  unchanged. Native export is **not** a prerequisite of the open alpha: operator
+  backups protect stored work, and the alpha notice states that authors cannot
+  export their Stories yet. Export stays the first "Next" item after opening.
 
 ## Priority decision, 2026-11-18
 
@@ -113,10 +115,6 @@ These items come from the 2026-11-18 documentation review and the 2026-11-19
 priority review. They need an
 explicit decision before they change the order above.
 
-- **Native export before the open alpha.** Authors invited to store real work
-  may need to get their Stories back out; operator backups do not give them
-  that. Decide whether task 9 waits for "Next" item 1, a minimal raw JSON
-  export, or neither (the alpha notice then states the limitation).
 - **Engine-oriented data export**, to validate with users. If collected feedback
   confirm the studio and visual-novel hypothesis, it becomes the next priority
   after the Story format:

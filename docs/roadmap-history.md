@@ -223,7 +223,7 @@ and 11 are new. Where an acceptance criterion says "observed evidence" or
    **Depends on:** tasks 2, 5, 8 and 11, and every gate marked for open creator
    alpha (since 2026-11-19; it previously depended on tasks 4–7).
    **Acceptance:** remaining limitations (including the absence of native
-   export, if task 7 is not done) and operating procedures are documented in the
+   export, decided 2026-11-19) and operating procedures are documented in the
    alpha notice; essential tasks have observable outcomes and no unresolved
    data/security blocker; a test submission reaches the feedback survey with
    its hidden context fields.
