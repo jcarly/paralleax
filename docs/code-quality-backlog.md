@@ -1844,26 +1844,36 @@ Incremental steps of
 its tests and the matching lint or dependency rule; none blocks product work.
 Take a step when its area is touched, in this order when there is a choice.
 
-- [ ] **P1 — Application errors.** Add application and domain error classes and
-      map them in the API exception filter to the existing
-      `{ status, code, message }` body. Convert one application area first, then
-      the others when touched. **Acceptance:** API responses are unchanged; the
-      converted area imports no NestJS HTTP exception; an ESLint
-      `no-restricted-imports` rule keeps it that way per converted folder.
 - [ ] **P1 — Narrative invariants in `shared`.** Move one family at a time from
       API application services to `packages/shared`, with shared unit tests:
       same-Story references, then stats and effects, then condition validity.
-      **Acceptance:** the API calls the shared rule and keeps no copy of it.
+      The first move adds the domain error class and its exception-filter
+      mapping. **Acceptance:** the API calls the shared rule and keeps no copy
+      of it; responses keep the full error contract of ADR-046 section 1
+      (status, specific `code`, message, `details`, `requestId`, no Sentry
+      capture for expected errors), covered by filter specs.
+- [ ] **P1 — Application errors.** Replace the remaining NestJS HTTP exceptions
+      in application services, one area at a time. **Acceptance:** API
+      responses are unchanged on every field of the error contract; the
+      converted area imports no NestJS HTTP exception; an ESLint
+      `no-restricted-imports` rule keeps it that way per converted folder.
 - [ ] **P2 — `packages/importers` workspace.** Move the QSP and ChoiceScript
       importers and `@qsp/converters` out of `packages/shared` when the native
       Story format work starts; keep the import report contract in `shared`.
-      **Acceptance:** dependency-cruiser forbids `shared` → `importers`; the web
+      **Acceptance:** the workspace is in every quality gate like the others
+      (root build, lint, typecheck, test and coverage scripts, the
+      dependency-cruiser scan, CI change filters and jobs, the production
+      Docker build); dependency-cruiser forbids `shared` → `importers`; the web
       bundle still excludes importer code.
 - [ ] **P2 — Persistence ports and module split.** When the Story or comment
       persistence is next touched, introduce its port (an abstract class used as
       the injection token) and split the repository and writer by
-      responsibility. **Acceptance:** application services no longer import
-      `stories.repository.ts`; no in-memory implementation of the port exists.
+      responsibility, one port per cohesive consumer need with a shared
+      transaction boundary (ADR-046 section 2). **Acceptance:** application
+      services no longer import `stories.repository.ts`; a dependency-cruiser
+      rule forbids application → outbound adapter imports, its existing
+      violations recorded once through a reviewed baseline transition and only
+      shrinking afterwards; no in-memory implementation of the port exists.
 - [ ] **P2 — Web features first.** Move root graph modules to
       `features/story-editor/graph/` and feature inspectors out of `components/`
       when touched. **Acceptance:** the React Flow allowlist shrinks accordingly.
