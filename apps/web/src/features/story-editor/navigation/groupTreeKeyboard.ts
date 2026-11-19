@@ -60,7 +60,7 @@ function handleMoveShortcut(
   if (!(event.ctrlKey || event.metaKey) || context.readOnly) {
     return false;
   }
-  const directions: Record<string, GroupMoveDirection> = {
+  const directions: Partial<Record<string, GroupMoveDirection>> = {
     ArrowUp: 'up',
     ArrowDown: 'down',
     ArrowRight: 'in',
