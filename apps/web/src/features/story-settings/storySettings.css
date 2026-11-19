@@ -38,16 +38,6 @@
   opacity: 1;
 }
 
-.story-settings-heading-icon svg,
-.story-settings-button svg {
-  width: 20px;
-  fill: none;
-  stroke: currentColor;
-  stroke-linecap: round;
-  stroke-linejoin: round;
-  stroke-width: 1.7;
-}
-
 .story-settings-properties > p,
 .settings-card > p {
   margin: 0;
@@ -175,26 +165,6 @@
   min-width: 0;
   align-items: center;
   gap: 0.2rem;
-}
-
-.story-settings-button {
-  display: grid;
-  width: 34px;
-  height: 34px;
-  flex: none;
-  place-items: center;
-  padding: 0;
-  border: 1px solid transparent;
-  background: transparent;
-  color: var(--color-muted);
-  box-shadow: none;
-}
-
-.story-settings-button:hover,
-.story-settings-button:focus-visible {
-  border-color: var(--color-border);
-  background: var(--color-surface);
-  color: var(--color-primary);
 }
 
 @media (max-width: 760px) {

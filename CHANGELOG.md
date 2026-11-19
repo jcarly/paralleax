@@ -2,6 +2,11 @@
 
 ## Unreleased
 
+- Fixed the Story settings toolbar button rendering without its styles until
+  the settings dialog was first opened: the button styles now load with the
+  icon instead of with the on-demand dialog. The CI Quality build now uses the same
+  empty build variables as the production image, so both measure the same
+  bundle and a budget overrun fails in the pull request that causes it.
 - Split the Story Editor page into focused canvas, inspector, navigation,
   comment, and orchestration modules without changing editor behavior. Removed
   the page's remaining ESLint baseline entry. Story settings now load on demand

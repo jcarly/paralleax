@@ -101,3 +101,14 @@ async function expectActionColors(
   await expect(locator).toHaveCSS('color', expected.color);
   await expect(locator).toHaveCSS('border-top-color', expected.borderColor);
 }
+
+test('styles the Story settings toolbar button before its dialog loads', async ({ page }) => {
+  await prepareEditorPage(page);
+  await page.goto('/stories/story-1/edit');
+  await expect(page.getByTestId('interaction-node')).toBeVisible();
+  const settingsButton = page.getByRole('button', { name: 'Story settings' });
+  // The dialog loads on demand; the button's stylesheet must already apply.
+  await expect(page.getByRole('dialog', { name: 'Story settings' })).toHaveCount(0);
+  await expect(settingsButton).toHaveCSS('width', '34px');
+  await expect(settingsButton.locator('svg')).toHaveCSS('width', '20px');
+});
