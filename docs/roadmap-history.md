@@ -191,14 +191,29 @@ and 11 are new. Where an acceptance criterion says "observed evidence" or
    loses. Instead of making them durable, send the complete report to the
    browser when analysis or import ends, offer the download from there, and
    delete the server copy. Drop the 7-day retention promise from the import
-   documentation and the interface. Keep the cancellation lifecycle unchanged.
-   **Depends on:** none. **Acceptance:** completed, failed and cancelled imports
-   each give a downloadable report without a second request; the API keeps no
-   report after the response; the warning-confirmation flow still works; the
-   documentation states that a report closed without downloading is lost.
-   Durable storage (`PARALLEAX_IMPORT_REPORT_DIR` on a volume or an object-store
-   adapter, plus persisted job metadata) is deferred until a use case needs
+   documentation and the interface. Keep the cancellation lifecycle unchanged:
+   a user-initiated cancel aborts the request, closes the dialog and creates
+   no Story, so it has no report to deliver.
+   **Depends on:** none. **Acceptance:**
+   - completed and failed imports, and analyses that stop on warnings, return a
+     downloadable report in the same response, without a second request;
+   - a user-initiated cancel keeps its current behavior (no Story, no report);
+     a network loss or a closed page before the response also creates no
+     retained report, and the API discards the partial report file;
+   - the API keeps no report after the response ends, whatever the outcome;
+   - the report is streamed from the worker's report file to the response
+     rather than assembled in API memory: on the large QSP import fixture,
+     API peak memory does not grow with the issue count beyond a bounded
+     buffer, and the browser offers the download without parsing the full
+     report into objects;
+   - the warning-confirmation flow still works;
+   - the documentation states that a report closed without downloading is
+     lost.
+
+   **Deferred:** durable storage (`PARALLEAX_IMPORT_REPORT_DIR` on a volume or
+   an object-store adapter, plus persisted job metadata), until a use case needs
    retained reports.
+
 9. **Open the creator alpha.** Close the applicable provider abuse,
    secret/container scanning, manual keyboard/focus, and measured performance
    gates in [Production readiness](production-readiness.md), configure the
