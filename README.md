@@ -68,7 +68,7 @@ The original MVP is kept as a historical milestone in [MVP](docs/mvp.md).
 
 ## Requirements
 
-- Node.js 24.x
+- Node.js 26.x
 - npm 12+
 
 On PowerShell, use `npm.cmd` if `npm` is blocked by the Windows execution policy.
@@ -233,7 +233,7 @@ restoration with the matching version of `pg_dump`.
 
 ## Docker
 
-The Docker setup pins the environment to Node.js 24 and starts a local
+The Docker setup pins the environment to Node.js 26 and starts a local
 PostgreSQL database for persisted Paralleax stories and reader progress.
 
 In development, the repository is mounted inside the container. Source changes

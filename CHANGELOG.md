@@ -2,6 +2,8 @@
 
 ## Unreleased
 
+- Moved the toolchain to Node 26, the current LTS line: `engines.node`, CI and
+  the production and development Docker images change together.
 - Restored the Node 24 production and development Docker base images after
   Dockerfile-only Dependabot bumps to Node 26 broke CI on `main`. CI now runs
   the operational tests for any Dockerfile or workflow change, and a test fails
