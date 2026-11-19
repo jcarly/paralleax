@@ -105,7 +105,10 @@ delete both legacy values from the deployment environment before release.
 ## Build And Release
 
 The multi-stage `Dockerfile` uses Node 24, matching the repository and CI, and
-has two production targets. Each compiles the shared
+has two production targets. `npm run test:operations` fails when the Node major
+in the Docker images or CI differs from `engines.node` in `package.json`, and CI
+runs it for every Dockerfile or workflow change, so a Node upgrade must change
+all three together. Each compiles the shared
 package and only the application in its target, so web source changes do not
 affect the API image build and vice versa:
 
