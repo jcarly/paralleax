@@ -1,6 +1,6 @@
 # Roadmap
 
-Status reviewed: 2026-11-18.
+Status reviewed: 2026-11-19.
 
 This page answers one question: **what comes next, and in which order?** It is
 deliberately short. What exists today is in [Current scope](current-scope.md).
@@ -12,6 +12,47 @@ Product positioning, the audience hypothesis, and the competitive context are in
 [Positioning](positioning.md). Operational gates are in
 [Production readiness](production-readiness.md); implementation debt is in the
 [Code quality backlog](code-quality-backlog.md).
+
+## Priority decision, 2026-11-19
+
+**Goal: open the creator alpha to everyone and collect feedback continuously**,
+instead of running guided author sessions first. Organizing guided sessions is
+too costly; feedback comes from the in-app feedback button
+([Formbricks](operations/formbricks-feedback.md)) and from real use.
+
+Consequences:
+
+- The open-alpha gates in [Production readiness](production-readiness.md)
+  become the critical path, starting with the valuable-project safety gate (P0):
+  strangers will store real work. Backups use a scheduled, encrypted `pg_dump`
+  uploaded outside the hosting provider (object storage such as Backblaze B2
+  costs a few cents a month at alpha size); provider-native backups alone do not
+  meet the separate-failure-domain gate.
+- QSP and ChoiceScript imports stay available. Their reports are sent to the
+  browser without server-side storage (task 8, redefined), which removes the
+  durable-storage prerequisite; durable retention is deferred.
+- The Interaction inspector legibility pass (task 11) is required before
+  opening: authors discover Paralleax without a moderator. The rest of the
+  design and clarity pass stays proposed.
+- Guided sessions (former tasks 1, 3 and 4) become optional. Run one only to
+  answer a specific question that feedback cannot.
+- Refactoring is **not** frozen. It continues in parallel, with CI guarding
+  regressions, when it serves a [backlog](code-quality-backlog.md) entry or an
+  area that a current task touches. It does not replace a task of the sequence
+  below.
+- Entries below that waited on guided sessions (collaboration groundwork, the
+  audience hypothesis behind engine export) now wait on collected feedback. The
+  feedback survey asks the author's profile so the
+  [audience hypothesis](positioning.md#audience-hypothesis) can still be tested;
+  its questions and verification are in
+  [Formbricks feedback](operations/formbricks-feedback.md#open-alpha-survey).
+- Feedback is self-selected: authors who give up early rarely answer it. The
+  absence of negative feedback is not evidence that the editor is clear; task 10
+  reads feedback together with simple activity counts.
+- The 2026-11-18 decision (Story format and native export first in "Next") is
+  unchanged. Native export is **not** a prerequisite of the open alpha: operator
+  backups protect stored work, and the alpha notice states that authors cannot
+  export their Stories yet. Export stays the first "Next" item after opening.
 
 ## Priority decision, 2026-11-18
 
@@ -29,27 +70,21 @@ unchanged.
 
 ## Now
 
-Validate the essential authoring journey with external authors, on disposable
-projects, and make the platform safe for valuable data. Full task descriptions,
-dependencies, and acceptance criteria are in
-[Next delivery tasks](roadmap-history.md#next-delivery-tasks).
+Make the product safe and clear enough to open publicly, then learn from
+feedback. Task numbers refer to
+[Next delivery tasks](roadmap-history.md#next-delivery-tasks); their acceptance
+criteria still apply, except that "observed evidence" now means collected
+feedback.
 
-| #   | Task                                                  | Status                        |
-| --- | ----------------------------------------------------- | ----------------------------- |
-| 1   | Prepare the alpha session brief                       | To do                         |
-| 2   | Complete confirmed Lot A quick fixes                  | To do                         |
-| 3   | Run guided author sessions on disposable projects     | To do                         |
-| 4   | Triage observations and close essential blockers      | After 3                       |
-| 5   | Complete the valuable-project safety gate (P0)        | Can run in parallel           |
-| 6   | Ship the next UX improvement selected by observation  | After 4                       |
-| 8   | Make import reports durable                           | Before production imports     |
-| 9   | Prepare any open creator alpha from observed evidence | After 4–7 (and 8 for imports) |
-
-Recommended addition to the session brief (task 1): test the
-[audience hypothesis](positioning.md#audience-hypothesis). Include at least one
-studio or visual-novel participant alongside other author profiles, and one task
-that follows a Story from the editor to the data an engine would consume, even
-before export exists, to learn what that data must contain.
+| #          | Task                                                       | Status                                                                                                                                       |
+| ---------- | ---------------------------------------------------------- | -------------------------------------------------------------------------------------------------------------------------------------------- |
+| 2          | Complete confirmed Lot A quick fixes                       | 1 of 3 implemented (Story deletion confirmation, still untested); localized default Interaction text and the "add a choice" wording remain   |
+| 5          | Complete the valuable-project safety gate (P0)             | To do: legacy-data migration test, scheduled encrypted off-host `pg_dump` and restore drill, staging and HTTPS verification                  |
+| 8          | Deliver import reports without server-side retention       | To do: send the full report to the browser, keep no server copy, drop the 7-day retention promise                                            |
+| 11         | Make the Interaction inspector legible                     | To do: mockup validated by the author first, then implementation                                                                             |
+| 9          | Open the creator alpha                                     | After 2, 5, 8 and 11: close the open-alpha gates, rehearse manual account export/deletion, configure the feedback survey, publish the notice |
+| 10         | Triage feedback and ship the next improvement it points to | Continuous, from 9                                                                                                                           |
+| 1, 3, 4, 6 | Guided sessions and observation triage                     | Optional since 2026-11-19                                                                                                                    |
 
 ## Next
 
@@ -71,15 +106,16 @@ Former task 7, promoted.
 
 Unchanged from the milestone detail (V0.3 / V0.8): field-scoped concurrency and
 text merging per [ADR-034](decisions/ADR-034-collaborative-offline-authoring.md),
-when guided sessions show that the current invalidate-and-
+when collected feedback shows that the current invalidate-and-
 reload model blocks real teams.
 
 ## Proposed, not yet decided
 
-These items are recommended by the 2026-11-18 documentation review. They need an
+These items come from the 2026-11-18 documentation review and the 2026-11-19
+priority review. They need an
 explicit decision before they change the order above.
 
-- **Engine-oriented data export**, to validate with users. If guided sessions
+- **Engine-oriented data export**, to validate with users. If collected feedback
   confirm the studio and visual-novel hypothesis, it becomes the next priority
   after the Story format:
   - define what an engine needs beyond the backup format: a runtime-oriented
@@ -108,6 +144,20 @@ explicit decision before they change the order above.
 - **Ink-inspired source mode.** Keep as planned in
   [ADR-043](decisions/ADR-043-ink-inspired-narrative-source.md); writers in
   studios often prefer text and version control.
+- **Design and clarity pass.** Make the editor read before it edits (the
+  inspector part is task 11 in "Now"): fewer words in favour of icons, graph zoom, and authored
+  information (Trigger conditions, effects) visible on the graph. Product topics
+  that need definition first: code mode, Groups as an explorer, Simulation,
+  linear writing, and the actor / spectator distinction. Inventory in the
+  [backlog](code-quality-backlog.md#design-and-clarity-2026-11-19). Each topic
+  starts with a mockup. First step: test a mockup tool (static HTML first)
+  before removing the code prototype; see
+  [UI prototype](ui-prototype.md#status-2026-11-19).
+
+The architecture review proposed on 2026-11-19 is decided in
+[ADR-046](decisions/ADR-046-target-project-structure.md). Its migration steps
+are refactoring under the 2026-11-19 rule: they proceed in parallel and are
+tracked in the [backlog](code-quality-backlog.md#adr-046-migration-2026-11-19).
 
 ## Before V1.0
 

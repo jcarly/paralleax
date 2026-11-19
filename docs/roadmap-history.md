@@ -104,7 +104,17 @@ sync-status refinement ahead of the author sessions as a narrow, directly
 specified usability adjustment. This does not replace the later session-led UX
 selection in task 6 or commit to a broader editor-menu redesign.
 
-1. **Prepare the alpha session brief.** Reuse the private-alpha runbook to state
+**Priority decision, 2026-11-19:** open the creator alpha publicly and collect
+feedback continuously instead of running guided sessions first (see the
+[roadmap](roadmap.md#priority-decision-2026-11-19)). The task definitions below
+are updated to that decision; the dated decisions above are kept as history.
+Tasks 1, 3, 4 and 6 are optional: run a guided session only to answer a
+specific question that feedback cannot. Task 8 now delivers the report without
+server-side storage, task 5 names the selected backup approach, and tasks 10
+and 11 are new. Where an acceptance criterion says "observed evidence" or
+"session evidence", collected feedback now provides it.
+
+1. **Prepare the alpha session brief.** _Optional since 2026-11-19._ Reuse the private-alpha runbook to state
    the hypotheses, representative author tasks, project-data boundary, and a
    lightweight observation record for first-time, narrative-tool-experienced,
    and professional authors. Include optional observation prompts about writing
@@ -116,11 +126,13 @@ selection in task 6 or commit to a broader editor-menu redesign.
 2. **Complete confirmed Lot A quick fixes.** Resolve the destructive
    library-delete path and the confirmed untranslated default; make the bounded
    create/link label change if browser reproduction supports it. **Depends on:**
-   task 1 and the existing implementation/test environment. **Acceptance:**
+   the existing implementation/test environment (task 1 is no longer a
+   prerequisite since 2026-11-19). **Acceptance:**
    confirmed code gaps pass their Lot A scenarios; unverified discovery reports
    have a defined observation task and do not expand this preparation into a
    redesign.
-3. **Run guided author sessions on disposable projects.** Cover creating and
+3. **Run guided author sessions on disposable projects.** _Optional since
+   2026-11-19._ Cover creating and
    connecting Interactions (including drag and drop), editing rich content,
    conditions and effects, running Simulation, saving, reloading, and recovering
    from a failed save. Use the optional prompts in task 1 when they fit the
@@ -128,7 +140,8 @@ selection in task 6 or commit to a broader editor-menu redesign.
    invitation/test environment. **Acceptance:**
    each observed task has a concise outcome and evidence; no valuable user-owned
    project data is introduced.
-4. **Triage observations and close essential blockers.** Separate data/security
+4. **Triage observations and close essential blockers.** _Optional since
+   2026-11-19; task 10 replaces it for collected feedback._ Separate data/security
    hazards and failures in the core authoring journey from workarounds, isolated
    preferences, and new feature ideas. Compare themes with the anonymized
    [product discovery synthesis](product-discovery-synthesis.md) without
@@ -145,10 +158,17 @@ selection in task 6 or commit to a broader editor-menu redesign.
    migration regression, configure monitored encrypted off-site backups, record
    a provider restore drill, verify the HTTPS/secrets/staging path, complete the
    operator notice/recovery/request procedures, and test application rollback.
-   **Can run in parallel with:** tasks 1–4. **Acceptance:** evidence is recorded
+   **Backup approach (2026-11-19):** a scheduled run of the existing
+   `npm run db:backup` (`pg_dump`) command, encrypted, uploaded to object
+   storage outside the hosting provider (Backblaze B2 or an equivalent
+   S3-compatible store), with an alert on failure and a retention window.
+   Provider-native volume backups may be added for fast restores but do not
+   satisfy the separate-failure-domain gate on their own.
+   **Can run in parallel with:** tasks 2 and 11. **Acceptance:** evidence is recorded
    for each applicable P0 gate; only then may invited authors rely on Paralleax
    to retain valuable project data.
-6. **Ship the next UX improvement selected by observation.** Choose one
+6. **Ship the next UX improvement selected by observation.** _Optional since
+   2026-11-19; task 10 replaces it for collected feedback._ Choose one
    independently usable improvement on any product surface from
    [UX Quick Wins](code-quality-backlog.md#ux-quick-wins--préparation-des-tests)
    or the detailed
@@ -160,24 +180,81 @@ selection in task 6 or commit to a broader editor-menu redesign.
 7. **Define and deliver native Paralleax backup/export and restore/import.**
    Specify the supported authored Story data and validation/diagnostic behavior,
    then verify a saved Story can be restored without loss of supported entities
-   or links. **Can run in parallel with:** task 6 after the supported model
-   boundary is agreed. **Acceptance:** round-trip evidence covers representative
+   or links. **Can run in parallel with:** the tasks above once the supported
+   model boundary is agreed. **Acceptance:** round-trip evidence covers representative
    Stories and invalid input is rejected before persistence. This task does not
    depend on advanced collaboration, offline authoring, or text-merge support.
-8. **Make import reports durable before promising retained reports or production
-   imports.** Keep report retention and job metadata separate from the
-   already implemented cancellation lifecycle. **Depends on:** the import
-   workflow's retention promise and storage choice. **Acceptance:** completed,
-   failed, and cancelled diagnostics survive the supported restart/instance
-   boundary, with documented ownership and retention.
-9. **Prepare any open creator alpha from observed evidence.** Close the applicable
-   provider abuse, secret/container scanning, manual keyboard/focus, and measured
-   performance gates in [Production readiness](production-readiness.md), then
-   repeat the essential author tasks. **Depends on:** tasks 4–7, task 8 when
-   production imports are included, and every gate marked for open creator alpha.
-   **Acceptance:** remaining limitations and
-   operating procedures are documented; essential tasks have observable outcomes
-   and no unresolved data/security blocker.
+8. **Deliver import reports without server-side retention.** _Redefined
+   2026-11-19._ QSP and ChoiceScript imports are already available to every
+   signed-in user, and their reports currently live in an ephemeral API
+   directory and an in-memory job map that a restart or a second instance
+   loses. Instead of making them durable, send the complete report to the
+   browser when analysis or import ends, offer the download from there, and
+   delete the server copy. Drop the 7-day retention promise from the import
+   documentation and the interface. Keep the cancellation lifecycle unchanged:
+   a user-initiated cancel aborts the request, closes the dialog and creates
+   no Story, so it has no report to deliver.
+   **Depends on:** none. **Acceptance:**
+   - completed and failed imports, and analyses that stop on warnings, return a
+     downloadable report in the same response, without a second request;
+   - a user-initiated cancel keeps its current behavior (no Story, no report);
+     a network loss or a closed page before the response also creates no
+     retained report, and the API discards the partial report file;
+   - the API keeps no report after the response ends, whatever the outcome;
+   - the report is streamed from the worker's report file to the response
+     rather than assembled in API memory: on the large QSP import fixture,
+     API peak memory does not grow with the issue count beyond a bounded
+     buffer, and the browser offers the download without parsing the full
+     report into objects;
+   - the warning-confirmation flow still works;
+   - the documentation states that a report closed without downloading is
+     lost.
+
+   **Deferred:** durable storage (`PARALLEAX_IMPORT_REPORT_DIR` on a volume or
+   an object-store adapter, plus persisted job metadata), until a use case needs
+   retained reports.
+
+9. **Open the creator alpha.** Close the applicable provider abuse,
+   secret/container scanning, manual keyboard/focus, and measured performance
+   gates in [Production readiness](production-readiness.md), configure the
+   feedback survey described in
+   [Formbricks feedback](operations/formbricks-feedback.md#open-alpha-survey),
+   publish the alpha notice, rehearse the manual account export and deletion
+   procedure (see [Production readiness](production-readiness.md)), then repeat
+   the essential author tasks on staging.
+   **Depends on:** tasks 2, 5, 8 and 11, and every gate marked for open creator
+   alpha (since 2026-11-19; it previously depended on tasks 4–7).
+   **Acceptance:** remaining limitations (including the absence of native
+   export, decided 2026-11-19) and operating procedures are documented in the
+   alpha notice; essential tasks have observable outcomes and no unresolved
+   data/security blocker; a test submission reaches the feedback survey with
+   its hidden context fields.
+10. **Triage collected feedback and ship the next improvement it points to.**
+    _New 2026-11-19._ Continuous from task 9. Review feedback on a fixed cadence
+    (for example weekly), separate data/security hazards and core-journey
+    failures from preferences and feature ideas, and compare themes with the
+    [product discovery synthesis](product-discovery-synthesis.md). Feedback is
+    self-selected: authors who give up early rarely answer, so the absence of
+    negative feedback is not evidence that the editor is clear. Read it together
+    with account and Story activity counts that need no new tracking (accounts
+    created, Stories created, Stories with more than the two starter
+    Interactions), and run a guided session when a drop-off has no explanation.
+    **Depends on:** task 9. **Acceptance:** every reported blocker has an owner
+    and a retest scenario; each shipped improvement names the feedback behind it
+    and is retested on a representative Story.
+11. **Make the Interaction inspector legible.** _New 2026-11-19._ First-time
+    authors now discover Paralleax without a moderator, so the inspector must
+    read before it edits: show the authored values (content, conditions,
+    effects) readably by default and open the editing controls on request,
+    following the progressive-disclosure rule in [AGENTS.md](../AGENTS.md).
+    Start from a mockup validated by the author (see
+    [UI prototype](ui-prototype.md#status-2026-11-19)), then implement it.
+    **Depends on:** none. **Can run in parallel with:** tasks 2, 5 and 8.
+    **Acceptance:** the validated mockup and the implementation show the same
+    states; an author can tell what an Interaction says, when it is available,
+    and what it changes without opening an editing control; existing editing
+    paths and tests keep working. The rest of the design and clarity pass stays
+    under [Proposed, not yet decided](roadmap.md#proposed-not-yet-decided).
 
 ### Product discovery follow-up
 
@@ -1225,8 +1302,9 @@ An author who did not build Paralleax can create, test, save, maintain, export, 
 
 ### Scope
 
-- Progressive contextual onboarding and a first-story flow, informed by guided
-  author sessions rather than a mandatory long tutorial.
+- Progressive contextual onboarding and a first-story flow, informed by
+  collected author feedback (and guided sessions where useful) rather than a
+  mandatory long tutorial.
 - Mature Story Canvas navigation.
 - A Workbench that preserves whole-Story visibility while projecting structure,
   characters, locations, state, time, and dependencies at useful levels of focus.
@@ -1243,7 +1321,7 @@ An author who did not build Paralleax can create, test, save, maintain, export, 
 - Accessibility pass on critical authoring workflows.
 - Representative usability testing with external authors.
 - Capture the request for a reader-facing progress indicator separately from
-  analytics. After guided sessions, assess an optional author-defined stage or
+  analytics. After collected feedback, assess an optional author-defined stage or
   step indicator for questionnaires and learning paths. Do not infer a percentage
   from graph length or require progress percentages for exploratory stories.
   This is independent of analytics and neither feature is a prerequisite for the
@@ -1260,10 +1338,11 @@ V0.7 is complete when:
 - common mistakes produce understandable validation/errors;
 - the author can back up and restore their work;
 - the core workflow passes a documented accessibility review;
-- guided sessions cover the representative author profiles and tasks; findings,
+- collected feedback (and any guided session run to answer a specific
+  question) covers the representative author profiles and tasks; findings,
   workarounds, and unresolved blockers are documented and prioritized. No fixed
   participant count or task pass-rate is required to make the next product
-  decision.
+  decision. (Before 2026-11-19 this criterion required guided sessions.)
 
 ### Dependencies
 

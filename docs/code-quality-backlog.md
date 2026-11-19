@@ -2,7 +2,7 @@
 
 Status: Active
 
-Last triaged: 2026-11-05
+Last triaged: 2026-11-19
 
 This page records maintainability, reliability, performance, and test work found
 during the August 2026 code review and subsequent technical evaluations. Production gates remain authoritative in
@@ -24,27 +24,28 @@ sequence; [Production readiness](production-readiness.md) owns release gates.
 
 ## Active Delivery View
 
-This backlog is intentionally broader than the near-term delivery queue. The
-[Roadmap](roadmap.md) now schedules the bounded strict quality-gate initiative
-before guided author validation, by explicit author decision on 2026-10-26.
-After that prerequisite, the only additional pre-session UX work is the bounded
-Lot A in [UX Quick Wins — Préparation des tests](#ux-quick-wins--préparation-des-tests).
-Lot B is optional and Lot C follows author observation; guided sessions remain
-the main source of UX validation. Then use the following order when choosing
-incremental quality work:
+This backlog is intentionally broader than the near-term delivery queue. Since
+the 2026-11-19 [priority decision](roadmap.md#priority-decision-2026-11-19), the
+roadmap opens the creator alpha publicly and collects feedback continuously;
+guided sessions are optional. The pre-opening UX work is Lot A in
+[UX Quick Wins — Préparation des tests](#ux-quick-wins--préparation-des-tests)
+and the Interaction inspector legibility task (roadmap task 11). Lot B is
+optional; Lot C follows collected feedback. Structural work is not held back
+until feedback arrives: it proceeds, with CI guarding regressions, when it serves
+an entry below or an area that a current task touches. Use the following order
+when choosing incremental quality work:
 
-1. **Protect the current alpha journey:** address observed data/security issues or
-   failures that prevent a scheduled author task. Disposable-project sessions do
-   not wait on real-project provider gates; valuable user projects do, per
-   [Production readiness](production-readiness.md).
-2. **Deliver evidence-backed product slices:** use session findings to pick an
-   independently useful authoring fix. `StoryPlayer` incremental extraction stays
-   P1 but begins after author observation unless a slice fixes a concrete blocker,
-   risk, priority feature, or duplicated rule. Do not start a complete rewrite.
+1. **Protect the alpha journey:** address data/security issues or failures that
+   block an essential author task. Valuable user projects wait on the provider
+   gates in [Production readiness](production-readiness.md).
+2. **Deliver evidence-backed product slices:** use collected feedback to pick an
+   independently useful authoring fix. `StoryPlayer` incremental extraction is
+   P1 and may proceed in targeted slices with regression coverage first. Do not
+   start a complete rewrite.
 3. **Close the gates for the next release stage:** retain the measured Story-summary
-   and React Flow budgets for the open creator alpha; durable import-report
-   storage and explicit mutation recovery remain P1 when their stated use cases
-   apply.
+   and React Flow budgets for the open creator alpha; import reports are sent to
+   the browser without server-side retention before opening (roadmap task 8);
+   explicit mutation recovery remains P1 when its stated use cases apply.
 4. **Use measurements for performance work:** implement repository/query changes
    only where profiles show a meaningful cost. General journey optimization and
    unused cleanup-contract work are P2.
@@ -90,9 +91,11 @@ first authoring journey. Keep optional redesign out of this gate.
 - **Confirm permanent Story deletion.** **Priority:** P0. **Effort:** 2–4 hours.
   **Impact / frequency:** low-frequency action with potentially total loss of a
   Story; the direct delete affordance is available on every manageable Story
-  card. **Status:** missing in code. The card calls `api.deleteStory` directly,
-  and the repository issues `DELETE FROM stories`; there is no confirmation or
-  undo in this path. **Dependencies:** none. **Risk:** an unclear prompt or
+  card. **Status (2026-11-19):** implemented on 2026-11-05 with the browser's
+  native confirmation naming the Story (`StoryCard.tsx`); no library test covers
+  confirm/cancel yet, and the native dialog does not follow the design system.
+  Remaining: the focused test, and a design-system dialog if the
+  [design pass](#design-and-clarity-2026-11-19) replaces native dialogs. **Dependencies:** none. **Risk:** an unclear prompt or
   keyboard-inaccessible icon could still lead to accidental deletion.
   **Acceptance:** show an explicit, accessible delete icon/action and a localized
   confirmation naming the Story; cancel leaves the Story unchanged, confirm
@@ -389,10 +392,10 @@ items when a row above points to them.
   orchestrator rewrites or a deadline to eliminate all historical findings.
 
 - **`StoryPlayer` extraction: P1 → P1 (retained).** Keep the detailed,
-  incremental plan and behavior coverage. Start after author observation unless a
-  slice addresses a concrete blocker, feature, risk, or duplication; no complete
-  rewrite before sessions.
-- **`StoryEditor` split: P1 → P2, conditional.** Split only where an observed
+  incremental plan and behavior coverage. Since 2026-11-19 it no longer waits on
+  author observation: proceed in targeted slices, regression coverage first; no
+  complete rewrite.
+- **`StoryEditor` split: P1 → P2, conditional.** Split only where a reported
   workflow, concrete risk, or needed feature benefits; file size alone is not a
   priority.
 - **`RichTextEditor` extraction: absorbed by the P1 editor migration.** The
@@ -408,9 +411,10 @@ items when a row above points to them.
 - **Repository commands and remaining complete-Story cleanup responses: P1 → P2.**
   Extend targeted mutations only for measured costs or a concrete safe client
   update.
-- **Durable import-report retention: P1 → P1, conditional gate.** Required before
-  promising reports survive restarts/multiple instances or before production
-  imports; it does not block disposable guided sessions in a test environment.
+- **Durable import-report retention: P1 → deferred (2026-11-19).** Reports are
+  sent to the browser and not kept on the server (roadmap task 8), so nothing
+  needs to survive restarts or multiple instances. Durable storage returns only
+  if a use case needs retained reports.
 - **Optimistic-mutation recovery policy: P1 → P1, retained.** Clarify recovery by
   mutation risk and user impact. Promote a specific path to P0 only if evidence
   shows current behavior can lose saved user work or blocks the alpha journey.
@@ -623,7 +627,7 @@ complex shared helpers, central React flows, functional duplication, then styles
       native suppression baseline: 45 findings across 34 files as of
       2026-10-25. Reduce this baseline incrementally; do not refactor the large
       orchestrators solely to clear the metric.
-- [ ] Revisit the complexity baseline after guided author sessions. Remove
+- [ ] Revisit the complexity baseline as affected areas change. Remove
       entries as affected functions are otherwise changed; do not schedule a
       broad refactor or set a zero-baseline date without evidence.
 - [x] Enable 12 type-aware ESLint safety rules on production TypeScript in all
@@ -759,12 +763,10 @@ than inherited from the historical audit grouping.
   - [x] Route QSP job cancellation to the worker abort signal, guard the
         persistence boundary, and expire terminal in-memory metadata.
     - [x] Make ChoiceScript parsing cancellable without blocking the API event loop.
-- [ ] **P1, conditional gate:** persist import compatibility reports durably so completed, failed, and
-      cancelled imports retain their diagnostics across process restarts; define
-      retention and ownership before exposing the report as a user-facing
-      recovery surface. This applies before promising report retention or running
-      production imports, not before disposable alpha sessions in a test
-      environment.
+- [ ] **P1, before the open alpha (roadmap task 8, redefined 2026-11-19):**
+      send the complete import report to the browser when analysis or import
+      ends and keep no server copy; drop the 7-day retention promise. Durable
+      report storage across restarts is deferred until a use case needs it.
 - [x] Make ELK the canonical graph-layout strategy while keeping the historic
       custom layout as an explicit fallback or removing it after validation;
       update the large-graph stress benchmark to use the active engine and keep
@@ -798,9 +800,9 @@ than inherited from the historical audit grouping.
       `StoryPlayer` into focused feature modules without duplicating narrative
       runtime state or changing the public behavior of the reader engine.
       **Priority:** targeted `StoryPlayer` slices remain P1; broad `StoryEditor`
-      splitting is conditional P2. Wait for author-session observations before
-      broad structural work; an earlier slice is justified only by a concrete
-      blocker, priority feature, risk, or duplicated rule.
+      splitting is conditional P2. Targeted slices may proceed with regression
+      coverage first; broad structural work still needs a concrete blocker,
+      priority feature, risk, or duplicated rule.
   - [ ] `StoryPlayer` - establish regression coverage before extracting behavior.
         Extend the existing `StoryPlayer.loading.test.tsx` and
         `StoryPlayer.runtime.test.tsx` only for uncovered lifecycle cases:
@@ -933,9 +935,9 @@ than inherited from the historical audit grouping.
 
 The items below consolidate the 2026-10-15 review and the 36 UX reports audited
 on 2026-10-25. They are candidates for observation-led work, not a new delivery
-sequence. The Roadmap still leads with guided author sessions and its existing
-reliability gates. For this intake, P0 means a reproducible defect that blocks an
-essential author task or a scheduled validation session; operational release
+sequence. The Roadmap leads with the open-alpha gates and continuous feedback
+(since 2026-11-19). For this intake, P0 means a reproducible defect that blocks an
+essential author task; operational release
 gates remain in Production readiness. No report was reproduced in a browser
 during this documentation audit, so no new P0 is confirmed. The implementation
 and existing test files were inspected, but tests and browser scenarios were not
@@ -1738,6 +1740,102 @@ versions and runtime requirements when a task is scheduled.
       behavior, and shared/web bundle impact. Preserve the handwritten parser
       when the measured tradeoff is negative. This is not a prerequisite for
       extending importer support.
+
+## Architecture Audit Follow-Ups (2026-11-18)
+
+Findings of the 2026-11-18 architecture audit and their status on 2026-11-19.
+
+Done:
+
+- [x] Centralize the SQL Story access predicates and check every repository path
+      against the shared access rules (jcarly/paralleax#153).
+- [x] Run the API e2e specs on PostgreSQL and remove the in-memory
+      `StoriesRepository` and comments fakes (jcarly/paralleax#155).
+- [x] Fix undo/redo refused as a conflict on PostgreSQL, record history against
+      the stored Story, and keep recorded history undoable
+      (jcarly/paralleax#155, jcarly/paralleax#159).
+- [x] Measure the web bundle in CI with the production image build variables
+      and restore the Story settings button styles (jcarly/paralleax#157).
+- [x] Decompose `StoryEditor.tsx` (5,821 to 327 lines) into editor feature
+      modules (jcarly/paralleax#156).
+- [x] Update the large-file list in `AGENTS.md` and the hotspots in
+      [Architecture map](architecture-map-ai.md).
+
+Remaining (P2 unless noted; extract when a task touches the area):
+
+- [ ] `apps/api/src/stories/stories.repository.ts` (1,647 lines) and
+      `apps/api/src/stories/persistence/stories.persistence.writer.ts`
+      (1,678 lines) mix SQL, Story assembly and access checks.
+- [ ] `apps/web/src/components/InteractionInspector.tsx` (1,187 lines); likely
+      touched by the [design pass](#design-and-clarity-2026-11-19).
+- [ ] Graph modules at the root of `apps/web/src` (`storyGraphLayout.ts`, 1,454
+      lines; `storyGraph.ts`; `storyGraphElkLayout.ts`) belong in
+      `features/story-editor/graph/`; the React Flow allowlist in
+      `.dependency-cruiser.cjs` then shrinks.
+- [ ] `StoryPlayer.tsx` (1,219 lines): incremental extraction stays P1 (see
+      [Architecture map](architecture-map-ai.md)).
+- [ ] Code prototype (`ParalleaxPrototype*.tsx`, about 2,945 lines and 53 KB of
+      CSS) shipped as a lazy production route. Remove it once a mockup tool has
+      been validated; see [UI prototype](ui-prototype.md#status-2026-11-19).
+- [ ] Undo compatibility: `story-history-compatibility.ts` lists the values the
+      projections omit. A new omission rule in a projection needs a matching
+      entry only for events recorded before 2026-11-19; new events are recorded
+      in the read-back form.
+- [ ] Investigate one unidentified web test failure seen once in a coverage run
+      on 2026-11-18 (not reproduced in four later runs).
+
+## Architecture Review (2026-11-19)
+
+Status: done on 2026-11-19. The target is recorded in
+[ADR-046](decisions/ADR-046-target-project-structure.md); its incremental steps
+are in [ADR-046 Migration](#adr-046-migration-2026-11-19). The observations
+below are the review's evidence.
+
+Observed on 2026-11-19:
+
+- **Domain core.** `packages/shared` is framework-free and the rule is enforced
+  by ESLint and dependency-cruiser. This is the hexagonal core in practice.
+- **Importers in the core.** QSP and ChoiceScript importers (5,250 lines) and
+  their only external dependency, `@qsp/converters`, live in `packages/shared`
+  and are re-exported by its facade. `AGENTS.md` asks for source-specific code
+  outside the narrative engine. Verified: they do not reach the web bundle. They
+  matter when `shared` becomes the documented Story format or a portable
+  reference evaluator. Candidate: a `packages/importers` workspace that depends
+  on `shared`, decided when the Story format work starts.
+- **Application layer coupled to HTTP and to concrete adapters.** API
+  application services throw NestJS HTTP exceptions (for example
+  `ForbiddenException` in `StoryMutationService`, `BadRequestException` in
+  `story-graph.ts`) and depend on the concrete `StoriesRepository` class.
+  Candidate: domain errors mapped to HTTP at the controller or exception filter,
+  and explicit ports only where a boundary needs one.
+- **Test doubles.** Real PostgreSQL e2e specs replaced a 963-line in-memory
+  repository that had hidden two undo bugs. Ports must not bring back parallel
+  in-memory implementations; keep fast tests on stubs and the domain.
+- **Clean-code debt.** 1,900 ESLint suppressions across 375 files remain in the
+  baseline (shrinking). Large persistence modules are listed above.
+
+## Design and Clarity (2026-11-19)
+
+Status: to define. Direction from the author: favour reading and clarity of
+information over editing controls. Each topic starts with a mockup, then ships
+in the real components and the `/design-system` catalogue. Topics already
+covered elsewhere in this backlog keep their entries; this list is the
+inventory to prioritize.
+
+- [ ] **Inspector legibility:** show the authored values first, editing on
+      demand (progressive disclosure already required by `AGENTS.md`).
+- [ ] **Less text, more icons:** review verbose labels and explanations; keep
+      text in tooltips with keyboard access.
+- [ ] **Graph zoom:** navigation and readable levels of detail.
+- [ ] **Authored information on the graph:** Trigger conditions, effects and
+      similar summaries visible without opening the inspector.
+- [ ] **Code mode:** to define; see
+      [ADR-043](decisions/ADR-043-ink-inspired-narrative-source.md).
+- [ ] **Groups as an explorer:** to define.
+- [ ] **Simulation:** review the experience.
+- [ ] **Linear writing:** to define; see the continuous linear writing proposal
+      in [Roadmap history](roadmap-history.md#product-discovery-follow-up).
+- [ ] **Actor / spectator distinction:** to define.
 
 ## ADR-046 Migration (2026-11-19)
 

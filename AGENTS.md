@@ -293,11 +293,21 @@ npm run build
 
 ## Large-file rule
 
-Treat these as orchestration hotspots, not default homes for new logic:
+Treat these large modules as hotspots, not default homes for new logic (status
+2026-11-19; see `docs/code-quality-backlog.md` for the current list):
+
+- `apps/api/src/stories/stories.repository.ts`
+- `apps/api/src/stories/persistence/stories.persistence.writer.ts`
+- `apps/web/src/pages/StoryPlayer.tsx`
+- `apps/web/src/components/InteractionInspector.tsx`
+- `apps/web/src/storyGraphLayout.ts`
+
+Keep these facades thin: they delegate and must not regain logic:
 
 - `packages/shared/src/index.ts`
 - `apps/api/src/stories/stories.service.ts`
 - `apps/web/src/hooks/useStoryEditorPersistence.ts`
+- `apps/web/src/pages/StoryEditor.tsx`
 
 When adding a coherent new responsibility, prefer extracting a focused module and
 re-exporting it rather than extending these files indefinitely.
