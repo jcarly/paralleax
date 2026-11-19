@@ -283,9 +283,32 @@ objectives.
   and import limits.
 - Clean expired sessions with scheduled maintenance rather than a global cleanup
   on every authenticated request.
-- Account recovery and session revocation are implemented. Add account export and
-  deletion before open registration; they must include reader-progress JSON as
-  personal user data.
+- Account recovery and session revocation are implemented. Account export and
+  deletion are required before open registration; they must include
+  reader-progress JSON as personal user data. Decided 2026-11-19: for the open
+  creator alpha, a documented and tested **manual operator procedure** is
+  enough; self-service export and deletion in the account dialog are required
+  for V1.0. The procedure:
+  - is reachable through a contact named in the alpha notice and privacy
+    policy, verifies that the request comes from the account holder, and is
+    answered within one month;
+  - **export:** gives the account data, owned Stories and reader progress as
+    JSON;
+  - **owned Stories:** are deleted by default. When an owned Story has
+    collaborators (`story_user_permissions`), the operator tells the requester
+    before deleting and offers to transfer it to a collaborator they name, with
+    that collaborator's agreement; the transfer changes `creator_user_id`
+    through a documented script. In-app ownership transfer is not in scope;
+  - **edits in other people's Stories:** stay in those Stories; change history
+    shows a deleted user (`actor_user_id` set to `NULL`, current behavior);
+  - **comments:** text stays, attributed to a deleted user; a message is deleted
+    on request when it contains personal data. `created_by` and
+    `author_user_id` currently use `ON DELETE RESTRICT`, so the procedure
+    reassigns them first; self-service deletion needs a migration;
+  - **everything else** (sessions, reader progress, permissions, account action
+    tokens, the user row) is deleted; copies leave `pg_dump` backups when their
+    retention window expires, as the privacy policy states;
+  - is rehearsed once on staging before the alpha opens.
 
 ## Accessibility and Device Support
 

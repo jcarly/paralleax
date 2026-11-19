@@ -219,7 +219,9 @@ and 11 are new. Where an acceptance criterion says "observed evidence" or
    gates in [Production readiness](production-readiness.md), configure the
    feedback survey described in
    [Formbricks feedback](operations/formbricks-feedback.md#open-alpha-survey),
-   publish the alpha notice, then repeat the essential author tasks on staging.
+   publish the alpha notice, rehearse the manual account export and deletion
+   procedure (see [Production readiness](production-readiness.md)), then repeat
+   the essential author tasks on staging.
    **Depends on:** tasks 2, 5, 8 and 11, and every gate marked for open creator
    alpha (since 2026-11-19; it previously depended on tasks 4–7).
    **Acceptance:** remaining limitations (including the absence of native

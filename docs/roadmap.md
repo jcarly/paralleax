@@ -76,15 +76,15 @@ feedback. Task numbers refer to
 criteria still apply, except that "observed evidence" now means collected
 feedback.
 
-| #          | Task                                                       | Status                                                                                                                                     |
-| ---------- | ---------------------------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------ |
-| 2          | Complete confirmed Lot A quick fixes                       | 1 of 3 implemented (Story deletion confirmation, still untested); localized default Interaction text and the "add a choice" wording remain |
-| 5          | Complete the valuable-project safety gate (P0)             | To do: legacy-data migration test, scheduled encrypted off-host `pg_dump` and restore drill, staging and HTTPS verification                |
-| 8          | Deliver import reports without server-side retention       | To do: send the full report to the browser, keep no server copy, drop the 7-day retention promise                                          |
-| 11         | Make the Interaction inspector legible                     | To do: mockup validated by the author first, then implementation                                                                           |
-| 9          | Open the creator alpha                                     | After 2, 5, 8 and 11: close the open-alpha gates, configure the feedback survey, publish the alpha notice                                  |
-| 10         | Triage feedback and ship the next improvement it points to | Continuous, from 9                                                                                                                         |
-| 1, 3, 4, 6 | Guided sessions and observation triage                     | Optional since 2026-11-19                                                                                                                  |
+| #          | Task                                                       | Status                                                                                                                                       |
+| ---------- | ---------------------------------------------------------- | -------------------------------------------------------------------------------------------------------------------------------------------- |
+| 2          | Complete confirmed Lot A quick fixes                       | 1 of 3 implemented (Story deletion confirmation, still untested); localized default Interaction text and the "add a choice" wording remain   |
+| 5          | Complete the valuable-project safety gate (P0)             | To do: legacy-data migration test, scheduled encrypted off-host `pg_dump` and restore drill, staging and HTTPS verification                  |
+| 8          | Deliver import reports without server-side retention       | To do: send the full report to the browser, keep no server copy, drop the 7-day retention promise                                            |
+| 11         | Make the Interaction inspector legible                     | To do: mockup validated by the author first, then implementation                                                                             |
+| 9          | Open the creator alpha                                     | After 2, 5, 8 and 11: close the open-alpha gates, rehearse manual account export/deletion, configure the feedback survey, publish the notice |
+| 10         | Triage feedback and ship the next improvement it points to | Continuous, from 9                                                                                                                           |
+| 1, 3, 4, 6 | Guided sessions and observation triage                     | Optional since 2026-11-19                                                                                                                    |
 
 ## Next
 
