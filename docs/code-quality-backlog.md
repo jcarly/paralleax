@@ -1786,9 +1786,10 @@ Remaining (P2 unless noted; extract when a task touches the area):
 
 ## Architecture Review (2026-11-19)
 
-Status: to schedule. Check the structure against the project's own rules
-(clean code, test-first changes, ports and adapters) and record the target in an
-ADR before any migration. Do not run it as one rewrite.
+Status: done on 2026-11-19. The target is recorded in
+[ADR-046](decisions/ADR-046-target-project-structure.md); its incremental steps
+are in [ADR-046 Migration](#adr-046-migration-2026-11-19). The observations
+below are the review's evidence.
 
 Observed on 2026-11-19:
 
@@ -1835,6 +1836,50 @@ inventory to prioritize.
 - [ ] **Linear writing:** to define; see the continuous linear writing proposal
       in [Roadmap history](roadmap-history.md#product-discovery-follow-up).
 - [ ] **Actor / spectator distinction:** to define.
+
+## ADR-046 Migration (2026-11-19)
+
+Incremental steps of
+[ADR-046](decisions/ADR-046-target-project-structure.md). Each step ships with
+its tests and the matching lint or dependency rule; none blocks product work.
+Take a step when its area is touched, in this order when there is a choice.
+
+- [ ] **P1 — Narrative invariants in `shared`.** Move one family at a time from
+      API application services to `packages/shared`, with shared unit tests:
+      same-Story references, then stats and effects, then condition validity.
+      The first move adds the domain error class and its exception-filter
+      mapping. **Acceptance:** the API calls the shared rule and keeps no copy
+      of it; responses keep the full error contract of ADR-046 section 1
+      (status, specific `code`, message, `details`, `requestId`, no Sentry
+      capture for expected errors), covered by filter specs.
+- [ ] **P1 — Application errors.** Replace the remaining NestJS HTTP exceptions
+      in application services, one area at a time. **Acceptance:** API
+      responses are unchanged on every field of the error contract; the
+      converted area imports no NestJS HTTP exception; an ESLint
+      `no-restricted-imports` rule keeps it that way per converted folder.
+- [ ] **P2 — `packages/importers` workspace.** Move the QSP and ChoiceScript
+      importers and `@qsp/converters` out of `packages/shared` when the native
+      Story format work starts; keep the import report contract in `shared`.
+      **Acceptance:** the workspace is in every quality gate like the others
+      (root build, lint, typecheck, test and coverage scripts, the
+      dependency-cruiser scan, CI change filters and jobs, the production
+      Docker build); dependency-cruiser forbids `shared` → `importers`; the web
+      bundle still excludes importer code.
+- [ ] **P2 — Persistence ports and module split.** When the Story or comment
+      persistence is next touched, introduce its port (an abstract class used as
+      the injection token) and split the repository and writer by
+      responsibility, one port per cohesive consumer need with a shared
+      transaction boundary (ADR-046 section 2). **Acceptance:** application
+      services no longer import `stories.repository.ts`; a dependency-cruiser
+      rule forbids application → outbound adapter imports, its existing
+      violations recorded once through a reviewed baseline transition and only
+      shrinking afterwards; no in-memory implementation of the port exists.
+- [ ] **P2 — Web features first.** Move root graph modules to
+      `features/story-editor/graph/` and feature inspectors out of `components/`
+      when touched. **Acceptance:** the React Flow allowlist shrinks accordingly.
+- [ ] **P2 — Replace SQL-text stubs.** Replace unit specs that stub PostgreSQL by
+      matching SQL text (`stories.repository.spec.ts` and three persistence
+      specs) with PostgreSQL specs when their module is touched.
 
 ## Delivery Notes
 
