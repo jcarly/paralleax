@@ -930,11 +930,14 @@ access check. A position-only delta persists all existing interaction positions
 and all existing Trigger positions through at most two JSON-backed bulk updates.
 Undo and redo store the directly inverted source delta, avoiding both a complete
 second diff and a second relational assembly. Deltas compare exactly with the
-assembled Story, so every read path projects a stored Interaction without a
-location without `locationId`. Events recorded before that projection stored
-the missing location as `null`; `story-history-compatibility.ts` reads those
-values as absent when it loads an undo or redo candidate, without rewriting the
-persisted events. The editor ignores initial SSE readiness and change events whose revision is already local, preventing a second
+assembled Story, so an authored mutation records its history event as the
+difference between the Story read before and after the write: the read-back
+form omits empty optional values that the mutation may have set, such as an
+empty image URL, a false playable flag, or a missing Interaction location, and
+every read path projects a stored Interaction without a location without
+`locationId`. Events recorded before then can hold those values;
+`story-history-compatibility.ts` reads them as absent when it loads an undo or
+redo candidate, without rewriting the persisted events. The editor ignores initial SSE readiness and change events whose revision is already local, preventing a second
 full Story reload after its own inverse. Graph projection indexes interactions by
 id once per immutable Story object so trigger placement and edge routing remain
 linear instead of repeatedly scanning every interaction. After a successful local

@@ -1092,9 +1092,8 @@ async function runFieldLevelMutation() {
   );
 }
 
-async function runVersionedMutation() {
-  const saved = { ...story(), revision: 1 };
-  relationalRead(mockClientQuery, saved);
+function readStoryWithHistoryInserts(value: Story) {
+  relationalRead(mockClientQuery, value);
   const relationalImplementation = mockClientQuery.getMockImplementation();
   if (!relationalImplementation) {
     throw new Error('Expected relational query mock implementation');
@@ -1105,15 +1104,25 @@ async function runVersionedMutation() {
     }
     return relationalImplementation(sql, values);
   });
+}
+
+async function runVersionedMutation() {
+  const saved = { ...story(), revision: 1 };
+  readStoryWithHistoryInserts(saved);
 
   await repository().mutate(
     saved.id,
-    (value) => ({
-      ...value,
-      revision: 2,
-      title: 'Versioned title',
-      updatedAt: '2026-01-02T00:00:00.000Z',
-    }),
+    (value) => {
+      const next = {
+        ...value,
+        revision: 2,
+        title: 'Versioned title',
+        updatedAt: '2026-01-02T00:00:00.000Z',
+      };
+      // The repository records history against the Story it reads back.
+      readStoryWithHistoryInserts(next);
+      return next;
+    },
     ownerId,
   );
 

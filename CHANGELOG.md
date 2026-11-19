@@ -2,6 +2,12 @@
 
 ## Unreleased
 
+- Fixed undo and redo of creating a Location, a Character or an Item
+  definition, of clearing an image URL, and of making a Character non-playable,
+  which PostgreSQL refused as a conflict. History events now record the
+  difference between the stored Story before and after each change, so they
+  always match what undo compares against; events recorded before this change
+  are read in the same form.
 - API e2e specs for stories and comments now run against the real PostgreSQL
   repositories instead of an in-memory fake, which is removed (963 lines) along
   with the fake comments repository. Validation, body-limit, rate-limit and 404
