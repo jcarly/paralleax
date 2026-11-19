@@ -1,6 +1,5 @@
 import type { INestApplication } from '@nestjs/common';
-import { json, urlencoded } from 'express';
-import type { Request } from 'express';
+import { json, urlencoded, type Request } from 'express';
 
 export const REQUEST_BODY_LIMIT = '128kb';
 
