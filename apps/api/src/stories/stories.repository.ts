@@ -583,18 +583,30 @@ export class StoriesRepository {
       assertStoryWithinQuotas(updated, current);
       const changes = createStoryChangeDelta(current, updated);
       await persistStoryDifference(client, current, updated, changes);
-      if (changes && updated.revision !== current.revision && updated.revision !== undefined) {
-        await insertStoryHistoryEvent(client, {
-          storyId: id,
-          actorUserId: ownerId,
-          revision: updated.revision,
-          kind: 'change',
-          operation,
-          changes,
-          createdAt: updated.updatedAt,
-        });
+      const stored = await this.findWith(client, id, ownerId);
+      if (
+        stored &&
+        changes &&
+        updated.revision !== current.revision &&
+        updated.revision !== undefined
+      ) {
+        // Undo and redo compare deltas with the Story as it is read back, which
+        // omits empty optional values the mutation may have set. Recording the
+        // difference between the two stored forms keeps every event replayable.
+        const storedChanges = createStoryChangeDelta(current, stored);
+        if (storedChanges) {
+          await insertStoryHistoryEvent(client, {
+            storyId: id,
+            actorUserId: ownerId,
+            revision: updated.revision,
+            kind: 'change',
+            operation,
+            changes: storedChanges,
+            createdAt: updated.updatedAt,
+          });
+        }
       }
-      return this.findWith(client, id, ownerId);
+      return stored;
     });
   }
 

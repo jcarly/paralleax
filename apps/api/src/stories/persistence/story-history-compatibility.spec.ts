@@ -66,3 +66,68 @@ it('keeps current-format and unrelated deltas unchanged', () => {
   expect(normalizeLegacyStoryHistoryDelta(current)).toEqual(current);
   expect(normalizeLegacyStoryHistoryDelta(title)).toBe(title);
 });
+
+function collectionDelta(collection: string, delta: StoryChangeDelta): StoryChangeDelta {
+  return {
+    kind: 'object',
+    fields: {
+      [collection]: {
+        kind: 'entities',
+        entries: { 'entity-1': { delta, before: { index: -1 }, after: { index: 0 } } },
+      },
+    },
+  };
+}
+
+it('removes values the projections omit from a legacy created Location', () => {
+  const created = collectionDelta('locations', {
+    kind: 'value',
+    beforeExists: false,
+    afterExists: true,
+    after: { id: 'entity-1', name: 'Harbor', imageUrl: '', stats: [], items: [] },
+  });
+
+  expect(normalizeLegacyStoryHistoryDelta(created)).toEqual(
+    collectionDelta('locations', {
+      kind: 'value',
+      beforeExists: false,
+      afterExists: true,
+      after: { id: 'entity-1', name: 'Harbor', stats: [], items: [] },
+    }),
+  );
+});
+
+it('reads a legacy non-playable Character as an absent flag', () => {
+  const update = collectionDelta('characters', {
+    kind: 'object',
+    fields: {
+      isPlayable: {
+        kind: 'value',
+        beforeExists: true,
+        before: true,
+        afterExists: true,
+        after: false,
+      },
+    },
+  });
+
+  expect(normalizeLegacyStoryHistoryDelta(update)).toEqual(
+    collectionDelta('characters', {
+      kind: 'object',
+      fields: {
+        isPlayable: { kind: 'value', beforeExists: true, before: true, afterExists: false },
+      },
+    }),
+  );
+});
+
+it('keeps values of collections whose projection does not omit them', () => {
+  const statDefinition = collectionDelta('statDefinitions', {
+    kind: 'value',
+    beforeExists: false,
+    afterExists: true,
+    after: { id: 'entity-1', name: 'Score', imageUrl: '' },
+  });
+
+  expect(normalizeLegacyStoryHistoryDelta(statDefinition)).toBe(statDefinition);
+});
