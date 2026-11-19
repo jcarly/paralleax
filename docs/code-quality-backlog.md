@@ -2,7 +2,7 @@
 
 Status: Active
 
-Last triaged: 2026-11-05
+Last triaged: 2026-11-19
 
 This page records maintainability, reliability, performance, and test work found
 during the August 2026 code review and subsequent technical evaluations. Production gates remain authoritative in
@@ -23,6 +23,12 @@ whether that dependency is truly required. The [Roadmap](roadmap.md) owns produc
 sequence; [Production readiness](production-readiness.md) owns release gates.
 
 ## Active Delivery View
+
+**Update 2026-11-19:** the [roadmap](roadmap.md#priority-decision-2026-11-19)
+now opens the creator alpha publicly instead of running guided sessions first.
+Below, "session" or "author observation" evidence reads as collected feedback,
+and structural work is not held back until then: it proceeds when it serves a
+backlog entry or an area that a current task touches.
 
 This backlog is intentionally broader than the near-term delivery queue. The
 [Roadmap](roadmap.md) now schedules the bounded strict quality-gate initiative
@@ -90,9 +96,11 @@ first authoring journey. Keep optional redesign out of this gate.
 - **Confirm permanent Story deletion.** **Priority:** P0. **Effort:** 2–4 hours.
   **Impact / frequency:** low-frequency action with potentially total loss of a
   Story; the direct delete affordance is available on every manageable Story
-  card. **Status:** missing in code. The card calls `api.deleteStory` directly,
-  and the repository issues `DELETE FROM stories`; there is no confirmation or
-  undo in this path. **Dependencies:** none. **Risk:** an unclear prompt or
+  card. **Status (2026-11-19):** implemented on 2026-11-05 with the browser's
+  native confirmation naming the Story (`StoryCard.tsx`); no library test covers
+  confirm/cancel yet, and the native dialog does not follow the design system.
+  Remaining: the focused test, and a design-system dialog if the
+  [design pass](#design-and-clarity-2026-11-19) replaces native dialogs. **Dependencies:** none. **Risk:** an unclear prompt or
   keyboard-inaccessible icon could still lead to accidental deletion.
   **Acceptance:** show an explicit, accessible delete icon/action and a localized
   confirmation naming the Story; cancel leaves the Story unchanged, confirm
@@ -1738,6 +1746,101 @@ versions and runtime requirements when a task is scheduled.
       behavior, and shared/web bundle impact. Preserve the handwritten parser
       when the measured tradeoff is negative. This is not a prerequisite for
       extending importer support.
+
+## Architecture Audit Follow-Ups (2026-11-18)
+
+Findings of the 2026-11-18 architecture audit and their status on 2026-11-19.
+
+Done:
+
+- [x] Centralize the SQL Story access predicates and check every repository path
+      against the shared access rules (jcarly/paralleax#153).
+- [x] Run the API e2e specs on PostgreSQL and remove the in-memory
+      `StoriesRepository` and comments fakes (jcarly/paralleax#155).
+- [x] Fix undo/redo refused as a conflict on PostgreSQL, record history against
+      the stored Story, and keep recorded history undoable
+      (jcarly/paralleax#155, jcarly/paralleax#159).
+- [x] Measure the web bundle in CI with the production image build variables
+      and restore the Story settings button styles (jcarly/paralleax#157).
+- [x] Decompose `StoryEditor.tsx` (5,821 to 327 lines) into editor feature
+      modules (jcarly/paralleax#156).
+- [x] Update the large-file list in `AGENTS.md` and the hotspots in
+      [Architecture map](architecture-map-ai.md).
+
+Remaining (P2 unless noted; extract when a task touches the area):
+
+- [ ] `apps/api/src/stories/stories.repository.ts` (1,647 lines) and
+      `apps/api/src/stories/persistence/stories.persistence.writer.ts`
+      (1,678 lines) mix SQL, Story assembly and access checks.
+- [ ] `apps/web/src/components/InteractionInspector.tsx` (1,187 lines); likely
+      touched by the [design pass](#design-and-clarity-2026-11-19).
+- [ ] Graph modules at the root of `apps/web/src` (`storyGraphLayout.ts`, 1,454
+      lines; `storyGraph.ts`; `storyGraphElkLayout.ts`) belong in
+      `features/story-editor/graph/`; the React Flow allowlist in
+      `.dependency-cruiser.cjs` then shrinks.
+- [ ] `StoryPlayer.tsx` (1,219 lines): incremental extraction stays P1 (see
+      [Architecture map](architecture-map-ai.md)).
+- [ ] Code prototype (`ParalleaxPrototype*.tsx`, about 2,945 lines and 53 KB of
+      CSS) shipped as a lazy production route. Remove it once a mockup tool has
+      been validated; see [UI prototype](ui-prototype.md#status-2026-11-19).
+- [ ] Undo compatibility: `story-history-compatibility.ts` lists the values the
+      projections omit. A new omission rule in a projection needs a matching
+      entry only for events recorded before 2026-11-19; new events are recorded
+      in the read-back form.
+- [ ] Investigate one unidentified web test failure seen once in a coverage run
+      on 2026-11-18 (not reproduced in four later runs).
+
+## Architecture Review (2026-11-19)
+
+Status: to schedule. Check the structure against the project's own rules
+(clean code, test-first changes, ports and adapters) and record the target in an
+ADR before any migration. Do not run it as one rewrite.
+
+Observed on 2026-11-19:
+
+- **Domain core.** `packages/shared` is framework-free and the rule is enforced
+  by ESLint and dependency-cruiser. This is the hexagonal core in practice.
+- **Importers in the core.** QSP and ChoiceScript importers (5,250 lines) and
+  their only external dependency, `@qsp/converters`, live in `packages/shared`
+  and are re-exported by its facade. `AGENTS.md` asks for source-specific code
+  outside the narrative engine. Verified: they do not reach the web bundle. They
+  matter when `shared` becomes the documented Story format or a portable
+  reference evaluator. Candidate: a `packages/importers` workspace that depends
+  on `shared`, decided when the Story format work starts.
+- **Application layer coupled to HTTP and to concrete adapters.** API
+  application services throw NestJS HTTP exceptions (for example
+  `ForbiddenException` in `StoryMutationService`, `BadRequestException` in
+  `story-graph.ts`) and depend on the concrete `StoriesRepository` class.
+  Candidate: domain errors mapped to HTTP at the controller or exception filter,
+  and explicit ports only where a boundary needs one.
+- **Test doubles.** Real PostgreSQL e2e specs replaced a 963-line in-memory
+  repository that had hidden two undo bugs. Ports must not bring back parallel
+  in-memory implementations; keep fast tests on stubs and the domain.
+- **Clean-code debt.** 1,900 ESLint suppressions across 375 files remain in the
+  baseline (shrinking). Large persistence modules are listed above.
+
+## Design and Clarity (2026-11-19)
+
+Status: to define. Direction from the author: favour reading and clarity of
+information over editing controls. Each topic starts with a mockup, then ships
+in the real components and the `/design-system` catalogue. Topics already
+covered elsewhere in this backlog keep their entries; this list is the
+inventory to prioritize.
+
+- [ ] **Inspector legibility:** show the authored values first, editing on
+      demand (progressive disclosure already required by `AGENTS.md`).
+- [ ] **Less text, more icons:** review verbose labels and explanations; keep
+      text in tooltips with keyboard access.
+- [ ] **Graph zoom:** navigation and readable levels of detail.
+- [ ] **Authored information on the graph:** Trigger conditions, effects and
+      similar summaries visible without opening the inspector.
+- [ ] **Code mode:** to define; see
+      [ADR-043](decisions/ADR-043-ink-inspired-narrative-source.md).
+- [ ] **Groups as an explorer:** to define.
+- [ ] **Simulation:** review the experience.
+- [ ] **Linear writing:** to define; see the continuous linear writing proposal
+      in [Roadmap history](roadmap-history.md#product-discovery-follow-up).
+- [ ] **Actor / spectator distinction:** to define.
 
 ## Delivery Notes
 
