@@ -9,11 +9,6 @@
       "count": 2
     }
   },
-  "apps/api/src/auth/auth.decorators.ts": {
-    "no-duplicate-imports": {
-      "count": 1
-    }
-  },
   "apps/api/src/auth/auth.e2e.spec.ts": {
     "@typescript-eslint/no-unsafe-assignment": {
       "count": 2
