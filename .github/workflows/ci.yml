@@ -40,7 +40,7 @@ jobs:
       acceptance: ${{ steps.full.outputs.full == 'true' || (github.event_name == 'push' && steps.filter.outputs.acceptance == 'true') }}
       docker: ${{ steps.full.outputs.full == 'true' || steps.filter.outputs.docker == 'true' }}
       security_audit: ${{ steps.full.outputs.full == 'true' || steps.filter.outputs.dependencies == 'true' }}
-      operations: ${{ steps.full.outputs.full == 'true' || steps.filter.outputs.tooling == 'true' }}
+      operations: ${{ steps.full.outputs.full == 'true' || steps.filter.outputs.tooling == 'true' || steps.filter.outputs.docker == 'true' || steps.filter.outputs.workflow == 'true' }}
       lint: ${{ steps.full.outputs.full == 'true' || steps.filter.outputs.application == 'true' || steps.filter.outputs.tooling == 'true' }}
       workflow: ${{ steps.full.outputs.full == 'true' || steps.filter.outputs.workflow == 'true' }}
     steps:
