@@ -2,6 +2,10 @@
 
 ## Unreleased
 
+- Restored the Node 24 Docker base images after a Dockerfile-only Dependabot
+  bump to Node 26 broke CI on `main`. CI now runs the operational tests for any
+  Dockerfile or workflow change, and a test fails when the Docker images or CI
+  use a Node major other than `engines.node`.
 - Accepted ADR-046, the target project structure: narrative invariants move
   from API services to `packages/shared`, application services use error classes
   mapped to HTTP by one exception filter, persistence ports are introduced when
