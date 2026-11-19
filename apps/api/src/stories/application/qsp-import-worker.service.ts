@@ -24,7 +24,7 @@ export class QspImportWorkerService extends AbortableImportWorkerService {
     if (this.activeImports >= 1) {
       throw new ServiceUnavailableException('Another QSP import is already running.');
     }
-    if (!reportPath) {
+    if (reportPath === undefined || reportPath === '') {
       throw new Error('A report path is required for QSP import execution.');
     }
 
