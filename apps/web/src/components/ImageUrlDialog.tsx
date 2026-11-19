@@ -64,7 +64,6 @@ function ImageUrlField({
       {label}
       <input
         className="form-control form-control--standard"
-        autoFocus
         data-modal-autofocus
         placeholder="https://example.com/image.png"
         type="url"
