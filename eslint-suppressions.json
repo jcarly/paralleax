@@ -114,11 +114,6 @@
       "count": 6
     }
   },
-  "apps/api/src/config/app-config.service.spec.ts": {
-    "max-lines-per-function": {
-      "count": 1
-    }
-  },
   "apps/api/src/config/app-config.service.ts": {
     "@typescript-eslint/strict-boolean-expressions": {
       "count": 8
