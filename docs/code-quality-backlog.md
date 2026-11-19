@@ -24,33 +24,28 @@ sequence; [Production readiness](production-readiness.md) owns release gates.
 
 ## Active Delivery View
 
-**Update 2026-11-19:** the [roadmap](roadmap.md#priority-decision-2026-11-19)
-now opens the creator alpha publicly instead of running guided sessions first.
-Below, "session" or "author observation" evidence reads as collected feedback,
-and structural work is not held back until then: it proceeds when it serves a
-backlog entry or an area that a current task touches.
+This backlog is intentionally broader than the near-term delivery queue. Since
+the 2026-11-19 [priority decision](roadmap.md#priority-decision-2026-11-19), the
+roadmap opens the creator alpha publicly and collects feedback continuously;
+guided sessions are optional. The pre-opening UX work is Lot A in
+[UX Quick Wins — Préparation des tests](#ux-quick-wins--préparation-des-tests)
+and the Interaction inspector legibility task (roadmap task 11). Lot B is
+optional; Lot C follows collected feedback. Structural work is not held back
+until feedback arrives: it proceeds, with CI guarding regressions, when it serves
+an entry below or an area that a current task touches. Use the following order
+when choosing incremental quality work:
 
-This backlog is intentionally broader than the near-term delivery queue. The
-[Roadmap](roadmap.md) now schedules the bounded strict quality-gate initiative
-before guided author validation, by explicit author decision on 2026-10-26.
-After that prerequisite, the only additional pre-session UX work is the bounded
-Lot A in [UX Quick Wins — Préparation des tests](#ux-quick-wins--préparation-des-tests).
-Lot B is optional and Lot C follows author observation; guided sessions remain
-the main source of UX validation. Then use the following order when choosing
-incremental quality work:
-
-1. **Protect the current alpha journey:** address observed data/security issues or
-   failures that prevent a scheduled author task. Disposable-project sessions do
-   not wait on real-project provider gates; valuable user projects do, per
-   [Production readiness](production-readiness.md).
-2. **Deliver evidence-backed product slices:** use session findings to pick an
-   independently useful authoring fix. `StoryPlayer` incremental extraction stays
-   P1 but begins after author observation unless a slice fixes a concrete blocker,
-   risk, priority feature, or duplicated rule. Do not start a complete rewrite.
+1. **Protect the alpha journey:** address data/security issues or failures that
+   block an essential author task. Valuable user projects wait on the provider
+   gates in [Production readiness](production-readiness.md).
+2. **Deliver evidence-backed product slices:** use collected feedback to pick an
+   independently useful authoring fix. `StoryPlayer` incremental extraction is
+   P1 and may proceed in targeted slices with regression coverage first. Do not
+   start a complete rewrite.
 3. **Close the gates for the next release stage:** retain the measured Story-summary
-   and React Flow budgets for the open creator alpha; durable import-report
-   storage and explicit mutation recovery remain P1 when their stated use cases
-   apply.
+   and React Flow budgets for the open creator alpha; import reports are sent to
+   the browser without server-side retention before opening (roadmap task 8);
+   explicit mutation recovery remains P1 when its stated use cases apply.
 4. **Use measurements for performance work:** implement repository/query changes
    only where profiles show a meaningful cost. General journey optimization and
    unused cleanup-contract work are P2.
@@ -397,10 +392,10 @@ items when a row above points to them.
   orchestrator rewrites or a deadline to eliminate all historical findings.
 
 - **`StoryPlayer` extraction: P1 → P1 (retained).** Keep the detailed,
-  incremental plan and behavior coverage. Start after author observation unless a
-  slice addresses a concrete blocker, feature, risk, or duplication; no complete
-  rewrite before sessions.
-- **`StoryEditor` split: P1 → P2, conditional.** Split only where an observed
+  incremental plan and behavior coverage. Since 2026-11-19 it no longer waits on
+  author observation: proceed in targeted slices, regression coverage first; no
+  complete rewrite.
+- **`StoryEditor` split: P1 → P2, conditional.** Split only where a reported
   workflow, concrete risk, or needed feature benefits; file size alone is not a
   priority.
 - **`RichTextEditor` extraction: absorbed by the P1 editor migration.** The
@@ -416,9 +411,10 @@ items when a row above points to them.
 - **Repository commands and remaining complete-Story cleanup responses: P1 → P2.**
   Extend targeted mutations only for measured costs or a concrete safe client
   update.
-- **Durable import-report retention: P1 → P1, conditional gate.** Required before
-  promising reports survive restarts/multiple instances or before production
-  imports; it does not block disposable guided sessions in a test environment.
+- **Durable import-report retention: P1 → deferred (2026-11-19).** Reports are
+  sent to the browser and not kept on the server (roadmap task 8), so nothing
+  needs to survive restarts or multiple instances. Durable storage returns only
+  if a use case needs retained reports.
 - **Optimistic-mutation recovery policy: P1 → P1, retained.** Clarify recovery by
   mutation risk and user impact. Promote a specific path to P0 only if evidence
   shows current behavior can lose saved user work or blocks the alpha journey.
@@ -631,7 +627,7 @@ complex shared helpers, central React flows, functional duplication, then styles
       native suppression baseline: 45 findings across 34 files as of
       2026-10-25. Reduce this baseline incrementally; do not refactor the large
       orchestrators solely to clear the metric.
-- [ ] Revisit the complexity baseline after guided author sessions. Remove
+- [ ] Revisit the complexity baseline as affected areas change. Remove
       entries as affected functions are otherwise changed; do not schedule a
       broad refactor or set a zero-baseline date without evidence.
 - [x] Enable 12 type-aware ESLint safety rules on production TypeScript in all
@@ -767,12 +763,10 @@ than inherited from the historical audit grouping.
   - [x] Route QSP job cancellation to the worker abort signal, guard the
         persistence boundary, and expire terminal in-memory metadata.
     - [x] Make ChoiceScript parsing cancellable without blocking the API event loop.
-- [ ] **P1, conditional gate:** persist import compatibility reports durably so completed, failed, and
-      cancelled imports retain their diagnostics across process restarts; define
-      retention and ownership before exposing the report as a user-facing
-      recovery surface. This applies before promising report retention or running
-      production imports, not before disposable alpha sessions in a test
-      environment.
+- [ ] **P1, before the open alpha (roadmap task 8, redefined 2026-11-19):**
+      send the complete import report to the browser when analysis or import
+      ends and keep no server copy; drop the 7-day retention promise. Durable
+      report storage across restarts is deferred until a use case needs it.
 - [x] Make ELK the canonical graph-layout strategy while keeping the historic
       custom layout as an explicit fallback or removing it after validation;
       update the large-graph stress benchmark to use the active engine and keep
@@ -806,9 +800,9 @@ than inherited from the historical audit grouping.
       `StoryPlayer` into focused feature modules without duplicating narrative
       runtime state or changing the public behavior of the reader engine.
       **Priority:** targeted `StoryPlayer` slices remain P1; broad `StoryEditor`
-      splitting is conditional P2. Wait for author-session observations before
-      broad structural work; an earlier slice is justified only by a concrete
-      blocker, priority feature, risk, or duplicated rule.
+      splitting is conditional P2. Targeted slices may proceed with regression
+      coverage first; broad structural work still needs a concrete blocker,
+      priority feature, risk, or duplicated rule.
   - [ ] `StoryPlayer` - establish regression coverage before extracting behavior.
         Extend the existing `StoryPlayer.loading.test.tsx` and
         `StoryPlayer.runtime.test.tsx` only for uncovered lifecycle cases:
@@ -941,9 +935,9 @@ than inherited from the historical audit grouping.
 
 The items below consolidate the 2026-10-15 review and the 36 UX reports audited
 on 2026-10-25. They are candidates for observation-led work, not a new delivery
-sequence. The Roadmap still leads with guided author sessions and its existing
-reliability gates. For this intake, P0 means a reproducible defect that blocks an
-essential author task or a scheduled validation session; operational release
+sequence. The Roadmap leads with the open-alpha gates and continuous feedback
+(since 2026-11-19). For this intake, P0 means a reproducible defect that blocks an
+essential author task; operational release
 gates remain in Production readiness. No report was reproduced in a browser
 during this documentation audit, so no new P0 is confirmed. The implementation
 and existing test files were inspected, but tests and browser scenarios were not

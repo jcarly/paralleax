@@ -68,6 +68,10 @@ review that metadata before collecting tester responses.
   PostgreSQL 17 client explicitly so `pg_dump` matches its PostgreSQL 17 service.
 - Configure monitored, encrypted, off-host PostgreSQL backup scheduling and
   complete a recorded restoration drill in the selected production provider.
+  Selected approach (2026-11-19): a scheduled `npm run db:backup` (`pg_dump`),
+  encrypted and uploaded to object storage outside the hosting provider, with
+  a failure alert and a retention window. Provider-native backups may be added
+  for fast restores but do not replace the off-host copy.
 - Implemented foundation: production requires an exact CORS origin, secure
   cookies, an explicit registration mode, and matching `Origin` headers for
   mutations. Add provider-managed staging/secrets and verify the complete HTTPS
@@ -156,10 +160,12 @@ review that metadata before collecting tester responses.
   the selected provider and complete a recorded rollback drill.
 - Add scheduled expired-session cleanup; Story size/entity quotas are already
   implemented.
-- Before production imports, replace the API container's ephemeral report
-  directory with durable storage configured through `PARALLEAX_IMPORT_REPORT_DIR`
-  or an `ImportReportStorage` object-store adapter. Persist import-job metadata
-  before claiming reports survive API restarts or multiple instances.
+- Before the open creator alpha, send the complete import report to the browser
+  and keep no server copy (roadmap task 8, decided 2026-11-19), so no report
+  depends on the API container's ephemeral directory. Durable storage through
+  `PARALLEAX_IMPORT_REPORT_DIR` or an `ImportReportStorage` object-store adapter,
+  with persisted import-job metadata, is needed only before claiming reports
+  survive API restarts or multiple instances.
 
 ### P2 — Before Public Story Reading
 

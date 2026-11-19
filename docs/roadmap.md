@@ -24,7 +24,16 @@ Consequences:
 
 - The open-alpha gates in [Production readiness](production-readiness.md)
   become the critical path, starting with the valuable-project safety gate (P0):
-  strangers will store real work.
+  strangers will store real work. Backups use a scheduled, encrypted `pg_dump`
+  uploaded outside the hosting provider (object storage such as Backblaze B2
+  costs a few cents a month at alpha size); provider-native backups alone do not
+  meet the separate-failure-domain gate.
+- QSP and ChoiceScript imports stay available. Their reports are sent to the
+  browser without server-side storage (task 8, redefined), which removes the
+  durable-storage prerequisite; durable retention is deferred.
+- The Interaction inspector legibility pass (task 11) is required before
+  opening: authors discover Paralleax without a moderator. The rest of the
+  design and clarity pass stays proposed.
 - Guided sessions (former tasks 1, 3 and 4) become optional. Run one only to
   answer a specific question that feedback cannot.
 - Refactoring is **not** frozen. It continues in parallel, with CI guarding
@@ -33,9 +42,13 @@ Consequences:
   below.
 - Entries below that waited on guided sessions (collaboration groundwork, the
   audience hypothesis behind engine export) now wait on collected feedback. The
-  feedback form should ask the author's profile (for example studio or
-  visual-novel team) so the [audience hypothesis](positioning.md#audience-hypothesis)
-  can still be tested.
+  feedback survey asks the author's profile so the
+  [audience hypothesis](positioning.md#audience-hypothesis) can still be tested;
+  its questions and verification are in
+  [Formbricks feedback](operations/formbricks-feedback.md#open-alpha-survey).
+- Feedback is self-selected: authors who give up early rarely answer it. The
+  absence of negative feedback is not evidence that the editor is clear; task 10
+  reads feedback together with simple activity counts.
 - The 2026-11-18 decision (Story format and native export first in "Next") is
   unchanged.
 
@@ -64,9 +77,10 @@ feedback.
 | #          | Task                                                       | Status                                                                                                                                     |
 | ---------- | ---------------------------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------ |
 | 2          | Complete confirmed Lot A quick fixes                       | 1 of 3 implemented (Story deletion confirmation, still untested); localized default Interaction text and the "add a choice" wording remain |
-| 5          | Complete the valuable-project safety gate (P0)             | To do: legacy-data migration test, off-host backup schedule and restore drill, staging and HTTPS verification                              |
-| 8          | Make import reports durable                                | Before imports are offered publicly                                                                                                        |
-| 9          | Open the creator alpha                                     | After 2 and 5 (and 8 for imports): close the open-alpha gates, publish the alpha notice, check feedback collection                         |
+| 5          | Complete the valuable-project safety gate (P0)             | To do: legacy-data migration test, scheduled encrypted off-host `pg_dump` and restore drill, staging and HTTPS verification                |
+| 8          | Deliver import reports without server-side retention       | To do: send the full report to the browser, keep no server copy, drop the 7-day retention promise                                          |
+| 11         | Make the Interaction inspector legible                     | To do: mockup validated by the author first, then implementation                                                                           |
+| 9          | Open the creator alpha                                     | After 2, 5, 8 and 11: close the open-alpha gates, configure the feedback survey, publish the alpha notice                                  |
 | 10         | Triage feedback and ship the next improvement it points to | Continuous, from 9                                                                                                                         |
 | 1, 3, 4, 6 | Guided sessions and observation triage                     | Optional since 2026-11-19                                                                                                                  |
 
@@ -99,6 +113,10 @@ These items come from the 2026-11-18 documentation review and the 2026-11-19
 priority review. They need an
 explicit decision before they change the order above.
 
+- **Native export before the open alpha.** Authors invited to store real work
+  may need to get their Stories back out; operator backups do not give them
+  that. Decide whether task 9 waits for "Next" item 1, a minimal raw JSON
+  export, or neither (the alpha notice then states the limitation).
 - **Engine-oriented data export**, to validate with users. If collected feedback
   confirm the studio and visual-novel hypothesis, it becomes the next priority
   after the Story format:
@@ -128,8 +146,8 @@ explicit decision before they change the order above.
 - **Ink-inspired source mode.** Keep as planned in
   [ADR-043](decisions/ADR-043-ink-inspired-narrative-source.md); writers in
   studios often prefer text and version control.
-- **Design and clarity pass.** Make the editor read before it edits: a more
-  legible inspector, fewer words in favour of icons, graph zoom, and authored
+- **Design and clarity pass.** Make the editor read before it edits (the
+  inspector part is task 11 in "Now"): fewer words in favour of icons, graph zoom, and authored
   information (Trigger conditions, effects) visible on the graph. Product topics
   that need definition first: code mode, Groups as an explorer, Simulation,
   linear writing, and the actor / spectator distinction. Inventory in the

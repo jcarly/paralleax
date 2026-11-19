@@ -2,7 +2,7 @@
 
 Status: Optional operator integration
 
-Last reviewed: 2026-10-28
+Last reviewed: 2026-11-19
 
 Paralleax exposes a compact `Give feedback` / `Donner un retour` button in the
 application header when Formbricks is configured. The SDK is loaded only after
@@ -116,6 +116,29 @@ enabled later, send only these milestone names and minimal categorical fields;
 never send story ids, story text, variable values, account identifiers, or
 per-action histories.
 
+## Open-alpha survey
+
+Since the 2026-11-19 [priority decision](../roadmap.md#priority-decision-2026-11-19),
+this feedback box is the main source of product validation instead of guided
+sessions. Before opening the alpha (roadmap task 9), extend the survey above:
+
+1. Add an optional single-choice question named `author_profile`: solo writer
+   (hobby), professional writer, game studio, visual-novel team, educator or
+   trainer, other. It tests the
+   [audience hypothesis](../positioning.md#audience-hypothesis).
+2. Add an optional single-choice question named `narrative_tool_experience`:
+   none, Twine or Ink, ChoiceScript or QSP, a game engine (Ren'Py, Unity,
+   Godot), other.
+3. Keep both questions optional and categorical. They are self-declared, never
+   linked to an account, and must be listed in the alpha privacy notice before
+   the survey is published.
+4. Keep `feedback_type` and `feedback_message` unchanged, so the survey stays
+   short enough for a quick report.
+
+Feedback is self-selected: authors who give up early rarely answer. Triage
+(roadmap task 10) therefore does not read the absence of negative feedback as a
+sign that the editor is clear.
+
 ## Verification
 
 After publishing the survey and deploying a configured web build:
@@ -131,3 +154,6 @@ After publishing the survey and deploying a configured web build:
    screenshot in the Formbricks response.
 6. Confirm no account identity or authored story content appears in the custom
    response fields. Review the separate full-URL metadata for story ids.
+7. For the open alpha, submit one response with both profile questions answered
+   and one without them; confirm both are accepted and recorded, and that the
+   alpha privacy notice lists the profile questions.
