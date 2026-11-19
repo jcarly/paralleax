@@ -2,6 +2,13 @@
 
 ## Unreleased
 
+- Fixed dragging from an Interaction's '+' controls in the graph, which did
+  nothing for Interactions loaded with the story (issue #32): no link to an
+  existing Interaction or trigger, and no child or parent created by a drop on
+  the canvas, until the node happened to be re-measured. The controls mount when
+  the editor becomes editable, after React Flow measured the node, so it never
+  registered them; the node now reports the change to React Flow. A Playwright
+  spec covers the real pointer drag, repeated links and persistence on reload.
 - Restored the Node 24 Docker base images after a Dockerfile-only Dependabot
   bump to Node 26 broke CI on `main`. CI now runs the operational tests for any
   Dockerfile or workflow change, and a test fails when the Docker images or CI
