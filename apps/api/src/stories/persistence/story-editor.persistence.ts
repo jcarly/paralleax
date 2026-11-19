@@ -8,6 +8,7 @@ import type {
   StatValue,
   TriggerConditionGroup,
 } from '@paralleax/shared';
+import { projectInteractionLocationId } from './story-projections';
 import type { Queryable } from './stories.persistence.types';
 
 interface ReadPageOptions {
@@ -465,7 +466,7 @@ export async function readStoryEditorInteractionPage(
       id: row.id,
       title: row.title,
       position: { x: row.position_x, y: row.position_y },
-      locationId: row.location_id,
+      ...projectInteractionLocationId(row.location_id),
     })),
   };
 }

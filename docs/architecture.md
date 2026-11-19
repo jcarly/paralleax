@@ -929,8 +929,12 @@ undo/redo availability share one history read query after the repository's
 access check. A position-only delta persists all existing interaction positions
 and all existing Trigger positions through at most two JSON-backed bulk updates.
 Undo and redo store the directly inverted source delta, avoiding both a complete
-second diff and a second relational assembly. The editor ignores initial SSE
-readiness and change events whose revision is already local, preventing a second
+second diff and a second relational assembly. Deltas compare exactly with the
+assembled Story, so every read path projects a stored Interaction without a
+location without `locationId`. Events recorded before that projection stored
+the missing location as `null`; `story-history-compatibility.ts` reads those
+values as absent when it loads an undo or redo candidate, without rewriting the
+persisted events. The editor ignores initial SSE readiness and change events whose revision is already local, preventing a second
 full Story reload after its own inverse. Graph projection indexes interactions by
 id once per immutable Story object so trigger placement and edge routing remain
 linear instead of repeatedly scanning every interaction. After a successful local
@@ -1242,9 +1246,23 @@ classes directly.
 
 ## Tests and CI
 
-- API: Jest and Supertest.
+- API: Jest and Supertest, in two layers with no parallel repository
+  implementation:
+  - HTTP boundary specs (`stories.http.spec.ts`) cover validation, body limits,
+    rate limiting, and error mapping. They boot the full Nest application with a
+    per-spec repository stub that answers only what each request needs, so any
+    unexpected storage call fails the request. They need no database.
+  - API e2e specs (`stories.e2e.spec.ts`, `comments.e2e.spec.ts`) exercise
+    behavior that depends on persistence (access, history, concurrency,
+    pagination, quotas) through the real repositories on the dedicated
+    PostgreSQL test database. Each test starts from emptied tables with the
+    accounts that the mocked `AuthService` authenticates.
+    The former in-memory `StoriesRepository` fake was removed because e2e specs
+    verified it rather than the SQL.
 - PostgreSQL integration: Jest against PostgreSQL 17, including persistence
-  across repository instances and concurrent row mutation coverage.
+  across repository instances and concurrent row mutation coverage. Specs that
+  need PostgreSQL are skipped when `POSTGRES_TEST_DATABASE_URL` is unset, and
+  destructive setup refuses a database whose name does not end with `_test`.
 - Web: Vitest and Testing Library.
 - Shared: Vitest for narrative rules and pure story operations.
 - Functional UI: fast Playwright suites with controlled API responses.
@@ -1283,7 +1301,8 @@ classes directly.
   three samples per build with explicit per-sample budgets and retains every
   structured measurement as a JSON test attachment.
 - Coverage: Jest coverage for the API, Vitest V8 coverage for shared and the web app,
-  with per-workspace thresholds enforced by the coverage commands.
+  with per-workspace thresholds enforced by the coverage commands. API coverage
+  runs in the PostgreSQL CI job because the API e2e specs need the database.
 - Bundle contract: the production web build checks the Vite manifest, dynamic
   route boundaries, and compressed initial/editor/player budgets.
 - Code style: ESLint with zero-warning enforcement, Stylelint on

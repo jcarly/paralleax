@@ -211,7 +211,6 @@ function expectedCurrentInteraction() {
     title: 'Current scene',
     body: '<p>Current scene</p>',
     position: { x: 0, y: 10 },
-    locationId: null,
     durationMinutes: 5,
     conditionalTextBlocks: [],
     characterIds: [],

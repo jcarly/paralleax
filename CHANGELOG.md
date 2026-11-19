@@ -2,6 +2,20 @@
 
 ## Unreleased
 
+- API e2e specs for stories and comments now run against the real PostgreSQL
+  repositories instead of an in-memory fake, which is removed (963 lines) along
+  with the fake comments repository. Validation, body-limit, rate-limit and 404
+  checks moved to a fast HTTP boundary spec that needs no database and uses a
+  per-request repository stub. API coverage now runs in the PostgreSQL CI job.
+  Destructive test setup refuses any database whose name does not end with
+  `_test`.
+- Fixed undo and redo of an Interaction creation, and of clearing an
+  Interaction location, which PostgreSQL refused as a conflict: stored
+  Interactions without a location are now read back without `locationId`, and
+  clearing a location removes the field, matching authored Interactions. The
+  editor and runtime projections use the same form, and history events recorded
+  before this change, which store a missing location as `null`, are read in the
+  current form so they can still be undone and redone.
 - Fixed the Story settings toolbar button rendering without its styles until
   the settings dialog was first opened: the button styles now load with the
   icon instead of with the on-demand dialog. The CI Quality build now uses the same

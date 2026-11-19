@@ -4,152 +4,21 @@ import { Server } from 'node:http';
 import { Test } from '@nestjs/testing';
 import * as request from 'supertest';
 import { filter, firstValueFrom, take, toArray } from 'rxjs';
-import type { CommentAnchor, StoryCommentThread } from '@paralleax/shared';
+import type { CommentAnchor } from '@paralleax/shared';
+import { Pool } from 'pg';
 import { AppModule } from '../app.module';
 import { AuthService } from '../auth/auth.service';
+import { DatabaseConnection } from '../database/database.connection';
 import { DatabaseMigrator } from '../database/database.migrator';
-import { InMemoryStoriesRepository } from '../stories/stories.repository.memory';
-import { StoriesRepository } from '../stories/stories.repository';
-import { CommentsRepository } from './comments.repository';
+import {
+  insertPostgresTestUsers,
+  itWithPostgres,
+  postgresTestDatabaseUrl,
+  resetPostgresTestDatabase,
+  sharedPostgresTestConnection,
+  truncatePostgresTestTables,
+} from '../database/postgres-test-database';
 import { CommentEventsService } from './comments.events';
-
-class InMemoryCommentsRepository {
-  readonly threads = new Map<string, StoryCommentThread>();
-
-  async list(storyId: string, includeDeleted = false) {
-    return [...this.threads.values()].filter(
-      (thread) => thread.storyId === storyId && (includeDeleted || !thread.deletedAt),
-    );
-  }
-
-  async find(storyId: string, threadId: string, includeDeleted = false) {
-    const thread = this.threads.get(threadId);
-    return thread?.storyId === storyId && (includeDeleted || !thread.deletedAt)
-      ? structuredClone(thread)
-      : undefined;
-  }
-
-  async create(input: {
-    id: string;
-    storyId: string;
-    anchor: CommentAnchor;
-    anchorLabel: string;
-    authorId: string;
-    messageId: string;
-    body: string;
-    timestamp: string;
-  }) {
-    const author = { id: input.authorId, displayName: `User ${input.authorId}` };
-    const thread: StoryCommentThread = {
-      id: input.id,
-      storyId: input.storyId,
-      anchor: input.anchor,
-      anchorLabel: input.anchorLabel,
-      status: 'open',
-      createdBy: author,
-      createdAt: input.timestamp,
-      updatedAt: input.timestamp,
-      messages: [
-        {
-          id: input.messageId,
-          threadId: input.id,
-          author,
-          body: input.body,
-          createdAt: input.timestamp,
-        },
-      ],
-    };
-    this.threads.set(thread.id, thread);
-    return structuredClone(thread);
-  }
-
-  async addMessage(input: {
-    id: string;
-    storyId: string;
-    threadId: string;
-    authorId: string;
-    body: string;
-    timestamp: string;
-  }) {
-    const thread = requireThread(this.threads, input.threadId);
-    thread.messages.push({
-      id: input.id,
-      threadId: input.threadId,
-      author: { id: input.authorId, displayName: `User ${input.authorId}` },
-      body: input.body,
-      createdAt: input.timestamp,
-    });
-    thread.updatedAt = input.timestamp;
-    return structuredClone(thread);
-  }
-
-  async updateStatus(
-    ...args: [
-      storyId: string,
-      threadId: string,
-      status: 'open' | 'resolved',
-      actorId: string,
-      timestamp: string,
-    ]
-  ) {
-    const [, threadId, status, actorId, timestamp] = args;
-    const thread = requireThread(this.threads, threadId);
-    thread.status = status;
-    thread.updatedAt = timestamp;
-    if (status === 'resolved') {
-      thread.resolvedAt = timestamp;
-      thread.resolvedBy = { id: actorId, displayName: `User ${actorId}` };
-    } else {
-      delete thread.resolvedAt;
-      delete thread.resolvedBy;
-    }
-    return structuredClone(thread);
-  }
-
-  async updateAnchor(
-    ...args: [
-      storyId: string,
-      threadId: string,
-      anchor: CommentAnchor,
-      anchorLabel: string,
-      timestamp: string,
-    ]
-  ) {
-    const [, threadId, anchor, anchorLabel, timestamp] = args;
-    const thread = requireThread(this.threads, threadId);
-    thread.anchor = anchor;
-    thread.anchorLabel = anchorLabel;
-    thread.updatedAt = timestamp;
-    return structuredClone(thread);
-  }
-
-  async softDelete(storyId: string, threadId: string, actorId: string, timestamp: string) {
-    const thread = requireThread(this.threads, threadId);
-    thread.deletedBy = { id: actorId, displayName: `User ${actorId}` };
-    thread.deletedAt = timestamp;
-    thread.updatedAt = timestamp;
-    return structuredClone(thread);
-  }
-
-  async restore(storyId: string, threadId: string, timestamp: string) {
-    const thread = requireThread(this.threads, threadId);
-    delete thread.deletedBy;
-    delete thread.deletedAt;
-    thread.updatedAt = timestamp;
-    return structuredClone(thread);
-  }
-}
-
-function requireThread(
-  threads: ReadonlyMap<string, StoryCommentThread>,
-  threadId: string,
-): StoryCommentThread {
-  const thread = threads.get(threadId);
-  if (!thread) {
-    throw new Error(`Comment thread ${threadId} was not found`);
-  }
-  return thread;
-}
 
 function isRecord(value: unknown): value is Record<string, unknown> {
   return typeof value === 'object' && value !== null && !Array.isArray(value);
@@ -183,6 +52,16 @@ function responseProperty(value: unknown, key: string): unknown {
   return requireRecord(value, `response at ${key}`)[key];
 }
 
+// Every test in this file needs the dedicated PostgreSQL test database; hooks
+// only run when a test runs, so the file is skipped when it is not configured.
+// This local `it` shadows the Jest global on purpose: one switch for the file.
+const it = itWithPostgres;
+const pool = new Pool({ connectionString: postgresTestDatabaseUrl });
+const database = sharedPostgresTestConnection(pool);
+const commentUsers = ['user-1', 'user-2', 'user-3'].map((id) => ({
+  id,
+  email: `${id}@paralleax.invalid`,
+}));
 let app: INestApplication;
 let httpServer: Parameters<typeof request>[0];
 
@@ -482,12 +361,15 @@ async function expectDiscussionResult(
   ]);
 }
 
+beforeAll(() => resetPostgresTestDatabase(pool, new DatabaseMigrator(database)), 30_000);
+afterAll(() => pool.end());
+
 beforeEach(async () => {
+  await truncatePostgresTestTables(pool);
+  await insertPostgresTestUsers(pool, commentUsers);
   const module = await Test.createTestingModule({ imports: [AppModule] })
-    .overrideProvider(StoriesRepository)
-    .useClass(InMemoryStoriesRepository)
-    .overrideProvider(CommentsRepository)
-    .useClass(InMemoryCommentsRepository)
+    .overrideProvider(DatabaseConnection)
+    .useValue(database)
     .overrideProvider(DatabaseMigrator)
     .useValue({ run: jest.fn().mockResolvedValue(undefined) })
     .overrideProvider(AuthService)

@@ -200,10 +200,6 @@ jobs:
         if: needs.changes.result == 'success' && needs.changes.outputs.shared_coverage == 'true'
         run: npm run coverage -w @paralleax/shared
 
-      - name: Run API coverage suite
-        if: needs.changes.result == 'success' && needs.changes.outputs.api_coverage == 'true'
-        run: npm run coverage -w @paralleax/api
-
       - name: Run web coverage suite
         if: needs.changes.result == 'success' && needs.changes.outputs.web_coverage == 'true'
         run: npm run coverage -w @paralleax/web
@@ -214,7 +210,6 @@ jobs:
         with:
           name: coverage-reports
           path: |
-            apps/api/coverage/
             apps/web/coverage/
             packages/shared/coverage/
           if-no-files-found: ignore
@@ -286,9 +281,24 @@ jobs:
           "$PG17_BIN/pg_dump" --version | grep -E ' 17([.]|$)'
           "$PG17_BIN/pg_restore" --version | grep -E ' 17([.]|$)'
 
+      # API e2e specs run against PostgreSQL, so API coverage runs here, where the
+      # database exists. The coverage suite already includes every PostgreSQL spec.
+      - name: Run API coverage suite
+        if: needs.changes.outputs.api_coverage == 'true'
+        run: npm run coverage -w @paralleax/api
+
       - name: Run PostgreSQL integration and migration tests
-        if: needs.changes.outputs.postgres_integration == 'true'
+        if: needs.changes.outputs.postgres_integration == 'true' && needs.changes.outputs.api_coverage != 'true'
         run: npm run test:postgres -w @paralleax/api
+
+      - name: Upload API coverage report
+        if: always() && needs.changes.outputs.api_coverage == 'true'
+        uses: actions/upload-artifact@v7
+        with:
+          name: api-coverage-report
+          path: apps/api/coverage/
+          if-no-files-found: ignore
+          retention-days: 7
 
       - name: Verify backup restoration
         if: needs.changes.outputs.postgres_restore == 'true'

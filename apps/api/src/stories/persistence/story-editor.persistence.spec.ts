@@ -512,7 +512,7 @@ function expectedInteractionStructurePage() {
         position: { x: 10, y: 20 },
         locationId: 'location-1',
       },
-      { id: 'interaction-2', title: 'Next', position: { x: 30, y: 40 }, locationId: null },
+      { id: 'interaction-2', title: 'Next', position: { x: 30, y: 40 } },
     ],
   };
 }
