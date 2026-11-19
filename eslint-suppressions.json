@@ -1866,11 +1866,6 @@
       "count": 1
     }
   },
-  "apps/web/src/features/story-player/runtime/loadLatestRuntimeSliceForSession.ts": {
-    "@typescript-eslint/no-unnecessary-condition": {
-      "count": 1
-    }
-  },
   "apps/web/src/features/story-player/runtime/useStoryPlayerLoading.ts": {
     "max-lines-per-function": {
       "count": 1
