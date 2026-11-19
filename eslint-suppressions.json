@@ -1482,11 +1482,6 @@
       "count": 1
     }
   },
-  "apps/web/src/features/story-editor/navigation/StoryGroupContextMenu.tsx": {
-    "@typescript-eslint/strict-boolean-expressions": {
-      "count": 1
-    }
-  },
   "apps/web/src/features/story-editor/navigation/StoryGroupRow.tsx": {
     "complexity": {
       "count": 1
