@@ -56,6 +56,23 @@ The API and root overrides now pin the Nest common, core, platform-express, and
 testing packages to 11.2.7. Keep the pins until the API and its Nest integrations
 are deliberately upgraded together.
 
+## NestJS 12 Upgrade (2026-11-19)
+
+The API now uses NestJS 12 for common, core, platform-express and testing
+(12.5.1) and Swagger 12.1.2. The root overrides pin common and core to 12.5.1 so
+root-level integrations such as `@sentry/nestjs` and `@nestjs/throttler` share
+the API's single Nest instance. Swagger 12 depends on `js-yaml` 5.5.0, so the
+targeted Swagger `js-yaml` override is removed.
+
+NestJS 12 is ESM-only. The API stays CommonJS: webpack bundles the Nest
+packages for production, and `apps/api/webpack.config.cjs` ignores the optional
+`@fastify/static`, microservices and websockets imports when they are not
+installed, which the Nest CLI 12.0.13 defaults do not cover. Jest runs the API
+specs with `--experimental-vm-modules` so CommonJS specs can require the Nest
+packages, and no longer transpiles any `node_modules` package except the nested
+`sanitize-html` ESM dependencies. `npm audit --omit=dev` reports the same four
+moderate `qs` findings as before the upgrade and no high findings.
+
 The web fixes address two independent checks. The account button's accessible
 name includes its visible initials and display name before the account action
 label, satisfying axe's visible text name check. The story import dialog loads

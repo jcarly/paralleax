@@ -54,9 +54,8 @@ when choosing incremental quality work:
    or style-only cleanup. DS-01 through DS-04 are resolved; remaining audit work
    retains its task-level P1/P2 status.
 
-Dependency-watch entries such as the Swagger `js-yaml` override and the
-development-only `glob@10.5.0` warning are removal conditions, not active feature
-work. Other UX ideas and library candidates remain discovery inputs until a
+Dependency-watch entries such as the development-only `glob@10.5.0` warning are
+removal conditions, not active feature work. Other UX ideas and library candidates remain discovery inputs until a
 product task promotes them.
 
 The anonymized product discovery proposals are recorded in the
@@ -456,6 +455,8 @@ items when a row above points to them.
 - [x] Upgrade `sanitize-html`, DOMPurify, React Router, Nano ID, and safe
       transitive packages. Pin the fixed `js-yaml` patch beneath Swagger with an
       npm override; the production dependency audit reports no known findings.
+      Swagger 12 declares the fixed `js-yaml` directly, so the override was
+      removed with the NestJS 12 upgrade.
 - [x] Upgrade Jest and Vitest, review every dependency install hook, and retain a
       clean full and production npm audit. Keep the classification and evidence
       in [npm warning triage](npm-warning-triage.md).
@@ -464,8 +465,6 @@ items when a row above points to them.
 
 ## Dependency Watches
 
-- Remove the targeted Swagger `js-yaml` override once Swagger declares the fixed
-  patch directly, retaining the high-severity CI audit.
 - Remove the development-only `test-exclude → glob@10.5.0` deprecation once the
   Jest/ts-jest coverage chain supports a maintained `glob` release; do not force
   a transitive major override without an upstream contract.
