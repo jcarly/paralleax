@@ -33,19 +33,22 @@ only place where a narrative rule exists.
 
 ## Dependency audit snapshot
 
-The 2026-10-25 dependency-cruiser scan covered 557 source modules and 2,018
-dependency edges. It found no workspace-boundary violations and no runtime
-cycles. One mixed cycle remains between `apps/api/src/email/email.service.ts`
-and `apps/api/src/email/test-email-outbox.ts`: the service imports the outbox at
+The 2026-11-19 dependency-cruiser scan covered 694 modules and 2,645
+dependency edges (the 2026-10-25 scan: 557 and 2,018). It found no
+workspace-boundary violations and no runtime cycles. One mixed cycle remains
+between `apps/api/src/email/email.service.ts` and
+`apps/api/src/email/test-email-outbox.ts`: the service imports the outbox at
 runtime, and the outbox imports `EmailMessage` as a type. It is the only entry
 in the architecture baseline. The check rejects any additional cycle.
 
-The graph has 34 dynamic-import edges and 447 type-only edges. The shared public
-facade has 212 dependents. High-fan-in modules worth inspecting when their
-responsibility changes include `apps/web/src/api.ts` (45 dependents),
-`packages/shared/src/model/index.ts` (28), `apps/api/src/stories/stories.repository.ts`
-(22), and `apps/web/src/storyGraph.ts` (21). These counts are review context,
-not automatic reasons to split a module.
+The graph has 50 dynamic-import edges and 701 type-only edges. The shared public
+facade has 282 dependents. High-fan-in modules worth inspecting when their
+responsibility changes include `apps/web/src/api.ts` (48 dependents),
+`apps/web/src/storyGraph.ts` (32), `packages/shared/src/model/index.ts` (29),
+and `apps/api/src/stories/stories.repository.ts` (23). These counts are review
+context, not automatic reasons to split a module.
+
+The 2026-10-25 census below has not been rerun.
 
 The production-source ESLint census found 86 functions above complexity 15 and
 45 above 20. At exploratory thresholds, it also found 2 functions deeper than 4
@@ -68,14 +71,18 @@ owner, but cannot prove that equivalent business behavior was not reimplemented.
 
 ## Current hotspots
 
-The remaining unusually broad orchestration files are:
+Status 2026-11-19. The broad modules are now persistence and a few web views:
 
-- `apps/web/src/pages/StoryEditor.tsx`
-- `apps/web/src/pages/StoryPlayer.tsx`
+- `apps/api/src/stories/stories.repository.ts` (1,647 lines) and
+  `apps/api/src/stories/persistence/stories.persistence.writer.ts` (1,678)
+- `apps/web/src/pages/StoryPlayer.tsx` (1,219)
+- `apps/web/src/components/InteractionInspector.tsx` (1,187)
+- `apps/web/src/storyGraphLayout.ts` (1,454), with the other graph modules still
+  at the root of `apps/web/src`
 
-`apps/api/src/stories/stories.service.ts` is intentionally a broad but thin
-controller-facing facade. Story metadata, access, mutation coordination, graph,
-context/inventory, and reader progress live in focused application services.
+`apps/web/src/pages/StoryEditor.tsx` (327 lines since jcarly/paralleax#156) and
+`apps/api/src/stories/stories.service.ts` are intentionally thin facades over
+focused editor feature modules and application services.
 
 The remaining hotspots are functional, but they increase agent risk because
 unrelated concepts share large edit surfaces.
@@ -294,9 +301,9 @@ availability/diagnostic work; incremental journey-date recalculation is a
 separate measured optimization. Neither should be hidden inside structural
 extraction. Keep the reader-progress version, save-slot/API contracts, and
 reader-visible behavior stable throughout this work. Keep incremental
-`StoryPlayer` slices at P1, while following the roadmap sequence: observe author
-sessions before broad structural work unless an earlier slice addresses a
-concrete blocker, priority feature, risk, or duplicated rule.
+`StoryPlayer` slices at P1. Since the 2026-11-19 roadmap decision, structural
+work does not wait for author sessions: take a slice when it serves a backlog
+entry or an area that a current task touches, and never as one rewrite.
 
 ## Extraction rule
 

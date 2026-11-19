@@ -393,7 +393,9 @@ Never perform the first restore drill during an incident.
 ## Remaining Boundary
 
 This foundation does not provide provider-managed scheduling, TLS, DNS, secrets,
-monitoring, account self-service export or deletion, or legal approval.
+monitoring, account self-service export or deletion (the open alpha uses the
+manual procedure in [Production readiness](../production-readiness.md)), or
+legal approval.
 Transactional email is required for registration, verification, and recovery;
 operating the Brevo account, its authenticated sender domain, API credentials,
 deliverability monitoring, and retention policy remains an operator responsibility
