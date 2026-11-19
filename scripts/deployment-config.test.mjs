@@ -7,12 +7,19 @@ import { createRailwayContext, github } from 'railway/iac';
 
 const readRepositoryFile = (path) => readFile(new URL(`../${path}`, import.meta.url), 'utf8');
 
+const readSupportedNodeMajor = async () => {
+  const { engines } = JSON.parse(await readRepositoryFile('package.json'));
+  const match = /^(\d+)\.x$/.exec(engines.node);
+  assert.ok(match, `engines.node must use the "<major>.x" form, got ${engines.node}`);
+  return match[1];
+};
+
 test('Dockerfile targets share the common build while compiling only their own app', async () => {
   const dockerfile = await readRepositoryFile('Dockerfile');
 
   assert.match(dockerfile, /^ARG RUNTIME_TARGET=web$/m);
   assert.match(dockerfile, /^FROM \$\{RUNTIME_TARGET\} AS runtime$/m);
-  assert.match(dockerfile, /^FROM node:24-alpine AS build$/m);
+  assert.match(dockerfile, /^FROM node:\d+-alpine AS build$/m);
   assert.match(dockerfile, /^FROM build AS shared-build$/m);
   assert.match(dockerfile, /^RUN npm run build --workspace=@paralleax\/shared$/m);
   assert.match(dockerfile, /^FROM shared-build AS api-build$/m);
@@ -32,9 +39,26 @@ test('Dockerfile targets share the common build while compiling only their own a
     dockerfile,
     /^COPY deploy\/sentry-csp\.envsh \/docker-entrypoint\.d\/15-sentry-csp\.envsh$/m,
   );
-  assert.match(dockerfile, /^FROM node:24-alpine AS api$/m);
+  assert.match(dockerfile, /^FROM node:\d+-alpine AS api$/m);
   assert.match(dockerfile, /^FROM nginx:alpine AS web$/m);
   assert.doesNotMatch(dockerfile, /^ARG SENTRY_AUTH_TOKEN=/m);
+});
+
+test('Docker images and CI use the Node major declared in package.json engines', async () => {
+  const nodeMajor = await readSupportedNodeMajor();
+  const dockerfile = await readRepositoryFile('Dockerfile');
+  const workflow = await readRepositoryFile('.github/workflows/ci.yml');
+
+  const imageMajors = [...dockerfile.matchAll(/^FROM node:([^\s-]+)-alpine AS \S+$/gm)].map(
+    ([, major]) => major,
+  );
+  assert.deepEqual(imageMajors, [nodeMajor, nodeMajor]);
+
+  const workflowMajors = [...workflow.matchAll(/^\s+node-version:\s*(\S+)$/gm)].map(
+    ([, major]) => major,
+  );
+  assert.ok(workflowMajors.length > 0, 'CI must pin a Node version');
+  assert.deepEqual(new Set(workflowMajors), new Set([nodeMajor]));
 });
 
 test('Railway IaC partial explicitly retains GitHub sources for the initial migration', async () => {

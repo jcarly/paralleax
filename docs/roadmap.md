@@ -153,11 +153,11 @@ explicit decision before they change the order above.
   starts with a mockup. First step: test a mockup tool (static HTML first)
   before removing the code prototype; see
   [UI prototype](ui-prototype.md#status-2026-11-19).
-- **Architecture review.** Check the project structure against its own rules
-  and decide the target in an ADR: importers outside the narrative engine,
-  application services independent of HTTP exceptions and concrete repositories,
-  and the remaining large persistence modules. See the
-  [backlog](code-quality-backlog.md#architecture-review-2026-11-19).
+
+The architecture review proposed on 2026-11-19 is decided in
+[ADR-046](decisions/ADR-046-target-project-structure.md). Its migration steps
+are refactoring under the 2026-11-19 rule: they proceed in parallel and are
+tracked in the [backlog](code-quality-backlog.md#adr-046-migration-2026-11-19).
 
 ## Before V1.0
 
