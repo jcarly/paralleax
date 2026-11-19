@@ -103,6 +103,7 @@ jobs:
               - 'packages/*/package.json'
             docker:
               - 'Dockerfile'
+              - 'Dockerfile.dev'
               - '.dockerignore'
               - 'compose.production.yaml'
               - 'deploy/**'

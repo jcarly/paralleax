@@ -47,12 +47,14 @@ test('Dockerfile targets share the common build while compiling only their own a
 test('Docker images and CI use the Node major declared in package.json engines', async () => {
   const nodeMajor = await readSupportedNodeMajor();
   const dockerfile = await readRepositoryFile('Dockerfile');
+  const developmentDockerfile = await readRepositoryFile('Dockerfile.dev');
   const workflow = await readRepositoryFile('.github/workflows/ci.yml');
 
   const imageMajors = [...dockerfile.matchAll(/^FROM node:([^\s-]+)-alpine AS \S+$/gm)].map(
     ([, major]) => major,
   );
   assert.deepEqual(imageMajors, [nodeMajor, nodeMajor]);
+  assert.match(developmentDockerfile, new RegExp(`^FROM node:${nodeMajor}-alpine$`, 'm'));
 
   const workflowMajors = [...workflow.matchAll(/^\s+node-version:\s*(\S+)$/gm)].map(
     ([, major]) => major,
