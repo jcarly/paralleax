@@ -406,10 +406,6 @@
   font-size: 1.25rem;
   line-height: 1;
 }
-.trigger-delete-action {
-  border-color: var(--color-trigger-strong);
-  background: var(--color-trigger-strong);
-}
 .temporal-condition {
   grid-column: 1 / -2;
   display: grid;
@@ -664,6 +660,9 @@ span.context-picto.interaction-metadata-avatar {
 .interaction-inspector-effects,
 .interaction-inspector-options {
   padding: 0.75rem 0;
+}
+/* A line only between sections, not under the last one. */
+.interaction-inspector-effects {
   border-bottom: 1px solid var(--color-border);
 }
 .interaction-inspector-section-heading {

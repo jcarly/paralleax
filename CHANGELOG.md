@@ -2,6 +2,12 @@
 
 ## Unreleased
 
+- Tidied the Inspector (PAR-7). Deleting the selected Interaction, Trigger or
+  graph decoration moves from a large red button at the bottom to a trash icon
+  in the header, beside Maximize and Close, with the same behaviour; the
+  separators and the trailing border left around it are removed. The Inspector
+  has no fixed 720px width cap on wide screens, and widening it past 70% of the
+  editor maximizes it; Restore returns to the width from before.
 - Added a private, local MCP server prototype (`apps/mcp`, ADR-047) built on
   the official MCP TypeScript SDK v2 over stdio. It calls the existing HTTP API
   as the signed-in user (`paralleax-mcp login`) and exposes six tools:
