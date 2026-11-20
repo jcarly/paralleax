@@ -5,19 +5,19 @@ export async function loadLatestRuntimeSliceForSession(
   runtimeStory: Story,
   getCurrentSession: () => ReaderProgressState,
 ): Promise<Story> {
-  let requestedSession = getCurrentSession();
-  while (true) {
-    const nextStory = await loadStoryRuntimeSlice(
+  let latestSession = getCurrentSession();
+  let requestedSession: ReaderProgressState;
+  let nextStory: Story;
+  do {
+    requestedSession = latestSession;
+    nextStory = await loadStoryRuntimeSlice(
       runtimeStory,
       requestedSession.currentInteractionId,
       requestedSession.journeyInteractionIds,
     );
-    const latestSession = getCurrentSession();
-    if (hasSameRuntimeSliceRequest(requestedSession, latestSession)) {
-      return nextStory;
-    }
-    requestedSession = latestSession;
-  }
+    latestSession = getCurrentSession();
+  } while (!hasSameRuntimeSliceRequest(requestedSession, latestSession));
+  return nextStory;
 }
 
 function hasSameRuntimeSliceRequest(
