@@ -34,7 +34,9 @@ edit policy, in the shared rule and its SQL projection. Product decision: no
 migration; invited editors on such Stories lose editing until the owner opens
 editing to Editors. Inviting or promoting an Editor from the settings screen
 while editing is `owner` opens editing to `collaborators` when reading allows
-it, and says so.
+it, and says so. The grant and policy change are performed atomically by the
+collaborator endpoint (one PostgreSQL data-modifying CTE statement), so a failed
+request does not leave a partially applied invitation or promotion.
 
 ## Context
 
