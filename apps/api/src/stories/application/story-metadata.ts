@@ -84,7 +84,7 @@ export class StoryMetadataService {
 
   async stream(storyId: string, userId: string) {
     const story = await this.get(storyId, userId);
-    if (!story.capabilities?.canEdit) {
+    if (story.capabilities?.canEdit !== true) {
       throw new ForbiddenException('Story edit access required');
     }
     return this.events.stream(storyId);

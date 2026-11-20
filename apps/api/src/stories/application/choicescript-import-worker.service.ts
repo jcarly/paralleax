@@ -23,7 +23,7 @@ export class ChoiceScriptImportWorkerService extends AbortableImportWorkerServic
     if (this.activeImports >= 1) {
       throw new ServiceUnavailableException('Another ChoiceScript import is already running.');
     }
-    if (!reportPath) {
+    if (reportPath === undefined || reportPath === '') {
       throw new Error('A report path is required for ChoiceScript import execution.');
     }
 

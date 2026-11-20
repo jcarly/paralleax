@@ -29,7 +29,7 @@ export class DatabaseMigrator {
           'SELECT id FROM schema_migrations WHERE id = $1',
           [migration.id],
         );
-        if (applied.rowCount) {
+        if (applied.rowCount !== null && applied.rowCount !== 0) {
           continue;
         }
 

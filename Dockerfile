@@ -4,7 +4,7 @@
 # the runtime alias for the API service.
 ARG RUNTIME_TARGET=web
 
-FROM node:24-alpine AS build
+FROM node:26-alpine AS build
 
 ARG VITE_FORMBRICKS_WORKSPACE_ID=
 ARG VITE_FORMBRICKS_APP_URL=
@@ -53,7 +53,7 @@ RUN --mount=type=secret,id=sentry_auth_token,required=false \
     npm run build --workspace=@paralleax/web; \
   fi
 
-FROM node:24-alpine AS api
+FROM node:26-alpine AS api
 
 ARG SENTRY_RELEASE=
 ENV NODE_ENV=production
