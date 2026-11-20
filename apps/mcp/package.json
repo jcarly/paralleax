@@ -1,0 +1,36 @@
+{
+  "name": "@paralleax/mcp",
+  "version": "0.1.0",
+  "private": true,
+  "description": "Local stdio MCP server that exposes a small set of Paralleax authoring tools over the Paralleax HTTP API.",
+  "type": "module",
+  "bin": {
+    "paralleax-mcp": "dist/main.js"
+  },
+  "scripts": {
+    "build": "tsc -p tsconfig.json",
+    "typecheck": "tsc -p tsconfig.json --noEmit",
+    "start": "node dist/main.js",
+    "login": "node dist/main.js login",
+    "logout": "node dist/main.js logout",
+    "test": "vitest run --configLoader runner",
+    "test:e2e": "vitest run --configLoader runner src/mcp.e2e.test.ts",
+    "coverage": "vitest run --coverage --configLoader runner",
+    "test:e2e:api": "node scripts/e2e-with-api.mjs"
+  },
+  "dependencies": {
+    "@modelcontextprotocol/server": "2.4.0",
+    "@paralleax/shared": "^0.1.0",
+    "zod": "^4.6.7"
+  },
+  "devDependencies": {
+    "@modelcontextprotocol/client": "2.4.0",
+    "@types/node": "^26.6.6",
+    "@vitest/coverage-v8": "^5.1.0",
+    "typescript": "^5.9.3",
+    "vitest": "^5.0.0"
+  },
+  "engines": {
+    "node": "26.x"
+  }
+}

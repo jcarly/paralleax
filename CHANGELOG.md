@@ -2,6 +2,18 @@
 
 ## Unreleased
 
+- Added a private, local MCP server prototype (`apps/mcp`, ADR-047) built on
+  the official MCP TypeScript SDK v2 over stdio. It calls the existing HTTP API
+  as the signed-in user (`paralleax-mcp login`) and exposes six tools:
+  `list_stories`, `get_story_structure`, `get_interaction`,
+  `create_interaction`, `update_interaction` and `create_trigger`. API
+  permissions, validation, quotas, rate limits, history and live editor updates
+  apply unchanged; nothing can be deleted or shared through it. Remote access
+  (for example from ChatGPT) needs OAuth and is documented, not implemented.
+  A retried write with the same idempotency key never duplicates a partially
+  applied or unconfirmed write, `logout` keeps the session file when the API
+  cannot revoke it, and CI runs the MCP tools against a real API and
+  PostgreSQL. See [docs/mcp.md](docs/mcp.md).
 - Dropping a graph connection on an interaction card now counts as a drop on
   its matching '+' (input '+' from an output, output '+' from an input) instead
   of doing nothing. Trigger markers keep their meaning: they add the source to

@@ -23,10 +23,17 @@ module.exports = {
       to: { path: '^apps/web/src/' },
     },
     {
+      name: 'mcp-over-http',
+      comment: 'The MCP server must call the Paralleax API over HTTP, never its internals.',
+      severity: 'error',
+      from: { path: '^apps/mcp/src/' },
+      to: { path: '^apps/(api|web)/src/' },
+    },
+    {
       name: 'shared-public-facade',
       comment: 'Application workspaces must consume the public @paralleax/shared facade.',
       severity: 'error',
-      from: { path: '^apps/(web|api)/src/' },
+      from: { path: '^apps/(web|api|mcp)/src/' },
       to: { path: '^packages/shared/src/(?!index\\.ts$)' },
     },
     {
