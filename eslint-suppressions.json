@@ -1497,11 +1497,6 @@
       "count": 1
     }
   },
-  "apps/web/src/features/story-editor/navigation/groupTreeKeyboard.ts": {
-    "@typescript-eslint/no-unnecessary-condition": {
-      "count": 1
-    }
-  },
   "apps/web/src/features/story-editor/navigation/interactionSearch.ts": {
     "@typescript-eslint/strict-boolean-expressions": {
       "count": 6
