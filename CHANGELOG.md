@@ -15,6 +15,9 @@
   non-private Story with that policy. Inviting or promoting an Editor switches
   editing to Editors when reading allows it, with a note; existing Stories are
   not migrated, so their invited Editors need editing opened to Editors.
+  Inviting or promoting an Editor now commits the grant and any required
+  editing-policy change atomically in one database statement, rather than
+  two requests that could leave the new Editor unable to edit.
 - Fixed the Story access settings help, which always described the By link
   option whatever reading policy was selected. Reading, Editing and Comments
   now each describe the selected value (PAR-7).
