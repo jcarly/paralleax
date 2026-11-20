@@ -72,13 +72,15 @@ describe('trigger connection policy', () => {
 
   it('checks only newly added pairs when editing a legacy duplicate Trigger', () => {
     const legacyStory = structuredClone(story);
-    legacyStory.interactions
-      .find(({ id }) => id === 'target')!
-      .triggers.push({
-        id: 'legacy-duplicate',
-        inputInteractionIds: ['source-a'],
-        conditions: [],
-      });
+    const target = legacyStory.interactions.find(({ id }) => id === 'target');
+    if (!target) {
+      throw new Error('Expected target interaction to exist');
+    }
+    target.triggers.push({
+      id: 'legacy-duplicate',
+      inputInteractionIds: ['source-a'],
+      conditions: [],
+    });
 
     expect(
       findNewTriggerInputConflict(legacyStory, 'target', ['source-a', 'source-c'], {

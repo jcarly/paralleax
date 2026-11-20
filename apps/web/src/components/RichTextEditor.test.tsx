@@ -65,6 +65,38 @@ describe('RichTextEditor', () => {
     expect(onBlur).toHaveBeenLastCalledWith(onChange.mock.lastCall?.[0]);
   });
 
+  it('places the toolbar after the text so revealing it does not move the text', () => {
+    render(<RichTextEditor value="<p>Body</p>" onChange={vi.fn()} onBlur={vi.fn()} />);
+
+    const text = screen.getByRole('textbox', { name: 'Content' });
+    const bold = screen.getByRole('button', { name: 'Bold' });
+    expect(text.compareDocumentPosition(bold) & Node.DOCUMENT_POSITION_FOLLOWING).toBeTruthy();
+  });
+
+  it('makes the toolbar a single Tab stop navigated with arrow keys', async () => {
+    const user = userEvent.setup();
+    render(<RichTextEditor value="<p>Body</p>" onChange={vi.fn()} onBlur={vi.fn()} />);
+    const toolbar = screen.getByRole('toolbar', { name: 'Content formatting' });
+    const buttons = within(toolbar)
+      .getAllByRole('button')
+      .filter((button) => !button.hasAttribute('disabled'));
+
+    expect(buttons.filter((button) => button.tabIndex === 0)).toHaveLength(1);
+    await user.click(screen.getByRole('textbox', { name: 'Content' }));
+    await user.tab();
+    expect(buttons[0]).toHaveFocus();
+    await user.keyboard('{ArrowRight}');
+    expect(buttons[1]).toHaveFocus();
+    await user.keyboard('{End}');
+    expect(buttons.at(-1)).toHaveFocus();
+    await user.keyboard('{ArrowRight}');
+    expect(buttons[0]).toHaveFocus();
+    await user.keyboard('{ArrowLeft}');
+    expect(buttons.at(-1)).toHaveFocus();
+    await user.tab();
+    expect(toolbar.contains(document.activeElement)).toBe(false);
+  });
+
   it('removes scripts, event handlers, and unsafe URLs when rendering', () => {
     const { container } = render(
       <RichTextContent

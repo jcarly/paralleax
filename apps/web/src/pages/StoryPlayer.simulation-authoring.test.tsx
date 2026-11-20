@@ -130,6 +130,8 @@ describe('StoryPlayer simulation authoring', () => {
 
     await user.clear(bodyInput);
     await user.type(bodyInput, 'Rewritten content.');
+    // One Tab stop for the formatting toolbar below the text, then out of the editor.
+    await user.tab();
     await user.tab();
 
     await waitFor(() => {
