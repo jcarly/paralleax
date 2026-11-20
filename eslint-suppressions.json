@@ -1958,11 +1958,6 @@
       "count": 1
     }
   },
-  "apps/web/src/features/story-player/useReaderProgressPersistence.test.ts": {
-    "max-lines-per-function": {
-      "count": 1
-    }
-  },
   "apps/web/src/features/story-player/useReaderProgressPersistence.ts": {
     "@typescript-eslint/strict-boolean-expressions": {
       "count": 1
