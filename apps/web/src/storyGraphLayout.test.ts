@@ -3,6 +3,17 @@ import type { Story } from '@paralleax/shared';
 import { interactionNodeHeight, interactionNodeWidth } from './storyGraph';
 import { computeLegacyStoryGraphLayout } from './storyGraphLayout';
 
+function requireValue<T>(value: T | null | undefined, description: string): T {
+  if (value === null || value === undefined) {
+    throw new Error(`Expected ${description} to exist`);
+  }
+  return value;
+}
+
+function requireMapValue<K, V>(map: Map<K, V>, key: K): V {
+  return requireValue(map.get(key), `value for ${String(key)}`);
+}
+
 function createLayoutStory(): Story {
   return {
     id: 'story-layout',
@@ -77,10 +88,16 @@ describe('story graph automatic layout', () => {
       ['trigger-right'],
       ['trigger-merge'],
     ]);
-    expect(positions.get('root')!.y).toBeLessThan(positions.get('left')!.y);
-    expect(positions.get('root')!.y).toBeLessThan(positions.get('right')!.y);
-    expect(positions.get('left')!.y).toBeLessThan(positions.get('merge')!.y);
-    expect(positions.get('right')!.y).toBeLessThan(positions.get('merge')!.y);
+    expect(requireMapValue(positions, 'root').y).toBeLessThan(requireMapValue(positions, 'left').y);
+    expect(requireMapValue(positions, 'root').y).toBeLessThan(
+      requireMapValue(positions, 'right').y,
+    );
+    expect(requireMapValue(positions, 'left').y).toBeLessThan(
+      requireMapValue(positions, 'merge').y,
+    );
+    expect(requireMapValue(positions, 'right').y).toBeLessThan(
+      requireMapValue(positions, 'merge').y,
+    );
 
     const interactionPositions = [...positions.values()];
     interactionPositions.forEach((left, leftIndex) => {
@@ -95,17 +112,20 @@ describe('story graph automatic layout', () => {
       });
     });
 
-    const leftMarker = result.triggerUpdates.find(({ triggerIds }) =>
-      triggerIds.includes('trigger-left'),
-    )!.position;
-    expect(leftMarker.y).toBeGreaterThan(positions.get('root')!.y + interactionNodeHeight);
-    expect(leftMarker.y + 20).toBeLessThan(positions.get('left')!.y);
-    expect(positions.get('isolated')!.x).toBeGreaterThan(
+    const leftMarker = requireValue(
+      result.triggerUpdates.find(({ triggerIds }) => triggerIds.includes('trigger-left')),
+      'trigger-left marker',
+    ).position;
+    expect(leftMarker.y).toBeGreaterThan(
+      requireMapValue(positions, 'root').y + interactionNodeHeight,
+    );
+    expect(leftMarker.y + 20).toBeLessThan(requireMapValue(positions, 'left').y);
+    expect(requireMapValue(positions, 'isolated').x).toBeGreaterThan(
       Math.max(
-        positions.get('root')!.x,
-        positions.get('left')!.x,
-        positions.get('right')!.x,
-        positions.get('merge')!.x,
+        requireMapValue(positions, 'root').x,
+        requireMapValue(positions, 'left').x,
+        requireMapValue(positions, 'right').x,
+        requireMapValue(positions, 'merge').x,
       ) + interactionNodeWidth,
     );
   });
@@ -157,8 +177,8 @@ describe('story graph automatic layout', () => {
     const positions = applyInteractionUpdates(story, result);
     const rectangles = story.interactions.map(({ id }) => ({
       id,
-      ...positions.get(id)!,
-      ...interactionSizes.get(id)!,
+      ...requireMapValue(positions, id),
+      ...requireMapValue(interactionSizes, id),
     }));
 
     rectangles.forEach((left, leftIndex) => {
@@ -187,7 +207,7 @@ describe('story graph automatic layout', () => {
 
     expect(result.triggerUpdates).toHaveLength(optionCount);
     expect(Math.min(...result.triggerUpdates.map(({ position }) => position.y))).toBeGreaterThan(
-      positions.get('root')!.y + interactionSizes.get('root')!.height,
+      requireMapValue(positions, 'root').y + requireMapValue(interactionSizes, 'root').height,
     );
   });
 
@@ -266,13 +286,14 @@ describe('story graph automatic layout', () => {
       result.triggerUpdates.map(({ triggerIds, position }) => [triggerIds[0], position]),
     );
     const sourceDelta =
-      interactionPositions.get('branch-left')!.x - interactionPositions.get('branch-right')!.x;
+      requireMapValue(interactionPositions, 'branch-left').x -
+      requireMapValue(interactionPositions, 'branch-right').x;
     const destinationTriggerDelta =
-      triggerPositions.get('destination-right-trigger')!.x -
-      triggerPositions.get('destination-left-trigger')!.x;
+      requireMapValue(triggerPositions, 'destination-right-trigger').x -
+      requireMapValue(triggerPositions, 'destination-left-trigger').x;
     const destinationDelta =
-      interactionPositions.get('destination-right')!.x -
-      interactionPositions.get('destination-left')!.x;
+      requireMapValue(interactionPositions, 'destination-right').x -
+      requireMapValue(interactionPositions, 'destination-left').x;
 
     expect(sourceDelta * destinationTriggerDelta).toBeGreaterThan(0);
     expect(destinationTriggerDelta * destinationDelta).toBeGreaterThan(0);
@@ -346,16 +367,24 @@ describe('story graph automatic layout', () => {
       result.triggerUpdates.map(({ triggerIds, position }) => [triggerIds[0], position.x + 10]),
     );
     const parentAChildTriggerCenters = Array.from({ length: 4 }, (_, index) =>
-      triggerCenters.get(`child-a-${index}-trigger`),
-    ).sort((left, right) => left! - right!) as number[];
+      requireMapValue(triggerCenters, `child-a-${index}-trigger`),
+    ).sort((left, right) => left - right);
     const parentAMedian = (parentAChildTriggerCenters[1] + parentAChildTriggerCenters[2]) / 2;
 
-    expect(Math.abs(interactionCenters.get('parent-a')! - parentAMedian)).toBeLessThanOrEqual(1);
     expect(
-      Math.abs(interactionCenters.get('parent-b')! - triggerCenters.get('child-b-trigger')!),
+      Math.abs(requireMapValue(interactionCenters, 'parent-a') - parentAMedian),
     ).toBeLessThanOrEqual(1);
     expect(
-      Math.abs(interactionCenters.get('child-b')! - triggerCenters.get('child-b-trigger')!),
+      Math.abs(
+        requireMapValue(interactionCenters, 'parent-b') -
+          requireMapValue(triggerCenters, 'child-b-trigger'),
+      ),
+    ).toBeLessThanOrEqual(1);
+    expect(
+      Math.abs(
+        requireMapValue(interactionCenters, 'child-b') -
+          requireMapValue(triggerCenters, 'child-b-trigger'),
+      ),
     ).toBeLessThanOrEqual(1);
   });
 
@@ -384,8 +413,8 @@ describe('story graph automatic layout', () => {
 
     expect(first).toEqual(second);
     expect(positions.get('cycle-a')).not.toEqual(positions.get('cycle-b'));
-    expect(Object.values(positions.get('cycle-a')!).every(Number.isFinite)).toBe(true);
-    expect(Object.values(positions.get('cycle-b')!).every(Number.isFinite)).toBe(true);
+    expect(Object.values(requireMapValue(positions, 'cycle-a')).every(Number.isFinite)).toBe(true);
+    expect(Object.values(requireMapValue(positions, 'cycle-b')).every(Number.isFinite)).toBe(true);
   });
 
   it('keeps generated dense and cyclic graphs finite, deterministic, and collision-free', () => {
@@ -405,8 +434,8 @@ describe('story graph automatic layout', () => {
       const positions = applyInteractionUpdates(story, first);
       const rectangles = story.interactions.map(({ id }) => ({
         id,
-        ...positions.get(id)!,
-        ...interactionSizes.get(id)!,
+        ...requireMapValue(positions, id),
+        ...requireMapValue(interactionSizes, id),
       }));
 
       expect(first, `layout differs for seed ${seed}`).toEqual(second);

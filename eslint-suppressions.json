@@ -1159,38 +1159,6 @@
       "count": 1
     }
   },
-  "apps/web/src/features/feedback/FeedbackButton.test.tsx": {
-    "@typescript-eslint/no-unsafe-assignment": {
-      "count": 1
-    },
-    "max-lines-per-function": {
-      "count": 1
-    }
-  },
-  "apps/web/src/features/feedback/feedbackConfig.ts": {
-    "@typescript-eslint/no-unsafe-argument": {
-      "count": 2
-    },
-    "@typescript-eslint/strict-boolean-expressions": {
-      "count": 3
-    }
-  },
-  "apps/web/src/features/feedback/formbricksClient.test.ts": {
-    "@typescript-eslint/no-unsafe-type-assertion": {
-      "count": 1
-    },
-    "max-lines-per-function": {
-      "count": 1
-    }
-  },
-  "apps/web/src/features/feedback/formbricksClient.ts": {
-    "@typescript-eslint/consistent-type-imports": {
-      "count": 1
-    },
-    "@typescript-eslint/prefer-nullish-coalescing": {
-      "count": 2
-    }
-  },
   "apps/web/src/features/graph-decorations/GraphDecorationInspector.tsx": {
     "@typescript-eslint/no-unsafe-type-assertion": {
       "count": 1
@@ -1822,26 +1790,6 @@
       "count": 1
     }
   },
-  "apps/web/src/features/story-player/useReaderSessionState.ts": {
-    "@typescript-eslint/no-unnecessary-condition": {
-      "count": 3
-    },
-    "@typescript-eslint/prefer-nullish-coalescing": {
-      "count": 2
-    },
-    "@typescript-eslint/strict-boolean-expressions": {
-      "count": 3
-    },
-    "max-lines-per-function": {
-      "count": 1
-    },
-    "max-params": {
-      "count": 1
-    },
-    "no-duplicate-imports": {
-      "count": 1
-    }
-  },
   "apps/web/src/features/story-player/useSimulationMutationPersistence.ts": {
     "max-lines-per-function": {
       "count": 1
@@ -2249,12 +2197,6 @@
     }
   },
   "apps/web/src/storyGraphLayout.test.ts": {
-    "@typescript-eslint/no-non-null-assertion": {
-      "count": 37
-    },
-    "@typescript-eslint/no-unsafe-type-assertion": {
-      "count": 1
-    },
     "max-lines-per-function": {
       "count": 5
     }
@@ -3051,9 +2993,6 @@
     }
   },
   "packages/shared/src/operations/groups.test.ts": {
-    "@typescript-eslint/no-non-null-assertion": {
-      "count": 31
-    },
     "@typescript-eslint/no-unnecessary-condition": {
       "count": 2
     },
