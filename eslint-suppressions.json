@@ -624,11 +624,6 @@
       "count": 2
     }
   },
-  "apps/web/playwright.config.ts": {
-    "@typescript-eslint/strict-boolean-expressions": {
-      "count": 1
-    }
-  },
   "apps/web/src/App.test.tsx": {
     "max-lines-per-function": {
       "count": 1
