@@ -2,6 +2,8 @@
 
 ## Unreleased
 
+- Noted author documentation, then optional topic guides (characters,
+  variables, conditions), as a proposed roadmap item (PAR-7).
 - Fixed the Story access settings help, which always described the By link
   option whatever reading policy was selected. Reading, Editing and Comments
   now each describe the selected value, and a short note states when the
