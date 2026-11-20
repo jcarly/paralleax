@@ -175,6 +175,7 @@ explicit decision before they change the order above.
      ([Onboarding](onboarding.md)).
 
   Acceptance for step 2 to define when it is scheduled.
+
 - **Ink-inspired source mode.** Keep as planned in
   [ADR-043](decisions/ADR-043-ink-inspired-narrative-source.md); writers in
   studios often prefer text and version control.
