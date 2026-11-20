@@ -284,11 +284,6 @@
       "count": 1
     }
   },
-  "apps/api/src/operations/request-context.ts": {
-    "@typescript-eslint/strict-boolean-expressions": {
-      "count": 1
-    }
-  },
   "apps/api/src/security/origin.guard.spec.ts": {
     "@typescript-eslint/no-unsafe-type-assertion": {
       "count": 3
