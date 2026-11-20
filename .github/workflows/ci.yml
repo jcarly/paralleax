@@ -190,8 +190,9 @@ jobs:
       - name: Build web workspace
         if: needs.changes.result == 'success' && needs.changes.outputs.build_web == 'true'
         env:
-          VITE_FORMBRICKS_WORKSPACE_ID: ''
-          VITE_FORMBRICKS_APP_URL: ''
+          VITE_POSTHOG_PROJECT_TOKEN: ''
+          VITE_POSTHOG_API_HOST: ''
+          VITE_POSTHOG_FEEDBACK_SURVEY_ID: ''
           VITE_SENTRY_DSN: ''
           VITE_SENTRY_RELEASE: ''
           VITE_SENTRY_TRACES_SAMPLE_RATE: ''
@@ -540,8 +541,9 @@ jobs:
           TAG_NAME: ${{ github.ref_name }}
           VITE_SENTRY_DSN: ${{ vars.VITE_SENTRY_DSN }}
           VITE_SENTRY_TRACES_SAMPLE_RATE: ${{ vars.VITE_SENTRY_TRACES_SAMPLE_RATE }}
-          VITE_FORMBRICKS_WORKSPACE_ID: ${{ vars.VITE_FORMBRICKS_WORKSPACE_ID }}
-          VITE_FORMBRICKS_APP_URL: ${{ vars.VITE_FORMBRICKS_APP_URL }}
+          VITE_POSTHOG_PROJECT_TOKEN: ${{ vars.VITE_POSTHOG_PROJECT_TOKEN }}
+          VITE_POSTHOG_API_HOST: ${{ vars.VITE_POSTHOG_API_HOST }}
+          VITE_POSTHOG_FEEDBACK_SURVEY_ID: ${{ vars.VITE_POSTHOG_FEEDBACK_SURVEY_ID }}
           SENTRY_AUTH_TOKEN: ${{ secrets.SENTRY_AUTH_TOKEN }}
           SENTRY_ORG: ${{ vars.SENTRY_ORG }}
           SENTRY_PROJECT: ${{ vars.SENTRY_PROJECT }}
@@ -560,8 +562,9 @@ jobs:
             --build-arg VITE_SENTRY_DSN \
             --build-arg "VITE_SENTRY_RELEASE=$TAG_NAME" \
             --build-arg VITE_SENTRY_TRACES_SAMPLE_RATE \
-            --build-arg VITE_FORMBRICKS_WORKSPACE_ID \
-            --build-arg VITE_FORMBRICKS_APP_URL \
+            --build-arg VITE_POSTHOG_PROJECT_TOKEN \
+            --build-arg VITE_POSTHOG_API_HOST \
+            --build-arg VITE_POSTHOG_FEEDBACK_SURVEY_ID \
             --build-arg SENTRY_ORG \
             --build-arg SENTRY_PROJECT \
             --build-arg SENTRY_URL \

@@ -24,10 +24,10 @@ The authoring guide stores only its step and active Story pointer in the
 browser's account-scoped `localStorage`; it does not send guide activity to an
 analytics service. Do not enable journey milestones or a post-Simulation survey
 until an explicit consent flow and the alpha notice describe the purpose, fields,
-provider, and retention. The separate Formbricks feedback button is voluntary,
-but opening it sends survey context and Formbricks can record the full URL,
-including a Story id. Review the [Formbricks runbook](formbricks-feedback.md)
-and reflect that metadata in the tester notice before collecting responses.
+provider, and retention. The separate PostHog feedback survey is voluntary and
+sends only sanitized answers with normalized context, but PostHog receives the
+client IP address. Review the [PostHog runbook](posthog-feedback.md) and reflect
+it in the tester notice before collecting responses.
 
 ## Required Topology
 
@@ -91,9 +91,10 @@ transactional messages over HTTPS so deployment plans that block outbound SMTP
 do not require a mail-port exception.
 
 To enable the optional contextual feedback button, also set
-`VITE_FORMBRICKS_WORKSPACE_ID` and `VITE_FORMBRICKS_APP_URL` before building the
-web image. They are public build inputs, not server secrets. Follow the
-[Formbricks feedback runbook](formbricks-feedback.md) before collecting tester
+`VITE_POSTHOG_PROJECT_TOKEN` and `VITE_POSTHOG_API_HOST` (and optionally
+`VITE_POSTHOG_FEEDBACK_SURVEY_ID`) before building the web image. They are
+public build inputs, not server secrets. Follow the
+[PostHog feedback runbook](posthog-feedback.md) before collecting tester
 responses.
 
 Open registration does not grant a session immediately: the user must consume
@@ -133,7 +134,7 @@ The release tags each image with the version and source commit for discovery,
 but Railway receives `ghcr.io/...@sha256:...` references. The web Sentry release
 and API `SENTRY_RELEASE` are set from the version tag so both services identify
 the same release. The workflow uses the existing public web Sentry DSN and
-optional public Formbricks build values from GitHub Actions repository variables.
+optional public PostHog build values from GitHub Actions repository variables.
 If browser source maps are enabled, store `SENTRY_AUTH_TOKEN` as a GitHub Actions
 secret. Only the web image build mounts it as a BuildKit secret; it is not passed
 to the API build, a build argument, or the final image. Local production Compose
@@ -253,9 +254,9 @@ Before creating the first release tag, configure the GitHub repository:
   keep it in GitHub Actions secrets, not build arguments or application images.
   The workflow verifies read access to both services before building images.
 - Copy the existing `VITE_SENTRY_DSN` build value into the `VITE_SENTRY_DSN`
-  Actions variable. If enabled, also add `VITE_FORMBRICKS_WORKSPACE_ID` and
-  `VITE_FORMBRICKS_APP_URL` and `VITE_SENTRY_TRACES_SAMPLE_RATE` as Actions
-  variables.
+  Actions variable. If enabled, also add `VITE_POSTHOG_PROJECT_TOKEN`,
+  `VITE_POSTHOG_API_HOST`, optional `VITE_POSTHOG_FEEDBACK_SURVEY_ID`, and
+  `VITE_SENTRY_TRACES_SAMPLE_RATE` as Actions variables.
 - If browser source-map uploads are enabled, add `SENTRY_AUTH_TOKEN` as an
   Actions secret and `SENTRY_ORG`, `SENTRY_PROJECT`, and optional `SENTRY_URL`
   as Actions variables. Keep the token in GitHub Actions only; Railway deploys
@@ -303,9 +304,9 @@ API_HOST=${{api.RAILWAY_PRIVATE_DOMAIN}}
 API_PORT=3000
 ```
 
-If Formbricks feedback is enabled, add its two `VITE_FORMBRICKS_*` values to the
-web service so Railway makes them available to the Docker build and the runtime
-Content Security Policy.
+If PostHog feedback is enabled, add `VITE_POSTHOG_API_HOST` to the web service
+with the same value as the image build, so the runtime Content Security Policy
+allows the PostHog API. Remove any former `VITE_FORMBRICKS_*` variables.
 
 Browser reports are configured at image build time. Set `VITE_SENTRY_DSN`,
 `VITE_SENTRY_TRACES_SAMPLE_RATE`, and the release value through the GitHub
