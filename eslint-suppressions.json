@@ -2739,11 +2739,6 @@
       "count": 2
     }
   },
-  "packages/shared/src/import-export/choicescript/importer.ts": {
-    "@typescript-eslint/no-non-null-assertion": {
-      "count": 1
-    }
-  },
   "packages/shared/src/import-export/choicescript/mapping.ts": {
     "@typescript-eslint/no-non-null-assertion": {
       "count": 6
@@ -2770,9 +2765,6 @@
     }
   },
   "packages/shared/src/import-export/choicescript/parser.ts": {
-    "@typescript-eslint/no-non-null-assertion": {
-      "count": 1
-    },
     "@typescript-eslint/strict-boolean-expressions": {
       "count": 1
     },
@@ -2800,9 +2792,6 @@
     }
   },
   "packages/shared/src/import-export/qsp/analyzer.ts": {
-    "@typescript-eslint/no-non-null-assertion": {
-      "count": 1
-    },
     "@typescript-eslint/strict-boolean-expressions": {
       "count": 2
     },
@@ -2891,9 +2880,6 @@
     }
   },
   "packages/shared/src/import-export/qsp/parser.ts": {
-    "@typescript-eslint/no-non-null-assertion": {
-      "count": 2
-    },
     "@typescript-eslint/strict-boolean-expressions": {
       "count": 8
     },

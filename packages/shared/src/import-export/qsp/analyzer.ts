@@ -155,15 +155,13 @@ export function analyzeQspCode(
         }
         const remainder = targetExpression.slice(targetLength).trim();
         const argumentResult = parseNavigationArgument(remainder);
-        analysis.navigationTargets.push({
+        const navigationTarget = {
           locationName: target,
           ...(argumentResult.argument !== undefined ? { argument: argumentResult.argument } : {}),
           source: sourceAtLine,
-        });
-        analysis.statements.push({
-          kind: 'navigation',
-          target: analysis.navigationTargets.at(-1)!,
-        });
+        };
+        analysis.navigationTargets.push(navigationTarget);
+        analysis.statements.push({ kind: 'navigation', target: navigationTarget });
         report.convertedStatementCount += 1;
         touchQspFeature(report, 'navigation');
         if (argumentResult.ignored) {
