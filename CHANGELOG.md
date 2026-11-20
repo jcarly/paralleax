@@ -14,10 +14,17 @@
   registered them; the node now reports the change to React Flow. A Playwright
   spec covers the real pointer drag to the canvas, to an existing Interaction
   and to existing trigger markers, repeated links and persistence on reload.
-- Restored the Node 24 Docker base images after a Dockerfile-only Dependabot
-  bump to Node 26 broke CI on `main`. CI now runs the operational tests for any
-  Dockerfile or workflow change, and a test fails when the Docker images or CI
-  use a Node major other than `engines.node`.
+- Moved the toolchain to Node 26, the current LTS line: `engines.node`, CI and
+  the production and development Docker images change together.
+- Upgraded the API to NestJS 12 (common, core, platform-express and testing
+  12.5.1, Swagger 12.1.2) as one coordinated change. The API stays CommonJS:
+  webpack bundles the ESM-only Nest packages, and Jest runs with
+  `--experimental-vm-modules` to load them. The Swagger `js-yaml` override is
+  removed because Swagger 12 depends on a fixed release.
+- Restored the Node 24 production and development Docker base images after
+  Dockerfile-only Dependabot bumps to Node 26 broke CI on `main`. CI now runs
+  the operational tests for any Dockerfile or workflow change, and a test fails
+  when the Docker images or CI use a Node major other than `engines.node`.
 - Accepted ADR-046, the target project structure: narrative invariants move
   from API services to `packages/shared`, application services use error classes
   mapped to HTTP by one exception filter, persistence ports are introduced when

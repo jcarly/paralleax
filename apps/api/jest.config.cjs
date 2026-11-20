@@ -10,7 +10,10 @@ module.exports = {
   // sanitize-html 2.17.7 is CommonJS but its patched htmlparser2 dependency is
   // ESM-only. Node 24 can require it directly; Jest's CommonJS test runtime
   // needs the nested ESM packages transpiled before evaluating the dependency.
-  transformIgnorePatterns: ['<rootDir>/../../node_modules/(?!sanitize-html/node_modules/)'],
+  // NestJS 12 is ESM-only and must stay untranspiled: the test scripts start
+  // Jest with --experimental-vm-modules so CommonJS specs can require it, and
+  // transpiling it to CommonJS inside an ESM package breaks that loading.
+  transformIgnorePatterns: ['/node_modules/(?!sanitize-html/node_modules/)'],
   collectCoverageFrom: ['src/**/*.ts', '!src/main.ts', '!src/**/*.spec.ts'],
   coverageDirectory: 'coverage',
   coverageReporters: ['text', 'html', 'lcov'],

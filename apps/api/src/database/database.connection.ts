@@ -12,7 +12,9 @@ export class DatabaseConnection implements OnModuleDestroy {
       ssl: config.postgresSsl
         ? {
             rejectUnauthorized: true,
-            ...(config.postgresSslCa ? { ca: config.postgresSslCa } : {}),
+            ...(typeof config.postgresSslCa === 'string' && config.postgresSslCa !== ''
+              ? { ca: config.postgresSslCa }
+              : {}),
           }
         : undefined,
     });

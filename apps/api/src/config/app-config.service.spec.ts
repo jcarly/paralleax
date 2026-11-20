@@ -1,6 +1,6 @@
 import { loadAppConfig } from './app-config.service';
 
-describe('AppConfigService', () => {
+describe('AppConfigService local defaults', () => {
   it('provides validated local defaults', () => {
     const config = loadAppConfig({});
     expect(config).toMatchObject({
@@ -19,57 +19,57 @@ describe('AppConfigService', () => {
     });
     expect(config.nodeEnvironment).toBe('development');
   });
+});
 
-  it('allows test-only configuration only in the test environment', () => {
-    expect(
-      loadAppConfig({
-        NODE_ENV: 'test',
-        TEST_AUTH_REGISTRATION_RATE_LIMIT: '100',
-        TEST_EMAIL_OUTBOX: 'true',
-      }).authRegistrationRateLimit,
-    ).toBe(100);
-    expect(loadAppConfig({ NODE_ENV: 'test', TEST_EMAIL_OUTBOX: 'true' }).testEmailOutbox).toBe(
-      true,
-    );
-    expect(loadAppConfig({ NODE_ENV: 'test' }).devSkipEmailVerification).toBe(false);
-    expect(
-      loadAppConfig({
-        NODE_ENV: 'development',
-        DEV_SKIP_EMAIL_VERIFICATION: 'false',
-      }).devSkipEmailVerification,
-    ).toBe(false);
-    expect(
-      loadAppConfig({
-        NODE_ENV: 'production',
-        DATABASE_URL: 'postgres://db/app',
-        CORS_ORIGIN: 'https://app.example.com',
-        REGISTRATION_MODE: 'closed',
-        TEST_AUTH_REGISTRATION_RATE_LIMIT: '100',
-      }).authRegistrationRateLimit,
-    ).toBe(5);
-    expect(() =>
-      loadAppConfig({
-        NODE_ENV: 'production',
-        DATABASE_URL: 'postgres://db/app',
-        CORS_ORIGIN: 'https://app.example.com',
-        REGISTRATION_MODE: 'closed',
-        TEST_EMAIL_OUTBOX: 'true',
-      }),
-    ).toThrow('TEST_EMAIL_OUTBOX is only available in the test environment');
-    expect(() => loadAppConfig({ NODE_ENV: 'test', DEV_SKIP_EMAIL_VERIFICATION: 'true' })).toThrow(
-      'DEV_SKIP_EMAIL_VERIFICATION is only available in the development environment',
-    );
-    expect(() =>
-      loadAppConfig({
-        NODE_ENV: 'production',
-        DATABASE_URL: 'postgres://db/app',
-        CORS_ORIGIN: 'https://app.example.com',
-        REGISTRATION_MODE: 'closed',
-        DEV_SKIP_EMAIL_VERIFICATION: 'true',
-      }),
-    ).toThrow('DEV_SKIP_EMAIL_VERIFICATION is only available in the development environment');
-  });
+it('allows test-only configuration only in the test environment', () => {
+  expect(
+    loadAppConfig({
+      NODE_ENV: 'test',
+      TEST_AUTH_REGISTRATION_RATE_LIMIT: '100',
+      TEST_EMAIL_OUTBOX: 'true',
+    }).authRegistrationRateLimit,
+  ).toBe(100);
+  expect(loadAppConfig({ NODE_ENV: 'test', TEST_EMAIL_OUTBOX: 'true' }).testEmailOutbox).toBe(true);
+  expect(loadAppConfig({ NODE_ENV: 'test' }).devSkipEmailVerification).toBe(false);
+  expect(
+    loadAppConfig({
+      NODE_ENV: 'development',
+      DEV_SKIP_EMAIL_VERIFICATION: 'false',
+    }).devSkipEmailVerification,
+  ).toBe(false);
+  expect(
+    loadAppConfig({
+      NODE_ENV: 'production',
+      DATABASE_URL: 'postgres://db/app',
+      CORS_ORIGIN: 'https://app.example.com',
+      REGISTRATION_MODE: 'closed',
+      TEST_AUTH_REGISTRATION_RATE_LIMIT: '100',
+    }).authRegistrationRateLimit,
+  ).toBe(5);
+  expect(() =>
+    loadAppConfig({
+      NODE_ENV: 'production',
+      DATABASE_URL: 'postgres://db/app',
+      CORS_ORIGIN: 'https://app.example.com',
+      REGISTRATION_MODE: 'closed',
+      TEST_EMAIL_OUTBOX: 'true',
+    }),
+  ).toThrow('TEST_EMAIL_OUTBOX is only available in the test environment');
+  expect(() => loadAppConfig({ NODE_ENV: 'test', DEV_SKIP_EMAIL_VERIFICATION: 'true' })).toThrow(
+    'DEV_SKIP_EMAIL_VERIFICATION is only available in the development environment',
+  );
+  expect(() =>
+    loadAppConfig({
+      NODE_ENV: 'production',
+      DATABASE_URL: 'postgres://db/app',
+      CORS_ORIGIN: 'https://app.example.com',
+      REGISTRATION_MODE: 'closed',
+      DEV_SKIP_EMAIL_VERIFICATION: 'true',
+    }),
+  ).toThrow('DEV_SKIP_EMAIL_VERIFICATION is only available in the development environment');
+});
 
+describe('AppConfigService configuration normalization', () => {
   it('normalizes optional configuration and enables production cookies', () => {
     const config = loadAppConfig({
       DATABASE_URL: 'postgresql://user:password@db:5432/app',
@@ -103,65 +103,64 @@ describe('AppConfigService', () => {
       emailReplyTo: { email: 'support@example.com' },
     });
   });
+});
 
-  it.each([
-    [{ DATABASE_URL: 'invalid' }, 'DATABASE_URL must be a valid URL'],
-    [{ DATABASE_URL: 'https://example.com' }, 'DATABASE_URL must use postgres: or postgresql:'],
-    [{ CORS_ORIGIN: 'ftp://example.com' }, 'CORS_ORIGIN must use http: or https:'],
-    [{ CORS_ORIGIN: 'https://example.com/app' }, 'CORS_ORIGIN must contain only an http(s) origin'],
-    [{ PORT: '70000' }, 'PORT must be an integer between 1 and 65535'],
-    [
-      { NODE_ENV: 'test', TEST_AUTH_REGISTRATION_RATE_LIMIT: '0' },
-      'TEST_AUTH_REGISTRATION_RATE_LIMIT must be an integer between 1 and 10000',
-    ],
-    [{ POSTGRES_SSL: 'yes' }, 'POSTGRES_SSL must be true or false'],
-    [{ TEST_EMAIL_OUTBOX: 'yes' }, 'TEST_EMAIL_OUTBOX must be true or false'],
-    [{ DEV_SKIP_EMAIL_VERIFICATION: 'yes' }, 'DEV_SKIP_EMAIL_VERIFICATION must be true or false'],
-    [
-      { EMAIL_SMTP_URL: 'smtp://smtp.example.com' },
-      'EMAIL_SMTP_URL is no longer supported; configure BREVO_API_KEY instead',
-    ],
-    [
-      { BREVO_API_KEY: 'xkeysib-secret' },
-      'BREVO_API_KEY and EMAIL_FROM must be configured together',
-    ],
-    [
-      {
-        BREVO_API_KEY: 'xsmtpsib-secret',
-        EMAIL_FROM: 'no-reply@example.com',
-      },
-      'BREVO_API_KEY must contain a Brevo API key, not an SMTP key',
-    ],
-    [
-      { EMAIL_FROM: 'no-reply@example.com' },
-      'BREVO_API_KEY and EMAIL_FROM must be configured together',
-    ],
-    [
-      { EMAIL_FROM: 'no-reply@example.com\r\nBcc: attacker@example.com' },
-      'EMAIL_FROM must not contain a line break',
-    ],
-    [
-      {
-        BREVO_API_KEY: 'xkeysib-secret',
-        EMAIL_FROM: 'not-an-email-address',
-      },
-      'EMAIL_FROM must contain a valid email address',
-    ],
-    [
-      { EMAIL_REPLY_TO: 'support@example.com' },
-      'EMAIL_REPLY_TO requires BREVO_API_KEY and EMAIL_FROM',
-    ],
-    [{ NODE_ENV: 'staging' }, 'NODE_ENV must be one of'],
-    [{ REGISTRATION_MODE: 'invite' }, 'REGISTRATION_MODE must be one of'],
-    [{ REGISTRATION_MODE: 'access-code' }, 'REGISTRATION_MODE must be one of: open, closed'],
-    [
-      { REGISTRATION_ACCESS_CODE: 'legacy-alpha-access-code' },
-      'REGISTRATION_ACCESS_CODE is no longer supported',
-    ],
-  ])('rejects invalid environment values', (environment, message) => {
-    expect(() => loadAppConfig(environment)).toThrow(message);
-  });
+it.each([
+  [{ DATABASE_URL: 'invalid' }, 'DATABASE_URL must be a valid URL'],
+  [{ DATABASE_URL: 'https://example.com' }, 'DATABASE_URL must use postgres: or postgresql:'],
+  [{ CORS_ORIGIN: 'ftp://example.com' }, 'CORS_ORIGIN must use http: or https:'],
+  [{ CORS_ORIGIN: 'https://example.com/app' }, 'CORS_ORIGIN must contain only an http(s) origin'],
+  [{ PORT: '70000' }, 'PORT must be an integer between 1 and 65535'],
+  [
+    { NODE_ENV: 'test', TEST_AUTH_REGISTRATION_RATE_LIMIT: '0' },
+    'TEST_AUTH_REGISTRATION_RATE_LIMIT must be an integer between 1 and 10000',
+  ],
+  [{ POSTGRES_SSL: 'yes' }, 'POSTGRES_SSL must be true or false'],
+  [{ TEST_EMAIL_OUTBOX: 'yes' }, 'TEST_EMAIL_OUTBOX must be true or false'],
+  [{ DEV_SKIP_EMAIL_VERIFICATION: 'yes' }, 'DEV_SKIP_EMAIL_VERIFICATION must be true or false'],
+  [
+    { EMAIL_SMTP_URL: 'smtp://smtp.example.com' },
+    'EMAIL_SMTP_URL is no longer supported; configure BREVO_API_KEY instead',
+  ],
+  [{ BREVO_API_KEY: 'xkeysib-secret' }, 'BREVO_API_KEY and EMAIL_FROM must be configured together'],
+  [
+    {
+      BREVO_API_KEY: 'xsmtpsib-secret',
+      EMAIL_FROM: 'no-reply@example.com',
+    },
+    'BREVO_API_KEY must contain a Brevo API key, not an SMTP key',
+  ],
+  [
+    { EMAIL_FROM: 'no-reply@example.com' },
+    'BREVO_API_KEY and EMAIL_FROM must be configured together',
+  ],
+  [
+    { EMAIL_FROM: 'no-reply@example.com\r\nBcc: attacker@example.com' },
+    'EMAIL_FROM must not contain a line break',
+  ],
+  [
+    {
+      BREVO_API_KEY: 'xkeysib-secret',
+      EMAIL_FROM: 'not-an-email-address',
+    },
+    'EMAIL_FROM must contain a valid email address',
+  ],
+  [
+    { EMAIL_REPLY_TO: 'support@example.com' },
+    'EMAIL_REPLY_TO requires BREVO_API_KEY and EMAIL_FROM',
+  ],
+  [{ NODE_ENV: 'staging' }, 'NODE_ENV must be one of'],
+  [{ REGISTRATION_MODE: 'invite' }, 'REGISTRATION_MODE must be one of'],
+  [{ REGISTRATION_MODE: 'access-code' }, 'REGISTRATION_MODE must be one of: open, closed'],
+  [
+    { REGISTRATION_ACCESS_CODE: 'legacy-alpha-access-code' },
+    'REGISTRATION_ACCESS_CODE is no longer supported',
+  ],
+])('rejects invalid environment values', (environment, message) => {
+  expect(() => loadAppConfig(environment)).toThrow(message);
+});
 
+describe('AppConfigService production requirements', () => {
   it('requires explicit external endpoints in production', () => {
     expect(() => loadAppConfig({ NODE_ENV: 'production' })).toThrow(
       'DATABASE_URL is required in production',
