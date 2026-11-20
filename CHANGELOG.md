@@ -2,6 +2,8 @@
 
 ## Unreleased
 
+- Noted author documentation, then optional topic guides (characters,
+  variables, conditions), as a proposed roadmap item (PAR-7).
 - Added a private, local MCP server prototype (`apps/mcp`, ADR-047) built on
   the official MCP TypeScript SDK v2 over stdio. It calls the existing HTTP API
   as the signed-in user (`paralleax-mcp login`) and exposes six tools:
