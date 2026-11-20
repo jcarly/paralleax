@@ -1,5 +1,27 @@
 const path = require('node:path');
+const webpack = require('webpack');
 const nodeExternals = require('webpack-node-externals');
+
+// Nest 12 loads these optional integrations through `import()` specifiers that
+// the Nest CLI webpack defaults do not ignore yet. Skip them only when they are
+// not installed, as the CLI does for its own list.
+const optionalNestImports = new Set([
+  '@fastify/static',
+  '@nestjs/microservices/microservices-module.js',
+  '@nestjs/websockets/socket-module.js',
+]);
+
+const isMissingOptionalNestImport = (resource) => {
+  if (!optionalNestImports.has(resource)) {
+    return false;
+  }
+  try {
+    require.resolve(resource, { paths: [process.cwd()] });
+    return false;
+  } catch {
+    return true;
+  }
+};
 
 module.exports = (options) => ({
   ...options,
@@ -17,6 +39,11 @@ module.exports = (options) => ({
       'src/stories/application/choicescript-import.worker.ts',
     ),
   },
+
+  plugins: [
+    ...(options.plugins ?? []),
+    new webpack.IgnorePlugin({ checkResource: isMissingOptionalNestImport }),
+  ],
 
   output: {
     ...options.output,

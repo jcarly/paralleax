@@ -9,11 +9,6 @@
       "count": 2
     }
   },
-  "apps/api/src/auth/auth.decorators.ts": {
-    "no-duplicate-imports": {
-      "count": 1
-    }
-  },
   "apps/api/src/auth/auth.e2e.spec.ts": {
     "@typescript-eslint/no-unsafe-assignment": {
       "count": 2
@@ -29,11 +24,6 @@
     },
     "max-lines-per-function": {
       "count": 2
-    }
-  },
-  "apps/api/src/auth/auth.guard.ts": {
-    "@typescript-eslint/strict-boolean-expressions": {
-      "count": 1
     }
   },
   "apps/api/src/auth/auth.repository.spec.ts": {
@@ -289,11 +279,6 @@
   "apps/api/src/operations/request-body.spec.ts": {
     "@typescript-eslint/no-unsafe-type-assertion": {
       "count": 2
-    }
-  },
-  "apps/api/src/operations/request-body.ts": {
-    "no-duplicate-imports": {
-      "count": 1
     }
   },
   "apps/api/src/operations/request-context.spec.ts": {
