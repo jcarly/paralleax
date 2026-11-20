@@ -1888,8 +1888,8 @@ Take a step when its area is touched, in this order when there is a choice.
 
 ### Quality inventory
 
-Run `npm run quality:report` from the repository root to write `quality-report.md`
-and `quality-report.json`. The report is a read-only inventory, not another gate
+Run `npm run quality:report` from the repository root to write `quality-reports/quality-report.md`
+and `quality-reports/quality-report.json`. The report is a read-only inventory, not another gate
 or baseline. It runs ESLint with an empty temporary suppression file and runs
 Stylelint without suppressions; neither command changes the accepted baselines.
 Dependency Cruiser entries come from its known-violations file, and jscpd uses
@@ -1899,8 +1899,9 @@ those counts. A matching count may hide replacement or increased severity (see
 ADR-041). Check the normal quality gates separately.
 
 The JSON contains individual findings and full groupings; the Markdown lists
-candidate file-disjoint batches. Their count, risk and cost are triage hints,
-not estimates or a promise of independence across shared interfaces and tests.
+candidate file-disjoint batches with test, production, prototype, and tooling
+file kinds. Their count, risk and cost are triage hints, not estimates or a
+promise of independence across shared interfaces and tests.
 Inspect each slice and coordinate common files before assigning it to Codex or
 Claude Code. Automatic-fix counts cover ESLint fixes only; Stylelint fixability
 is not measured. A reported fix is an opportunity to review, not an instruction

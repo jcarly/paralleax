@@ -1,5 +1,5 @@
 import { spawnSync, execFileSync } from 'node:child_process';
-import { mkdtempSync, readFileSync, rmSync, writeFileSync } from 'node:fs';
+import { mkdirSync, mkdtempSync, readFileSync, rmSync, writeFileSync } from 'node:fs';
 import { glob } from 'node:fs/promises';
 import os from 'node:os';
 import path from 'node:path';
@@ -23,7 +23,12 @@ export function category(tool, rule) {
   if (/complexity|cognitive|nested|max-lines|max-params|function-length/.test(rule)) {
     return 'refactoring';
   }
-  if (/type|unsafe|promise/.test(rule)) {
+  const ruleName = rule.replace(/^@typescript-eslint\//, '');
+  if (
+    /^(no-unsafe-|no-unnecessary-type-|no-unnecessary-condition$|no-non-null-assertion$|strict-boolean-expressions$|restrict-template-expressions$|restrict-plus-operands$|no-floating-promises$|no-misused-promises$)/.test(
+      ruleName,
+    )
+  ) {
     return 'type-safety';
   }
   if (tool === 'stylelint') {
@@ -42,6 +47,16 @@ export function summarize(diagnostics) {
     }
   }
   return groups;
+}
+
+export function fileKind(file) {
+  if (/(^|\/)(__tests__|tests?|e2e)(\/|$)|\.(spec|test)\.[^/]+$/.test(file)) {
+    return 'test';
+  }
+  if (/prototype/i.test(file)) {
+    return 'prototype';
+  }
+  return /^(apps|packages)\/[^/]+\/src\//.test(file) ? 'production' : 'tooling';
 }
 
 // Union linked files so no two proposed batches claim the same file.
@@ -95,17 +110,25 @@ export function batches(diagnostics) {
         files: [...group.files].sort(),
         count: group.diagnostics.length,
         categories: [...group.categories].sort(),
+        fileKinds: [...new Set([...group.files].map(fileKind))].sort(),
         potential: group.diagnostics.length,
         risk: structural ? 'higher: structural change' : 'moderate: behavior review',
         cost: structural ? 'higher: structural review' : 'lower: provisional',
         structural,
-        fixable: group.diagnostics.filter((item) => item.fixable).length,
+        fixable: group.diagnostics.some(
+          (item) => item.fixable !== null && item.fixable !== undefined,
+        )
+          ? group.diagnostics.filter((item) => item.fixable === true).length
+          : null,
+        fixabilityNotEvaluated: group.diagnostics.filter(
+          (item) => typeof item.fixable !== 'boolean',
+        ).length,
       };
     })
     .sort(
       (a, b) =>
         Number(a.structural) - Number(b.structural) ||
-        b.fixable - a.fixable ||
+        (b.fixable ?? 0) - (a.fixable ?? 0) ||
         b.potential - a.potential ||
         a.files[0].localeCompare(b.files[0]),
     );
@@ -145,32 +168,35 @@ function lintGroups(groups, empty) {
   });
 }
 
-function runEslint() {
+export function runEslint(groups = eslintGroups()) {
   const dir = mkdtempSync(path.join(os.tmpdir(), 'paralleax-report-'));
   try {
     const empty = path.join(dir, 'suppressions.json');
     writeFileSync(empty, '{}');
-    const groups = [
-      ['apps/api'],
-      ['apps/web'],
-      ['apps/mcp'],
-      ['packages/shared'],
-      [
-        '.',
-        '--ignore-pattern',
-        'apps/api/**',
-        '--ignore-pattern',
-        'apps/web/**',
-        '--ignore-pattern',
-        'apps/mcp/**',
-        '--ignore-pattern',
-        'packages/shared/**',
-      ],
-    ];
     return lintGroups(groups, empty);
   } finally {
     rmSync(dir, { recursive: true, force: true });
   }
+}
+
+function eslintGroups() {
+  return [
+    ['apps/api'],
+    ['apps/web'],
+    ['apps/mcp'],
+    ['packages/shared'],
+    [
+      '.',
+      '--ignore-pattern',
+      'apps/api/**',
+      '--ignore-pattern',
+      'apps/web/**',
+      '--ignore-pattern',
+      'apps/mcp/**',
+      '--ignore-pattern',
+      'packages/shared/**',
+    ],
+  ];
 }
 
 function diagnostic(tool, file, rule, details) {
@@ -184,9 +210,9 @@ function diagnostic(tool, file, rule, details) {
   };
 }
 
-async function runStylelint() {
+export async function runStylelint(files = glob('apps/web/src/**/*.css')) {
   const diagnostics = [];
-  for await (const file of glob('apps/web/src/**/*.css')) {
+  for await (const file of files) {
     const result = await stylelint.lint({
       code: readFileSync(file, 'utf8'),
       codeFilename: path.resolve(file),
@@ -335,23 +361,30 @@ export function markdown(report) {
     '',
     'Ranked provisionally by structural risk and cost, then automatic-fix opportunities and finding count as potential. These are heuristics, not effort estimates; inspect before assignment. Different files can still share semantic dependencies; coordinate shared interfaces and tests. Codex and Claude Code can each take one independent batch after review.',
     '',
-    '| Rank | Files | Findings | Categories | Fixable | Risk | Cost |',
-    '| --- | --- | ---: | --- | ---: | --- | --- |',
+    '| Rank | Files | Kinds | Findings | Categories | Fixable | Risk | Cost |',
+    '| --- | --- | --- | ---: | --- | --- | --- | --- |',
   ];
   report.batches
     .slice(0, 20)
     .forEach((batch, index) =>
       lines.push(
-        `| ${index + 1} | ${batch.files.map((file) => `\`${file}\``).join('<br>')} | ${batch.count} | ${batch.categories.join(', ')} | ${batch.fixable} | ${batch.risk} | ${batch.cost} |`,
+        `| ${index + 1} | ${batch.files.map((file) => `\`${file}\``).join('<br>')} | ${batch.fileKinds.join(', ')} | ${batch.count} | ${batch.categories.join(', ')} | ${batch.fixable ?? 'not evaluated'}${batch.fixable !== null && batch.fixabilityNotEvaluated ? ` (${batch.fixabilityNotEvaluated} not evaluated)` : ''} | ${batch.risk} | ${batch.cost} |`,
       ),
     );
   lines.push('', 'The JSON contains all candidate batches and per-file findings.');
   return `${lines.join('\n')}\n`;
 }
 
+export function writeReport(report, directory = 'quality-reports') {
+  mkdirSync(directory, { recursive: true });
+  writeFileSync(
+    path.join(directory, 'quality-report.json'),
+    `${JSON.stringify(report, null, 2)}\n`,
+  );
+  writeFileSync(path.join(directory, 'quality-report.md'), markdown(report));
+}
+
 if (process.argv[1] && import.meta.url === pathToFileURL(path.resolve(process.argv[1])).href) {
-  const report = await collect();
-  writeFileSync('quality-report.json', `${JSON.stringify(report, null, 2)}\n`);
-  writeFileSync('quality-report.md', markdown(report));
-  console.log('Wrote quality-report.md and quality-report.json');
+  writeReport(await collect());
+  console.log('Wrote quality-reports/quality-report.md and quality-reports/quality-report.json');
 }

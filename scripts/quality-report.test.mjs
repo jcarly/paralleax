@@ -61,3 +61,31 @@ test('compares native counts without inventing individual identities', async () 
   assert.deepEqual(result.growth, ['a / r: 1 → 2']);
   assert.deepEqual(result.stale, ['b / r: 1 → 0']);
 });
+
+test('classifies rule names and batch file kinds without treating the plugin name as a type rule', () => {
+  assert.equal(
+    category('eslint', '@typescript-eslint/no-duplicate-imports'),
+    'correctness-and-maintainability',
+  );
+  assert.equal(category('eslint', '@typescript-eslint/no-unsafe-assignment'), 'type-safety');
+  const findings = [
+    { file: 'apps/web/src/App.test.tsx', category: 'styles', fixable: null },
+    { file: 'apps/web/src/pages/ParalleaxPrototype.css', category: 'styles', fixable: null },
+    { file: 'apps/web/src/pages/App.css', category: 'styles', fixable: null },
+  ];
+  const result = batches(findings);
+  assert.deepEqual(result.find((batch) => batch.files[0].endsWith('App.test.tsx')).fileKinds, [
+    'test',
+  ]);
+  assert.deepEqual(result.find((batch) => batch.files[0].includes('Prototype')).fileKinds, [
+    'prototype',
+  ]);
+  assert.deepEqual(result.find((batch) => batch.files[0].endsWith('App.css')).fileKinds, [
+    'production',
+  ]);
+  assert.equal(result[0].fixable, null);
+  const groups = summarize(
+    findings.map((item) => ({ ...item, tool: 'stylelint', rule: 'r', workspace: 'apps/web' })),
+  );
+  assert.match(markdown({ revision: 'abc', groups, batches: result }), /not evaluated/);
+});
