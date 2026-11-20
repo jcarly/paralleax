@@ -2,6 +2,11 @@
 
 ## Unreleased
 
+- Fixed the editor toolbar's Test from start and Test from current interaction
+  icons, which sat 9.5px off-centre with no border because the links did not
+  get the shared button styles (PAR-7). They now use the existing `button` class
+  and match the Comments action in size, border, centring, hover, focus and
+  tooltip.
 - Editing a Story body no longer changes how it looks (PAR-7). In the Inspector
   the text switched from the narrative serif at 18.4px to the interface sans at
   16px and moved down by about 100px when the toolbar appeared; it now keeps the
