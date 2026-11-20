@@ -109,8 +109,18 @@ test('styles the Story settings toolbar button before its dialog loads', async (
   const settingsButton = page.getByRole('button', { name: 'Story settings' });
   // The dialog loads on demand; the button's stylesheet must already apply.
   await expect(page.getByRole('dialog', { name: 'Story settings' })).toHaveCount(0);
-  await expect(settingsButton).toHaveCSS('width', '34px');
-  await expect(settingsButton.locator('svg')).toHaveCSS('width', '20px');
+  await expect(settingsButton).toHaveCSS('width', '40px');
+  await expect(settingsButton.locator('svg')).toHaveCSS('width', '21px');
+  // On the title line, vertically centred with the title field.
+  const [title, button] = await Promise.all([
+    page.getByRole('textbox', { name: 'Story title' }).boundingBox(),
+    settingsButton.boundingBox(),
+  ]);
+  expect(title && button).toBeTruthy();
+  if (title && button) {
+    expect(Math.abs(title.y + title.height / 2 - (button.y + button.height / 2))).toBeLessThan(1);
+    expect(button.x).toBeGreaterThan(title.x + title.width - 1);
+  }
 });
 
 test('renders the Test toolbar links like the other toolbar actions', async ({ page }) => {
