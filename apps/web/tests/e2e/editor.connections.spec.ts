@@ -263,3 +263,15 @@ test('drags from an initial interaction output onto an existing trigger node', a
     .toEqual([{ id: 'trigger-2', inputInteractionIds: ['interaction-3', 'interaction-1'] }]);
   await expect(page.locator('.react-flow__node[data-id^="interaction-new"]')).toHaveCount(0);
 });
+
+test('treats a drop on an existing interaction card as a drop on its input plus', async ({
+  page,
+}) => {
+  const state = await openEditor(page);
+  const card = flowNode(page, 'interaction-2').locator('.interaction-excerpt');
+
+  await dragPointer(page, childHandle(page, 'interaction-1'), await centerOf(card));
+
+  await expect.poll(() => inputsOf(state.story, 'interaction-2')).toContain('interaction-1');
+  await expect(page.locator('.react-flow__node[data-id^="interaction-new"]')).toHaveCount(0);
+});

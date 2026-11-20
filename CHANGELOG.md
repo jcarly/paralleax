@@ -2,6 +2,10 @@
 
 ## Unreleased
 
+- Dropping a graph connection on an interaction card now counts as a drop on
+  its matching '+' (input '+' from an output, output '+' from an input) instead
+  of doing nothing. Trigger markers keep their meaning: they add the source to
+  that existing trigger. A drop back on the starting card creates nothing.
 - Fixed dragging from an Interaction's '+' controls in the graph, which did
   nothing for Interactions loaded with the story (issue #32): no link to an
   existing Interaction or trigger, and no child or parent created by a drop on
