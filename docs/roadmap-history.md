@@ -218,7 +218,7 @@ and 11 are new. Where an acceptance criterion says "observed evidence" or
    secret/container scanning, manual keyboard/focus, and measured performance
    gates in [Production readiness](production-readiness.md), configure the
    feedback survey described in
-   [Formbricks feedback](operations/formbricks-feedback.md#open-alpha-survey),
+   [Formbricks feedback, now PostHog](operations/posthog-feedback.md#open-alpha-survey),
    publish the alpha notice, rehearse the manual account export and deletion
    procedure (see [Production readiness](production-readiness.md)), then repeat
    the essential author tasks on staging.

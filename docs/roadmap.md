@@ -40,7 +40,7 @@ Consequences:
 **Goal: open the creator alpha to everyone and collect feedback continuously**,
 instead of running guided author sessions first. Organizing guided sessions is
 too costly; feedback comes from the in-app feedback button
-([Formbricks](operations/formbricks-feedback.md)) and from real use.
+([PostHog survey](operations/posthog-feedback.md)) and from real use.
 
 Consequences:
 
@@ -67,7 +67,7 @@ Consequences:
   feedback survey asks the author's profile so the
   [audience hypothesis](positioning.md#audience-hypothesis) can still be tested;
   its questions and verification are in
-  [Formbricks feedback](operations/formbricks-feedback.md#open-alpha-survey).
+  [PostHog feedback](operations/posthog-feedback.md#open-alpha-survey).
 - Feedback is self-selected: authors who give up early rarely answer it. The
   absence of negative feedback is not evidence that the editor is clear; task 10
   reads feedback together with simple activity counts.
