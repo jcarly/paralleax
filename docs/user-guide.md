@@ -89,6 +89,7 @@ reading audience are shown but cannot be selected; narrowing reading narrows
 editing to the widest option still allowed, and the screen says so. With
 `Owner only` editing, invited Editors cannot edit: inviting or promoting an
 Editor switches editing to `Editors` when reading allows it, and says so.
+The invitation and any required policy change succeed or fail together.
 
 Direct grants target an existing Paralleax account by email and grant either
 reader or editor access. An existing grant can be changed in place or removed.
