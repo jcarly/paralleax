@@ -38,6 +38,13 @@ function hoverCommentField(fieldButton: HTMLElement) {
   fireEvent.pointerOver(fieldButton);
 }
 
+/** Keyboard focus on a field control reveals its comment control right after it. */
+function focusCommentField(fieldButton: HTMLElement) {
+  act(() => {
+    fieldButton.focus();
+  });
+}
+
 describe('StoryEditor graph collaboration and layout', () => {
   setupStoryEditorTestSuite();
 
@@ -392,10 +399,7 @@ describe('StoryEditor graph collaboration and layout', () => {
 
     await renderEditor(story);
     await user.click(screen.getByTestId('flow-node-interaction-2'));
-    // Keyboard: focusing the Duration control reveals its comment control right after it.
-    act(() => {
-      screen.getByRole('button', { name: 'Duration: No time change' }).focus();
-    });
+    focusCommentField(screen.getByRole('button', { name: 'Duration: No time change' }));
     expect(screen.getByRole('button', { name: 'Comment on Duration' })).toBeInTheDocument();
     hoverCommentField(screen.getByRole('button', { name: 'Duration: No time change' }));
     fireEvent.click(screen.getByRole('button', { name: 'Comment on Duration' }));
