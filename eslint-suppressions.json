@@ -1832,11 +1832,6 @@
       "count": 1
     }
   },
-  "apps/web/src/features/story-player/simulation/getVisibleChoices.ts": {
-    "no-duplicate-imports": {
-      "count": 1
-    }
-  },
   "apps/web/src/features/story-player/simulation/useSimulationAuthoringCommands.ts": {
     "max-lines-per-function": {
       "count": 1
