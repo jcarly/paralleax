@@ -28,6 +28,7 @@ import { RichTextContent } from './RichTextContent';
 import { hasAuthoredRichTextContent } from './richTextProjection';
 import { VariablePicker } from './VariablePicker';
 import {
+  choiceLabelForDisplay,
   interactionTitleForDisplay,
   interactionTitlePlaceholder,
 } from '../features/story/interactionTitlePresentation';
@@ -532,7 +533,9 @@ function InteractionInspectorView({
           >
             <InteractionLabel
               label={interactionTitleForDisplay(interaction, t)}
-              className="interaction-inspector-title-bubble"
+              className={`interaction-inspector-title-bubble${
+                interaction.title.trim() ? '' : ' interaction-label-fallback'
+              }`}
               leadingIcon="→"
               dataCommentField="title"
               ariaLabel={`${t('interactionInspector.title')}: ${interactionTitleForDisplay(interaction, t)}`}
@@ -1159,20 +1162,35 @@ function InteractionInspectorView({
         </div>
         {optionDestinations.length > 0 ? (
           <ul className="interaction-inspector-option-list">
-            {optionDestinations.map((destination) => (
-              <li key={destination.id}>
-                <button
-                  className="interaction-inspector-readout interaction-inspector-option-readout"
-                  type="button"
-                  onClick={() => onSelectInteraction?.(destination.id)}
-                >
-                  <InteractionLabel label={interactionTitleForDisplay(destination, t)} />
-                  <i className="interaction-inspector-option-arrow" aria-hidden="true">
-                    →
-                  </i>
-                </button>
-              </li>
-            ))}
+            {optionDestinations.map((destination, index) => {
+              const choiceLabel = choiceLabelForDisplay(
+                destination,
+                { index, count: optionDestinations.length },
+                t,
+              );
+              return (
+                <li key={destination.id}>
+                  <button
+                    className="interaction-inspector-readout interaction-inspector-option-readout"
+                    type="button"
+                    onClick={() => onSelectInteraction?.(destination.id)}
+                  >
+                    <InteractionLabel
+                      label={choiceLabel.label}
+                      className={choiceLabel.authored ? undefined : 'interaction-label-fallback'}
+                    />
+                    <i className="interaction-inspector-option-arrow" aria-hidden="true">
+                      →
+                    </i>
+                  </button>
+                  {choiceLabel.needsLabel ? (
+                    <p className="hint interaction-inspector-option-warning">
+                      {t('player.choiceLabelNeeded')}
+                    </p>
+                  ) : null}
+                </li>
+              );
+            })}
           </ul>
         ) : (
           <p className="hint">{t('interactionInspector.noOptions')}</p>

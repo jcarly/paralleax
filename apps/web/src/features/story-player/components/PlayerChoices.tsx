@@ -4,7 +4,7 @@ import type { Interaction, Story, TriggerTimerResult } from '@paralleax/shared';
 import { ChoiceTimerBar } from '../ChoiceTimerBar';
 import { getConditionSummary } from '../storyPlayerPresentation';
 import {
-  interactionTitleForDisplay,
+  choiceLabelForDisplay,
   interactionTitlePlaceholder,
 } from '../../story/interactionTitlePresentation';
 
@@ -55,64 +55,72 @@ export function PlayerChoices({
       className="choices"
       data-onboarding-target={isSimulationMode ? 'simulation-choices' : undefined}
     >
-      {choices.map(({ interaction, available, timerState, unavailableReason }) => (
-        <div className="choice-row" key={interaction.id}>
-          {timerState ? (
-            <ChoiceTimerBar
-              key={`${journeyLength}:${interaction.id}:${timerState.triggerId}:${currentStepStartedAt ?? ''}`}
-              timer={timerState}
-            />
-          ) : null}
-          {editingChoiceId === interaction.id ? (
-            <>
-              {/* eslint-disable-next-line design-system/require-shared-form-control -- Simulation choice-title editing keeps its narrative control styling */}
-              <input
-                ref={editingChoiceInputRef}
-                className="choice-title-input"
-                aria-label={t('player.newOptionTitle')}
-                placeholder={interactionTitlePlaceholder(interaction, t)}
-                value={interaction.title}
-                onChange={(event) => {
-                  onPatchInteraction(interaction.id, { title: event.target.value });
-                }}
-                onBlur={(event) => void onSaveChoiceTitle(interaction, event.target.value)}
-                onKeyDown={(event) => {
-                  if (event.key === 'Enter') {
-                    event.preventDefault();
-                    event.currentTarget.blur();
-                  }
-                }}
+      {choices.map(({ interaction, available, timerState, unavailableReason }, index) => {
+        const choiceLabel = choiceLabelForDisplay(interaction, { index, count: choices.length }, t);
+        return (
+          <div className="choice-row" key={interaction.id}>
+            {timerState ? (
+              <ChoiceTimerBar
+                key={`${journeyLength}:${interaction.id}:${timerState.triggerId}:${currentStepStartedAt ?? ''}`}
+                timer={timerState}
               />
-            </>
-          ) : (
-            <button
-              className={`choice ${available ? 'available' : 'unavailable'} ${isSimulationMode && !available && forceUnavailableOptions ? 'forced' : ''}`}
-              disabled={isSimulationMode && !available && !forceUnavailableOptions}
-              onClick={() => {
-                onChoose(interaction);
-              }}
-              title={
-                available
-                  ? getConditionSummary(story, interaction, currentInteractionId ?? null, t)
-                  : (unavailableReason ?? t('player.unavailable'))
-              }
-            >
-              <span className="choice-copy">
-                <strong>{interactionTitleForDisplay(interaction, t)}</strong>
-                {isSimulationMode && !available ? (
-                  <small>
-                    {unavailableReason ?? t('player.unavailable')}
-                    {forceUnavailableOptions ? t('player.forced') : ''}
-                  </small>
-                ) : null}
-              </span>
-              <span className="choice-arrow" aria-hidden="true">
-                →
-              </span>
-            </button>
-          )}
-        </div>
-      ))}
+            ) : null}
+            {editingChoiceId === interaction.id ? (
+              <>
+                {/* eslint-disable-next-line design-system/require-shared-form-control -- Simulation choice-title editing keeps its narrative control styling */}
+                <input
+                  ref={editingChoiceInputRef}
+                  className="choice-title-input"
+                  aria-label={t('player.newOptionTitle')}
+                  placeholder={interactionTitlePlaceholder(interaction, t)}
+                  value={interaction.title}
+                  onChange={(event) => {
+                    onPatchInteraction(interaction.id, { title: event.target.value });
+                  }}
+                  onBlur={(event) => void onSaveChoiceTitle(interaction, event.target.value)}
+                  onKeyDown={(event) => {
+                    if (event.key === 'Enter') {
+                      event.preventDefault();
+                      event.currentTarget.blur();
+                    }
+                  }}
+                />
+              </>
+            ) : (
+              <button
+                className={`choice ${available ? 'available' : 'unavailable'} ${isSimulationMode && !available && forceUnavailableOptions ? 'forced' : ''}`}
+                disabled={isSimulationMode && !available && !forceUnavailableOptions}
+                onClick={() => {
+                  onChoose(interaction);
+                }}
+                title={
+                  available
+                    ? getConditionSummary(story, interaction, currentInteractionId ?? null, t)
+                    : (unavailableReason ?? t('player.unavailable'))
+                }
+              >
+                <span className="choice-copy">
+                  <strong className={choiceLabel.authored ? undefined : 'choice-label-fallback'}>
+                    {choiceLabel.label}
+                  </strong>
+                  {isSimulationMode && choiceLabel.needsLabel ? (
+                    <small className="choice-label-needed">{t('player.choiceLabelNeeded')}</small>
+                  ) : null}
+                  {isSimulationMode && !available ? (
+                    <small>
+                      {unavailableReason ?? t('player.unavailable')}
+                      {forceUnavailableOptions ? t('player.forced') : ''}
+                    </small>
+                  ) : null}
+                </span>
+                <span className="choice-arrow" aria-hidden="true">
+                  →
+                </span>
+              </button>
+            )}
+          </div>
+        );
+      })}
       {isSimulationMode ? (
         <button
           className="choice add-option"

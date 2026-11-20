@@ -170,7 +170,7 @@ export function InteractionNode({ id, data }: NodeProps<Node<InteractionNodeData
       {title ? (
         <InteractionLabel
           label={title}
-          className="interaction-node-label"
+          className={`interaction-node-label${authoredTitle ? '' : ' interaction-label-fallback'}`}
           leadingIcon="→"
           suffix={
             (d.occurrenceCount ?? 0) > 0 ? (

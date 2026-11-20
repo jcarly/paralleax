@@ -2,6 +2,7 @@ import { describe, expect, it } from 'vitest';
 import type { Interaction } from '@paralleax/shared';
 import { changeInterfaceLanguage, i18n } from '../../i18n';
 import {
+  choiceLabelForDisplay,
   interactionTitleForDisplay,
   interactionTitlePlaceholder,
 } from './interactionTitlePresentation';
@@ -31,5 +32,31 @@ describe('interaction title presentation', () => {
     expect(interactionTitlePlaceholder(interaction('', ['source']), i18n.t.bind(i18n))).toBe(
       'New interaction',
     );
+  });
+
+  it('labels untitled choices for readers', async () => {
+    await i18n.changeLanguage('en');
+    const t = i18n.t.bind(i18n);
+
+    expect(choiceLabelForDisplay({ title: '' }, { index: 0, count: 1 }, t)).toEqual({
+      label: 'Continue',
+      authored: false,
+      needsLabel: false,
+    });
+    expect(choiceLabelForDisplay({ title: ' ' }, { index: 1, count: 3 }, t)).toEqual({
+      label: 'Option 2',
+      authored: false,
+      needsLabel: true,
+    });
+    expect(choiceLabelForDisplay({ title: 'Leave' }, { index: 0, count: 3 }, t)).toEqual({
+      label: 'Leave',
+      authored: true,
+      needsLabel: false,
+    });
+    await changeInterfaceLanguage('fr');
+    expect(
+      choiceLabelForDisplay({ title: '' }, { index: 0, count: 1 }, i18n.t.bind(i18n)).label,
+    ).toBe('Continuer');
+    await i18n.changeLanguage('en');
   });
 });
