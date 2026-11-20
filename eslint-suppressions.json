@@ -1854,7 +1854,7 @@
   },
   "apps/web/src/features/story-settings/StoryAccessSettings.tsx": {
     "@typescript-eslint/no-unsafe-type-assertion": {
-      "count": 4
+      "count": 2
     },
     "@typescript-eslint/strict-boolean-expressions": {
       "count": 3

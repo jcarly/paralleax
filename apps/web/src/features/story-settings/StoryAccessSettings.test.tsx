@@ -53,6 +53,59 @@ describe('StoryAccessSettings', () => {
     expect(screen.getByLabelText('Comments')).toHaveValue('editors');
   });
 
+  it('describes the selected value of every access policy', async () => {
+    const user = userEvent.setup();
+    render(<StoryAccessSettings storyId="story-1" />);
+    const reading = await screen.findByLabelText('Reading');
+    const editing = screen.getByLabelText('Editing');
+    const comments = screen.getByLabelText('Comments');
+    const help = (name: string) =>
+      screen.getByRole('button', { name: new RegExp(name) }).getAttribute('aria-describedby') ?? '';
+    const helpText = (name: string) => document.getElementById(help(name))?.textContent;
+
+    const readingHelp = {
+      public: 'Anyone can read the Story without signing in. It appears in the public catalog.',
+      unlisted:
+        "Anyone with the URL can read the Story without signing in. It won't appear in the public catalog.",
+      authenticated: 'Any signed-in user can read the Story and find it in the catalog.',
+      invitation: 'Only the users added below can read the Story.',
+      private: 'Only you can read the Story. Access given to the users below stays inactive.',
+    };
+    expect(helpText('Reading')).toBe(readingHelp.private);
+    for (const [value, text] of Object.entries(readingHelp)) {
+      await user.selectOptions(reading, value);
+      await waitFor(() => {
+        expect(reading).toHaveValue(value);
+      });
+      expect(helpText('Reading')).toBe(text);
+    }
+
+    expect(helpText('Editing')).toBe('Only you can edit the Story.');
+    await user.selectOptions(editing, 'authenticated');
+    await waitFor(() => {
+      expect(helpText('Editing')).toBe('Any signed-in user can read and edit the Story.');
+    });
+
+    expect(helpText('Comments')).toBe('Only users who can edit the Story comment, while editing.');
+    await user.selectOptions(comments, 'readers');
+    await waitFor(() => {
+      expect(helpText('Comments')).toMatch(/^Signed-in users who can read the Story comment/);
+    });
+  });
+
+  it('states when the editing policy also opens reading to signed-in users', async () => {
+    vi.mocked(api.getStoryAccess).mockResolvedValue({
+      ...structuredClone(access),
+      visibility: 'invitation',
+      editPolicy: 'authenticated',
+    });
+    render(<StoryAccessSettings storyId="story-1" />);
+
+    expect(
+      await screen.findByText('Signed-in users can also read it, because they can edit it.'),
+    ).toBeInTheDocument();
+  });
+
   it('shows an access-loading failure inside the settings surface', async () => {
     vi.mocked(api.getStoryAccess).mockRejectedValue(new Error('Access unavailable'));
 

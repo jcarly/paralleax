@@ -2,6 +2,11 @@
 
 ## Unreleased
 
+- Fixed the Story access settings help, which always described the By link
+  option whatever reading policy was selected. Reading, Editing and Comments
+  now each describe the selected value, and a short note states when the
+  Signed-in users editing policy also lets signed-in users read a private or
+  invitation-only Story, as the access rules already did (PAR-7).
 - Added a private, local MCP server prototype (`apps/mcp`, ADR-047) built on
   the official MCP TypeScript SDK v2 over stdio. It calls the existing HTTP API
   as the signed-in user (`paralleax-mcp login`) and exposes six tools:
