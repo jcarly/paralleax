@@ -166,11 +166,6 @@
       "count": 1
     }
   },
-  "apps/api/src/health/health.service.ts": {
-    "@typescript-eslint/strict-boolean-expressions": {
-      "count": 2
-    }
-  },
   "apps/api/src/imports/import-job.service.spec.ts": {
     "@typescript-eslint/no-unsafe-assignment": {
       "count": 4
