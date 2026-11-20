@@ -282,6 +282,7 @@ describe('StoryAccessSettings', () => {
     vi.mocked(api.getStoryAccess).mockResolvedValue(invitationAccess);
     vi.mocked(api.setStoryCollaborator).mockResolvedValue({
       ...invitationAccess,
+      editPolicy: 'collaborators',
       collaborators: [
         { userId: 'user-2', email: 'writer@example.com', displayName: 'Writer', role: 'editor' },
       ],
@@ -293,16 +294,37 @@ describe('StoryAccessSettings', () => {
     await user.click(screen.getByRole('button', { name: 'Add user' }));
 
     await waitFor(() => {
-      expect(api.updateStoryAccess).toHaveBeenCalledWith('story-1', {
-        visibility: 'invitation',
-        editPolicy: 'collaborators',
-        commentPolicy: 'editors',
-      });
+      expect(api.setStoryCollaborator).toHaveBeenCalledWith(
+        'story-1',
+        'writer@example.com',
+        'editor',
+      );
     });
+    expect(api.updateStoryAccess).not.toHaveBeenCalled();
     expect(screen.getByLabelText('Editing')).toHaveValue('collaborators');
     expect(
       screen.getByText('Editing set to Editors so the invited editor can edit.'),
     ).toBeInTheDocument();
+  });
+
+  it('keeps the invitation form and policy unchanged when the atomic grant fails', async () => {
+    const user = userEvent.setup();
+    vi.mocked(api.getStoryAccess).mockResolvedValue({
+      ...structuredClone(access),
+      visibility: 'invitation',
+    });
+    vi.mocked(api.setStoryCollaborator).mockRejectedValue(new Error('Access unavailable'));
+    render(<StoryAccessSettings storyId="story-1" />);
+
+    await user.type(await screen.findByLabelText('User email'), 'writer@example.com');
+    await user.selectOptions(screen.getByLabelText('Access'), 'editor');
+    await user.click(screen.getByRole('button', { name: 'Add user' }));
+
+    expect(await screen.findByRole('alert')).toHaveTextContent('Access unavailable');
+    expect(screen.getByLabelText('User email')).toHaveValue('writer@example.com');
+    expect(screen.getByLabelText('Editing')).toHaveValue('owner');
+    expect(api.updateStoryAccess).not.toHaveBeenCalled();
+    expect(screen.queryByText('writer@example.com')).not.toBeInTheDocument();
   });
 
   it('leaves editing unchanged when a viewer is invited', async () => {
