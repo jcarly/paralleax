@@ -25,7 +25,16 @@ narrowed existing incoherent Stories to the widest allowed edit policy
 (`owner` for private, `collaborators` for invitation), as decided by the product
 owner; this removes access some signed-in users had on such Stories. The
 settings screen disables incompatible options and narrows editing when reading
-is narrowed. `resolveStoryAccess` is unchanged.
+is narrowed.
+
+The same review found that `resolveStoryAccess` let an `editor` grant edit a
+non-private Story whose edit policy is `owner`, so "Owner only" did not hold.
+An editor grant now edits only under the `collaborators` or `authenticated`
+edit policy, in the shared rule and its SQL projection. Product decision: no
+migration; invited editors on such Stories lose editing until the owner opens
+editing to Editors. Inviting or promoting an Editor from the settings screen
+while editing is `owner` opens editing to `collaborators` when reading allows
+it, and says so.
 
 ## Context
 

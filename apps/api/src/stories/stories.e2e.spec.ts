@@ -379,7 +379,7 @@ it('refuses to undo over a later overlapping collaborator change', async () => {
   await request(httpServer)
     .patch(`/api/stories/${responseStringAt(parseResponse(created), 'id')}/access`)
     .set('Cookie', ownerCookie)
-    .send({ visibility: 'invitation', editPolicy: 'owner', commentPolicy: 'editors' })
+    .send({ visibility: 'invitation', editPolicy: 'collaborators', commentPolicy: 'editors' })
     .expect(200);
   await request(httpServer)
     .post(`/api/stories/${responseStringAt(parseResponse(created), 'id')}/access/collaborators`)

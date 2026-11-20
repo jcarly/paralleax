@@ -434,6 +434,7 @@ export const englishTranslation = {
       authenticated: 'Signed-in users',
       adjusted: 'Editing set to {{policy}}: it cannot be wider than reading.',
       limitedByReading: 'Limited by the Reading setting.',
+      openedForEditors: 'Editing set to Editors so the invited editor can edit.',
       help: {
         owner: 'Only you can edit the Story.',
         collaborators: 'You and the users added below as Editor can edit the Story.',

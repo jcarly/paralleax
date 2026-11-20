@@ -86,7 +86,9 @@ editors, or be opened to every signed-in user. Editing is never open to more
 people than reading: an owner-only Story is edited by its owner only, and an
 invitation-only Story by its owner or invited editors. Options outside the
 reading audience are shown but cannot be selected; narrowing reading narrows
-editing to the widest option still allowed, and the screen says so.
+editing to the widest option still allowed, and the screen says so. With
+`Owner only` editing, invited Editors cannot edit: inviting or promoting an
+Editor switches editing to `Editors` when reading allows it, and says so.
 
 Direct grants target an existing Paralleax account by email and grant either
 reader or editor access. An existing grant can be changed in place or removed.

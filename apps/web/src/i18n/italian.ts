@@ -449,6 +449,7 @@ export const italianTranslation = {
       authenticated: 'Utenti registrati',
       adjusted: 'Modifica impostata su «{{policy}}»: non può essere più aperta della lettura.',
       limitedByReading: 'Limitata dall’impostazione Lettura.',
+      openedForEditors: 'Modifica aperta agli Editori perché l’editore invitato possa modificare.',
       help: {
         owner: 'Solo tu puoi modificare la Storia.',
         collaborators: 'Tu e gli utenti aggiunti qui sotto come Editore potete modificarla.',

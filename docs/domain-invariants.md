@@ -309,8 +309,10 @@ details. They should stay covered by tests as the editor grows.
   viewer or editor grant.
 - A private story ignores collaborator grants until its visibility changes. A
   stale grant must never bypass private visibility.
-- An editor grant implies reading only when the story is not private. The
-  authenticated edit policy implies reading and editing for signed-in users.
+- An editor grant implies reading only when the story is not private, and
+  editing only when the edit policy is `collaborators` or `authenticated`: an
+  `owner` edit policy means the owner (and administrators) only (2026-11-20).
+  The authenticated edit policy implies reading and editing for signed-in users.
 - Editing is never open to more people than reading (2026-11-20): a private
   story allows only owner editing, and an invitation story allows owner or
   collaborator editing; other visibilities allow every edit policy. The shared

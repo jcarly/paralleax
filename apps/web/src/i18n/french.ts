@@ -443,6 +443,8 @@ export const frenchTranslation = {
       adjusted:
         'Modification ramenée à « {{policy}} » : elle ne peut pas être plus ouverte que la lecture.',
       limitedByReading: 'Limitée par le réglage Lecture.',
+      openedForEditors:
+        'Modification ouverte aux Éditeurs pour que l’éditeur invité puisse modifier.',
       help: {
         owner: 'Vous seul pouvez modifier l’histoire.',
         collaborators:

@@ -273,6 +273,59 @@ describe('StoryAccessSettings', () => {
     expect(screen.queryByText('reader@example.com')).not.toBeInTheDocument();
   });
 
+  it('opens owner-only editing to editors when an editor is invited, and says so', async () => {
+    const user = userEvent.setup();
+    const invitationAccess: StoryAccessConfiguration = {
+      ...structuredClone(access),
+      visibility: 'invitation',
+    };
+    vi.mocked(api.getStoryAccess).mockResolvedValue(invitationAccess);
+    vi.mocked(api.setStoryCollaborator).mockResolvedValue({
+      ...invitationAccess,
+      collaborators: [
+        { userId: 'user-2', email: 'writer@example.com', displayName: 'Writer', role: 'editor' },
+      ],
+    });
+    render(<StoryAccessSettings storyId="story-1" />);
+
+    await user.type(await screen.findByLabelText('User email'), 'writer@example.com');
+    await user.selectOptions(screen.getByLabelText('Access'), 'editor');
+    await user.click(screen.getByRole('button', { name: 'Add user' }));
+
+    await waitFor(() => {
+      expect(api.updateStoryAccess).toHaveBeenCalledWith('story-1', {
+        visibility: 'invitation',
+        editPolicy: 'collaborators',
+        commentPolicy: 'editors',
+      });
+    });
+    expect(screen.getByLabelText('Editing')).toHaveValue('collaborators');
+    expect(
+      screen.getByText('Editing set to Editors so the invited editor can edit.'),
+    ).toBeInTheDocument();
+  });
+
+  it('leaves editing unchanged when a viewer is invited', async () => {
+    const user = userEvent.setup();
+    vi.mocked(api.getStoryAccess).mockResolvedValue({
+      ...structuredClone(access),
+      visibility: 'invitation',
+    });
+    vi.mocked(api.setStoryCollaborator).mockResolvedValue({
+      ...structuredClone(access),
+      visibility: 'invitation',
+    });
+    render(<StoryAccessSettings storyId="story-1" />);
+
+    await user.type(await screen.findByLabelText('User email'), 'reader@example.com');
+    await user.click(screen.getByRole('button', { name: 'Add user' }));
+
+    await waitFor(() => {
+      expect(api.setStoryCollaborator).toHaveBeenCalled();
+    });
+    expect(api.updateStoryAccess).not.toHaveBeenCalled();
+  });
+
   it('restores a policy when its automatic save fails', async () => {
     const user = userEvent.setup();
     vi.mocked(api.updateStoryAccess).mockRejectedValue(new Error('Access unavailable'));

@@ -10,7 +10,11 @@
   `400 STORY_ACCESS_INCOHERENT`, using the first shared domain error class
   mapped by the exception filter (ADR-046). A migration narrows existing
   Stories: private ones to owner-only editing, invitation-only ones from
-  signed-in editing to invited editors. ADR-017 is amended.
+  signed-in editing to invited editors. ADR-017 is amended. "Owner only"
+  editing now really means the owner: an invited Editor could still edit a
+  non-private Story with that policy. Inviting or promoting an Editor switches
+  editing to Editors when reading allows it, with a note; existing Stories are
+  not migrated, so their invited Editors need editing opened to Editors.
 - Fixed the Story access settings help, which always described the By link
   option whatever reading policy was selected. Reading, Editing and Comments
   now each describe the selected value (PAR-7).

@@ -27,7 +27,7 @@ export function StoryAccessSettings({ storyId, onInaccessible }: StoryAccessSett
   const [pending, setPending] = useState(false);
   const [error, setError] = useState('');
   const [accessStatus, setAccessStatus] = useState<'idle' | 'saving' | 'saved' | 'error'>('idle');
-  const [editPolicyAdjusted, setEditPolicyAdjusted] = useState(false);
+  const [editPolicyChange, setEditPolicyChange] = useState<'narrowed' | 'openedForEditors'>();
 
   useEffect(() => {
     let cancelled = false;
@@ -63,7 +63,7 @@ export function StoryAccessSettings({ storyId, onInaccessible }: StoryAccessSett
       ...changed,
       editPolicy: fitStoryEditPolicy(changed.visibility, changed.editPolicy),
     };
-    setEditPolicyAdjusted(next.editPolicy !== changed.editPolicy);
+    setEditPolicyChange(next.editPolicy === changed.editPolicy ? undefined : 'narrowed');
     setAccess(next);
     setAccessStatus('saving');
     const updated = await runAccessOperation(
@@ -74,8 +74,30 @@ export function StoryAccessSettings({ storyId, onInaccessible }: StoryAccessSett
       setAccessStatus('saved');
     } else {
       setAccess(previous);
-      setEditPolicyAdjusted(false);
+      setEditPolicyChange(undefined);
       setAccessStatus('error');
+    }
+  }
+
+  /** An invited Editor can only edit when editing is open to editors: open it when reading allows. */
+  async function openEditingToEditors(updated: StoryAccessConfiguration | undefined) {
+    if (
+      updated?.editPolicy !== 'owner' ||
+      !getAllowedStoryEditPolicies(updated.visibility).includes('collaborators')
+    ) {
+      return;
+    }
+    const opened = await runAccessOperation(
+      () =>
+        api.updateStoryAccess(storyId, {
+          visibility: updated.visibility,
+          editPolicy: 'collaborators',
+          commentPolicy: updated.commentPolicy,
+        }),
+      t('access.saveFailed'),
+    );
+    if (opened) {
+      setEditPolicyChange('openedForEditors');
     }
   }
 
@@ -84,6 +106,9 @@ export function StoryAccessSettings({ storyId, onInaccessible }: StoryAccessSett
       () => api.setStoryCollaborator(storyId, email.trim(), role),
       t('access.inviteFailed'),
     );
+    if (role === 'editor') {
+      await openEditingToEditors(updated);
+    }
     return Boolean(updated);
   }
 
@@ -91,10 +116,13 @@ export function StoryAccessSettings({ storyId, onInaccessible }: StoryAccessSett
     if (pending) {
       return;
     }
-    await runAccessOperation(
+    const updated = await runAccessOperation(
       () => api.setStoryCollaborator(storyId, emailAddress, nextRole),
       t('access.roleUpdateFailed'),
     );
+    if (nextRole === 'editor') {
+      await openEditingToEditors(updated);
+    }
   }
 
   async function remove(userId: string) {
@@ -143,8 +171,11 @@ export function StoryAccessSettings({ storyId, onInaccessible }: StoryAccessSett
     if (!access) {
       return undefined;
     }
-    if (editPolicyAdjusted) {
+    if (editPolicyChange === 'narrowed') {
       return t('access.edit.adjusted', { policy: t(`access.edit.${access.editPolicy}`) });
+    }
+    if (editPolicyChange === 'openedForEditors') {
+      return t('access.edit.openedForEditors');
     }
     return getAllowedStoryEditPolicies(access.visibility).length < editOptions.length
       ? t('access.edit.limitedByReading')

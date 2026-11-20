@@ -51,8 +51,12 @@ export function resolveStoryAccess(
   subject: StoryAccessSubject,
 ): StoryAccessCapabilities {
   const privileged = subject.role === 'admin' || subject.isOwner === true;
+  // An editor grant edits only when the edit policy is open to editors and the
+  // story is not private: "Owner only" editing means the owner only.
   const canEditAsCollaborator =
-    settings.visibility !== 'private' && subject.collaboratorRole === 'editor';
+    settings.visibility !== 'private' &&
+    settings.editPolicy !== 'owner' &&
+    subject.collaboratorRole === 'editor';
   const canEdit =
     privileged ||
     (subject.authenticated && (settings.editPolicy === 'authenticated' || canEditAsCollaborator));

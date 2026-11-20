@@ -84,6 +84,21 @@ describe('story access control', () => {
     ).toEqual({ canRead: true, canEdit: true, canManage: false, canComment: true });
   });
 
+  it('keeps owner-only editing for the owner even with an editor grant', () => {
+    const editor = { authenticated: true, role: 'user', collaboratorRole: 'editor' } as const;
+    for (const visibility of ['invitation', 'authenticated', 'unlisted', 'public'] as const) {
+      expect(
+        resolveStoryAccess({ visibility, editPolicy: 'owner', commentPolicy: 'editors' }, editor),
+      ).toMatchObject({ canRead: true, canEdit: false, canComment: false });
+      expect(
+        resolveStoryAccess(
+          { visibility, editPolicy: 'collaborators', commentPolicy: 'editors' },
+          editor,
+        ).canEdit,
+      ).toBe(true);
+    }
+  });
+
   it('supports public reading and authenticated editing without granting management', () => {
     const settings: StoryAccessSettings = {
       visibility: 'public',
