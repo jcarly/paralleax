@@ -442,6 +442,9 @@ The following remain future or incomplete unless a task explicitly implements th
 - lossless or runtime-equivalent QSP import, QSP re-export, and incremental re-import;
 - executable/Unity/video exports;
 - AI-driven narrative/runtime behavior.
+- Remote or multi-user MCP access, scoped API credentials, and batch
+  preview/commit for assistant edits. Only the private local stdio MCP
+  prototype exists ([MCP prototype](mcp.md), [ADR-047](decisions/ADR-047-local-mcp-adapter-over-http-api.md)).
 - An author-facing content-source mode, an accepted narrative content grammar,
   and source round-trip conversion. The current Tiptap editor remains the only
   content authoring mode; the proposed syntax is tracked in

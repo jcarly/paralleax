@@ -205,6 +205,11 @@ jobs:
         if: needs.changes.result == 'success' && needs.changes.outputs.web_coverage == 'true'
         run: npm run coverage -w @paralleax/web
 
+      # The MCP end-to-end spec needs a running API and is skipped here.
+      - name: Run MCP coverage suite
+        if: needs.changes.result == 'success' && needs.changes.outputs.application == 'true'
+        run: npm run coverage -w @paralleax/mcp
+
       - name: Upload coverage reports
         if: always() && needs.changes.outputs.application == 'true'
         uses: actions/upload-artifact@v7

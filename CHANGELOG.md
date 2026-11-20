@@ -2,6 +2,15 @@
 
 ## Unreleased
 
+- Added a private, local MCP server prototype (`apps/mcp`, ADR-047) built on
+  the official MCP TypeScript SDK v2 over stdio. It calls the existing HTTP API
+  as the signed-in user (`paralleax-mcp login`) and exposes six tools:
+  `list_stories`, `get_story_structure`, `get_interaction`,
+  `create_interaction`, `update_interaction` and `create_trigger`. API
+  permissions, validation, quotas, rate limits, history and live editor updates
+  apply unchanged; nothing can be deleted or shared through it. Remote access
+  (for example from ChatGPT) needs OAuth and is documented, not implemented.
+  See [docs/mcp.md](docs/mcp.md).
 - Moved the toolchain to Node 26, the current LTS line: `engines.node`, CI and
   the production and development Docker images change together.
 - Upgraded the API to NestJS 12 (common, core, platform-express and testing
