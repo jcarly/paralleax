@@ -712,11 +712,6 @@
       "count": 1
     }
   },
-  "apps/web/src/components/ImageUrlDialog.tsx": {
-    "jsx-a11y-x/no-autofocus": {
-      "count": 1
-    }
-  },
   "apps/web/src/components/ImageUrlField.tsx": {
     "@typescript-eslint/strict-boolean-expressions": {
       "count": 2
