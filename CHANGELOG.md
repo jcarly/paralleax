@@ -2,6 +2,11 @@
 
 ## Unreleased
 
+- New Stories place their starting child where ELK places a child, one layer
+  below the start, instead of 16px under it (PAR-7). The Trigger marker covered
+  the child's input `+`, and links to later choices ran under the child card so
+  they seemed to leave its sides. API and MCP creation and the editor fallback
+  use the same distance. Existing Stories are not moved; Organize lays them out.
 - Added a private, local MCP server prototype (`apps/mcp`, ADR-047) built on
   the official MCP TypeScript SDK v2 over stdio. It calls the existing HTTP API
   as the signed-in user (`paralleax-mcp login`) and exposes six tools:
