@@ -2,6 +2,8 @@
 
 ## Unreleased
 
+- Moved the toolchain to Node 26, the current LTS line: `engines.node`, CI and
+  the production and development Docker images change together.
 - Upgraded the API to NestJS 12 (common, core, platform-express and testing
   12.5.1, Swagger 12.1.2) as one coordinated change. The API stays CommonJS:
   webpack bundles the ESM-only Nest packages, and Jest runs with
