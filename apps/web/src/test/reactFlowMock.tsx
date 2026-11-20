@@ -412,5 +412,6 @@ export function createReactFlowMock() {
     SelectionMode: { Full: 'full', Partial: 'partial' },
     useNodesState: useTestNodesState,
     useEdgesState: useTestEdgesState,
+    useUpdateNodeInternals: () => () => {},
   };
 }

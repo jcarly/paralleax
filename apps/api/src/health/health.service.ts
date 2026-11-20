@@ -20,7 +20,8 @@ export class HealthService {
       const migrationTable = await this.database.pool.query<{ table_name: string | null }>(
         `SELECT to_regclass('public.schema_migrations')::text AS table_name`,
       );
-      if (!migrationTable.rows[0]?.table_name) {
+      const tableName = migrationTable.rows.at(0)?.table_name;
+      if (tableName === null || tableName === undefined || tableName === '') {
         throw new Error('Migration table is missing');
       }
 
@@ -29,7 +30,11 @@ export class HealthService {
         'SELECT id FROM schema_migrations WHERE id = $1',
         [latestMigrationId],
       );
-      if (!migration.rowCount) {
+      if (
+        migration.rowCount === null ||
+        migration.rowCount === 0 ||
+        Number.isNaN(migration.rowCount)
+      ) {
         throw new Error('Database schema is not current');
       }
 

@@ -158,22 +158,12 @@
       "count": 9
     }
   },
-  "apps/api/src/health/health.controller.spec.ts": {
-    "@typescript-eslint/no-unsafe-type-assertion": {
-      "count": 1
-    }
-  },
   "apps/api/src/health/health.service.spec.ts": {
     "@typescript-eslint/no-unsafe-type-assertion": {
       "count": 1
     },
     "max-lines-per-function": {
       "count": 1
-    }
-  },
-  "apps/api/src/health/health.service.ts": {
-    "@typescript-eslint/strict-boolean-expressions": {
-      "count": 2
     }
   },
   "apps/api/src/imports/import-job.service.spec.ts": {
@@ -1412,11 +1402,6 @@
       "count": 1
     }
   },
-  "apps/web/src/features/story-editor/navigation/StoryGroupContextMenu.tsx": {
-    "@typescript-eslint/strict-boolean-expressions": {
-      "count": 1
-    }
-  },
   "apps/web/src/features/story-editor/navigation/StoryGroupRow.tsx": {
     "complexity": {
       "count": 1
@@ -1494,11 +1479,6 @@
       "count": 2
     },
     "@typescript-eslint/strict-boolean-expressions": {
-      "count": 1
-    }
-  },
-  "apps/web/src/features/story-editor/navigation/groupTreeKeyboard.ts": {
-    "@typescript-eslint/no-unnecessary-condition": {
       "count": 1
     }
   },

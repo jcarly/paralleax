@@ -230,7 +230,10 @@ The graph affordance makes that choice explicit before the connection is made:
 
 - dropping on an interaction's input `+` creates a new trigger for that output;
 - dropping on a visible trigger marker adds the source as another input of that
-  existing trigger.
+  existing trigger;
+- dropping anywhere else on an interaction card counts as a drop on its matching
+  `+`: its input `+` when dragging from an output, its output `+` when dragging
+  from an input. A drop on the card where the drag started does nothing.
 
 The editor does not open a follow-up connection-choice dialog.
 
