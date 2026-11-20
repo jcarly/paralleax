@@ -70,7 +70,10 @@ describe('stat targets', () => {
 
   it('rejects malformed, unknown, and ambiguous author references', () => {
     const story = storyFixture();
-    story.characters!.push({
+    if (!story.characters) {
+      throw new Error('Expected fixture characters to exist');
+    }
+    story.characters.push({
       id: 'other-mira',
       name: 'Mira',
       description: '',
