@@ -71,6 +71,10 @@ function renderGuide(path = '/') {
         <Link data-onboarding-target="simulation-launch" to="/stories/story-1/play?mode=simulation">
           Simulation target
         </Link>
+        {/* A launch whose navigation is blocked, for example by a pending save. */}
+        <button data-onboarding-target="simulation-launch" type="button">
+          Blocked simulation target
+        </button>
         <button data-onboarding-target="story-create" type="button">
           New story target
         </button>
@@ -161,6 +165,22 @@ it('closes without a completion card when Simulation is launched from the guide'
     expect(screen.queryByRole('region')).not.toBeInTheDocument();
   });
   expect(screen.queryByText(/ready/i)).not.toBeInTheDocument();
+});
+
+it('keeps the test step when the Simulation launch does not navigate', async () => {
+  const user = userEvent.setup();
+  renderGuide('/stories/story-1/edit');
+  await user.click(screen.getByRole('button', { name: 'Start guide' }));
+  await user.click(screen.getByRole('button', { name: 'Mark scene saved' }));
+  await user.click(screen.getByRole('button', { name: 'Mark branch created' }));
+
+  await user.click(screen.getByRole('button', { name: 'Blocked simulation target' }));
+
+  expect(screen.getByTestId('guide-status')).toHaveTextContent('active');
+  expect(screen.getByRole('heading', { name: 'Test your story' })).toBeInTheDocument();
+
+  await user.click(screen.getByRole('link', { name: 'Simulation target' }));
+  expect(screen.getByTestId('guide-status')).toHaveTextContent('complete');
 });
 
 it('never covers Simulation with a guide step', async () => {

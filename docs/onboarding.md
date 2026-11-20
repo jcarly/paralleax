@@ -33,8 +33,10 @@ The guide has three outcome-based steps:
    removed on 2026-11-20 and stored progress that still names it is read
    without it.)
 2. Create a choice with more than one distinct destination from a source.
-3. Launch Simulation with the highlighted `Test from start` action. Launching
-   completes the guide, which closes; nothing is layered over Simulation.
+3. Launch Simulation with the highlighted `Test from start` action. The guide
+   completes once Simulation for that Story has opened, then closes; a launch
+   whose navigation is blocked (for example by a pending save) or cancelled
+   keeps the step. Nothing is layered over Simulation.
    Advancing a Simulation journey also completes this step.
 
 Testing from the editor starts at the beginning of the Story. A separate
@@ -75,7 +77,7 @@ the guide remains usable for the current session.
   saves. Graph changes count after the persisted Story revision changes, so an
   optimistic unsaved edit does not complete a step.
 - `OnboardingGuide.tsx` completes the last step when the highlighted
-  Simulation entry point is activated. `StoryPlayer.tsx` also recognizes a
+  Simulation entry point was chosen and Simulation for that Story opened. `StoryPlayer.tsx` also recognizes a
   Simulation journey that advanced beyond its starting Interaction.
 
 The guide is separate from Formbricks and application analytics. No guide

@@ -230,39 +230,58 @@ function useGuideExitTransition(view: GuideView) {
     : { view, leaving: false };
 }
 
-/** Launching Simulation from the highlighted action is the last step of the guide. */
-function useCompleteTestOnSimulationLaunch(view: GuideView) {
+/**
+ * Choosing the highlighted Simulation entry point is the last step of the guide.
+ * The click only records the intent: the step completes once Simulation for that
+ * Story has actually opened, so a navigation blocked by a pending save, or
+ * cancelled, leaves the guide where it was.
+ */
+function useCompleteTestOnSimulationLaunch(view: GuideView, route: GuideRoute) {
   const { reportStepComplete } = useOnboarding();
+  const requestedLaunch = useRef<string | undefined>(undefined);
   const storyId = view.kind === 'step' && view.step === 'test-story' ? view.storyId : undefined;
 
   useEffect(() => {
     if (storyId === undefined) {
       return undefined;
     }
-    const completeOnLaunch = (event: MouseEvent) => {
+    const recordLaunch = (event: MouseEvent) => {
       if (
         event.target instanceof Element &&
         event.target.closest('[data-onboarding-target="simulation-launch"]')
       ) {
-        reportStepComplete(storyId, 'test-story');
+        requestedLaunch.current = storyId;
       }
     };
-    document.addEventListener('click', completeOnLaunch, true);
+    document.addEventListener('click', recordLaunch, true);
     return () => {
-      document.removeEventListener('click', completeOnLaunch, true);
+      document.removeEventListener('click', recordLaunch, true);
     };
-  }, [reportStepComplete, storyId]);
+  }, [storyId]);
+
+  const { isSimulation, storyId: routeStoryId } = route;
+  useEffect(() => {
+    const requested = requestedLaunch.current;
+    if (requested === undefined || (!isSimulation && routeStoryId === requested)) {
+      // Still on this Story's editor: the navigation is pending, blocked, or cancelled.
+      return;
+    }
+    requestedLaunch.current = undefined;
+    if (isSimulation && routeStoryId === requested) {
+      reportStepComplete(requested, 'test-story');
+    }
+  }, [isSimulation, reportStepComplete, routeStoryId]);
 }
 
 export function OnboardingGuide() {
   const { pathname, search } = useLocation();
   const { progress, pause, restart, skipCurrentStep } = useOnboarding();
+  const route = useMemo(() => readGuideRoute(pathname, search), [pathname, search]);
   const resolvedView = useMemo(
-    () =>
-      resolveGuideView(progress, currentOnboardingStep(progress), readGuideRoute(pathname, search)),
-    [pathname, progress, search],
+    () => resolveGuideView(progress, currentOnboardingStep(progress), route),
+    [progress, route],
   );
-  useCompleteTestOnSimulationLaunch(resolvedView);
+  useCompleteTestOnSimulationLaunch(resolvedView, route);
   const { view, leaving } = useGuideExitTransition(resolvedView);
   if (view.kind === 'hidden') {
     return null;
