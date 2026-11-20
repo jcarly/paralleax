@@ -10,7 +10,10 @@
   permissions, validation, quotas, rate limits, history and live editor updates
   apply unchanged; nothing can be deleted or shared through it. Remote access
   (for example from ChatGPT) needs OAuth and is documented, not implemented.
-  See [docs/mcp.md](docs/mcp.md).
+  A retried write with the same idempotency key never duplicates a partially
+  applied or unconfirmed write, `logout` keeps the session file when the API
+  cannot revoke it, and CI runs the MCP tools against a real API and
+  PostgreSQL. See [docs/mcp.md](docs/mcp.md).
 - Moved the toolchain to Node 26, the current LTS line: `engines.node`, CI and
   the production and development Docker images change together.
 - Upgraded the API to NestJS 12 (common, core, platform-express and testing

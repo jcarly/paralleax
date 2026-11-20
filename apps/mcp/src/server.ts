@@ -2,7 +2,7 @@ import { McpServer, type CallToolResult } from '@modelcontextprotocol/server';
 import type { ParalleaxApiClient } from './api-client.js';
 import { IdempotencyCache } from './idempotency.js';
 import { createToolLogger, type ToolLogger } from './logger.js';
-import { toolErrorPayload, toolFailure, toolSuccess } from './tool-result.js';
+import { isPossiblyApplied, toolErrorPayload, toolFailure, toolSuccess } from './tool-result.js';
 import {
   createInteractionInput,
   createTriggerInput,
@@ -156,6 +156,10 @@ export function createParalleaxMcpServer(options: ParalleaxMcpServerOptions): Mc
   );
   const run = createRunner(options.api, options.logger ?? createToolLogger());
   registerReadTools(server, run);
-  registerWriteTools(server, run, options.idempotency ?? new IdempotencyCache());
+  registerWriteTools(
+    server,
+    run,
+    options.idempotency ?? new IdempotencyCache({ keepsFailure: isPossiblyApplied }),
+  );
   return server;
 }

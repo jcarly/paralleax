@@ -1,4 +1,4 @@
-import { mkdtemp, readFile, rm, stat } from 'node:fs/promises';
+import { chmod, mkdtemp, readFile, rm, stat } from 'node:fs/promises';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 import { afterEach, expect, it } from 'vitest';
@@ -10,6 +10,13 @@ import { resolveSessionToken, writeStoredSession } from './session-store.js';
 const directories: string[] = [];
 const localApi = parseApiUrl('http://localhost:3000/api');
 const credentials = { email: 'author@example.test', password: 'password' };
+const posixIt = process.platform === 'win32' ? it.skip : it;
+
+async function storedSessionFile() {
+  const file = await tempFile();
+  await writeStoredSession(file, { apiUrl: localApi.href, token: 'stored', createdAt: 'now' });
+  return file;
+}
 
 async function tempFile() {
   const directory = await mkdtemp(join(tmpdir(), 'paralleax-mcp-'));
@@ -64,7 +71,7 @@ it('logs in through the regular endpoint, then revokes and deletes the session',
   const user = await login(localApi, credentials, file, fetchImpl);
   expect(user.displayName).toBe('Author');
   expect(await readFile(file, 'utf8')).toContain('fresh-token');
-  await logout(file, fetchImpl);
+  expect(await logout(file, { fetch: fetchImpl })).toBe(true);
   await expect(stat(file)).rejects.toThrow();
   expect(calls).toEqual([
     'POST http://localhost:3000/api/auth/login',
@@ -80,4 +87,37 @@ it('surfaces login failures from the API and stores nothing', async () => {
     code: 'INVALID_CREDENTIALS',
   });
   await expect(stat(file)).rejects.toThrow();
+});
+
+posixIt('refuses a session file other OS users can read', async () => {
+  const file = await storedSessionFile();
+  await chmod(file, 0o644);
+  await expect(resolveSessionToken(localApi, {}, file)).rejects.toThrow(/other users/);
+  expect(await resolveSessionToken(localApi, {}, file, { checkPermissions: false })).toBe('stored');
+});
+
+it('keeps the session file when the API cannot revoke the session', async () => {
+  const file = await storedSessionFile();
+  const unreachable = () => Promise.reject(new Error('offline'));
+  const refused = () => Promise.resolve(new Response(null, { status: 500 }));
+  for (const fetchImpl of [unreachable, refused]) {
+    await expect(logout(file, { fetch: fetchImpl })).rejects.toMatchObject({
+      code: 'SESSION_REVOCATION_FAILED',
+    });
+    expect((await stat(file)).isFile()).toBe(true);
+  }
+});
+
+it('deletes only the local file with localOnly, without calling the API', async () => {
+  const file = await storedSessionFile();
+  await chmod(file, 0o644);
+  const calls: string[] = [];
+  const fetchImpl = (input: string) => {
+    calls.push(input);
+    return Promise.resolve(new Response(null, { status: 204 }));
+  };
+  expect(await logout(file, { localOnly: true, fetch: fetchImpl })).toBe(false);
+  await expect(stat(file)).rejects.toThrow();
+  expect(calls).toEqual([]);
+  expect(await logout(file, { fetch: fetchImpl })).toBe(false);
 });

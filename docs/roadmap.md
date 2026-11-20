@@ -13,6 +13,28 @@ Product positioning, the audience hypothesis, and the competitive context are in
 [Production readiness](production-readiness.md); implementation debt is in the
 [Code quality backlog](code-quality-backlog.md).
 
+## Priority decision, 2026-11-20
+
+**A private, local MCP prototype exists; external agent integration stays a
+Post-V1 direction and is not delivered to users.** The task that commissioned
+the prototype required write tools, which deviates from the planned read-only
+first stage ([ADR-047](decisions/ADR-047-local-mcp-adapter-over-http-api.md)).
+
+| Stage                                                       | Status                                      |
+| ----------------------------------------------------------- | ------------------------------------------- |
+| Local MCP prototype, read and write ([guide](mcp.md))       | Implemented, being finalized                |
+| Safe writes: preview, diff, commit against a known revision | Required before any wider release           |
+| Remote MCP with delegated authentication (OAuth)            | To plan if the functional test justifies it |
+
+Consequences:
+
+- It does not displace the open-alpha sequence below. The prototype only
+  works with a local or development API, never with production stories.
+- The next step is a functional test: whether an assistant helps the author
+  build a complex Story without multiplying errors or useless interactions.
+  Its outcome decides the priority of the remaining stages; OAuth and remote
+  access are not started before it.
+
 ## Priority decision, 2026-11-19
 
 **Goal: open the creator alpha to everyone and collect feedback continuously**,

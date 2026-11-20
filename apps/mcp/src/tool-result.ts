@@ -1,5 +1,5 @@
 import type { CallToolResult } from '@modelcontextprotocol/server';
-import { ParalleaxApiError } from './api-client.js';
+import { mayHaveWritten, ParalleaxApiError } from './api-client.js';
 import { ConfigurationError } from './config.js';
 import { IdempotencyKeyReusedError } from './idempotency.js';
 
@@ -35,6 +35,10 @@ const hints: Partial<Record<string, string>> = {
     'Another Trigger already connects these Interactions; reuse it instead of adding one.',
   RATE_LIMITED: 'The Paralleax API rate limit was reached. Wait a minute before retrying.',
   API_UNREACHABLE: 'Check that the Paralleax API is running and PARALLEAX_API_URL is correct.',
+  WRITE_OUTCOME_UNKNOWN:
+    'Read the story with get_story_structure before retrying, to avoid a duplicate.',
+  PARTIALLY_APPLIED:
+    'Complete the created interaction with update_interaction; do not create it again.',
 };
 
 export function toolSuccess(payload: Record<string, unknown>): CallToolResult {
@@ -58,10 +62,12 @@ function apiErrorPayload(error: ParalleaxApiError): ToolErrorPayload {
 
 function localErrorPayload(error: unknown): ToolErrorPayload {
   if (error instanceof ToolError) {
+    const hint = hints[error.code];
     return {
       code: error.code,
       message: error.message,
       ...(error.details === undefined ? {} : { details: error.details }),
+      ...(hint === undefined ? {} : { hint }),
     };
   }
   if (error instanceof IdempotencyKeyReusedError) {
@@ -84,4 +90,11 @@ export function toolFailure(error: unknown): CallToolResult {
     content: [{ type: 'text', text: JSON.stringify({ error: payload }, null, 2) }],
     structuredContent: { error: payload },
   };
+}
+
+/** Tool failures after which a change exists or may exist. */
+export function isPossiblyApplied(error: unknown): boolean {
+  return (
+    (error instanceof ToolError && error.code === 'PARTIALLY_APPLIED') || mayHaveWritten(error)
+  );
 }

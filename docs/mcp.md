@@ -29,7 +29,15 @@ npm run login -w @paralleax/mcp
 `login` asks for your Paralleax email and password, signs in through the usual
 login endpoint and stores a separate session in
 `~/.config/paralleax-mcp/session.json` (mode 0600, bound to the API URL).
-`npm run logout -w @paralleax/mcp` revokes and deletes it.
+On Linux and macOS the server refuses to use the file if other OS users can
+read or write it. Windows has no such mode bits: the file is protected only by
+the user profile's access control lists, which the prototype does not verify.
+
+`npm run logout -w @paralleax/mcp` revokes the session on the API, then
+deletes the file. If the API cannot revoke it, the file is kept and the command
+fails, so a still-valid session is not forgotten. `logout --local-only`
+deletes the file anyway; the session then stays valid until it expires (30
+days) or until you use "Sign out other sessions" in the Paralleax account menu.
 `node apps/mcp/dist/main.js status` shows which user the server acts as.
 
 | Variable                     | Purpose                                                                                   |
@@ -88,13 +96,18 @@ machine. ChatGPT on the web cannot use it; see [Remote access](#remote-access).
 
 Write tools accept an optional `idempotencyKey`: retrying with the same key and
 arguments returns the first result (`replayed: true`) instead of writing again.
+A failure that certainly wrote nothing is forgotten, so the retry runs. A
+failure that wrote or may have written something is replayed, never retried:
+`PARTIALLY_APPLIED` (the interaction exists without its content) and
+`WRITE_OUTCOME_UNKNOWN` (the API did not answer in time). Without a key, the
+assistant must read the story before retrying such a call.
 
 Errors are returned as `{ error: { code, message, status?, requestId?, details?, hint? } }`.
 Codes come from the API (`AUTHENTICATION_REQUIRED`, `FORBIDDEN`,
 `STORY_NOT_FOUND`, `TRIGGER_CONNECTION_EXISTS`, `STORY_QUOTA_EXCEEDED`,
 `RATE_LIMITED`, ...) or from the adapter (`API_UNREACHABLE`,
 `API_CONTRACT_MISMATCH`, `INTERACTION_NOT_FOUND`, `PARTIALLY_APPLIED`,
-`IDEMPOTENCY_KEY_REUSED`).
+`WRITE_OUTCOME_UNKNOWN`, `IDEMPOTENCY_KEY_REUSED`).
 
 Not exposed: deletion, access and collaborator changes, administration,
 imports, bulk changes and whole-graph replacement.
@@ -124,16 +137,23 @@ encrypted message, then create two possible branches._
 - `npm run test -w @paralleax/mcp`: tools through a real MCP client and server
   against a stubbed HTTP edge (contracts, errors, input validation, token
   handling, idempotency).
-- End-to-end against a running development API and PostgreSQL, with real
-  accounts and permissions (never point it at production):
+- End-to-end: the real MCP tools against the built API and PostgreSQL, with
+  real accounts, sessions and permissions. CI runs it in the `mcp` job. Locally,
+  build the API, then give a dedicated database whose name ends with `_test`
+  (the script migrates it and fills it with test accounts and stories):
 
 ```bash
-PARALLEAX_MCP_E2E_API_URL=http://localhost:3000/api npm run test:e2e -w @paralleax/mcp
+npm run build -w @paralleax/shared && npm run build -w @paralleax/api
 ```
 
-Set `PARALLEAX_MCP_E2E_INTERACTION_QUOTA` to the API's
-`PARALLEAX_STORY_QUOTA_INTERACTIONS` to also check quota enforcement. The API
-allows five registrations per minute, so wait a minute between runs.
+```bash
+MCP_E2E_DATABASE_URL=postgres://paralleax:paralleax@localhost:5432/paralleax_mcp_test npm run test:e2e:api -w @paralleax/mcp
+```
+
+The script starts the API on port 3100 (`MCP_E2E_API_PORT`) with a small
+interaction quota, runs the spec and stops the API. To use an API you already
+started, set `PARALLEAX_MCP_E2E_API_URL` and run `npm run test:e2e -w @paralleax/mcp`.
+The API allows five registrations per minute, so wait a minute between runs.
 
 ## Limitations
 
@@ -147,6 +167,7 @@ allows five registrations per minute, so wait a minute between runs.
   like editor edits, the last write to the same field wins. Every change can be
   undone from the editor history.
 - Idempotency keys live in memory for one server process.
+- Session file protection is verified on Linux and macOS only, not on Windows.
 - `get_interaction` loads the complete Story; `get_story_structure` makes six
   requests per page. Both count against the API rate limits.
 - Conditional text blocks and rich text links to other interactions are read

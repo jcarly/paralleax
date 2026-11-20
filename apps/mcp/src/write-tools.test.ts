@@ -208,3 +208,61 @@ it('forwards the API trigger invariant error with a hint', async () => {
     },
   });
 });
+
+it('replays a partially applied creation instead of creating a duplicate', async () => {
+  const api = stubFetch(creationRoutes(() => apiError(500, 'INTERNAL_SERVER_ERROR')));
+  const { call } = await connect(api.fetchImpl);
+  const args = { storyId, title: 'Once', position: { x: 1, y: 2 }, idempotencyKey: 'partial-0001' };
+  const first = await call('create_interaction', args);
+  const retry = await call('create_interaction', args);
+  for (const result of [first, retry]) {
+    expect(result).toMatchObject({
+      isError: true,
+      data: {
+        error: {
+          code: 'PARTIALLY_APPLIED',
+          details: { createdInteractionId: 'created' },
+          hint: expect.stringContaining('update_interaction') as unknown,
+        },
+      },
+    });
+  }
+  expect(api.requests.filter(({ method }) => method === 'POST')).toHaveLength(1);
+});
+
+it('never retries a write whose outcome is unknown under the same key', async () => {
+  const methods: string[] = [];
+  const timeout = (_input: string, init: RequestInit) => {
+    methods.push(init.method ?? 'GET');
+    return Promise.reject(new DOMException('The operation timed out.', 'TimeoutError'));
+  };
+  const { call } = await connect(timeout);
+  const args = { storyId, title: 'Once', position: { x: 1, y: 2 }, idempotencyKey: 'timeout-0001' };
+  const first = await call('create_interaction', args);
+  const retry = await call('create_interaction', args);
+  expect(first.data).toMatchObject({ error: { code: 'WRITE_OUTCOME_UNKNOWN', status: 504 } });
+  expect(retry.data).toEqual(first.data);
+  expect(methods).toEqual(['POST']);
+});
+
+it('retries a write that certainly failed under the same key', async () => {
+  let attempts = 0;
+  const api = stubFetch({
+    [`PATCH ${base}/interactions/a`]: () => {
+      attempts += 1;
+      return attempts === 1
+        ? apiError(429, 'RATE_LIMITED')
+        : { body: mutation('a', { title: 'Retried' }) };
+    },
+  });
+  const { call } = await connect(api.fetchImpl);
+  const args = {
+    storyId,
+    interactionId: 'a',
+    changes: { title: 'Retried' },
+    idempotencyKey: 'retry-0001',
+  };
+  expect((await call('update_interaction', args)).isError).toBe(true);
+  expect((await call('update_interaction', args)).data).toMatchObject({ replayed: false });
+  expect(attempts).toBe(2);
+});

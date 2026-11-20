@@ -14,6 +14,11 @@ export interface IdempotencyCacheOptions {
   ttlMs?: number;
   maxEntries?: number;
   now?: () => number;
+  /**
+   * Failures that may have left a durable change (a partially applied or
+   * unconfirmed write). They stay cached and are replayed instead of retried.
+   */
+  keepsFailure?: (error: unknown) => boolean;
 }
 
 function stableJson(value: unknown): string {
@@ -32,19 +37,22 @@ function stableJson(value: unknown): string {
 /**
  * Process-local replay protection for write tools. A repeated call with the
  * same key and the same input returns the first result instead of writing
- * again; the same key with a different input is refused. Failed calls are
- * forgotten so that they can be retried. Entries live in memory only.
+ * again; the same key with a different input is refused. Failures are
+ * forgotten so that they can be retried, except those `keepsFailure` marks as
+ * possibly applied, which are replayed. Entries live in memory only.
  */
 export class IdempotencyCache<T> {
   private readonly entries = new Map<string, Entry<T>>();
   private readonly ttlMs: number;
   private readonly maxEntries: number;
   private readonly now: () => number;
+  private readonly keepsFailure: (error: unknown) => boolean;
 
   constructor(options: IdempotencyCacheOptions = {}) {
     this.ttlMs = options.ttlMs ?? 24 * 60 * 60 * 1000;
     this.maxEntries = options.maxEntries ?? 500;
     this.now = options.now ?? Date.now;
+    this.keepsFailure = options.keepsFailure ?? (() => false);
   }
 
   async run(
@@ -73,7 +81,9 @@ export class IdempotencyCache<T> {
     try {
       return { result: await result, replayed: false };
     } catch (error) {
-      this.entries.delete(cacheKey);
+      if (!this.keepsFailure(error)) {
+        this.entries.delete(cacheKey);
+      }
       throw error;
     }
   }

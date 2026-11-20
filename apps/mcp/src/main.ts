@@ -9,10 +9,11 @@ import { createParalleaxMcpServer } from './server.js';
 import { resolveSessionToken } from './session-store.js';
 import { toolErrorPayload } from './tool-result.js';
 
-const usage = `Usage: paralleax-mcp [serve|login|logout|status]
+const usage = `Usage: paralleax-mcp [serve|login|logout [--local-only]|status]
   serve   Run the MCP server on stdio (default).
   login   Sign in to Paralleax and store a session for the server.
-  logout  Revoke and delete the stored session.
+  logout  Revoke the stored session on the API, then delete it.
+          --local-only deletes the file even if the API cannot revoke it.
   status  Show which Paralleax user the server acts as.
 Environment: PARALLEAX_API_URL (default http://localhost:3000/api),
   PARALLEAX_SESSION_TOKEN, PARALLEAX_MCP_SESSION_FILE.`;
@@ -77,13 +78,23 @@ const commands = new Map<string, () => Promise<void>>([
       const credentials = await promptCredentials();
       const user = await login(apiUrlFromEnvironment(), credentials, sessionFilePath());
       print(`Signed in as ${user.displayName}. Session stored in ${sessionFilePath()}`);
+      if (process.platform === 'win32') {
+        print(
+          'Windows: the file is protected only by your user profile permissions; mode 0600 is not enforced.',
+        );
+      }
     },
   ],
   [
     'logout',
     async () => {
-      await logout(sessionFilePath());
-      print('Signed out.');
+      const localOnly = process.argv.includes('--local-only');
+      const revoked = await logout(sessionFilePath(), { localOnly });
+      print(
+        revoked || !localOnly
+          ? 'Signed out.'
+          : 'Session file deleted. The session stays valid on the API until it expires or you sign out other sessions from the Paralleax account menu.',
+      );
     },
   ],
   [

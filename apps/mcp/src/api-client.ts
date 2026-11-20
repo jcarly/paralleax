@@ -148,7 +148,15 @@ export class ParalleaxApiClient {
         signal: AbortSignal.timeout(this.timeoutMs),
         ...(body === undefined ? {} : { body: JSON.stringify(body) }),
       });
-    } catch {
+    } catch (error) {
+      if (method !== 'GET' && error instanceof Error && error.name === 'TimeoutError') {
+        // The request may have reached the API: retrying could write twice.
+        throw new ParalleaxApiError({
+          status: 504,
+          code: 'WRITE_OUTCOME_UNKNOWN',
+          message: 'The Paralleax API did not answer in time; the change may have been saved',
+        });
+      }
       throw new ParalleaxApiError({
         status: 503,
         code: 'API_UNREACHABLE',
@@ -171,4 +179,9 @@ export class ParalleaxApiClient {
 /** Encodes a caller-provided identifier as a single URL path segment. */
 export function pathSegment(value: string): string {
   return encodeURIComponent(value);
+}
+
+/** Write failures after which the change may exist: never retried blindly. */
+export function mayHaveWritten(error: unknown): boolean {
+  return error instanceof ParalleaxApiError && error.code === 'WRITE_OUTCOME_UNKNOWN';
 }

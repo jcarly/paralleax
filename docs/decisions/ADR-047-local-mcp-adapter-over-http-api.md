@@ -51,7 +51,9 @@ built with the official TypeScript SDK v2 (`@modelcontextprotocol/server`
   rate limits, history and live invalidation are those of the API.
 - **Identity.** `paralleax-mcp login` signs in with the regular login endpoint
   and stores the resulting session (a separate server-side session, revocable
-  with `paralleax-mcp logout`) in a 0600 file bound to the API URL. The tool
+  with `paralleax-mcp logout`) in a 0600 file bound to the API URL. On POSIX
+  systems a file other users can access is refused; Windows ACLs are not
+  verified. `logout` keeps the file when the API cannot revoke the session. The tool
   caller never chooses the user. `PARALLEAX_SESSION_TOKEN` overrides the file
   for automated tests. Tokens are only sent to https or loopback API URLs, and
   redirects are refused so the cookie cannot be forwarded.
@@ -67,8 +69,10 @@ built with the official TypeScript SDK v2 (`@modelcontextprotocol/server`
   minimal contract so a drift fails clearly.
 - **Repeated writes.** Write tools accept an optional `idempotencyKey`; the
   server replays the first result for the same key and arguments and refuses a
-  reused key with other arguments. The cache is in memory for the process
-  lifetime (24 hours, 500 entries).
+  reused key with other arguments. Failures that certainly wrote nothing are
+  forgotten so the retry runs; `PARTIALLY_APPLIED` and `WRITE_OUTCOME_UNKNOWN`
+  (a write timeout) are replayed instead, so a retry cannot create a duplicate.
+  The cache is in memory for the process lifetime (24 hours, 500 entries).
 - **Concurrency.** Writes send only the fields being changed and are serialized
   by the API transaction, like editor edits. There is no expected-revision
   check: the API has none for single-entity mutations. Structure reads report

@@ -205,7 +205,7 @@ jobs:
         if: needs.changes.result == 'success' && needs.changes.outputs.web_coverage == 'true'
         run: npm run coverage -w @paralleax/web
 
-      # The MCP end-to-end spec needs a running API and is skipped here.
+      # The MCP end-to-end spec needs a running API; the mcp job runs it.
       - name: Run MCP coverage suite
         if: needs.changes.result == 'success' && needs.changes.outputs.application == 'true'
         run: npm run coverage -w @paralleax/mcp
@@ -316,6 +316,51 @@ jobs:
           RUN_POSTGRES_STRESS_TESTS: 'true'
         run: npm run test:stress:postgres -w @paralleax/api
 
+  mcp:
+    name: MCP end-to-end validation
+    needs: changes
+    if: needs.changes.outputs.application == 'true'
+    runs-on: ubuntu-latest
+    services:
+      postgres:
+        image: postgres:17-alpine
+        env:
+          POSTGRES_USER: paralleax
+          POSTGRES_PASSWORD: paralleax
+          POSTGRES_DB: paralleax_mcp_test
+        ports:
+          - 5432:5432
+        options: >-
+          --health-cmd "pg_isready -U paralleax -d paralleax_mcp_test"
+          --health-interval 10s
+          --health-timeout 5s
+          --health-retries 5
+    env:
+      MCP_E2E_DATABASE_URL: postgres://paralleax:paralleax@127.0.0.1:5432/paralleax_mcp_test
+    steps:
+      - name: Check out repository
+        uses: actions/checkout@v7
+
+      - name: Set up Node.js
+        uses: actions/setup-node@v7
+        with:
+          node-version: 26
+          cache: npm
+
+      - name: Set up npm
+        run: npm install --global npm@12.0.1
+
+      - name: Install dependencies
+        run: npm ci --prefer-offline --audit=false
+
+      - name: Build shared and API workspaces
+        run: npm run build -w @paralleax/shared && npm run build -w @paralleax/api
+
+      # Starts the built API against PostgreSQL, then runs the MCP tools
+      # through a real MCP client with real accounts and permissions.
+      - name: Run MCP end-to-end tests against the API
+        run: npm run test:e2e:api -w @paralleax/mcp
+
   browser:
     name: Browser validation
     needs: changes
@@ -382,7 +427,7 @@ jobs:
 
   production-images:
     name: Production images
-    needs: [changes, quality, workflow-validation, postgres, browser]
+    needs: [changes, quality, workflow-validation, postgres, mcp, browser]
     if: >-
       always() &&
       github.ref_type != 'tag' &&
@@ -390,6 +435,7 @@ jobs:
       needs.quality.result == 'success' &&
       (needs.workflow-validation.result == 'success' || needs.workflow-validation.result == 'skipped') &&
       (needs.postgres.result == 'success' || needs.postgres.result == 'skipped') &&
+      (needs.mcp.result == 'success' || needs.mcp.result == 'skipped') &&
       (needs.browser.result == 'success' || needs.browser.result == 'skipped')
     runs-on: ubuntu-latest
     steps:
@@ -411,7 +457,7 @@ jobs:
 
   release:
     name: Alpha release
-    needs: [changes, quality, workflow-validation, postgres, browser]
+    needs: [changes, quality, workflow-validation, postgres, mcp, browser]
     if: github.event_name == 'push' && github.ref_type == 'tag' && github.event.created == true && github.event.deleted != true
     runs-on: ubuntu-latest
     timeout-minutes: 45

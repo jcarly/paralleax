@@ -58,21 +58,47 @@ export async function login(
   return parseApiResponse(publicUserSchema, user);
 }
 
-/** Revokes the stored session on the API (best effort) and deletes the file. */
-export async function logout(
-  sessionFile: string,
-  fetchImpl: FetchLike = defaultFetch,
-): Promise<void> {
-  const stored = await readStoredSession(sessionFile);
-  if (stored) {
-    await fetchImpl(apiEndpoint(new URL(stored.apiUrl), '/auth/logout'), {
+export interface LogoutOptions {
+  /** Delete the local file even if the API cannot revoke the session. */
+  localOnly?: boolean;
+  fetch?: FetchLike;
+}
+
+async function revoke(stored: { apiUrl: string; token: string }, fetchImpl: FetchLike) {
+  let response: Response;
+  try {
+    response = await fetchImpl(apiEndpoint(new URL(stored.apiUrl), '/auth/logout'), {
       method: 'POST',
       headers: sessionCookieHeader(stored.token),
       redirect: 'error',
       signal: AbortSignal.timeout(15_000),
-    }).catch(() => undefined);
+    });
+  } catch {
+    response = new Response(null, { status: 503 });
+  }
+  if (!response.ok) {
+    throw new ParalleaxApiError({
+      status: response.status,
+      code: 'SESSION_REVOCATION_FAILED',
+      message:
+        'The API did not revoke the session, so the session file was kept. Retry, or use "logout --local-only" and sign out other sessions from the Paralleax account menu',
+    });
+  }
+}
+
+/**
+ * Revokes the stored session on the API, then deletes the file. The file is
+ * kept when revocation fails, so a still-valid session is never forgotten.
+ * Returns whether the API revoked the session.
+ */
+export async function logout(sessionFile: string, options: LogoutOptions = {}): Promise<boolean> {
+  // Logging out must work even when the file permissions are wrong.
+  const stored = await readStoredSession(sessionFile, { checkPermissions: false });
+  if (stored && options.localOnly !== true) {
+    await revoke(stored, options.fetch ?? defaultFetch);
   }
   await deleteStoredSession(sessionFile);
+  return stored !== undefined && options.localOnly !== true;
 }
 
 export function whoAmI(api: ParalleaxApiClient): Promise<PublicUser> {

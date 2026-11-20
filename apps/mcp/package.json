@@ -15,7 +15,8 @@
     "logout": "node dist/main.js logout",
     "test": "vitest run --configLoader runner",
     "test:e2e": "vitest run --configLoader runner src/mcp.e2e.test.ts",
-    "coverage": "vitest run --coverage --configLoader runner"
+    "coverage": "vitest run --coverage --configLoader runner",
+    "test:e2e:api": "node scripts/e2e-with-api.mjs"
   },
   "dependencies": {
     "@modelcontextprotocol/server": "2.4.0",
