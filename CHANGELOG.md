@@ -2,6 +2,13 @@
 
 ## Unreleased
 
+- Simplified the Simulation header and start screen (PAR-7). The `Simulation
+  synced live` text and the `Saving Story changes` / `Story changes saved`
+  messages become the editor's sync icon, shared through one `SyncIndicator`
+  component, with its meaning in the label and tooltip; a failed save still
+  shows its message with Retry and Reload. The start screen drops `Ready when
+  you are` and `Choose a starting interaction.`: the starting choices speak for
+  themselves, and `Start the story` remains a screen-reader heading.
 - Added a private, local MCP server prototype (`apps/mcp`, ADR-047) built on
   the official MCP TypeScript SDK v2 over stdio. It calls the existing HTTP API
   as the signed-in user (`paralleax-mcp login`) and exposes six tools:

@@ -4,6 +4,7 @@ import { Link } from 'react-router-dom';
 import type { ReaderProgressStatus } from '../useReaderProgressPersistence';
 import type { SimulationMutationStatus } from '../useSimulationMutationPersistence';
 import type { StoryRealtimeStatus } from '../../realtime/storyRealtime';
+import { SyncIndicator } from '../../story/SyncIndicator';
 
 type SimulationMutationFeedback = {
   status: SimulationMutationStatus;
@@ -65,41 +66,23 @@ export function PlayerToolbar({
       </div>
       {isSimulationMode ? <span className="mode-pill">{t('player.simulation')}</span> : null}
       {isSimulationMode ? (
-        <span
-          className={`story-realtime-status ${storyRealtimeStatus}`}
-          role="status"
-          aria-live="polite"
-        >
-          <span className={`realtime-status-dot ${storyRealtimeStatus}`} aria-hidden="true" />
-          {t(`player.realtime.${storyRealtimeStatus}`)}
-        </span>
+        <SyncIndicator
+          saveStatus={simulationMutations.status}
+          realtimeStatus={storyRealtimeStatus}
+        />
       ) : null}
-      {isSimulationMode && simulationMutations.status !== 'idle' ? (
-        <div
-          className={`simulation-save-feedback ${simulationMutations.status}`}
-          role={simulationMutations.status === 'error' ? 'alert' : 'status'}
-          aria-live="polite"
-        >
-          <span>
-            {simulationMutations.status === 'saving'
-              ? t('player.savingStoryChanges')
-              : simulationMutations.status === 'saved'
-                ? t('player.storyChangesSaved')
-                : t('player.storyChangesSaveFailed')}
-          </span>
-          {simulationMutations.status === 'error' ? (
-            <>
-              <small>{simulationMutations.error}</small>
-              {simulationMutations.canRetry ? (
-                <button type="button" onClick={simulationMutations.retry}>
-                  {t('player.retryStoryChanges')}
-                </button>
-              ) : null}
-              <button type="button" onClick={() => void onReloadAfterSimulationFailure()}>
-                {t('player.reloadStoryAfterSaveFailure')}
-              </button>
-            </>
+      {isSimulationMode && simulationMutations.status === 'error' ? (
+        <div className="simulation-save-feedback error" role="alert" aria-live="polite">
+          <span>{t('player.storyChangesSaveFailed')}</span>
+          <small>{simulationMutations.error}</small>
+          {simulationMutations.canRetry ? (
+            <button type="button" onClick={simulationMutations.retry}>
+              {t('player.retryStoryChanges')}
+            </button>
           ) : null}
+          <button type="button" onClick={() => void onReloadAfterSimulationFailure()}>
+            {t('player.reloadStoryAfterSaveFailure')}
+          </button>
         </div>
       ) : null}
       {authenticated ? (

@@ -118,7 +118,7 @@
   },
   "apps/web/src/features/story-player/storySimulation.css": {
     "color-no-hex": {
-      "count": 26
+      "count": 25
     }
   },
   "apps/web/src/features/story-editor/inspectors/inspector-layout.css": {
