@@ -953,11 +953,6 @@
       "count": 2
     }
   },
-  "apps/web/src/components/StoryGraphSelectionInspector.tsx": {
-    "@typescript-eslint/no-shadow": {
-      "count": 1
-    }
-  },
   "apps/web/src/components/TriggerConditionEditor.tsx": {
     "@eslint-react/no-array-index-key": {
       "count": 3
