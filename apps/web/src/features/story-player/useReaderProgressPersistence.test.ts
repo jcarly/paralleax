@@ -11,16 +11,16 @@ vi.mock('../../api', () => ({
   },
 }));
 
-describe('useReaderProgressPersistence', () => {
-  beforeEach(() => {
-    vi.resetAllMocks();
-    vi.mocked(api.saveReaderProgress).mockResolvedValue({
-      state: sessionFixture(),
-      updatedAt: '2026-08-26T08:00:00.000Z',
-    });
-    vi.mocked(api.deleteReaderProgress).mockResolvedValue(undefined);
+beforeEach(() => {
+  vi.resetAllMocks();
+  vi.mocked(api.saveReaderProgress).mockResolvedValue({
+    state: sessionFixture(),
+    updatedAt: '2026-08-26T08:00:00.000Z',
   });
+  vi.mocked(api.deleteReaderProgress).mockResolvedValue(undefined);
+});
 
+describe('reader progress save queue', () => {
   it('saves the authoritative journey and owned item ids', async () => {
     const { result } = renderHook(() =>
       useReaderProgressPersistence({ authenticated: true, storyId: 'story-1' }),
@@ -62,7 +62,9 @@ describe('useReaderProgressPersistence', () => {
       expect(result.current.status).toBe('idle');
     });
   });
+});
 
+describe('reader progress authentication and mode', () => {
   it('does not persist an anonymous reader session', () => {
     const { result } = renderHook(() =>
       useReaderProgressPersistence({ authenticated: false, storyId: 'story-1' }),
@@ -100,7 +102,9 @@ describe('useReaderProgressPersistence', () => {
       'simulation',
     );
   });
+});
 
+describe('reader progress session changes', () => {
   it('can select the resolved autosave mode while a Story is loading', async () => {
     const { result } = renderHook(() =>
       useReaderProgressPersistence({ authenticated: true, storyId: 'story-1' }),
@@ -119,58 +123,58 @@ describe('useReaderProgressPersistence', () => {
       'simulation',
     );
   });
+});
 
-  it('does not let an earlier Story save block or update the active Story', async () => {
-    let resolveFirstSave: (() => void) | undefined;
-    vi.mocked(api.saveReaderProgress)
-      .mockImplementationOnce(
-        () =>
-          new Promise((resolve) => {
-            resolveFirstSave = () => {
-              resolve({
-                state: sessionFixture(),
-                updatedAt: '2026-08-26T08:00:00.000Z',
-              });
-            };
-          }),
-      )
-      .mockResolvedValueOnce({
-        state: sessionFixture(),
-        updatedAt: '2026-08-26T08:01:00.000Z',
-      });
-    const { result, rerender } = renderHook(
-      ({ storyId }) => useReaderProgressPersistence({ authenticated: true, storyId }),
-      { initialProps: { storyId: 'story-1' } },
-    );
+it('does not let an earlier Story save block or update the active Story', async () => {
+  let resolveFirstSave: (() => void) | undefined;
+  vi.mocked(api.saveReaderProgress)
+    .mockImplementationOnce(
+      () =>
+        new Promise((resolve) => {
+          resolveFirstSave = () => {
+            resolve({
+              state: sessionFixture(),
+              updatedAt: '2026-08-26T08:00:00.000Z',
+            });
+          };
+        }),
+    )
+    .mockResolvedValueOnce({
+      state: sessionFixture(),
+      updatedAt: '2026-08-26T08:01:00.000Z',
+    });
+  const { result, rerender } = renderHook(
+    ({ storyId }) => useReaderProgressPersistence({ authenticated: true, storyId }),
+    { initialProps: { storyId: 'story-1' } },
+  );
 
-    act(() => {
-      result.current.save(sessionFixture());
-    });
-    await waitFor(() => {
-      expect(api.saveReaderProgress).toHaveBeenCalledTimes(1);
-    });
+  act(() => {
+    result.current.save(sessionFixture());
+  });
+  await waitFor(() => {
+    expect(api.saveReaderProgress).toHaveBeenCalledTimes(1);
+  });
 
-    rerender({ storyId: 'story-2' });
-    act(() => {
-      result.current.save(sessionFixture());
-    });
+  rerender({ storyId: 'story-2' });
+  act(() => {
+    result.current.save(sessionFixture());
+  });
 
-    await waitFor(() => {
-      expect(api.saveReaderProgress).toHaveBeenCalledTimes(2);
-    });
-    expect(api.saveReaderProgress).toHaveBeenLastCalledWith(
-      'story-2',
-      expect.objectContaining({ journeyInteractionIds: ['start'] }),
-      'reader',
-    );
-    await waitFor(() => {
-      expect(result.current.status).toBe('saved');
-    });
+  await waitFor(() => {
+    expect(api.saveReaderProgress).toHaveBeenCalledTimes(2);
+  });
+  expect(api.saveReaderProgress).toHaveBeenLastCalledWith(
+    'story-2',
+    expect.objectContaining({ journeyInteractionIds: ['start'] }),
+    'reader',
+  );
+  await waitFor(() => {
+    expect(result.current.status).toBe('saved');
+  });
 
-    act(() => resolveFirstSave?.());
-    await waitFor(() => {
-      expect(result.current.status).toBe('saved');
-    });
+  act(() => resolveFirstSave?.());
+  await waitFor(() => {
+    expect(result.current.status).toBe('saved');
   });
 });
 

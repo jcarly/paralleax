@@ -116,7 +116,7 @@ export class ImportJobService implements OnModuleInit, OnModuleDestroy {
 
   beginPersistence(id: string, data: Partial<ImportJobSnapshot> = {}): boolean {
     const current = this.jobs.get(id);
-    if (!current || current.status !== 'running') {
+    if (current?.status !== 'running') {
       return false;
     }
     this.update(id, { ...data, status: 'running', phase: 'saving' });

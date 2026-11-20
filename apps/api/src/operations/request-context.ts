@@ -18,7 +18,7 @@ export function requestContextMiddleware(
 ) {
   const suppliedRequestId = request.header('x-request-id');
   const requestId =
-    suppliedRequestId && requestIdPattern.test(suppliedRequestId)
+    typeof suppliedRequestId === 'string' && requestIdPattern.test(suppliedRequestId)
       ? suppliedRequestId
       : randomUUID();
   const startedAt = performance.now();

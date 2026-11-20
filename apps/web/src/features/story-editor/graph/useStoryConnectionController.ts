@@ -85,7 +85,17 @@ export function useStoryConnectionController({
         return;
       }
 
-      if (!start || connectionState.isValid === true || connectionState.toNode) {
+      if (!start || connectionState.isValid === true) {
+        return;
+      }
+      const cardDrop = getInteractionCardDrop(start, event, story);
+      if (cardDrop) {
+        if (cardDrop.connection) {
+          requestConnection(cardDrop.connection);
+        }
+        return;
+      }
+      if (connectionState.toNode) {
         return;
       }
       if (start.handleType === 'source') {
@@ -110,6 +120,8 @@ export function useStoryConnectionController({
       flowInstanceRef,
       onConnectionConflict,
       onUnexpectedError,
+      requestConnection,
+      story,
     ],
   );
 
@@ -154,6 +166,36 @@ function getExistingTriggerConnection(
     sourceId: start.nodeId,
     targetId: target.interactionId,
     triggerId: target.triggerId,
+  };
+}
+
+/**
+ * A drop on an interaction card counts as a drop on its matching '+' handle:
+ * the input '+' when dragging from an output, the output '+' otherwise. A drop
+ * on the starting card itself is absorbed without creating anything.
+ */
+function getInteractionCardDrop(
+  start: { nodeId: string; handleType: 'source' | 'target' },
+  event: MouseEvent | TouchEvent,
+  story: Story | undefined,
+): { connection?: Connection } | undefined {
+  const element = event.target instanceof Element ? event.target : null;
+  const cardId = element?.closest<HTMLElement>('.react-flow__node')?.dataset.id;
+  if (cardId === undefined || story?.interactions.some(({ id }) => id === cardId) !== true) {
+    return undefined;
+  }
+  if (cardId === start.nodeId) {
+    return {};
+  }
+  const [source, target] =
+    start.handleType === 'source' ? [start.nodeId, cardId] : [cardId, start.nodeId];
+  return {
+    connection: {
+      source,
+      target,
+      sourceHandle: 'interaction-output',
+      targetHandle: 'create-source-input',
+    },
   };
 }
 
