@@ -109,11 +109,6 @@
       "count": 8
     }
   },
-  "apps/api/src/database/database.connection.ts": {
-    "@typescript-eslint/strict-boolean-expressions": {
-      "count": 1
-    }
-  },
   "apps/api/src/database/database.migrations.postgres.spec.ts": {
     "@typescript-eslint/no-non-null-assertion": {
       "count": 2
