@@ -678,11 +678,6 @@
       "count": 1
     }
   },
-  "apps/web/src/apiErrorMessages.ts": {
-    "@typescript-eslint/strict-boolean-expressions": {
-      "count": 2
-    }
-  },
   "apps/web/src/authNavigation.ts": {
     "@typescript-eslint/strict-boolean-expressions": {
       "count": 1
