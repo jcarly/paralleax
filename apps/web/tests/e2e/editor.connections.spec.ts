@@ -133,9 +133,35 @@ function inputsOf(story: Story, interactionId: string) {
     ?.triggers.flatMap((trigger) => trigger.inputInteractionIds);
 }
 
-async function openEditor(page: Page) {
+function storyWithLinkedTrigger(): Story {
+  const next = storyWithUnlinkedScenes();
+  next.interactions.push({
+    id: 'interaction-3',
+    title: 'Third scene',
+    body: 'Leads to the second scene.',
+    position: { x: 520, y: 140 },
+    triggers: [{ id: 'trigger-3', inputInteractionIds: [], conditions: [] }],
+  });
+  next.interactions = next.interactions.map((interaction) =>
+    interaction.id === 'interaction-2'
+      ? {
+          ...interaction,
+          triggers: [{ id: 'trigger-2', inputInteractionIds: ['interaction-3'], conditions: [] }],
+        }
+      : interaction,
+  );
+  return next;
+}
+
+function triggerInputsOf(story: Story, interactionId: string) {
+  return story.interactions
+    .find((interaction) => interaction.id === interactionId)
+    ?.triggers.map(({ id, inputInteractionIds }) => ({ id, inputInteractionIds }));
+}
+
+async function openEditor(page: Page, initialStory: Story = storyWithUnlinkedScenes()) {
   const state: MockStoryServer = {
-    story: storyWithUnlinkedScenes(),
+    story: initialStory,
     nextInteraction: 1,
     nextTrigger: 1,
     revision: 1,
@@ -207,4 +233,33 @@ test('links initial interactions by drag, repeatably and persistently after relo
     y: box.y + box.height + 120,
   });
   await expect(flowNode(page, 'interaction-new-1')).toBeVisible();
+});
+
+test('drags from an initial interaction output onto an existing root trigger marker', async ({
+  page,
+}) => {
+  const state = await openEditor(page);
+  const marker = flowNode(page, 'interaction-2').locator(
+    '.root-trigger-marker[data-trigger-id="trigger-2"]',
+  );
+
+  await dragPointer(page, childHandle(page, 'interaction-1'), await centerOf(marker));
+
+  await expect
+    .poll(() => triggerInputsOf(state.story, 'interaction-2'))
+    .toEqual([{ id: 'trigger-2', inputInteractionIds: ['interaction-1'] }]);
+  await expect(page.locator('.react-flow__node[data-id^="interaction-new"]')).toHaveCount(0);
+});
+
+test('drags from an initial interaction output onto an existing trigger node', async ({ page }) => {
+  const state = await openEditor(page, storyWithLinkedTrigger());
+  const marker = page.getByTestId('flow-trigger-interaction-2-trigger-2');
+  await expect(marker).toBeVisible();
+
+  await dragPointer(page, childHandle(page, 'interaction-1'), await centerOf(marker));
+
+  await expect
+    .poll(() => triggerInputsOf(state.story, 'interaction-2'))
+    .toEqual([{ id: 'trigger-2', inputInteractionIds: ['interaction-3', 'interaction-1'] }]);
+  await expect(page.locator('.react-flow__node[data-id^="interaction-new"]')).toHaveCount(0);
 });
