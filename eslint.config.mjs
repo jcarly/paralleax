@@ -193,7 +193,12 @@ export default tseslint.config(
     },
   },
   {
-    files: ['apps/api/src/**/*.ts', 'packages/shared/src/**/*.ts', '**/*.{cjs,js,mjs}'],
+    files: [
+      'apps/api/src/**/*.ts',
+      'apps/mcp/src/**/*.ts',
+      'packages/shared/src/**/*.ts',
+      '**/*.{cjs,js,mjs}',
+    ],
     languageOptions: {
       globals: nodeGlobals,
     },
@@ -308,6 +313,30 @@ export default tseslint.config(
     },
   },
   {
+    files: ['apps/mcp/src/**/*.ts'],
+    rules: {
+      'no-restricted-imports': [
+        'error',
+        {
+          patterns: [
+            {
+              group: [
+                '@paralleax/api',
+                '@paralleax/api/**',
+                '@paralleax/web',
+                '@paralleax/web/**',
+                '**/apps/api/**',
+                '**/apps/web/**',
+                'pg',
+              ],
+              message: 'apps/mcp must reach Paralleax through the HTTP API, never its internals.',
+            },
+          ],
+        },
+      ],
+    },
+  },
+  {
     files: ['**/*.{js,cjs,mjs,ts,tsx}'],
     plugins: { sonarjs },
     rules: {
@@ -331,6 +360,10 @@ export default tseslint.config(
     './packages/shared/tsconfig.eslint.json',
   ),
   typeAwareWorkspaceConfig(['apps/api/src/**/*.ts'], './apps/api/tsconfig.eslint.json'),
+  typeAwareWorkspaceConfig(
+    ['apps/mcp/src/**/*.ts', 'apps/mcp/vitest.config.ts'],
+    './apps/mcp/tsconfig.eslint.json',
+  ),
   typeAwareWorkspaceConfig(['apps/web/**/*.{ts,tsx}'], './apps/web/tsconfig.eslint.json'),
   {
     rules: {

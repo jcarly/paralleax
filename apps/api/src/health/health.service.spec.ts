@@ -1,23 +1,31 @@
 import { ServiceUnavailableException } from '@nestjs/common';
-import type { DatabaseConnection } from '../database/database.connection';
+import { Test } from '@nestjs/testing';
+import { DatabaseConnection } from '../database/database.connection';
 import { databaseMigrations } from '../database/database.migrations';
 import { HealthService } from './health.service';
 
-describe('HealthService', () => {
-  const query = jest.fn();
-  const service = new HealthService({
-    pool: { query },
-  } as unknown as DatabaseConnection);
+const query = jest.fn();
+let service: HealthService;
 
-  beforeEach(() => {
-    query.mockReset();
-  });
+beforeAll(async () => {
+  const module = await Test.createTestingModule({
+    providers: [HealthService, { provide: DatabaseConnection, useValue: { pool: { query } } }],
+  }).compile();
+  service = module.get(HealthService);
+});
 
+beforeEach(() => {
+  query.mockReset();
+});
+
+describe('HealthService process health', () => {
   it('reports process health without querying PostgreSQL', () => {
     expect(service.health()).toEqual({ status: 'ok' });
     expect(query).not.toHaveBeenCalled();
   });
+});
 
+describe('HealthService readiness', () => {
   it('reports readiness when PostgreSQL is reachable and the schema is current', async () => {
     query
       .mockResolvedValueOnce({ rows: [{ '?column?': 1 }], rowCount: 1 })

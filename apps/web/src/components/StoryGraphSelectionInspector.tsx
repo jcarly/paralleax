@@ -23,8 +23,8 @@ export function StoryGraphSelectionInspector({
     setIsCreating(true);
     setCreated(false);
     try {
-      const created = await onCreateGroup(t('editor.groups.newGroup'), interactionIds);
-      if (created) {
+      const groupCreated = await onCreateGroup(t('editor.groups.newGroup'), interactionIds);
+      if (groupCreated) {
         setCreated(true);
       }
     } finally {

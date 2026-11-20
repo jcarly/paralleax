@@ -1,4 +1,5 @@
-import type { HealthService } from './health.service';
+import { Test } from '@nestjs/testing';
+import { HealthService } from './health.service';
 import { HealthController } from './health.controller';
 
 describe('HealthController', () => {
@@ -6,7 +7,15 @@ describe('HealthController', () => {
     health: jest.fn(() => ({ status: 'ok' as const })),
     readiness: jest.fn(() => Promise.resolve({ status: 'ok' as const })),
   };
-  const controller = new HealthController(healthService as unknown as HealthService);
+  let controller: HealthController;
+
+  beforeAll(async () => {
+    const module = await Test.createTestingModule({
+      controllers: [HealthController],
+      providers: [{ provide: HealthService, useValue: healthService }],
+    }).compile();
+    controller = module.get(HealthController);
+  });
 
   beforeEach(() => {
     jest.clearAllMocks();

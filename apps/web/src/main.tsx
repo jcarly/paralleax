@@ -27,7 +27,11 @@ const router = createBrowserRouter([
 void startBrowserMonitoring();
 
 void i18nReady.then(() => {
-  ReactDOM.createRoot(document.getElementById('root')!).render(
+  const root = document.getElementById('root');
+  if (root === null) {
+    throw new Error('The application root element is missing');
+  }
+  ReactDOM.createRoot(root).render(
     <React.StrictMode>
       <RouterProvider router={router} />
     </React.StrictMode>,

@@ -27,7 +27,7 @@ export function StoryUnavailablePage({
         )}
       </p>
       <div className="actions">
-        {storyId && isAccessSettings ? (
+        {storyId !== undefined && storyId !== '' && isAccessSettings ? (
           <Link className="button secondary" to={`/stories/${storyId}/edit`}>
             {t('storyUnavailable.backToStory')}
           </Link>

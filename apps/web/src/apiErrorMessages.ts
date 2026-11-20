@@ -62,10 +62,13 @@ export function apiErrorMessage(caught: unknown, t: TFunction, fallback: string)
     return caught instanceof Error && caught.message.trim() ? caught.message : fallback;
   }
   const code = caught.code;
-  if (code && localizedErrorKeys[code]) {
+  if (code === undefined || code === '') {
+    return fallback;
+  }
+  if (localizedErrorKeys[code]) {
     return t(localizedErrorKeys[code]);
   }
-  if (code && !isGenericCode(code) && caught.message.trim()) {
+  if (!isGenericCode(code) && caught.message.trim()) {
     return caught.message;
   }
   return fallback;

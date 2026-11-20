@@ -9,9 +9,9 @@ function setup(onCommit = vi.fn().mockResolvedValue(true)) {
     const [name, setName] = useState('Original');
     return (
       <>
-        <label>
+        <label htmlFor="entity-name">
           Name
-          <EntityNameInput value={name} onChange={setName} onCommit={onCommit} />
+          <EntityNameInput id="entity-name" value={name} onChange={setName} onCommit={onCommit} />
         </label>
         <button>Outside</button>
       </>

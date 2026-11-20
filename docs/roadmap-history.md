@@ -1688,6 +1688,11 @@ described in [Current Scope](current-scope.md).
 
 ### Staged scope
 
+> Status 2026-11-20: a private local MCP prototype with read and write tools
+> exists ahead of stages 1 to 4 ([ADR-047](decisions/ADR-047-local-mcp-adapter-over-http-api.md),
+> [roadmap decision](roadmap.md#priority-decision-2026-11-20)). The stages below
+> remain the plan for any wider release.
+
 #### 1. Provider-neutral authoring API and operation boundary
 
 This is the first structural stage and should remain useful to the editor,
