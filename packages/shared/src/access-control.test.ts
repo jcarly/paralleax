@@ -1,6 +1,11 @@
 import { describe, expect, it } from 'vitest';
 import {
+  assertStoryAccessCoherent,
   canDiscoverStory,
+  DomainValidationError,
+  fitStoryEditPolicy,
+  getAllowedStoryEditPolicies,
+  isStoryAccessCoherent,
   defaultStoryAccess,
   resolveStoryAccess,
   type StoryAccessSettings,
@@ -107,5 +112,65 @@ describe('story access control', () => {
         collaboratorRole: 'editor',
       }),
     ).toEqual({ canRead: false, canEdit: false, canManage: false, canComment: false });
+  });
+});
+
+describe('story access coherence', () => {
+  it('keeps editing within the reading audience', () => {
+    expect(getAllowedStoryEditPolicies('private')).toEqual(['owner']);
+    expect(getAllowedStoryEditPolicies('invitation')).toEqual(['owner', 'collaborators']);
+    for (const visibility of ['authenticated', 'unlisted', 'public'] as const) {
+      expect(getAllowedStoryEditPolicies(visibility)).toEqual([
+        'owner',
+        'collaborators',
+        'authenticated',
+      ]);
+    }
+    expect(isStoryAccessCoherent(defaultStoryAccess)).toBe(true);
+    expect(isStoryAccessCoherent({ visibility: 'private', editPolicy: 'collaborators' })).toBe(
+      false,
+    );
+    expect(isStoryAccessCoherent({ visibility: 'invitation', editPolicy: 'authenticated' })).toBe(
+      false,
+    );
+  });
+
+  it('narrows an editing policy to the broadest one the reading policy allows', () => {
+    expect(fitStoryEditPolicy('invitation', 'authenticated')).toBe('collaborators');
+    expect(fitStoryEditPolicy('private', 'authenticated')).toBe('owner');
+    expect(fitStoryEditPolicy('private', 'collaborators')).toBe('owner');
+    expect(fitStoryEditPolicy('invitation', 'owner')).toBe('owner');
+    expect(fitStoryEditPolicy('public', 'authenticated')).toBe('authenticated');
+  });
+});
+
+describe('story access coherence errors', () => {
+  it('rejects an incoherent combination with a stable domain error', () => {
+    expect(() => {
+      assertStoryAccessCoherent({
+        ...defaultStoryAccess,
+        visibility: 'invitation',
+        editPolicy: 'collaborators',
+      });
+    }).not.toThrow();
+    let caught: unknown;
+    try {
+      assertStoryAccessCoherent({
+        visibility: 'private',
+        editPolicy: 'authenticated',
+        commentPolicy: 'editors',
+      });
+    } catch (error) {
+      caught = error;
+    }
+    expect(caught).toBeInstanceOf(DomainValidationError);
+    expect(caught).toMatchObject({
+      code: 'STORY_ACCESS_INCOHERENT',
+      details: {
+        visibility: 'private',
+        editPolicy: 'authenticated',
+        allowedEditPolicies: ['owner'],
+      },
+    });
   });
 });

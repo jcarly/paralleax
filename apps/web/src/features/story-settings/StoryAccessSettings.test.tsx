@@ -81,6 +81,7 @@ describe('StoryAccessSettings', () => {
     }
 
     expect(helpText('Editing')).toBe('Only you can edit the Story.');
+    await user.selectOptions(reading, 'public');
     await user.selectOptions(editing, 'authenticated');
     await waitFor(() => {
       expect(helpText('Editing')).toBe('Any signed-in user can read and edit the Story.');
@@ -93,17 +94,52 @@ describe('StoryAccessSettings', () => {
     });
   });
 
-  it('states when the editing policy also opens reading to signed-in users', async () => {
+  it('only offers editing policies within the reading audience', async () => {
+    render(<StoryAccessSettings storyId="story-1" />);
+    const editing = await screen.findByLabelText('Editing');
+    const option = (name: string) => within(editing).getByRole('option', { name });
+
+    expect(option('Owner only')).toBeEnabled();
+    expect(option('Editors')).toBeDisabled();
+    expect(option('Signed-in users')).toBeDisabled();
+    expect(screen.getByText('Limited by the Reading setting.')).toBeInTheDocument();
+
+    await userEvent.setup().selectOptions(screen.getByLabelText('Reading'), 'invitation');
+
+    await waitFor(() => {
+      expect(option('Editors')).toBeEnabled();
+    });
+    expect(option('Signed-in users')).toBeDisabled();
+  });
+
+  it('narrows editing when reading becomes narrower, and says so', async () => {
+    const user = userEvent.setup();
     vi.mocked(api.getStoryAccess).mockResolvedValue({
       ...structuredClone(access),
-      visibility: 'invitation',
+      visibility: 'public',
       editPolicy: 'authenticated',
     });
     render(<StoryAccessSettings storyId="story-1" />);
 
+    await user.selectOptions(await screen.findByLabelText('Reading'), 'invitation');
+
+    expect(api.updateStoryAccess).toHaveBeenLastCalledWith('story-1', {
+      ...access,
+      visibility: 'invitation',
+      editPolicy: 'collaborators',
+    });
+    expect(screen.getByLabelText('Editing')).toHaveValue('collaborators');
     expect(
-      await screen.findByText('Signed-in users can also read it, because they can edit it.'),
+      await screen.findByText('Editing set to Editors: it cannot be wider than reading.'),
     ).toBeInTheDocument();
+
+    await user.selectOptions(screen.getByLabelText('Reading'), 'public');
+    await waitFor(() => {
+      expect(
+        screen.queryByText('Editing set to Editors: it cannot be wider than reading.'),
+      ).not.toBeInTheDocument();
+    });
+    expect(screen.getByLabelText('Editing')).toHaveValue('collaborators');
   });
 
   it('shows an access-loading failure inside the settings surface', async () => {

@@ -1847,7 +1847,10 @@ Take a step when its area is touched, in this order when there is a choice.
       API application services to `packages/shared`, with shared unit tests:
       same-Story references, then stats and effects, then condition validity.
       The first move adds the domain error class and its exception-filter
-      mapping. **Acceptance:** the API calls the shared rule and keeps no copy
+      mapping. Started 2026-11-20: `DomainValidationError` (shared) is mapped
+      by `ApiExceptionFilter` to 400 with its code and details, not captured,
+      covered by a filter spec; the first rule using it is Story access
+      coherence (`assertStoryAccessCoherent`). **Acceptance:** the API calls the shared rule and keeps no copy
       of it; responses keep the full error contract of ADR-046 section 1
       (status, specific `code`, message, `details`, `requestId`, no Sentry
       capture for expected errors), covered by filter specs.

@@ -440,7 +440,6 @@ export const italianTranslation = {
         private:
           'Solo tu puoi leggere la Storia. Gli accessi dati agli utenti qui sotto restano inattivi.',
       },
-      widenedByEditing: 'Anche gli utenti registrati possono leggerla, perché possono modificarla.',
       invitation: 'Su invito',
     },
     edit: {
@@ -448,10 +447,11 @@ export const italianTranslation = {
       owner: 'Solo proprietario',
       collaborators: 'Editori',
       authenticated: 'Utenti registrati',
+      adjusted: 'Modifica impostata su «{{policy}}»: non può essere più aperta della lettura.',
+      limitedByReading: 'Limitata dall’impostazione Lettura.',
       help: {
         owner: 'Solo tu puoi modificare la Storia.',
-        collaborators:
-          'Tu e gli utenti aggiunti qui sotto come Editore potete modificarla, a meno che la lettura sia riservata al proprietario.',
+        collaborators: 'Tu e gli utenti aggiunti qui sotto come Editore potete modificarla.',
         authenticated: 'Ogni utente registrato può leggere e modificare la Storia.',
       },
     },

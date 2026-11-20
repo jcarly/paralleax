@@ -311,6 +311,13 @@ details. They should stay covered by tests as the editor grows.
   stale grant must never bypass private visibility.
 - An editor grant implies reading only when the story is not private. The
   authenticated edit policy implies reading and editing for signed-in users.
+- Editing is never open to more people than reading (2026-11-20): a private
+  story allows only owner editing, and an invitation story allows owner or
+  collaborator editing; other visibilities allow every edit policy. The shared
+  `assertStoryAccessCoherent` rule rejects other combinations with the domain
+  error `STORY_ACCESS_INCOHERENT` (HTTP 400). Migration
+  `202611200046_coherent_story_access` narrowed existing stories to the widest
+  allowed edit policy.
 - Only the story creator or a global administrator can manage access settings,
   collaborators, or deletion. An ordinary editor cannot grant itself management.
 - Every API read and mutation checks effective access; knowledge of an entity or

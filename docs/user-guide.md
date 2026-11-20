@@ -82,7 +82,11 @@ Select `Access` from a story card, or open the gear beside the Story title and
 select the `Access` tab. The creator or an administrator can choose who may read
 the story: only the owner, every signed-in user, anyone with the public link, or
 accounts with a direct grant. Editing can remain with the owner, be granted to
-editors, or be opened to every signed-in user.
+editors, or be opened to every signed-in user. Editing is never open to more
+people than reading: an owner-only Story is edited by its owner only, and an
+invitation-only Story by its owner or invited editors. Options outside the
+reading audience are shown but cannot be selected; narrowing reading narrows
+editing to the widest option still allowed, and the screen says so.
 
 Direct grants target an existing Paralleax account by email and grant either
 reader or editor access. An existing grant can be changed in place or removed.

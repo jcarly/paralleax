@@ -433,8 +433,6 @@ export const frenchTranslation = {
         private:
           'Vous seul pouvez lire l’histoire. Les accès donnés aux utilisateurs ci-dessous restent inactifs.',
       },
-      widenedByEditing:
-        'Les utilisateurs connectés peuvent aussi la lire, car ils peuvent la modifier.',
       invitation: 'Par invitation',
     },
     edit: {
@@ -442,10 +440,13 @@ export const frenchTranslation = {
       owner: 'Propriétaire uniquement',
       collaborators: 'Éditeurs',
       authenticated: 'Utilisateurs connectés',
+      adjusted:
+        'Modification ramenée à « {{policy}} » : elle ne peut pas être plus ouverte que la lecture.',
+      limitedByReading: 'Limitée par le réglage Lecture.',
       help: {
         owner: 'Vous seul pouvez modifier l’histoire.',
         collaborators:
-          'Vous et les utilisateurs ajoutés ci-dessous comme Éditeur pouvez la modifier, sauf si la lecture est réservée au propriétaire.',
+          'Vous et les utilisateurs ajoutés ci-dessous comme Éditeur pouvez la modifier.',
         authenticated: 'Tout utilisateur connecté peut lire et modifier l’histoire.',
       },
     },

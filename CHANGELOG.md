@@ -2,11 +2,18 @@
 
 ## Unreleased
 
+- Story access settings no longer allow editing to be open to more people than
+  reading (PAR-7). An owner-only Story is edited by its owner only, and an
+  invitation-only Story by its owner or invited editors. The settings screen
+  disables the other editing options and, when reading is narrowed, narrows
+  editing and says so. The API rejects other combinations with
+  `400 STORY_ACCESS_INCOHERENT`, using the first shared domain error class
+  mapped by the exception filter (ADR-046). A migration narrows existing
+  Stories: private ones to owner-only editing, invitation-only ones from
+  signed-in editing to invited editors. ADR-017 is amended.
 - Fixed the Story access settings help, which always described the By link
   option whatever reading policy was selected. Reading, Editing and Comments
-  now each describe the selected value, and a short note states when the
-  Signed-in users editing policy also lets signed-in users read a private or
-  invitation-only Story, as the access rules already did (PAR-7).
+  now each describe the selected value (PAR-7).
 - Added a private, local MCP server prototype (`apps/mcp`, ADR-047) built on
   the official MCP TypeScript SDK v2 over stdio. It calls the existing HTTP API
   as the signed-in user (`paralleax-mcp login`) and exposes six tools:
