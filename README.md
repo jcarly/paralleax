@@ -90,11 +90,11 @@ Local URLs:
 - Web: http://127.0.0.1:5173
 - API: http://localhost:3000/api
 
-Contextual Formbricks feedback is optional and disabled by default. Set both
-`VITE_FORMBRICKS_WORKSPACE_ID` and `VITE_FORMBRICKS_APP_URL` before starting the
-web app to enable it. See the
-[Formbricks feedback runbook](docs/operations/formbricks-feedback.md) for the
-required action, hidden fields, deployment settings, and privacy boundary.
+Contextual PostHog survey feedback is optional and disabled by default. Set
+`VITE_POSTHOG_PROJECT_TOKEN` (public `phc_` token) and `VITE_POSTHOG_API_HOST`
+before starting the web app to enable it. See the
+[PostHog feedback runbook](docs/operations/posthog-feedback.md) for the survey
+settings, deployment, CSP, and privacy boundary.
 
 The API expects PostgreSQL. When running with `npm run dev`, its default URL is:
 

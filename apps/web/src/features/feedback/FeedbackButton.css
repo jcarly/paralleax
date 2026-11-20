@@ -25,6 +25,16 @@
   stroke-width: 1.7;
 }
 
+/* Screen-reader announcements; PostHog displays the visible survey states. */
+.product-feedback-status {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  overflow: hidden;
+  clip: rect(0, 0, 0, 0);
+  white-space: nowrap;
+}
+
 @media (max-width: 820px) {
   .product-feedback-button {
     width: 34px;
