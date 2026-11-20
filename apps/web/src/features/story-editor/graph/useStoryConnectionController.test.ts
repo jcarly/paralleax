@@ -106,6 +106,50 @@ describe('story connection controller', () => {
     expect(actions.createChildFromInteraction).not.toHaveBeenCalled();
   });
 
+  it('treats a drop on an interaction card as a drop on its matching plus handle', () => {
+    const { actions, result } = renderController();
+
+    endDrag(result.current, { nodeId: 'source', handleType: 'source' }, cardContent('target'));
+    endDrag(
+      result.current,
+      { nodeId: 'empty-target', handleType: 'target' },
+      cardContent('source'),
+    );
+
+    expect(actions.connectInteractions).toHaveBeenNthCalledWith(1, {
+      source: 'source',
+      target: 'target',
+      sourceHandle: 'interaction-output',
+      targetHandle: 'create-source-input',
+    });
+    expect(actions.connectInteractions).toHaveBeenNthCalledWith(2, {
+      source: 'source',
+      target: 'empty-target',
+      sourceHandle: 'interaction-output',
+      targetHandle: 'create-source-input',
+    });
+    expect(actions.createChildFromInteraction).not.toHaveBeenCalled();
+    expect(actions.createParentForInteraction).not.toHaveBeenCalled();
+  });
+
+  it('reports a duplicate route dropped on an interaction card', () => {
+    const { actions, result } = renderController();
+
+    endDrag(result.current, { nodeId: 'other', handleType: 'source' }, cardContent('target'));
+
+    expect(actions.onConnectionConflict).toHaveBeenCalledWith(true);
+    expect(actions.connectInteractions).not.toHaveBeenCalled();
+  });
+
+  it('creates nothing when a drag is dropped back on its own card', () => {
+    const { actions, result } = renderController();
+
+    endDrag(result.current, { nodeId: 'source', handleType: 'source' }, cardContent('source'));
+
+    expect(actions.connectInteractions).not.toHaveBeenCalled();
+    expect(actions.createChildFromInteraction).not.toHaveBeenCalled();
+  });
+
   it('does not create an interaction after a completed or unstarted connection', () => {
     const { actions, result } = renderController();
 
@@ -156,6 +200,30 @@ function renderController() {
     }),
   );
   return { actions, ...hook };
+}
+
+type ControllerResult = ReturnType<typeof useStoryConnectionController>;
+
+function endDrag(
+  controller: ControllerResult,
+  start: { nodeId: string; handleType: 'source' | 'target' },
+  dropTarget: Element,
+) {
+  act(() => {
+    controller.startCanvasConnection(mouseEvent(0, 0), { ...start, handleId: null });
+  });
+  act(() => {
+    controller.endCanvasConnection(mouseEvent(0, 0, dropTarget), emptyConnectionState());
+  });
+}
+
+function cardContent(interactionId: string) {
+  const card = document.createElement('div');
+  card.className = 'react-flow__node';
+  card.dataset.id = interactionId;
+  const excerpt = document.createElement('span');
+  card.append(excerpt);
+  return excerpt;
 }
 
 function connect(source: string, target: string): Connection {

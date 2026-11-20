@@ -2,6 +2,20 @@
 
 ## Unreleased
 
+- Dropping a graph connection on an interaction card now counts as a drop on
+  its matching '+' (input '+' from an output, output '+' from an input) instead
+  of doing nothing. Trigger markers keep their meaning: they add the source to
+  that existing trigger. A drop back on the starting card creates nothing.
+- Fixed dragging from an Interaction's '+' controls in the graph, which did
+  nothing for Interactions loaded with the story (issue #32): no link to an
+  existing Interaction or trigger, and no child or parent created by a drop on
+  the canvas, until the node happened to be re-measured. The controls mount when
+  the editor becomes editable, after React Flow measured the node, so it never
+  registered them; the node now reports the change to React Flow. A Playwright
+  spec covers the real pointer drag to the canvas, to an existing Interaction
+  and to existing trigger markers, repeated links and persistence on reload.
+- Moved the toolchain to Node 26, the current LTS line: `engines.node`, CI and
+  the production and development Docker images change together.
 - Upgraded the API to NestJS 12 (common, core, platform-express and testing
   12.5.1, Swagger 12.1.2) as one coordinated change. The API stays CommonJS:
   webpack bundles the ESM-only Nest packages, and Jest runs with
