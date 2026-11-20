@@ -12,6 +12,18 @@
   the child's input `+`, and links to later choices ran under the child card so
   they seemed to leave its sides. API and MCP creation and the editor fallback
   use the same distance. Existing Stories are not moved; Organize lays them out.
+- Replaced the Formbricks feedback integration with PostHog Surveys
+  (ADR-048). The header button still loads nothing before a click; it now
+  opens the configured PostHog survey through `displaySurvey()`, announces a
+  submitted response, and reports a draft, unreachable, or blocked survey as
+  unavailable. The bundled `posthog-js` no-external build loads no external
+  script, so only the API host is added to `connect-src`. Automatic capture,
+  session replay, remote config, feature flags, and persistent identity are
+  disabled, and a `before_send` allowlist sends only survey answers and
+  normalized, non-content context. New build variables:
+  `VITE_POSTHOG_PROJECT_TOKEN`, `VITE_POSTHOG_API_HOST`, and optional
+  `VITE_POSTHOG_FEEDBACK_SURVEY_ID`; the `VITE_FORMBRICKS_*` variables are
+  removed. Unknown routes are now reported as `/*` instead of their raw path.
 - Added a private, local MCP server prototype (`apps/mcp`, ADR-047) built on
   the official MCP TypeScript SDK v2 over stdio. It calls the existing HTTP API
   as the signed-in user (`paralleax-mcp login`) and exposes six tools:
