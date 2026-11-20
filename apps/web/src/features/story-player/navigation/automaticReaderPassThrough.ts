@@ -115,7 +115,7 @@ function hasPassThroughContext({
     loadedKey === loadKey &&
     current &&
     journeyLength > 0 &&
-    !(playableCharacterCount > 0 && !playedCharacterId),
+    !(playableCharacterCount > 0 && (playedCharacterId === undefined || playedCharacterId === '')),
   );
 }
 

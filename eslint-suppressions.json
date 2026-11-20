@@ -1780,11 +1780,6 @@
       "count": 1
     }
   },
-  "apps/web/src/features/story-player/navigation/automaticReaderPassThrough.ts": {
-    "@typescript-eslint/strict-boolean-expressions": {
-      "count": 1
-    }
-  },
   "apps/web/src/features/story-player/navigation/restoreReaderSave.ts": {
     "max-params": {
       "count": 1
