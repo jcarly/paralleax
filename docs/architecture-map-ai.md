@@ -63,9 +63,7 @@ contains feature-aware inspectors, so no blanket generic-component-to-feature
 rule is enabled. React Flow imports stay on the explicit graph allowlist in
 `.dependency-cruiser.cjs`.
 
-`@formbricks/js` is declared by the web workspace and resolves from Node, but
-dependency-cruiser reports it as unresolved through its conditional/type-query
-export path. Unresolved imports are not a blocking rule. Semantic duplication
+Unresolved imports are not a blocking rule. Semantic duplication
 also remains a review responsibility; dependency rules can protect the shared
 owner, but cannot prove that equivalent business behavior was not reimplemented.
 

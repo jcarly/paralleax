@@ -285,19 +285,22 @@ test('Railway image releases use supported source connect options', async () => 
   assert.ok(!sourceConnect.includes(' --json'), 'Railway source connect does not accept --json');
 });
 
-test('the optional Formbricks web build and CSP use the same public app URL', async () => {
+test('the optional PostHog web build and CSP use the same public API host', async () => {
   const dockerfile = await readRepositoryFile('Dockerfile');
   const productionCompose = await readRepositoryFile('compose.production.yaml');
   const nginxConfiguration = await readRepositoryFile('deploy/nginx.conf.template');
 
-  assert.match(dockerfile, /^ARG VITE_FORMBRICKS_WORKSPACE_ID=$/m);
-  assert.match(dockerfile, /^ARG VITE_FORMBRICKS_APP_URL=$/m);
-  assert.match(productionCompose, /^\s+VITE_FORMBRICKS_APP_URL: \$\{VITE_FORMBRICKS_APP_URL:-\}$/m);
+  assert.match(dockerfile, /^ARG VITE_POSTHOG_PROJECT_TOKEN=$/m);
+  assert.match(dockerfile, /^ARG VITE_POSTHOG_API_HOST=$/m);
+  assert.match(dockerfile, /^ARG VITE_POSTHOG_FEEDBACK_SURVEY_ID=$/m);
+  assert.match(productionCompose, /^\s+VITE_POSTHOG_API_HOST: \$\{VITE_POSTHOG_API_HOST:-\}$/m);
   assert.match(
     nginxConfiguration,
-    /connect-src 'self' \$\{SENTRY_CSP_ORIGIN\} \$\{VITE_FORMBRICKS_APP_URL\}/,
+    /connect-src 'self' \$\{SENTRY_CSP_ORIGIN\} \$\{VITE_POSTHOG_API_HOST\};/,
   );
-  assert.match(nginxConfiguration, /script-src 'self' \$\{VITE_FORMBRICKS_APP_URL\}/);
+  // The survey renderer is bundled: no third-party script origin is allowed.
+  assert.match(nginxConfiguration, /script-src 'self';/);
+  assert.doesNotMatch(nginxConfiguration, /FORMBRICKS|posthog\.com/i);
 });
 
 test('local development exposes services only through IPv4 loopback', async () => {
