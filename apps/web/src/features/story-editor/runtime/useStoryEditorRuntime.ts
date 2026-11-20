@@ -42,7 +42,11 @@ function useStoryEditorPageSelection(base: StoryEditorBaseRuntime) {
     setCommentsOpen: uiState.setCommentsOpen,
     setContextualCommentsTargetKey: uiState.setContextualCommentsTargetKey,
   });
-  useStoryEditorGraphPreparation(persistence.loadPhase, persistence.story?.id);
+  useStoryEditorGraphPreparation(
+    persistence.loadPhase,
+    persistence.story?.id,
+    persistence.story?.capabilities?.canEdit === true,
+  );
   useStoryEditorHistoryShortcuts(persistence);
   const closeStorySettings = useStoryEditorSettingsClose({
     setStorySettingsTab: uiState.setStorySettingsTab,

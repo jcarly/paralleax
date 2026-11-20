@@ -13,6 +13,7 @@ export function RichTextEditor(props: RichTextEditorProps) {
       className={`rich-text-editor${props.revealToolbarOnFocus ? ' rich-text-editor--focus-revealed' : ''}`}
       onClickCapture={editor.clickCapture}
     >
+      <EditorContent className="rich-text-surface" editor={editor.editor} />
       <RichTextEditorToolbar
         editor={editor.editor}
         canAddConditionalText={Boolean(
@@ -28,7 +29,6 @@ export function RichTextEditor(props: RichTextEditorProps) {
         onAddInteractionLink={editor.openLinkDialog}
         onAddVariable={editor.openVariableDialog}
       />
-      <EditorContent className="rich-text-surface" editor={editor.editor} />
       <EditorStatus {...editor} value={props.value} />
       <RichTextEditorDialogs
         editor={editor.editor}

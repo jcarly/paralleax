@@ -2,6 +2,16 @@
 
 ## Unreleased
 
+- Editing a Story body no longer changes how it looks (PAR-7). In the Inspector
+  the text switched from the narrative serif at 18.4px to the interface sans at
+  16px and moved down by about 100px when the toolbar appeared; it now keeps the
+  same font, size, line height and position, through shared narrative type
+  tokens. The editor is one frame around the text, its formatting toolbar (now
+  below the text) and the character count; the editable-field focus indicator
+  now surrounds that whole frame instead of the text only. The toolbar is a single Tab stop
+  navigated with arrow keys, Home and End. The Tiptap editor chunk now preloads
+  when the editor is idle for authors who can edit, so the first edit opens
+  without the Loading state (about 345ms to 75ms in development).
 - Noted author documentation, then optional topic guides (characters,
   variables, conditions), as a proposed roadmap item (PAR-7).
 - Fixed the Story access settings help, which always described the By link
