@@ -36,10 +36,12 @@ export function describeFeedbackRoute(pathname: string): {
   if (pathname.startsWith('/admin/')) {
     return { route: '/admin/*', surface: 'administration' };
   }
-  return { route: pathname, surface: 'other' };
+  // An unknown path may contain identifiers; never forward it verbatim.
+  return { route: '/*', surface: 'other' };
 }
 
-export function buildFeedbackHiddenFields(
+/** Minimal technical context attached to every feedback survey event. */
+export function buildFeedbackContext(
   pathname: string,
   language: string,
   viewport: ViewportSize = { width: window.innerWidth, height: window.innerHeight },
