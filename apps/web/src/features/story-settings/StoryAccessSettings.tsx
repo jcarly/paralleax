@@ -79,50 +79,32 @@ export function StoryAccessSettings({ storyId, onInaccessible }: StoryAccessSett
     }
   }
 
-  /** An invited Editor can only edit when editing is open to editors: open it when reading allows. */
-  async function openEditingToEditors(updated: StoryAccessConfiguration | undefined) {
-    if (
-      updated?.editPolicy !== 'owner' ||
-      !getAllowedStoryEditPolicies(updated.visibility).includes('collaborators')
-    ) {
-      return;
-    }
-    const opened = await runAccessOperation(
-      () =>
-        api.updateStoryAccess(storyId, {
-          visibility: updated.visibility,
-          editPolicy: 'collaborators',
-          commentPolicy: updated.commentPolicy,
-        }),
-      t('access.saveFailed'),
+  /** A single API operation atomically creates the grant and opens editing if needed. */
+  async function saveCollaborator(
+    email: string,
+    role: StoryCollaboratorRole,
+    errorMessage: string,
+  ): Promise<boolean> {
+    const previousEditPolicy = access?.editPolicy;
+    const updated = await runAccessOperation(
+      () => api.setStoryCollaborator(storyId, email.trim(), role),
+      errorMessage,
     );
-    if (opened) {
+    if (updated && previousEditPolicy === 'owner' && updated.editPolicy === 'collaborators') {
       setEditPolicyChange('openedForEditors');
     }
+    return Boolean(updated);
   }
 
   async function addUser(email: string, role: StoryCollaboratorRole): Promise<boolean> {
-    const updated = await runAccessOperation(
-      () => api.setStoryCollaborator(storyId, email.trim(), role),
-      t('access.inviteFailed'),
-    );
-    if (role === 'editor') {
-      await openEditingToEditors(updated);
-    }
-    return Boolean(updated);
+    return saveCollaborator(email, role, t('access.inviteFailed'));
   }
 
   async function changeRole(emailAddress: string, nextRole: StoryCollaboratorRole) {
     if (pending) {
       return;
     }
-    const updated = await runAccessOperation(
-      () => api.setStoryCollaborator(storyId, emailAddress, nextRole),
-      t('access.roleUpdateFailed'),
-    );
-    if (nextRole === 'editor') {
-      await openEditingToEditors(updated);
-    }
+    await saveCollaborator(emailAddress, nextRole, t('access.roleUpdateFailed'));
   }
 
   async function remove(userId: string) {
