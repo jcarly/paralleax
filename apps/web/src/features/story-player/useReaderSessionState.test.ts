@@ -1,7 +1,6 @@
 import { act, renderHook } from '@testing-library/react';
 import { describe, expect, it } from 'vitest';
-import type { Story } from '@paralleax/shared';
-import { buildReaderProgressState } from '@paralleax/shared';
+import { buildReaderProgressState, type Story } from '@paralleax/shared';
 import { useReaderSessionState } from './useReaderSessionState';
 
 describe('useReaderSessionState', () => {
@@ -36,7 +35,7 @@ describe('useReaderSessionState', () => {
         stats: [{ id: 'charge', statDefinitionId: 'number', initialValue: 5 }],
       },
     ];
-    story.locations![0].items = [{ id: 'battery-1', itemDefinitionId: 'battery' }];
+    addBatteryToLocation(story);
     story.interactions[1].durationMinutes = 30;
     story.interactions[1].statEffects = [
       { statId: 'charge', itemId: 'battery-1', operation: 'add', value: 1 },
@@ -61,6 +60,14 @@ describe('useReaderSessionState', () => {
     );
   });
 });
+
+function addBatteryToLocation(story: Story) {
+  const location = story.locations?.at(0);
+  if (!location) {
+    throw new Error('Reader session fixture must include a location');
+  }
+  location.items = [{ id: 'battery-1', itemDefinitionId: 'battery' }];
+}
 
 function storyFixture(): Story {
   return {

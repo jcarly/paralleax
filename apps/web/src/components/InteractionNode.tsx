@@ -1,5 +1,5 @@
-import type { KeyboardEvent, MouseEvent } from 'react';
-import { Handle, Position, type Node, type NodeProps } from '@xyflow/react';
+import { useEffect, useRef, type KeyboardEvent, type MouseEvent } from 'react';
+import { Handle, Position, useUpdateNodeInternals, type Node, type NodeProps } from '@xyflow/react';
 import { useTranslation } from 'react-i18next';
 import { InteractionContext } from '../features/story/InteractionContext';
 import { InteractionLabel } from '../features/story/InteractionLabel';
@@ -25,11 +25,32 @@ export interface InteractionNodeData extends Record<string, unknown> {
 }
 
 const routingHandles = [Position.Top, Position.Right, Position.Bottom, Position.Left];
+
+/**
+ * The '+' handles mount only once the editor is editable. React Flow registers
+ * handle bounds when it measures a node and does not notice handles mounted
+ * later without a size change, which leaves them unable to start a drag. The
+ * initial mount is measured normally, so only later changes are reported.
+ */
+function useCreationHandleRegistration(id: string, hasChild: boolean, hasParent: boolean) {
+  const updateNodeInternals = useUpdateNodeInternals();
+  const handles = `${String(hasChild)}:${String(hasParent)}`;
+  const measuredHandles = useRef(handles);
+  useEffect(() => {
+    if (measuredHandles.current === handles) {
+      return;
+    }
+    measuredHandles.current = handles;
+    updateNodeInternals(id);
+  }, [handles, id, updateNodeInternals]);
+}
+
 type NodeActionEvent = Pick<MouseEvent<HTMLDivElement>, 'preventDefault' | 'stopPropagation'>;
 
 export function InteractionNode({ id, data }: NodeProps<Node<InteractionNodeData>>) {
   const { t } = useTranslation();
   const d = data;
+  useCreationHandleRegistration(id, d.onCreateChild !== undefined, d.onCreateParent !== undefined);
   const rootTriggerId = d.rootTriggerId;
   const fallbackTitle = t(
     rootTriggerId !== undefined && rootTriggerId.length > 0
