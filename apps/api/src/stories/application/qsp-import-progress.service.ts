@@ -53,12 +53,12 @@ export class QspImportProgressService {
   }
 
   publish(userId: string, progressId: string | undefined, progress: QspImportProgress) {
-    if (!progressId) {
+    if (progressId === undefined || progressId === '') {
       return;
     }
 
     const channel = this.channels.get(progressId);
-    if (!channel || channel.userId !== userId) {
+    if (channel?.userId !== userId) {
       return;
     }
 
@@ -66,12 +66,12 @@ export class QspImportProgressService {
   }
 
   complete(userId: string, progressId: string | undefined) {
-    if (!progressId) {
+    if (progressId === undefined || progressId === '') {
       return;
     }
 
     const channel = this.channels.get(progressId);
-    if (!channel || channel.userId !== userId) {
+    if (channel?.userId !== userId) {
       return;
     }
 

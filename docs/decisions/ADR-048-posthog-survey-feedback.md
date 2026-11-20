@@ -1,4 +1,4 @@
-# ADR-047 - PostHog Surveys for Voluntary In-App Feedback
+# ADR-048 - PostHog Surveys for Voluntary In-App Feedback
 
 **Status:** Accepted  
 **Date:** 2026-11-20

@@ -501,7 +501,7 @@ compose translated diagnostic phrases around those authored values without
 mutating them.
 
 `apps/web/src/features/feedback/` owns the optional PostHog survey adapter and
-its header control ([ADR-047](decisions/ADR-047-posthog-survey-feedback.md)).
+its header control ([ADR-048](decisions/ADR-048-posthog-survey-feedback.md)).
 `PostHogFeedbackClient` is the only importer of `posthog-js`: it loads the
 bundled, no-external SDK on the first click, opens the configured survey with
 `displaySurvey()`, and filters every outgoing event through a `before_send`

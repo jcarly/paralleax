@@ -9,7 +9,7 @@ Paralleax exposes a compact `Give feedback` / `Donner un retour` /
 The PostHog SDK is loaded only after the user clicks the button, and it is used
 only to display one survey and send its answers. The integration is entirely
 in the web layer: it does not change authored stories, reader progress, the
-API, or the database. [ADR-047](../decisions/ADR-047-posthog-survey-feedback.md)
+API, or the database. [ADR-048](../decisions/ADR-048-posthog-survey-feedback.md)
 records the decision and its rationale.
 
 Until 2026-11-20 this button used Formbricks (code action

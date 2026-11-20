@@ -5,6 +5,7 @@ import { fileURLToPath } from 'node:url';
 const groups = [
   ['apps/api'],
   ['apps/web'],
+  ['apps/mcp'],
   ['packages/shared'],
   [
     '.',
@@ -12,6 +13,8 @@ const groups = [
     'apps/api/**',
     '--ignore-pattern',
     'apps/web/**',
+    '--ignore-pattern',
+    'apps/mcp/**',
     '--ignore-pattern',
     'packages/shared/**',
   ],

@@ -3,7 +3,7 @@
 ## Unreleased
 
 - Replaced the Formbricks feedback integration with PostHog Surveys
-  (ADR-047). The header button still loads nothing before a click; it now
+  (ADR-048). The header button still loads nothing before a click; it now
   opens the configured PostHog survey through `displaySurvey()`, announces a
   submitted response, and reports a draft, unreachable, or blocked survey as
   unavailable. The bundled `posthog-js` no-external build loads no external
@@ -14,6 +14,30 @@
   `VITE_POSTHOG_PROJECT_TOKEN`, `VITE_POSTHOG_API_HOST`, and optional
   `VITE_POSTHOG_FEEDBACK_SURVEY_ID`; the `VITE_FORMBRICKS_*` variables are
   removed. Unknown routes are now reported as `/*` instead of their raw path.
+- Added a private, local MCP server prototype (`apps/mcp`, ADR-047) built on
+  the official MCP TypeScript SDK v2 over stdio. It calls the existing HTTP API
+  as the signed-in user (`paralleax-mcp login`) and exposes six tools:
+  `list_stories`, `get_story_structure`, `get_interaction`,
+  `create_interaction`, `update_interaction` and `create_trigger`. API
+  permissions, validation, quotas, rate limits, history and live editor updates
+  apply unchanged; nothing can be deleted or shared through it. Remote access
+  (for example from ChatGPT) needs OAuth and is documented, not implemented.
+  A retried write with the same idempotency key never duplicates a partially
+  applied or unconfirmed write, `logout` keeps the session file when the API
+  cannot revoke it, and CI runs the MCP tools against a real API and
+  PostgreSQL. See [docs/mcp.md](docs/mcp.md).
+- Dropping a graph connection on an interaction card now counts as a drop on
+  its matching '+' (input '+' from an output, output '+' from an input) instead
+  of doing nothing. Trigger markers keep their meaning: they add the source to
+  that existing trigger. A drop back on the starting card creates nothing.
+- Fixed dragging from an Interaction's '+' controls in the graph, which did
+  nothing for Interactions loaded with the story (issue #32): no link to an
+  existing Interaction or trigger, and no child or parent created by a drop on
+  the canvas, until the node happened to be re-measured. The controls mount when
+  the editor becomes editable, after React Flow measured the node, so it never
+  registered them; the node now reports the change to React Flow. A Playwright
+  spec covers the real pointer drag to the canvas, to an existing Interaction
+  and to existing trigger markers, repeated links and persistence on reload.
 - Moved the toolchain to Node 26, the current LTS line: `engines.node`, CI and
   the production and development Docker images change together.
 - Upgraded the API to NestJS 12 (common, core, platform-express and testing
