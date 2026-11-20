@@ -2657,9 +2657,6 @@
     }
   },
   "packages/shared/src/demo/story.test.ts": {
-    "@typescript-eslint/no-non-null-assertion": {
-      "count": 1
-    },
     "@typescript-eslint/no-shadow": {
       "count": 10
     },
@@ -2702,9 +2699,6 @@
     }
   },
   "packages/shared/src/history/story-history.test.ts": {
-    "@typescript-eslint/no-non-null-assertion": {
-      "count": 8
-    },
     "@typescript-eslint/no-shadow": {
       "count": 1
     },
