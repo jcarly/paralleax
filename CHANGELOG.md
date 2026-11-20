@@ -2,6 +2,11 @@
 
 ## Unreleased
 
+- Fixed the editor toolbar's Test from start and Test from current interaction
+  icons, which sat 9.5px off-centre with no border because the links did not
+  get the shared button styles (PAR-7). They now use the existing `button` class
+  and match the Comments action in size, border, centring, hover, focus and
+  tooltip.
 - Added a private, local MCP server prototype (`apps/mcp`, ADR-047) built on
   the official MCP TypeScript SDK v2 over stdio. It calls the existing HTTP API
   as the signed-in user (`paralleax-mcp login`) and exposes six tools:
