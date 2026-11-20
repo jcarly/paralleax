@@ -16,7 +16,10 @@ describe('Story difference persistence', () => {
         y: (trigger.position?.y ?? 0) + 50,
       };
     }
-    const delta = createStoryChangeDelta(before, after)!;
+    const delta = createStoryChangeDelta(before, after);
+    if (!delta) {
+      throw new Error('Expected a story change delta');
+    }
     const query = jest.fn().mockResolvedValue({ rows: [], rowCount: 2_000 });
 
     await persistStoryDifference({ query }, before, after, delta);

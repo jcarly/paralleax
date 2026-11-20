@@ -122,3 +122,36 @@ test('styles the Story settings toolbar button before its dialog loads', async (
     expect(button.x).toBeGreaterThan(title.x + title.width - 1);
   }
 });
+
+test('renders the Test toolbar links like the other toolbar actions', async ({ page }) => {
+  await prepareEditorPage(page);
+  await page.goto('/stories/story-1/edit');
+  await expect(page.getByTestId('interaction-node')).toBeVisible();
+  const comments = page.getByRole('button', { name: 'Comments' });
+  const testFromStart = page.getByRole('link', { name: 'Test from start' });
+  await expect(testFromStart).toBeVisible();
+
+  const [reference, link] = await Promise.all(
+    [comments, testFromStart].map((action) =>
+      action.evaluate((element) => {
+        const box = element.getBoundingClientRect();
+        const icon = element.querySelector('svg')?.getBoundingClientRect();
+        const style = getComputedStyle(element);
+        return {
+          width: box.width,
+          height: box.height,
+          top: box.top,
+          iconOffsetX: icon ? icon.x + icon.width / 2 - (box.x + box.width / 2) : NaN,
+          iconOffsetY: icon ? icon.y + icon.height / 2 - (box.y + box.height / 2) : NaN,
+          border: `${style.borderTopWidth} ${style.borderTopStyle}`,
+          radius: style.borderTopLeftRadius,
+          background: style.backgroundColor,
+        };
+      }),
+    ),
+  );
+  expect(link).toEqual({ ...reference, top: link.top });
+  expect(link.top).toBeCloseTo(reference.top, 0);
+  expect(Math.abs(link.iconOffsetX)).toBeLessThan(1);
+  expect(Math.abs(link.iconOffsetY)).toBeLessThan(1);
+});
