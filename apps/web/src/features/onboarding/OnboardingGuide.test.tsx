@@ -15,10 +15,6 @@ function BeginGuide() {
     { label: 'Open library guide', onClick: bindAction(openHelp) },
     { label: 'Start guide', onClick: bindAction(beginForStory, 'story-1') },
     {
-      label: 'Mark first step',
-      onClick: bindAction(reportStepComplete, 'story-1', 'discover-interactions'),
-    },
-    {
       label: 'Mark scene saved',
       onClick: bindAction(reportStepComplete, 'story-1', 'write-scene'),
     },
@@ -63,14 +59,18 @@ function renderGuide(path = '/') {
         <button data-onboarding-target="interaction" type="button">
           Interaction target
         </button>
-        <aside data-onboarding-target="scene-inspector">Inspector target</aside>
+        <aside data-onboarding-target="scene-inspector">
+          Inspector target
+          <button data-onboarding-target="scene-content" type="button">
+            Add content target
+          </button>
+        </aside>
         <button data-onboarding-target="branch-add" type="button">
           Branch target
         </button>
-        <button data-onboarding-target="simulation-launch" type="button">
+        <Link data-onboarding-target="simulation-launch" to="/stories/story-1/play?mode=simulation">
           Simulation target
-        </button>
-        <div data-onboarding-target="simulation-choices">Simulation choices target</div>
+        </Link>
         <button data-onboarding-target="story-create" type="button">
           New story target
         </button>
@@ -103,38 +103,48 @@ it('highlights the new-story action when opened from the library', async () => {
   });
 });
 
-it('highlights the interaction and inspector without trapping focus', async () => {
+it('starts at the scene and highlights Add content without trapping focus', async () => {
   const user = userEvent.setup();
   renderGuide('/stories/story-1/edit');
   await user.click(screen.getByRole('button', { name: 'Start guide' }));
 
-  expect(screen.getByRole('heading', { name: 'Explore the graph' })).toBeInTheDocument();
+  expect(screen.getByText('Step 1 of 3')).toBeInTheDocument();
+  expect(screen.getByRole('heading', { name: 'Write a scene' })).toBeInTheDocument();
   await waitFor(() => {
-    expect(screen.getByText('Interaction target')).toHaveClass('onboarding-target-highlight');
+    expect(screen.getByText('Add content target')).toHaveClass('onboarding-target-highlight');
   });
-  const guideCard = screen.getByRole('region', { name: 'Explore the graph' });
+  expect(screen.getByText('Interaction target')).not.toHaveClass('onboarding-target-highlight');
+  const guideCard = screen.getByRole('region', { name: 'Write a scene' });
   expect(guideCard.parentElement).toHaveClass('onboarding-guide-positioner');
   const guideLayer = guideCard.parentElement?.parentElement;
   expect(guideLayer).toHaveClass('onboarding-guide-layer');
   expect(guideLayer?.parentElement).toBe(document.body);
 
-  await user.click(screen.getByRole('button', { name: 'Mark first step' }));
-  expect(screen.getByRole('heading', { name: 'Write a scene' })).toBeInTheDocument();
-  expect(screen.getByRole('button', { name: 'Skip step' })).toBeInTheDocument();
-  await waitFor(() => {
-    expect(screen.getByText('Inspector target')).toHaveClass('onboarding-target-highlight');
-  });
-  expect(screen.getByText('Interaction target')).not.toHaveClass('onboarding-target-highlight');
-
   await user.click(screen.getByRole('button', { name: 'Close guide' }));
-  expect(screen.queryByRole('heading', { name: 'Write a scene' })).not.toBeInTheDocument();
+  await waitFor(() => {
+    expect(screen.queryByRole('heading', { name: 'Write a scene' })).not.toBeInTheDocument();
+  });
 });
 
-it('moves the highlight through branching and Simulation', async () => {
+it('falls back to the Inspector once the scene editor is open', async () => {
   const user = userEvent.setup();
   renderGuide('/stories/story-1/edit');
   await user.click(screen.getByRole('button', { name: 'Start guide' }));
-  await user.click(screen.getByRole('button', { name: 'Mark first step' }));
+  await waitFor(() => {
+    expect(screen.getByText('Add content target')).toHaveClass('onboarding-target-highlight');
+  });
+
+  screen.getByText('Add content target').remove();
+
+  await waitFor(() => {
+    expect(screen.getByText('Inspector target')).toHaveClass('onboarding-target-highlight');
+  });
+});
+
+it('closes without a completion card when Simulation is launched from the guide', async () => {
+  const user = userEvent.setup();
+  renderGuide('/stories/story-1/edit');
+  await user.click(screen.getByRole('button', { name: 'Start guide' }));
   await user.click(screen.getByRole('button', { name: 'Mark scene saved' }));
   await waitFor(() => {
     expect(screen.getByText('Branch target')).toHaveClass('onboarding-target-highlight');
@@ -143,44 +153,37 @@ it('moves the highlight through branching and Simulation', async () => {
   await waitFor(() => {
     expect(screen.getByText('Simulation target')).toHaveClass('onboarding-target-highlight');
   });
-  await user.click(screen.getByRole('link', { name: 'Go to Simulation' }));
-  await waitFor(() => {
-    expect(screen.getByText('Simulation choices target')).toHaveClass(
-      'onboarding-target-highlight',
-    );
-  });
 
-  await user.click(screen.getByRole('button', { name: 'Close guide' }));
-  expect(screen.queryByRole('heading', { name: 'Test your story' })).not.toBeInTheDocument();
+  await user.click(screen.getByRole('link', { name: 'Simulation target' }));
+
+  expect(screen.getByTestId('guide-status')).toHaveTextContent('complete');
+  await waitFor(() => {
+    expect(screen.queryByRole('region')).not.toBeInTheDocument();
+  });
+  expect(screen.queryByText(/ready/i)).not.toBeInTheDocument();
+});
+
+it('never covers Simulation with a guide step', async () => {
+  const user = userEvent.setup();
+  renderGuide('/stories/story-1/edit');
+  await user.click(screen.getByRole('button', { name: 'Start guide' }));
+  await user.click(screen.getByRole('button', { name: 'Mark scene saved' }));
+  await user.click(screen.getByRole('button', { name: 'Mark branch created' }));
+
+  await user.click(screen.getByRole('link', { name: 'Go to Simulation' }));
+
+  expect(screen.getByTestId('guide-status')).toHaveTextContent('active');
+  await waitFor(() => {
+    expect(screen.queryByRole('region')).not.toBeInTheDocument();
+  });
 });
 
 it('can restart the guide from the help control', async () => {
   const user = userEvent.setup();
   renderGuide('/stories/story-1/edit');
   await user.click(screen.getByRole('button', { name: 'Start guide' }));
-  await user.click(screen.getByRole('button', { name: 'Mark first step' }));
+  await user.click(screen.getByRole('button', { name: 'Mark scene saved' }));
   await user.click(screen.getByRole('button', { name: 'Restart guide' }));
 
-  expect(screen.getByRole('heading', { name: 'Explore the graph' })).toBeInTheDocument();
-});
-
-it('shows completion actions after testing and pauses when opening access settings', async () => {
-  const user = userEvent.setup();
-  renderGuide('/stories/story-1/edit');
-  await user.click(screen.getByRole('button', { name: 'Start guide' }));
-  await user.click(screen.getByRole('button', { name: 'Mark first step' }));
-  await user.click(screen.getByRole('button', { name: 'Mark scene saved' }));
-  await user.click(screen.getByRole('button', { name: 'Mark branch created' }));
-  await user.click(screen.getByRole('link', { name: 'Go to Simulation' }));
-  await user.click(screen.getByRole('button', { name: 'Mark test complete' }));
-
-  expect(screen.getByRole('region', { name: 'Story ready to explore' })).toBeInTheDocument();
-  const continueLink = screen.getByRole('link', { name: 'Continue creating' });
-  const shareLink = screen.getByRole('link', { name: 'Share for testing' });
-  expect(continueLink).toHaveAttribute('href', '/stories/story-1/edit');
-  expect(shareLink).toHaveAttribute('href', '/stories/story-1/edit?settings=access');
-
-  await user.click(shareLink);
-  expect(screen.getByTestId('guide-status')).toHaveTextContent('paused');
-  expect(screen.queryByRole('region', { name: 'Story ready to explore' })).not.toBeInTheDocument();
+  expect(screen.getByRole('heading', { name: 'Write a scene' })).toBeInTheDocument();
 });

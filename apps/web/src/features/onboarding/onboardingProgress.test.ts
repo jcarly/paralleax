@@ -26,11 +26,11 @@ describe('onboarding progress', () => {
   afterEach(() => vi.restoreAllMocks());
 
   it('starts with the first action and advances only when that step is completed or skipped', () => {
-    expect(currentOnboardingStep(initialOnboardingProgress)).toBe('discover-interactions');
-    const completed = completeOnboardingStep(initialOnboardingProgress, 'discover-interactions');
-    expect(currentOnboardingStep(completed)).toBe('write-scene');
-    expect(currentOnboardingStep(skipOnboardingStep(completed, 'write-scene'))).toBe(
-      'create-branch',
+    expect(currentOnboardingStep(initialOnboardingProgress)).toBe('write-scene');
+    const completed = completeOnboardingStep(initialOnboardingProgress, 'write-scene');
+    expect(currentOnboardingStep(completed)).toBe('create-branch');
+    expect(currentOnboardingStep(skipOnboardingStep(completed, 'create-branch'))).toBe(
+      'test-story',
     );
   });
 
@@ -38,13 +38,13 @@ describe('onboarding progress', () => {
     const key = onboardingStorageKey('author-1');
     const progress = completeOnboardingStep(
       { ...initialOnboardingProgress, status: 'active', storyId: 'story-1' },
-      'discover-interactions',
+      'write-scene',
     );
     writeOnboardingProgress(window.localStorage, key, progress);
 
     expect(readOnboardingProgress(window.localStorage, key)).toEqual(progress);
     expect(currentOnboardingStep(readOnboardingProgress(window.localStorage, key))).toBe(
-      'write-scene',
+      'create-branch',
     );
   });
 
@@ -62,15 +62,33 @@ describe('onboarding progress', () => {
 
   it('does not show the guide again after all steps are completed or passed', () => {
     let progress: OnboardingProgress = { ...initialOnboardingProgress, status: 'active' };
-    for (const step of [
-      'discover-interactions',
-      'write-scene',
-      'create-branch',
-      'test-story',
-    ] as const) {
+    for (const step of ['write-scene', 'create-branch', 'test-story'] as const) {
       progress = completeOnboardingStep(progress, step);
     }
     expect(progress.status).toBe('complete');
     expect(currentOnboardingStep(progress)).toBeNull();
+  });
+});
+
+describe('stored onboarding progress', () => {
+  beforeEach(() => {
+    window.localStorage.clear();
+  });
+
+  it('reads progress stored with the former Explore the graph step', () => {
+    const key = onboardingStorageKey('author-1');
+    window.localStorage.setItem(
+      key,
+      JSON.stringify({
+        status: 'active',
+        storyId: 'story-1',
+        completedSteps: ['discover-interactions', 'write-scene'],
+        skippedSteps: [],
+      }),
+    );
+
+    const progress = readOnboardingProgress(window.localStorage, key);
+    expect(progress.completedSteps).toEqual(['write-scene']);
+    expect(currentOnboardingStep(progress)).toBe('create-branch');
   });
 });

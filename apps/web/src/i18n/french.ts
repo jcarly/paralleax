@@ -87,27 +87,15 @@ export const frenchTranslation = {
     openStoryPrompt: 'Votre nouvelle histoire est prête. Ouvrez-la pour continuer.',
     returnToEditorPrompt: 'Retournez dans l’éditeur pour continuer le guide.',
     openStory: 'Ouvrir l’histoire',
-    completeTitle: 'Votre histoire est prête à explorer',
-    completeDescription: 'Vous avez créé et testé un premier parcours.',
-    completeSkippedDescription: 'Continuez à créer ou relancez le guide quand vous le souhaitez.',
-    completeAccessDescription:
-      'Choisissez qui peut lire, commenter ou modifier. L’histoire reste privée tant que vous ne changez pas ses paramètres d’accès.',
-    continueCreating: 'Continuer la création',
-    shareForTesting: 'Partager pour faire tester',
     stepCount: 'Étape {{current}} sur {{total}}',
     skipStep: 'Passer l’étape',
     close: 'Fermer le guide',
     restart: 'Relancer le guide',
     steps: {
-      'discover-interactions': {
-        title: 'Découvrir le graphe',
-        description:
-          'Sélectionnez une interaction. Les connexions montrent comment les scènes se suivent.',
-      },
       'write-scene': {
         title: 'Écrire une scène',
         description:
-          'L’interaction sélectionnée apparaît dans l’inspecteur. Ajoutez sa scène, puis quittez le champ pour l’enregistrer.',
+          'L’interaction de départ est sélectionnée. Choisissez Ajouter du contenu, écrivez sa scène, puis cliquez hors du champ pour l’enregistrer.',
       },
       'create-branch': {
         title: 'Créer un choix',
@@ -117,7 +105,7 @@ export const frenchTranslation = {
       'test-story': {
         title: 'Tester votre histoire',
         description:
-          'Dans l’éditeur, choisissez Tester depuis le début, puis suivez un parcours en simulation.',
+          'Choisissez Tester depuis le début. Le guide se ferme et la simulation s’ouvre sur votre histoire.',
       },
     },
   },

@@ -825,6 +825,7 @@ function InteractionInspectorView({
                 <button
                   className="secondary interaction-content-edit-toggle"
                   data-comment-exclude="true"
+                  data-onboarding-target="scene-content"
                   type="button"
                   onClick={startBodyEditing}
                 >

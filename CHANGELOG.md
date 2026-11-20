@@ -2,6 +2,13 @@
 
 ## Unreleased
 
+- Reworked the first-story guide (PAR-7). A new Story opens with its starting
+  Interaction selected, so the guide's first step, Explore the graph, completed
+  itself and the guide opened at Step 2 of 4; the guide now has three steps and
+  starts at Write a scene, which highlights `Add content`. Choosing Test from
+  start finishes and closes the guide instead of leaving its card over
+  Simulation, and there is no longer a Story ready card. The card fades in and
+  out, and the Guide control restarts a finished guide.
 - Added a private, local MCP server prototype (`apps/mcp`, ADR-047) built on
   the official MCP TypeScript SDK v2 over stdio. It calls the existing HTTP API
   as the signed-in user (`paralleax-mcp login`) and exposes six tools:
