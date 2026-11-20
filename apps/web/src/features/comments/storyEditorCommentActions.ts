@@ -9,6 +9,7 @@ import {
   type StoryCommentThread,
 } from '@paralleax/shared';
 import { captureActiveTextSelection } from './textAnchors';
+import type { TextCommentSelection } from './useTextCommentSelection';
 import type { useStoryComments } from './useStoryComments';
 import {
   isSemanticCommentAnchor,
@@ -139,11 +140,14 @@ function findSemanticCommentThread(
   );
 }
 
-function startStoryTextComment(input: StoryEditorCommentActionInput) {
+function startStoryTextComment(
+  input: StoryEditorCommentActionInput,
+  captured?: TextCommentSelection,
+) {
   if (!input.selectedCommentTarget || input.story?.capabilities?.canComment !== true) {
     return;
   }
-  const selection = captureActiveTextSelection();
+  const selection = captured ?? captureActiveTextSelection();
   if (!selection) {
     return;
   }
@@ -205,8 +209,8 @@ export function bindStoryEditorCommentActions(input: StoryEditorCommentActionInp
     openSemanticComments: (slot: CommentSemanticSlot) => {
       selectSemanticCommentThread(input, slot);
     },
-    startTextComment: () => {
-      startStoryTextComment(input);
+    startTextComment: (selection?: TextCommentSelection) => {
+      startStoryTextComment(input, selection);
     },
     reattachSelectedThread: (threadId: string) => reattachStoryCommentThread(input, threadId),
   };

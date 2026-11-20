@@ -568,8 +568,7 @@ export const italianTranslation = {
     clickCanvas: 'Fare clic sul grafico',
     commentEntity: 'Commenta questo elemento',
     commentScene: 'Commenta questa scena',
-    selectTextHelp:
-      'Seleziona il testo in un titolo o in una descrizione, quindi utilizza questa azione.',
+    commentSelectedText: 'Commenta il testo selezionato',
     triggerSummary_one: 'Condizione {{count}} in questo trigger.',
     triggerSummary_other: 'Condizioni {{count}} in questo trigger.',
     anchor: {

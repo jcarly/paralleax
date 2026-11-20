@@ -1,5 +1,6 @@
 import { ContextualCommentsRail } from '../../comments/ContextualCommentsRail';
 import { StoryCommentsPanel } from '../../comments/StoryCommentsPanel';
+import { TextCommentAction } from '../../comments/TextCommentAction';
 import { InspectorResizeHandle } from './InspectorResizeHandle';
 import { StoryInspectorContent } from './StoryInspectorContent';
 import type { StoryEditorInspectorModel } from './storyEditorInspectorModel';
@@ -243,18 +244,7 @@ function StoryInspectorCommentActions({ model }: { model: StoryEditorInspectorMo
           <span aria-hidden="true">+</span>
         </button>
       ) : null}
-      <button
-        className="ghost"
-        type="button"
-        title={t('comments.selectTextHelp')}
-        aria-label={t('comments.selectTextHelp')}
-        onMouseDown={(event) => {
-          event.preventDefault();
-          model.actions.startTextComment();
-        }}
-      >
-        <span aria-hidden="true">✎</span>
-      </button>
+      <TextCommentAction onStart={model.actions.startTextComment} />
     </div>
   );
 }

@@ -2,6 +2,11 @@
 
 ## Unreleased
 
+- The Inspector's text-comment action (✎) now appears only while commentable
+  text is selected, and works from the keyboard (PAR-7). It was always shown,
+  even with nothing selected, and reacted only to a mouse press, so keyboard
+  users could not start a comment on selected text. The selection is captured
+  when it changes and kept while focus moves to the action.
 - Added a private, local MCP server prototype (`apps/mcp`, ADR-047) built on
   the official MCP TypeScript SDK v2 over stdio. It calls the existing HTTP API
   as the signed-in user (`paralleax-mcp login`) and exposes six tools:
