@@ -606,9 +606,10 @@ describe('StoryEditor graph collaboration and layout', () => {
 
     const toolbar = screen.getByRole('toolbar', { name: 'Canvas tools' });
     expect(toolbar).toHaveClass('canvas-tools');
-    expect(within(toolbar).getAllByRole('button')).toHaveLength(8);
+    expect(within(toolbar).getAllByRole('button')).toHaveLength(9);
 
     for (const label of [
+      'Collapse story context',
       'Undo last Story change',
       'Redo Story change',
       'Open Story history',
@@ -624,6 +625,24 @@ describe('StoryEditor graph collaboration and layout', () => {
       expect(button.querySelector('svg')).toBeInTheDocument();
       expect(button.textContent).toBe('');
     }
+  });
+
+  it('collapses the story context panel from the tool rail without leaving a strip', async () => {
+    const user = userEvent.setup();
+    await renderEditor();
+    const toolbar = screen.getByRole('toolbar', { name: 'Canvas tools' });
+    const toggle = within(toolbar).getByRole('button', { name: 'Collapse story context' });
+    expect(toggle).toHaveAttribute('aria-expanded', 'true');
+    expect(toggle).toHaveAttribute('aria-controls', 'story-context-panel-content');
+    expect(screen.getByRole('navigation', { name: 'Story context' })).toBeInTheDocument();
+
+    await user.click(toggle);
+
+    expect(screen.queryByRole('navigation', { name: 'Story context' })).not.toBeInTheDocument();
+    const expand = within(toolbar).getByRole('button', { name: 'Expand story context' });
+    expect(expand).toHaveAttribute('aria-expanded', 'false');
+    await user.click(expand);
+    expect(screen.getByRole('navigation', { name: 'Story context' })).toBeInTheDocument();
   });
 
   it('opens a position-aware canvas context menu for creation and comments', async () => {

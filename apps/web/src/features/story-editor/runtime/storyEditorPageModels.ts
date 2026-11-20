@@ -108,7 +108,10 @@ export function buildStoryEditorCanvasModel(
   const { persistence, canvasState, uiState } = base;
   const { reviewOnly } = runtime.comments;
   const { selectedLayoutTargets, organizeGraph, addGraphDecoration } = runtime.actions;
+  const { contextNavigation } = runtime.selection.navigation;
   const createToolbarProps = buildStoryEditorCanvasToolbarProps({
+    contextPanelOpen: contextNavigation.isContextPanelOpen,
+    toggleContextPanel: contextNavigation.toggleContextPanel,
     story,
     reviewOnly,
     isOrganizing: canvasState.isOrganizing,

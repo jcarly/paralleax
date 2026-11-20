@@ -6,6 +6,13 @@ import {
   parseQspConditionExpression,
 } from './expressions.js';
 
+function requireValue<T>(value: T | null | undefined, description: string): T {
+  if (value === null || value === undefined) {
+    throw new Error(`Expected ${description} to exist`);
+  }
+  return value;
+}
+
 const source = { fileName: 'state.qsps', locationName: 'Start', line: 4 };
 
 describe('QSP simple expressions', () => {
@@ -25,12 +32,21 @@ describe('QSP simple expressions', () => {
   });
 
   it('combines prior branch failures with later alternatives', () => {
-    const first = parseQspConditionExpression('a = 1 and b = 2', source)!;
-    const second = parseQspConditionExpression('c = 3 or d = 4', source)!;
-    const laterBranch = andQspConditionGroups(negateQspConditionGroups(first)!, second);
+    const first = requireValue(
+      parseQspConditionExpression('a = 1 and b = 2', source),
+      'first condition',
+    );
+    const second = requireValue(
+      parseQspConditionExpression('c = 3 or d = 4', source),
+      'second condition',
+    );
+    const laterBranch = andQspConditionGroups(
+      requireValue(negateQspConditionGroups(first), 'negated first condition'),
+      second,
+    );
     const elseBranch = andQspConditionGroups(
-      negateQspConditionGroups(first)!,
-      negateQspConditionGroups(second)!,
+      requireValue(negateQspConditionGroups(first), 'negated first condition'),
+      requireValue(negateQspConditionGroups(second), 'negated second condition'),
     );
 
     expect(laterBranch).toHaveLength(4);

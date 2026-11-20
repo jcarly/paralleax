@@ -25,7 +25,7 @@ function inspectorWidthBounds(viewportWidth: number, locationPanelOpen: boolean)
       MAX_INSPECTOR_WIDTH,
       viewportWidth <= 800
         ? Math.floor(viewportWidth * 0.9)
-        : Math.floor(viewportWidth - (locationPanelOpen ? 260 : 48) - 280),
+        : Math.floor(viewportWidth - (locationPanelOpen ? 260 : 0) - 280),
     ),
   );
   return { minimum, maximum };

@@ -2,6 +2,7 @@ import { useCallback, useEffect, type Dispatch, type SetStateAction } from 'reac
 import type { useSearchParams } from 'react-router-dom';
 import type { StorySettingsTab } from '../../story-settings/StorySettingsDialog';
 import type { useStoryEditorPersistence } from '../../../hooks/useStoryEditorPersistence';
+import { preloadRichTextEditor } from '../../../components/richTextEditorLoader';
 
 type IdleCallbackWindow = {
   requestIdleCallback?: (callback: () => void, options?: { timeout?: number }) => number;
@@ -27,6 +28,7 @@ function scheduleIdleWork(callback: () => void) {
 export function useStoryEditorGraphPreparation(
   loadPhase: ReturnType<typeof useStoryEditorPersistence>['loadPhase'],
   storyId: string | undefined,
+  canEdit = false,
 ) {
   useEffect(() => {
     if (loadPhase !== 'ready' || storyId === undefined || storyId.length === 0) {
@@ -38,9 +40,11 @@ export function useStoryEditorGraphPreparation(
         import('../../../storyGraphElkLayout').then(({ preloadStoryGraphElk }) =>
           preloadStoryGraphElk(),
         ),
+        // Authors open the body editor right away; review-only readers never do.
+        canEdit ? preloadRichTextEditor() : undefined,
       ]).catch(() => undefined);
     });
-  }, [loadPhase, storyId]);
+  }, [canEdit, loadPhase, storyId]);
 }
 
 type StoryEditorSettingsCloseInput = {
