@@ -70,12 +70,17 @@ incident materially affects their data, subject to applicable law.
 
 ## Feedback
 
-Testers may choose to open the Formbricks feedback form by selecting its button.
-When opened, Paralleax sends the normalized route, product surface, web version,
-viewport size, and interface language. Formbricks may also record the full URL,
-browser, operating system, device, and country; the full URL can contain a Story
-id. State the Formbricks workspace/operator, hosting region, response access,
-retention, and deletion procedure: `[details]`. State whether feedback may be
+Testers may choose to open the feedback form, provided by PostHog (EU Cloud), by
+selecting its button. Nothing is sent to PostHog before that click. A response
+contains the answers, the normalized route (without Story id), product surface,
+web version, viewport size, interface language, and a random identifier that
+changes on every page load. Paralleax does not send the account, email address,
+Story content, browser URL, or session identifiers, and asks PostHog not to
+derive a location. PostHog receives the IP address of each request; state
+whether the project discards it: `[IP setting]`. The survey stores its own
+progress in the browser's local storage. State the PostHog project
+operator, hosting region, response access, retention, and deletion procedure:
+`[details]`. State whether feedback may be
 quoted, attributed, or used anonymously: `[terms]`.
 
 Automatic journey milestones and a survey opened after Simulation are disabled.

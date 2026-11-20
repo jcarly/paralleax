@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { buildFeedbackHiddenFields, describeFeedbackRoute } from './feedbackContext';
+import { buildFeedbackContext, describeFeedbackRoute } from './feedbackContext';
 
 describe('feedback context', () => {
   it.each([
@@ -10,14 +10,14 @@ describe('feedback context', () => {
     ['/stories', '/stories', 'story-library'],
     ['/login', '/login', 'authentication'],
     ['/admin/users', '/admin/*', 'administration'],
-    ['/unexpected', '/unexpected', 'other'],
+    ['/unexpected/secret-token', '/*', 'other'],
   ])('normalizes %s without exposing a story id', (pathname, route, surface) => {
     expect(describeFeedbackRoute(pathname)).toEqual({ route, surface });
   });
 
-  it('builds only the documented non-content hidden fields', () => {
+  it('builds only the documented non-content context fields', () => {
     expect(
-      buildFeedbackHiddenFields('/stories/story-1/edit', 'fr', { width: 1440, height: 900 }),
+      buildFeedbackContext('/stories/story-1/edit', 'fr', { width: 1440, height: 900 }),
     ).toEqual({
       paralleax_route: '/stories/:storyId/edit',
       paralleax_surface: 'editor',

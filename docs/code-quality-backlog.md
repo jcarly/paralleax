@@ -368,7 +368,7 @@ solution with a guided task or a browser reproduction before implementation.
   neither is an interface-only quick win.
 - **Comments, history, saves, and feedback:** comments have recoverable deletion
   and confirmation; named save deletion already confirms; history and
-  save-recovery work remain separately tracked. Keep Formbricks feedback
+  save-recovery work remain separately tracked. Keep PostHog survey feedback
   distinct from issue #26's opt-in subscription.
 - **Import and export:** import diagnostics/retention remain the conditional P1
   durability task. No static evidence from this pass justifies presenting the
@@ -1888,3 +1888,25 @@ Take a step when its area is touched, in this order when there is a choice.
 - Perform module extraction in behavior-preserving slices, not a broad rewrite.
 - Pair every behavior change with a regression test and changelog entry.
 - Do not prepare a public release while applicable production gates are open.
+
+### Quality inventory
+
+Run `npm run quality:report` from the repository root to write `quality-reports/quality-report.md`
+and `quality-reports/quality-report.json`. The report is a read-only inventory, not another gate
+or baseline. It runs ESLint with an empty temporary suppression file and runs
+Stylelint without suppressions; neither command changes the accepted baselines.
+Dependency Cruiser entries come from its known-violations file, and jscpd uses
+its existing scanner and coverage check. Lint counts are compared with native
+baseline counts, but individual historical findings cannot be identified by
+those counts. A matching count may hide replacement or increased severity (see
+ADR-041). Check the normal quality gates separately.
+
+The JSON contains individual findings and full groupings; the Markdown lists
+candidate file-disjoint batches with test, production, prototype, and tooling
+file kinds. Their count, risk and cost are triage hints, not estimates or a
+promise of independence across shared interfaces and tests.
+Inspect each slice and coordinate common files before assigning it to Codex or
+Claude Code. Automatic-fix counts cover ESLint fixes only; Stylelint fixability
+is not measured. A reported fix is an opportunity to review, not an instruction
+to apply it. Validate the inventory before starting application refactoring, and
+use the existing shrink-only baseline workflow after approved corrections.

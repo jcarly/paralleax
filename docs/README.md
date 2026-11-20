@@ -48,7 +48,7 @@ Pick the path that matches what you want to do.
 1. [Production readiness](production-readiness.md)
 2. [Private alpha deployment](operations/alpha-deployment.md)
 3. [PostgreSQL backup and restore](operations/postgresql-backup-and-restore.md)
-4. [Formbricks contextual feedback](operations/formbricks-feedback.md)
+4. [PostHog contextual feedback](operations/posthog-feedback.md)
 5. [Hosting and scale](hosting-and-scale.md)
 6. [Alpha test notice template](alpha-test-notice.template.md)
 
@@ -120,7 +120,7 @@ Pick the path that matches what you want to do.
 - [Hosting and scale](hosting-and-scale.md)
 - [Private alpha deployment](operations/alpha-deployment.md)
 - [PostgreSQL backup and restore](operations/postgresql-backup-and-restore.md)
-- [Formbricks contextual feedback](operations/formbricks-feedback.md)
+- [PostHog contextual feedback](operations/posthog-feedback.md)
 - [Alpha test notice template](alpha-test-notice.template.md)
 
 ### Audits (dated snapshots)
