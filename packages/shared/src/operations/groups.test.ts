@@ -10,6 +10,13 @@ import {
   validateStoryGroups,
 } from './groups.js';
 
+function requireValue<T>(value: T | null | undefined, description: string): T {
+  if (value === null || value === undefined) {
+    throw new Error(`Expected ${description} to exist`);
+  }
+  return value;
+}
+
 function fixture(): Story {
   return {
     id: 'story',
@@ -33,11 +40,15 @@ describe('authored groups', () => {
   it('moves and reorders in canonical list order without moving Interactions, and reverses atomically', () => {
     const before = fixture();
     const after = moveStoryGroup(before, 'leaf', null, 'root');
-    expect(after.groups!.map(({ id }) => id)).toEqual(['leaf', 'root', 'child']);
-    expect(after.groups![0].parentGroupId).toBeUndefined();
+    expect(requireValue(after.groups, 'after groups').map(({ id }) => id)).toEqual([
+      'leaf',
+      'root',
+      'child',
+    ]);
+    expect(requireValue(after.groups, 'after groups')[0].parentGroupId).toBeUndefined();
     expect(after.interactions).toBe(before.interactions);
-    expect(before.groups![2].parentGroupId).toBe('child');
-    const delta = createStoryChangeDelta(before, after)!;
+    expect(requireValue(before.groups, 'before groups')[2].parentGroupId).toBe('child');
+    const delta = requireValue(createStoryChangeDelta(before, after), 'story change delta');
     const undo = applyStoryChangeDelta(after, delta, 'backward');
     expect(undo.applied).toBe(true);
     if (undo.applied) {
@@ -50,13 +61,15 @@ describe('authored groups', () => {
     }
     const nested = moveStoryGroup(after, 'leaf', 'root', 'child');
     expect(
-      nested.groups!.filter(({ parentGroupId }) => parentGroupId === 'root').map(({ id }) => id),
+      requireValue(nested.groups, 'nested groups')
+        .filter(({ parentGroupId }) => parentGroupId === 'root')
+        .map(({ id }) => id),
     ).toEqual(['leaf', 'child']);
   });
 
   it('rejects invalid move references and cycles even for deep descendants', () => {
     const story = fixture();
-    expect(getGroupDescendantIds(story.groups!, 'root')).toEqual(
+    expect(getGroupDescendantIds(requireValue(story.groups, 'story groups'), 'root')).toEqual(
       new Set(['root', 'child', 'leaf']),
     );
     expect(() => moveStoryGroup(story, 'root', 'leaf', null)).toThrow('cycles');
@@ -72,44 +85,53 @@ describe('authored groups', () => {
     const story = fixture();
     const before = structuredClone(story);
     expect(validateStoryGroups(story)).toBeUndefined();
-    expect(getGroupInteractionIds(story.groups!, 'root')).toEqual(['one', 'two']);
+    expect(getGroupInteractionIds(requireValue(story.groups, 'story groups'), 'root')).toEqual([
+      'one',
+      'two',
+    ]);
     expect(story).toEqual(before);
   });
 
   it('rejects direct membership in more than one group, including parent and child', () => {
     const story = fixture();
-    story.groups![1].interactionIds.push('one');
+    requireValue(story.groups, 'story groups')[1].interactionIds.push('one');
     expect(validateStoryGroups(story)).toContain('only one Group');
   });
 
   it('moves direct membership while preserving mixed group contents and unrelated members', () => {
     const original = fixture();
     const updated = setStoryGroupInteractions(original, 'child', ['one', 'two']);
-    expect(updated.groups![0].interactionIds).toEqual([]);
-    expect(updated.groups![1].interactionIds).toEqual(['one', 'two']);
-    expect(updated.groups![2].parentGroupId).toBe('child');
+    expect(requireValue(updated.groups, 'updated groups')[0].interactionIds).toEqual([]);
+    expect(requireValue(updated.groups, 'updated groups')[1].interactionIds).toEqual([
+      'one',
+      'two',
+    ]);
+    expect(requireValue(updated.groups, 'updated groups')[2].parentGroupId).toBe('child');
     expect(updated.interactions).toBe(original.interactions);
-    expect(original.groups![0].interactionIds).toEqual(['one']);
+    expect(requireValue(original.groups, 'original groups')[0].interactionIds).toEqual(['one']);
     expect(validateStoryGroups(updated)).toBeUndefined();
-    expect(getGroupInteractionIds(updated.groups!, 'root')).toEqual(['one', 'two']);
+    expect(getGroupInteractionIds(requireValue(updated.groups, 'updated groups'), 'root')).toEqual([
+      'one',
+      'two',
+    ]);
     const removed = setStoryGroupInteractions(updated, 'child', ['two']);
-    expect(removed.groups![0].interactionIds).toEqual([]);
-    expect(removed.groups![1].interactionIds).toEqual(['two']);
+    expect(requireValue(removed.groups, 'removed groups')[0].interactionIds).toEqual([]);
+    expect(requireValue(removed.groups, 'removed groups')[1].interactionIds).toEqual(['two']);
     expect(setStoryGroupInteractions(original, 'missing', ['one'])).toBe(original);
   });
 
   it('undoes a membership transfer atomically and rejects replay that would duplicate ownership', () => {
     const original = fixture();
     const updated = setStoryGroupInteractions(original, 'child', ['one', 'two']);
-    const delta = createStoryChangeDelta(original, updated)!;
+    const delta = requireValue(createStoryChangeDelta(original, updated), 'story change delta');
     const reversed = applyStoryChangeDelta(updated, delta, 'backward');
     expect(reversed.applied).toBe(true);
     if (reversed.applied) {
       expect(reversed.story.groups).toEqual(original.groups);
     }
     const later = fixture();
-    later.groups![0].interactionIds = [];
-    const removal = createStoryChangeDelta(original, later)!;
+    requireValue(later.groups, 'later groups')[0].interactionIds = [];
+    const removal = requireValue(createStoryChangeDelta(original, later), 'story change delta');
     const moved = setStoryGroupInteractions(later, 'leaf', ['one']);
     expect(applyStoryChangeDelta(moved, removal, 'backward').applied).toBe(false);
   });
@@ -118,24 +140,29 @@ describe('authored groups', () => {
     const story = fixture();
     const updated = removeStoryGroup(story, 'child');
     expect(updated.interactions).toBe(story.interactions);
-    expect(updated.groups!.map(({ id }) => id)).toEqual(['root', 'leaf']);
-    expect(updated.groups![1].parentGroupId).toBe('root');
-    expect(removeStoryGroup(story, 'root').groups![0].parentGroupId).toBeUndefined();
+    expect(requireValue(updated.groups, 'updated groups').map(({ id }) => id)).toEqual([
+      'root',
+      'leaf',
+    ]);
+    expect(requireValue(updated.groups, 'updated groups')[1].parentGroupId).toBe('root');
+    expect(
+      requireValue(removeStoryGroup(story, 'root').groups, 'remaining groups')[0].parentGroupId,
+    ).toBeUndefined();
     expect(removeStoryGroup(story, 'missing')).toBe(story);
   });
 
   it.each(['root', 'leaf'])('rejects a cycle when the root is placed under %s', (parentGroupId) => {
     const story = fixture();
-    story.groups![0].parentGroupId = parentGroupId;
+    requireValue(story.groups, 'story groups')[0].parentGroupId = parentGroupId;
     expect(validateStoryGroups(story)).toContain('cycles');
   });
 
   it('rejects missing or foreign parents and members', () => {
     const story = fixture();
-    story.groups![0].parentGroupId = 'foreign';
+    requireValue(story.groups, 'story groups')[0].parentGroupId = 'foreign';
     expect(validateStoryGroups(story)).toContain('same Story');
-    delete story.groups![0].parentGroupId;
-    story.groups![0].interactionIds.push('missing');
+    delete requireValue(story.groups, 'story groups')[0].parentGroupId;
+    requireValue(story.groups, 'story groups')[0].interactionIds.push('missing');
     expect(validateStoryGroups(story)).toContain('same Story');
   });
 
@@ -158,9 +185,9 @@ describe('authored groups', () => {
   it('rejects an undo that would create a cycle after another author moves a group', () => {
     const before = fixture();
     const after = structuredClone(before);
-    delete after.groups![1].parentGroupId;
-    const delta = createStoryChangeDelta(before, after)!;
-    after.groups![0].parentGroupId = 'child';
+    delete requireValue(after.groups, 'after groups')[1].parentGroupId;
+    const delta = requireValue(createStoryChangeDelta(before, after), 'story change delta');
+    requireValue(after.groups, 'after groups')[0].parentGroupId = 'child';
     expect(applyStoryChangeDelta(after, delta, 'backward')).toEqual({
       applied: false,
       conflicts: [{ path: '$.groups' }],
@@ -170,10 +197,10 @@ describe('authored groups', () => {
   it('rejects undo restoring membership after its interaction was deleted', () => {
     const before = fixture();
     const after = structuredClone(before);
-    after.groups![0].interactionIds = [];
-    const delta = createStoryChangeDelta(before, after)!;
+    requireValue(after.groups, 'after groups')[0].interactionIds = [];
+    const delta = requireValue(createStoryChangeDelta(before, after), 'story change delta');
     after.interactions = after.interactions.filter(({ id }) => id !== 'one');
-    after.groups![1].interactionIds = ['two'];
+    requireValue(after.groups, 'after groups')[1].interactionIds = ['two'];
     expect(applyStoryChangeDelta(after, delta, 'backward').applied).toBe(false);
   });
 });

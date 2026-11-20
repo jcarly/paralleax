@@ -1,27 +1,32 @@
-import { cleanup, render, screen, waitFor } from '@testing-library/react';
+import { act, cleanup, render, screen, waitFor } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import { MemoryRouter } from 'react-router-dom';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import { changeInterfaceLanguage } from '../../i18n';
 import { FeedbackButton } from './FeedbackButton';
-import { formbricksFeedbackClient } from './formbricksClient';
+import { postHogFeedbackClient } from './posthogFeedbackClient';
 
-describe('FeedbackButton', () => {
-  const environmentConfiguration = formbricksFeedbackClient.isConfigured;
+const environmentConfiguration = postHogFeedbackClient.isConfigured;
+let notifySubmitted: () => void = () => undefined;
 
-  beforeEach(() => {
-    formbricksFeedbackClient.isConfigured = true;
-    vi.spyOn(formbricksFeedbackClient, 'setup').mockResolvedValue(true);
-    vi.spyOn(formbricksFeedbackClient, 'trackFeedback').mockResolvedValue(true);
+beforeEach(() => {
+  postHogFeedbackClient.isConfigured = true;
+  vi.spyOn(postHogFeedbackClient, 'openFeedback').mockResolvedValue('opened');
+  vi.spyOn(postHogFeedbackClient, 'onSubmitted').mockImplementation((listener) => {
+    notifySubmitted = listener;
+    return () => undefined;
   });
+});
 
-  afterEach(() => {
-    formbricksFeedbackClient.isConfigured = environmentConfiguration;
-    vi.restoreAllMocks();
-    cleanup();
-  });
+afterEach(async () => {
+  postHogFeedbackClient.isConfigured = environmentConfiguration;
+  vi.restoreAllMocks();
+  cleanup();
+  await changeInterfaceLanguage('en');
+});
 
-  it('waits for an explicit click before loading Formbricks and sends normalized context', async () => {
+describe('FeedbackButton opening', () => {
+  it('waits for an explicit click before opening PostHog and sends normalized context', async () => {
     const user = userEvent.setup();
     render(
       <MemoryRouter initialEntries={['/stories/private-story/edit?panel=context']}>
@@ -30,11 +35,11 @@ describe('FeedbackButton', () => {
     );
 
     const button = await screen.findByRole('button', { name: 'Give feedback' });
-    expect(formbricksFeedbackClient.setup).not.toHaveBeenCalled();
+    expect(postHogFeedbackClient.openFeedback).not.toHaveBeenCalled();
     await user.click(button);
 
     await waitFor(() => {
-      expect(formbricksFeedbackClient.trackFeedback).toHaveBeenCalledWith(
+      expect(postHogFeedbackClient.openFeedback).toHaveBeenCalledWith(
         'en',
         expect.objectContaining({
           paralleax_route: '/stories/:storyId/edit',
@@ -44,26 +49,59 @@ describe('FeedbackButton', () => {
         }),
       );
     });
-    expect(formbricksFeedbackClient.trackFeedback).not.toHaveBeenCalledWith(
-      expect.anything(),
-      expect.objectContaining({ storyId: expect.anything() }),
+    expect(JSON.stringify(vi.mocked(postHogFeedbackClient.openFeedback).mock.calls)).not.toMatch(
+      /private-story|panel=context/,
     );
   });
+});
 
-  it('uses the localized label and survey language', async () => {
-    await changeInterfaceLanguage('fr');
+describe('FeedbackButton languages', () => {
+  it.each([
+    ['fr', 'Donner un retour', 'Merci pour votre retour !'],
+    ['it', 'Dai un feedback', 'Grazie per il tuo feedback!'],
+    ['en', 'Give feedback', 'Thank you for your feedback!'],
+  ])('uses the %s label, survey language, and confirmation', async (language, label, sent) => {
+    await changeInterfaceLanguage(language);
     render(
       <MemoryRouter>
         <FeedbackButton />
       </MemoryRouter>,
     );
 
-    expect(await screen.findByRole('button', { name: 'Donner un retour' })).toBeInTheDocument();
-    expect(formbricksFeedbackClient.setup).not.toHaveBeenCalled();
+    await userEvent.setup().click(await screen.findByRole('button', { name: label }));
+    expect(postHogFeedbackClient.openFeedback).toHaveBeenCalledWith(
+      language,
+      expect.objectContaining({ paralleax_language: language }),
+    );
+    expect(screen.queryByText(sent)).not.toBeInTheDocument();
+    act(() => {
+      notifySubmitted();
+    });
+    expect(await screen.findByText(sent)).toBeInTheDocument();
   });
+});
 
-  it('stays absent when the integration is disabled or setup fails', async () => {
-    formbricksFeedbackClient.isConfigured = false;
+describe('FeedbackButton states', () => {
+  it('can be opened again after a response', async () => {
+    const user = userEvent.setup();
+    render(
+      <MemoryRouter>
+        <FeedbackButton />
+      </MemoryRouter>,
+    );
+    const button = await screen.findByRole('button', { name: 'Give feedback' });
+
+    await user.click(button);
+    act(() => {
+      notifySubmitted();
+    });
+    await user.click(button);
+
+    expect(postHogFeedbackClient.openFeedback).toHaveBeenCalledTimes(2);
+    expect(screen.queryByText('Thank you for your feedback!')).not.toBeInTheDocument();
+  });
+  it('stays absent when disabled and announces an unavailable survey', async () => {
+    postHogFeedbackClient.isConfigured = false;
     render(
       <MemoryRouter>
         <FeedbackButton />
@@ -72,8 +110,8 @@ describe('FeedbackButton', () => {
     expect(screen.queryByRole('button', { name: 'Give feedback' })).not.toBeInTheDocument();
 
     cleanup();
-    formbricksFeedbackClient.isConfigured = true;
-    vi.mocked(formbricksFeedbackClient.trackFeedback).mockResolvedValue(false);
+    postHogFeedbackClient.isConfigured = true;
+    vi.mocked(postHogFeedbackClient.openFeedback).mockResolvedValue('unavailable');
     render(
       <MemoryRouter>
         <FeedbackButton />
@@ -84,5 +122,7 @@ describe('FeedbackButton', () => {
     expect(
       await screen.findByText('The feedback form is unavailable. Try again later.'),
     ).toBeInTheDocument();
+    expect(button).toBeEnabled();
+    expect(button).toHaveAccessibleName('Give feedback');
   });
 });
