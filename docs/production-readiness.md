@@ -31,11 +31,12 @@ import-job lifecycle handling. See [Current scope](current-scope.md) for product
 behavior and its current verification evidence.
 
 The optional authoring guide keeps its progress in browser storage and does not
-send activity to an analytics service. Automatic Formbricks journey milestones
-and post-Simulation surveys remain disabled until an explicit consent flow and
-the alpha privacy notice cover that collection. The separate feedback button is
-user-initiated and Formbricks may record the full current URL; disclose and
-review that metadata before collecting tester responses.
+send activity to an analytics service. Automatic journey milestones and
+post-Simulation surveys remain disabled until an explicit consent flow and the
+alpha privacy notice cover that collection. The separate PostHog feedback
+survey is user-initiated and sends only sanitized answers, but PostHog still
+receives the client IP address; enable the project's IP discarding and disclose
+the provider before collecting tester responses.
 
 ## Non-Negotiable Priorities
 
