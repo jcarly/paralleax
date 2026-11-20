@@ -158,14 +158,6 @@
       "count": 9
     }
   },
-  "apps/api/src/health/health.service.spec.ts": {
-    "@typescript-eslint/no-unsafe-type-assertion": {
-      "count": 1
-    },
-    "max-lines-per-function": {
-      "count": 1
-    }
-  },
   "apps/api/src/imports/import-job.service.spec.ts": {
     "@typescript-eslint/no-unsafe-assignment": {
       "count": 4
