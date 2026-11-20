@@ -2,6 +2,16 @@
 
 ## Unreleased
 
+- Re-centred each Interaction's output `+` at the bottom of its card, where its
+  links start, as `docs/story-canvas.md` specifies (PAR-7). It had been moved to
+  the bottom right because the child's Trigger marker covered it; default
+  placement now leaves room for the marker. Stories created before that fix keep
+  tight spacing until Organize lays them out.
+- New Stories place their starting child where ELK places a child, one layer
+  below the start, instead of 16px under it (PAR-7). The Trigger marker covered
+  the child's input `+`, and links to later choices ran under the child card so
+  they seemed to leave its sides. API and MCP creation and the editor fallback
+  use the same distance. Existing Stories are not moved; Organize lays them out.
 - The story context menu now collapses from the first button of the graph tool
   rail, and leaves no empty strip when collapsed (PAR-7). Its former toggle sat
   half under the editor title bar, so a click on its centre missed it, and a
