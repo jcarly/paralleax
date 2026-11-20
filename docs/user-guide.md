@@ -512,8 +512,10 @@ for Story, location, and item-definition variables; no separate characteristic
 model is created.
 
 The **Locations**, **Characters**, **Variables**, and **Items** lists can be collapsed
-independently. Collapse or expand the whole story context menu from the control
-in its top-right corner.
+independently. Collapse or expand the whole story context menu with the first
+button of the graph tool rail. Collapsed, the menu takes no space; the setting is
+remembered in this browser. On narrow screens the open menu overlays the graph
+beside the tool rail, so the same button closes it.
 
 Open any location, character, reusable variable, or reusable item and fill in
 **Category** to organize it. The field suggests categories already used for the

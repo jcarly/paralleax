@@ -2,6 +2,11 @@
 
 ## Unreleased
 
+- The story context menu now collapses from the first button of the graph tool
+  rail, and leaves no empty strip when collapsed (PAR-7). Its former toggle sat
+  half under the editor title bar, so a click on its centre missed it, and a
+  48px empty strip remained. On narrow screens the open menu overlays the graph
+  beside the rail, which previously hid the only way to close it.
 - The Story settings gear now sits on the Story title line, vertically centred,
   as a toolbar icon action, and is redrawn with eight regular teeth (PAR-7). It
   wrapped under the title as a smaller icon, and its outline was irregular, so
