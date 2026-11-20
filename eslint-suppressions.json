@@ -673,11 +673,6 @@
       "count": 1
     }
   },
-  "apps/web/src/apiErrorMessages.test.ts": {
-    "max-lines-per-function": {
-      "count": 1
-    }
-  },
   "apps/web/src/apiErrorMessages.ts": {
     "@typescript-eslint/strict-boolean-expressions": {
       "count": 2

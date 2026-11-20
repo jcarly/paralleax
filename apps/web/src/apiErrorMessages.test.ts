@@ -3,11 +3,11 @@ import { ApiError } from './api';
 import { apiErrorMessage } from './apiErrorMessages';
 import { changeInterfaceLanguage, i18n } from './i18n';
 
-describe('apiErrorMessage', () => {
-  afterEach(async () => {
-    await i18n.changeLanguage('en');
-  });
+afterEach(async () => {
+  await i18n.changeLanguage('en');
+});
 
+describe('apiErrorMessage localization', () => {
   it('uses the localized copy for a stable application error code', async () => {
     await changeInterfaceLanguage('fr');
 
@@ -60,7 +60,9 @@ describe('apiErrorMessage', () => {
       'Cette histoire dépasse sa limite de taille ou d’entités. Réduisez son contenu et réessayez.',
     );
   });
+});
 
+describe('apiErrorMessage fallbacks', () => {
   it('keeps a future explicit application message as a compatibility fallback', () => {
     expect(
       apiErrorMessage(
