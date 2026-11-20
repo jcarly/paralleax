@@ -2,6 +2,11 @@
 
 ## Unreleased
 
+- Fixed the Story access settings help, which always described the By link
+  option whatever reading policy was selected. Reading, Editing and Comments
+  now each describe the selected value, and a short note states when the
+  Signed-in users editing policy also lets signed-in users read a private or
+  invitation-only Story, as the access rules already did (PAR-7).
 - Replaced the Formbricks feedback integration with PostHog Surveys
   (ADR-048). The header button still loads nothing before a click; it now
   opens the configured PostHog survey through `displaySurvey()`, announces a
