@@ -738,11 +738,6 @@
       "count": 1
     }
   },
-  "apps/web/src/components/EntityNameInput.test.tsx": {
-    "jsx-a11y-x/label-has-associated-control": {
-      "count": 1
-    }
-  },
   "apps/web/src/components/EntityNameInput.tsx": {
     "max-lines-per-function": {
       "count": 1
