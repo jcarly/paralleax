@@ -1,9 +1,12 @@
 import type { TFunction } from 'i18next';
-import type { Interaction, StatValue, Story, TriggerEvaluationContext } from '@paralleax/shared';
 import {
   getInputReachableInteractions,
   getInteractionTimerState,
   getTriggerConditionFailures,
+  type Interaction,
+  type StatValue,
+  type Story,
+  type TriggerEvaluationContext,
 } from '@paralleax/shared';
 import { getUnavailableReason } from '../storyPlayerPresentation';
 

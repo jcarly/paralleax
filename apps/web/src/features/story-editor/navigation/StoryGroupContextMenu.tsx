@@ -214,7 +214,7 @@ function GroupParentActions({
   onMoveToRoot,
 }: Pick<StoryGroupContextMenuProps, 'onClose' | 'onMove' | 'onMoveToRoot'> & { group: Group }) {
   const { t } = useTranslation();
-  if (!group.parentGroupId) {
+  if (group.parentGroupId === undefined || group.parentGroupId === '') {
     return null;
   }
   return (

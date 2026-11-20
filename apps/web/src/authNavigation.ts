@@ -1,7 +1,7 @@
 const localOrigin = 'https://paralleax.local';
 
 export function safeReturnTo(value: string | null, fallback = '/') {
-  if (!value || !value.startsWith('/') || value.startsWith('//')) {
+  if (value === null || value === '' || !value.startsWith('/') || value.startsWith('//')) {
     return fallback;
   }
   try {

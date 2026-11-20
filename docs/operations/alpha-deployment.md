@@ -104,7 +104,7 @@ delete both legacy values from the deployment environment before release.
 
 ## Build And Release
 
-The multi-stage `Dockerfile` uses Node 24, matching the repository and CI.
+The multi-stage `Dockerfile` uses Node 26, matching the repository and CI.
 `npm run test:operations` fails when the Node major of the production or
 development Docker image or of CI differs from `engines.node` in `package.json`,
 and CI runs it for every Dockerfile or workflow change, so a Node upgrade changes
