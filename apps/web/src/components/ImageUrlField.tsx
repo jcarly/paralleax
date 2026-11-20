@@ -15,7 +15,8 @@ export function ImageUrlField({
 }) {
   const { t } = useTranslation();
   const [isDialogOpen, setIsDialogOpen] = useState(false);
-  const actionLabel = imageUrl ? t('inspector.editImage') : t('inspector.addImage');
+  const hasImage = imageUrl !== undefined && imageUrl !== '';
+  const actionLabel = hasImage ? t('inspector.editImage') : t('inspector.addImage');
 
   return (
     <>
@@ -28,7 +29,7 @@ export function ImageUrlField({
           setIsDialogOpen(true);
         }}
       >
-        {imageUrl ? (
+        {hasImage ? (
           <img src={imageUrl} alt="" />
         ) : (
           <span aria-hidden="true">{t('inspector.imagePlaceholder')}</span>
