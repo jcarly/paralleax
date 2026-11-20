@@ -112,6 +112,13 @@ Geist, followed by Geist Sans and platform sans-serif fallbacks. Use
 `--font-narrative` (Georgia, Times New Roman, serif) for story text and
 editorial/display headings. Reader prose, its title, and the editable Simulation
 surface share the narrative family so authors preview the same reading style.
+Story body text uses `--type-size-narrative` and `--type-leading-narrative` both
+when it is read and when it is edited (Inspector and Simulation), so opening the
+editor never reflows the text (2026-11-20). The rich-text editor is one framed
+field: its text first, then its formatting toolbar and character count inside
+the same border, with the shared field focus edge on the whole frame. The
+toolbar follows the WAI-ARIA toolbar keyboard model (one Tab stop, arrow keys,
+Home and End).
 
 The font stacks reference installed system fonts; the web app does not download
 or bundle font files. The operating system may select a fallback when Geist or

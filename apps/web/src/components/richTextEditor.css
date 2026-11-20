@@ -1,17 +1,24 @@
-.rich-text-surface {
-  min-height: 180px;
-  padding: 0.7rem;
-  overflow-wrap: anywhere;
-  border: 1px solid #cfd5df;
-  border-radius: 0 0 0.5rem 0.5rem;
-  background: white;
+/* One frame around the text and its toolbar, with the shared field focus style. */
+.rich-text-editor {
+  border: 1px solid var(--form-control-border);
+  border-radius: var(--form-control-radius);
+  background: var(--form-control-surface);
 }
 
-.rich-text-surface:focus-within {
+.rich-text-editor:focus-within {
   border-color: var(--color-primary);
-  outline: 2px solid var(--color-surface);
+  outline: 2px solid var(--color-primary);
   outline-offset: 1px;
-  box-shadow: 0 0 0 4px var(--color-primary);
+}
+
+/* Same typography and inset as the read-only body, so editing does not reflow it. */
+.rich-text-surface {
+  min-height: 180px;
+  padding: 0.45rem;
+  overflow-wrap: anywhere;
+  font-family: var(--font-narrative);
+  font-size: var(--type-size-narrative);
+  line-height: var(--type-leading-narrative);
 }
 
 .rich-text-editor .rich-text-surface .ProseMirror:focus {
@@ -161,7 +168,10 @@
 }
 
 .rich-text-limit {
-  margin: 0.35rem 0 0;
+  margin: 0;
+  padding: 0.25rem 0.45rem 0.35rem;
+  background: var(--color-surface-secondary);
+  border-radius: 0 0 var(--form-control-radius) var(--form-control-radius);
   color: var(--color-muted);
   font-size: 0.78rem;
   text-align: right;
@@ -202,8 +212,6 @@
 
 .rich-text-editor--focus-revealed:not(:focus-within) .rich-text-surface {
   min-height: 2.75rem;
-  padding: 0.55rem 0.7rem;
-  border-radius: 0.5rem;
 }
 
 .rich-text-editor--focus-revealed:focus-within .rich-text-surface {

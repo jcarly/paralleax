@@ -45,18 +45,18 @@
 }
 
 .rich-text-editor {
-  margin: 0 0 1rem;
+  margin: 0.25rem 0;
 }
 
+/* Below the text, inside the editor frame, so revealing it never moves the text. */
 .rich-text-toolbar {
   display: flex;
   flex-wrap: wrap;
   gap: 0.3rem;
   padding: 0.45rem;
-  border: 1px solid #cfd5df;
-  border-bottom: 0;
-  border-radius: 0.5rem 0.5rem 0 0;
-  background: #f5f7fa;
+  border-top: 1px solid var(--color-border);
+  border-radius: 0 0 var(--form-control-radius) var(--form-control-radius);
+  background: var(--color-surface-secondary);
 }
 
 .rich-text-toolbar button {

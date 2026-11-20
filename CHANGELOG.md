@@ -2,6 +2,16 @@
 
 ## Unreleased
 
+- Editing a Story body no longer changes how it looks (PAR-7). In the Inspector
+  the text switched from the narrative serif at 18.4px to the interface sans at
+  16px and moved down by about 100px when the toolbar appeared; it now keeps the
+  same font, size, line height and position, through shared narrative type
+  tokens. The editor is one frame around the text, its formatting toolbar (now
+  below the text) and the character count, with the shared field focus style
+  instead of a heavy ring around the text only. The toolbar is a single Tab stop
+  navigated with arrow keys, Home and End. The Tiptap editor chunk now preloads
+  when the editor is idle for authors who can edit, so the first edit opens
+  without the Loading state (about 345ms to 75ms in development).
 - Added a private, local MCP server prototype (`apps/mcp`, ADR-047) built on
   the official MCP TypeScript SDK v2 over stdio. It calls the existing HTTP API
   as the signed-in user (`paralleax-mcp login`) and exposes six tools:
