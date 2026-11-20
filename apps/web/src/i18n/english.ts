@@ -418,7 +418,15 @@ export const englishTranslation = {
       authenticated: 'Signed-in users',
       public: 'Everyone',
       unlisted: 'By link (unlisted)',
-      help: "Anyone with the URL can read the Story without signing in. It won't appear in the public catalog.",
+      help: {
+        public: 'Anyone can read the Story without signing in. It appears in the public catalog.',
+        unlisted:
+          "Anyone with the URL can read the Story without signing in. It won't appear in the public catalog.",
+        authenticated: 'Any signed-in user can read the Story and find it in the catalog.',
+        invitation: 'Only the users added below can read the Story.',
+        private: 'Only you can read the Story. Access given to the users below stays inactive.',
+      },
+      widenedByEditing: 'Signed-in users can also read it, because they can edit it.',
       invitation: 'By invitation',
     },
     edit: {
@@ -426,12 +434,22 @@ export const englishTranslation = {
       owner: 'Owner only',
       collaborators: 'Editors',
       authenticated: 'Signed-in users',
+      help: {
+        owner: 'Only you can edit the Story.',
+        collaborators:
+          'You and the users added below as Editor can edit the Story, unless reading is Owner only.',
+        authenticated: 'Any signed-in user can read and edit the Story.',
+      },
     },
     comments: {
       label: 'Comments',
       readers: 'Readers',
       editors: 'Editors',
-      help: 'Editors can comment while editing. Signed-in readers comment from the reader only.',
+      help: {
+        readers:
+          'Signed-in users who can read the Story comment from the reader. Editors comment while editing.',
+        editors: 'Only users who can edit the Story comment, while editing.',
+      },
     },
     collaborators: 'Users',
     collaboratorsHelp: 'Add an existing Paralleax account with reading or editing access.',

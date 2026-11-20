@@ -45,6 +45,9 @@
     Geist, 'Geist Sans', ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont, 'Segoe UI',
     sans-serif;
   --font-narrative: Georgia, 'Times New Roman', serif;
+  /* Story body text, shared by reading and editing so switching mode does not reflow it. */
+  --type-size-narrative: 1.15rem;
+  --type-leading-narrative: 1.7;
   --type-size-compact: 0.75rem;
   --type-size-control: 0.875rem;
   --type-size-body: 0.875rem;
