@@ -7,8 +7,11 @@
 
 .rich-text-editor:focus-within {
   border-color: var(--color-primary);
-  outline: 2px solid var(--color-primary);
+  /* The design-system focus indicator for editable Story fields (D8): an opaque
+     surface outline and a primary outer ring, around the text and its toolbar. */
+  outline: 2px solid var(--color-surface);
   outline-offset: 1px;
+  box-shadow: 0 0 0 4px var(--color-primary);
 }
 
 /* Same typography and inset as the read-only body, so editing does not reflow it. */

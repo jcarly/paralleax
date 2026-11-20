@@ -7,8 +7,8 @@
   16px and moved down by about 100px when the toolbar appeared; it now keeps the
   same font, size, line height and position, through shared narrative type
   tokens. The editor is one frame around the text, its formatting toolbar (now
-  below the text) and the character count, with the shared field focus style
-  instead of a heavy ring around the text only. The toolbar is a single Tab stop
+  below the text) and the character count; the editable-field focus indicator
+  now surrounds that whole frame instead of the text only. The toolbar is a single Tab stop
   navigated with arrow keys, Home and End. The Tiptap editor chunk now preloads
   when the editor is idle for authors who can edit, so the first edit opens
   without the Loading state (about 345ms to 75ms in development).

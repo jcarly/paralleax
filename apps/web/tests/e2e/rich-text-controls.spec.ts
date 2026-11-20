@@ -189,6 +189,7 @@ test('keeps the body text in place with the same typography when editing starts'
   // One frame around the text and its toolbar.
   const editor = page.locator('.rich-text-editor');
   await expect(editor).toHaveCSS('outline-style', 'solid');
+  await expect(editor).toHaveCSS('box-shadow', /rgb\(47, 98, 80\)/);
   await expect(page.locator('.rich-text-surface')).toHaveCSS('border-top-width', '0px');
   const [frame, toolbar] = await Promise.all([
     editor.boundingBox(),

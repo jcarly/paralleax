@@ -116,7 +116,8 @@ Story body text uses `--type-size-narrative` and `--type-leading-narrative` both
 when it is read and when it is edited (Inspector and Simulation), so opening the
 editor never reflows the text (2026-11-20). The rich-text editor is one framed
 field: its text first, then its formatting toolbar and character count inside
-the same border, with the shared field focus edge on the whole frame. The
+the same border, with the editable-field focus indicator (opaque surface
+outline and primary outer ring) on the whole frame. The
 toolbar follows the WAI-ARIA toolbar keyboard model (one Tab stop, arrow keys,
 Home and End).
 
