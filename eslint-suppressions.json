@@ -681,11 +681,6 @@
       "count": 1
     }
   },
-  "apps/web/src/components/ImageUrlField.tsx": {
-    "@typescript-eslint/strict-boolean-expressions": {
-      "count": 2
-    }
-  },
   "apps/web/src/components/InteractionInspector.test.tsx": {
     "@typescript-eslint/no-non-null-assertion": {
       "count": 3
