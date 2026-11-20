@@ -7,6 +7,23 @@
   get the shared button styles (PAR-7). They now use the existing `button` class
   and match the Comments action in size, border, centring, hover, focus and
   tooltip.
+- Editing a Story body no longer changes how it looks (PAR-7). In the Inspector
+  the text switched from the narrative serif at 18.4px to the interface sans at
+  16px and moved down by about 100px when the toolbar appeared; it now keeps the
+  same font, size, line height and position, through shared narrative type
+  tokens. The editor is one frame around the text, its formatting toolbar (now
+  below the text) and the character count; the editable-field focus indicator
+  now surrounds that whole frame instead of the text only. The toolbar is a single Tab stop
+  navigated with arrow keys, Home and End. The Tiptap editor chunk now preloads
+  when the editor is idle for authors who can edit, so the first edit opens
+  without the Loading state (about 345ms to 75ms in development).
+- Noted author documentation, then optional topic guides (characters,
+  variables, conditions), as a proposed roadmap item (PAR-7).
+- Fixed the Story access settings help, which always described the By link
+  option whatever reading policy was selected. Reading, Editing and Comments
+  now each describe the selected value, and a short note states when the
+  Signed-in users editing policy also lets signed-in users read a private or
+  invitation-only Story, as the access rules already did (PAR-7).
 - Replaced the Formbricks feedback integration with PostHog Surveys
   (ADR-048). The header button still loads nothing before a click; it now
   opens the configured PostHog survey through `displaySurvey()`, announces a
