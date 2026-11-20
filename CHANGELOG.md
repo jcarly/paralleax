@@ -2,6 +2,11 @@
 
 ## Unreleased
 
+- Re-centred each Interaction's output `+` at the bottom of its card, where its
+  links start, as `docs/story-canvas.md` specifies (PAR-7). It had been moved to
+  the bottom right because the child's Trigger marker covered it; default
+  placement now leaves room for the marker. Stories created before that fix keep
+  tight spacing until Organize lays them out.
 - New Stories place their starting child where ELK places a child, one layer
   below the start, instead of 16px under it (PAR-7). The Trigger marker covered
   the child's input `+`, and links to later choices ran under the child card so
