@@ -423,7 +423,19 @@ export const frenchTranslation = {
       authenticated: 'Utilisateurs connectés',
       public: 'Tout le monde',
       unlisted: 'Par lien (non répertoriée)',
-      help: 'Toute personne disposant de l’URL peut lire l’histoire sans compte. Elle reste absente du catalogue public.',
+      help: {
+        public:
+          'Tout le monde peut lire l’histoire sans compte. Elle apparaît dans le catalogue public.',
+        unlisted:
+          'Toute personne disposant de l’URL peut lire l’histoire sans compte. Elle reste absente du catalogue public.',
+        authenticated:
+          'Tout utilisateur connecté peut lire l’histoire et la trouver dans le catalogue.',
+        invitation: 'Seuls les utilisateurs ajoutés ci-dessous peuvent lire l’histoire.',
+        private:
+          'Vous seul pouvez lire l’histoire. Les accès donnés aux utilisateurs ci-dessous restent inactifs.',
+      },
+      widenedByEditing:
+        'Les utilisateurs connectés peuvent aussi la lire, car ils peuvent la modifier.',
       invitation: 'Par invitation',
     },
     edit: {
@@ -431,12 +443,23 @@ export const frenchTranslation = {
       owner: 'Propriétaire uniquement',
       collaborators: 'Éditeurs',
       authenticated: 'Utilisateurs connectés',
+      help: {
+        owner: 'Vous seul pouvez modifier l’histoire.',
+        collaborators:
+          'Vous et les utilisateurs ajoutés ci-dessous comme Éditeur pouvez la modifier, sauf si la lecture est réservée au propriétaire.',
+        authenticated: 'Tout utilisateur connecté peut lire et modifier l’histoire.',
+      },
     },
     comments: {
       label: 'Commentaires',
       readers: 'Lecteurs',
       editors: 'Éditeurs',
-      help: 'Les éditeurs commentent dans l’éditeur. Les lecteurs connectés commentent uniquement depuis le lecteur.',
+      help: {
+        readers:
+          'Les utilisateurs connectés qui peuvent lire l’histoire commentent depuis le lecteur. Les éditeurs commentent dans l’éditeur.',
+        editors:
+          'Seuls les utilisateurs qui peuvent modifier l’histoire commentent, dans l’éditeur.',
+      },
     },
     collaborators: 'Utilisateurs',
     collaboratorsHelp:

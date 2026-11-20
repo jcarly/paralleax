@@ -321,7 +321,10 @@ describe('AuthService', () => {
       'Member',
     );
     const memberEmail = member.verificationRequired ? member.email : member.user.email;
-    const memberUser = users.get(memberEmail)!;
+    const memberUser = users.get(memberEmail);
+    if (!memberUser) {
+      throw new Error(`Expected registered user ${memberEmail}`);
+    }
     await expect(auth.listUsers('user')).rejects.toBeInstanceOf(ForbiddenException);
     await expect(auth.updateUserRole('admin', memberUser.id, 'admin')).resolves.toMatchObject({
       id: memberUser.id,
