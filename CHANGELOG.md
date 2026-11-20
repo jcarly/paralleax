@@ -4,8 +4,9 @@
 
 - Readers no longer see authoring placeholders as text (PAR-7). An untitled
   scene shows no label, a lone untitled choice reads Continue, and untitled
-  choices among several read Option 1, Option 2 and so on. Simulation and the
-  Inspector's options ask for a label on those, without blocking drafts. In the
+  choices among several read Option 1, Option 2 and so on. The graph,
+  Simulation and the Inspector's options ask for a label on those, without
+  blocking drafts; requiring labels waits for version publication (V0.9). In the
   graph and the Inspector, placeholder titles are greyed so they no longer look
   authored. Stored Stories are unchanged.
 - Added a private, local MCP server prototype (`apps/mcp`, ADR-047) built on

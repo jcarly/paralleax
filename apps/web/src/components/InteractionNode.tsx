@@ -8,6 +8,8 @@ export interface InteractionNodeData extends Record<string, unknown> {
   body: string;
   selected: boolean;
   occurrenceCount?: number;
+  /** One of several choices without its own title: readers would see `Option N`. */
+  needsChoiceLabel?: boolean;
   dimmed?: boolean;
   location?: { id: string; name: string };
   characters?: Array<{ id: string; name: string; imageUrl?: string }>;
@@ -59,7 +61,10 @@ export function InteractionNode({ id, data }: NodeProps<Node<InteractionNodeData
   );
   const authoredTitle = d.title.trim();
   const title =
-    authoredTitle || (rootTriggerId !== undefined && rootTriggerId.length > 0 ? fallbackTitle : '');
+    authoredTitle ||
+    ((rootTriggerId !== undefined && rootTriggerId.length > 0) || d.needsChoiceLabel === true
+      ? fallbackTitle
+      : '');
   const commentEntityTitle = authoredTitle || fallbackTitle;
   const characters = d.characters ?? [];
   const createParent = (event: NodeActionEvent) => {
@@ -173,14 +178,26 @@ export function InteractionNode({ id, data }: NodeProps<Node<InteractionNodeData
           className={`interaction-node-label${authoredTitle ? '' : ' interaction-label-fallback'}`}
           leadingIcon="→"
           suffix={
-            (d.occurrenceCount ?? 0) > 0 ? (
-              <span
-                className="interaction-occurrence-count"
-                aria-label={t('graph.occurrences', { count: d.occurrenceCount })}
-              >
-                {d.occurrenceCount}
-              </span>
-            ) : null
+            <>
+              {d.needsChoiceLabel === true ? (
+                <span
+                  className="interaction-label-warning"
+                  role="img"
+                  aria-label={t('player.choiceLabelNeeded')}
+                  title={t('player.choiceLabelNeeded')}
+                >
+                  !
+                </span>
+              ) : null}
+              {(d.occurrenceCount ?? 0) > 0 ? (
+                <span
+                  className="interaction-occurrence-count"
+                  aria-label={t('graph.occurrences', { count: d.occurrenceCount })}
+                >
+                  {d.occurrenceCount}
+                </span>
+              ) : null}
+            </>
           }
         />
       ) : null}

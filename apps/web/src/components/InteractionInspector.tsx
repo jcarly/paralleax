@@ -27,6 +27,7 @@ import { RichTextEditor } from './RichTextEditor';
 import { RichTextContent } from './RichTextContent';
 import { hasAuthoredRichTextContent } from './richTextProjection';
 import { VariablePicker } from './VariablePicker';
+import { getOptionDestinations } from '../features/story/choiceLabelDiagnostics';
 import {
   choiceLabelForDisplay,
   interactionTitleForDisplay,
@@ -394,9 +395,7 @@ function InteractionInspectorView({
     ? `${interaction.durationMinutes} ${t('interactionInspector.minutesShort')}`
     : t('interactionInspector.noDuration');
   const durationTooltip = durationSummary;
-  const optionDestinations = story.interactions.filter((candidate) =>
-    candidate.triggers.some((trigger) => trigger.inputInteractionIds.includes(interaction.id)),
-  );
+  const optionDestinations = getOptionDestinations(story, interaction.id);
   const effectUnavailableReasons: Record<EffectType, string | undefined> = {
     stat: availableStatTarget
       ? undefined

@@ -18,9 +18,10 @@ its content and never shows an authoring placeholder such as `Start` or
 `New interaction`. As a choice, an untitled destination reads `Continue` when it
 is the only choice and `Option N` (its position among the shown choices) when
 several follow. This is a presentation fallback: nothing is stored and authored
-titles are unchanged. Simulation and the Inspector's option list mark each
-untitled option among several as needing a label; this warning never blocks
-drafting, saving, or testing. Authors customize the label by writing the
+titles are unchanged. The graph, Simulation and the Inspector's option list
+mark each untitled option among several as needing a label; this warning never
+blocks drafting, saving, or testing. Requiring labels is deferred to the
+validation of a future version publication (see the roadmap, V0.9). Authors customize the label by writing the
 destination Interaction's title.
 
 ## Function Shape
