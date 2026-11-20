@@ -51,10 +51,17 @@ function sentEvents(): SentEvent[] {
     });
 }
 
-async function waitForSentEvent(event: string) {
+function answers(completed: boolean): SentEvent[] {
+  return sentEvents().filter(
+    ({ event, properties }) =>
+      event === 'survey sent' && properties.$survey_completed === completed,
+  );
+}
+
+async function waitForSentEvent(match: (events: SentEvent[]) => boolean) {
   await vi.waitFor(
     () => {
-      expect(sentEvents().map((sent) => sent.event)).toContain(event);
+      expect(match(sentEvents())).toBe(true);
     },
     { timeout: 8000 },
   );
@@ -76,14 +83,40 @@ async function closeSurvey() {
   );
 }
 
-async function answerSurvey(choice: string) {
-  const root = surveyRoot();
-  const option = Array.from(root?.querySelectorAll('label') ?? []).find(
-    (label) => label.textContent.trim() === choice,
-  );
-  option?.click();
+async function showsQuestion(question: string) {
   await vi.waitFor(() => {
-    const submit = root?.querySelector<HTMLButtonElement>('button[aria-label="Submit survey"]');
+    expect(surveyRoot()?.querySelector('.survey-question')?.textContent).toBe(question);
+  });
+}
+
+/** Survey state updates are asynchronous: wait until the answer is rendered. */
+async function choose(choice: string) {
+  const option = () =>
+    Array.from(surveyRoot()?.querySelectorAll('label') ?? []).find(
+      (label) => label.textContent.trim() === choice,
+    );
+  option()?.click();
+  await vi.waitFor(() => {
+    expect(option()?.querySelector('input')?.checked).toBe(true);
+  });
+  await new Promise((resolve) => setTimeout(resolve, 20));
+}
+
+async function type(text: string) {
+  const field = surveyRoot()?.querySelector('textarea');
+  if (field) {
+    field.value = text;
+    field.dispatchEvent(new Event('input', { bubbles: true }));
+  }
+  await new Promise((resolve) => setTimeout(resolve, 20));
+}
+
+/** Clicks the survey's next/submit button once the current answer is accepted. */
+async function submitStep() {
+  await vi.waitFor(() => {
+    const submit = surveyRoot()?.querySelector<HTMLButtonElement>(
+      'button[aria-label="Submit survey"]',
+    );
     expect(submit?.disabled).toBe(false);
     submit?.click();
   });
@@ -118,65 +151,87 @@ afterAll(() => {
   document.body.innerHTML = '';
 });
 
-describe('real SDK opening and answering', () => {
-  it('makes no request before the click, then opens the translated survey', async () => {
+describe('real SDK opening and abandonment', () => {
+  it('makes no request before the click, then opens the French base survey', async () => {
     await new Promise((resolve) => setTimeout(resolve, 50));
     expect(requests).toEqual([]);
     expect(surveyRoot()).toBeNull();
 
     await expect(client.openFeedback('fr', context)).resolves.toBe('opened');
 
-    expect(surveyRoot()?.textContent).toContain('Quel type de retour ?');
+    await showsQuestion('Quel type de retour ?');
     expect(requests.map(({ url }) => `${url.origin}${url.pathname}`)).toEqual([
       `${apiHost}/api/surveys/`,
     ]);
   });
 
-  it('sends the answer with the context and without automatic metadata', async () => {
-    const submitted = vi.fn();
-    const unsubscribe = client.onSubmitted(submitted);
-    await answerSurvey('Bug');
+  it('keeps a partial answer without thanking the user when the survey is abandoned', async () => {
+    const thanked = vi.fn();
+    const unsubscribe = client.onSubmitted(thanked);
+    await choose('Bug');
+    await submitStep();
+    await showsQuestion('Décrivez votre retour');
+    await closeSurvey();
     unsubscribe();
-    expect(submitted).toHaveBeenCalledOnce();
 
-    await waitForSentEvent('survey sent');
-    const events = sentEvents();
-    expect(new Set(events.map(({ event }) => event))).toEqual(
-      new Set(['survey shown', 'survey sent']),
+    await waitForSentEvent((events) => events.some(({ event }) => event === 'survey dismissed'));
+    expect(thanked).not.toHaveBeenCalled();
+    expect(answers(true)).toEqual([]);
+    expect(answers(false).at(-1)?.properties).toMatchObject({
+      '$survey_response_feedback-type': 'Bug',
+      ...context,
+    });
+  }, 15_000);
+});
+
+describe('real SDK complete response', () => {
+  it('sends the three answers with the context and without automatic metadata', async () => {
+    const thanked = vi.fn();
+    const unsubscribe = client.onSubmitted(thanked);
+    await expect(client.openFeedback('en', context)).resolves.toBe('opened');
+    await showsQuestion('What kind of feedback?');
+    await choose('Usability difficulty');
+    await submitStep();
+    await showsQuestion('Describe your feedback');
+    await type('[TEST] The save indicator is unclear.');
+    await submitStep();
+    await showsQuestion('What is your profile?');
+    await choose('Game studio');
+    await submitStep();
+    unsubscribe();
+
+    expect(thanked).toHaveBeenCalledOnce();
+    await waitForSentEvent((events) =>
+      events.some(({ properties }) => properties.$survey_completed === true),
     );
-    expect(events.find(({ event }) => event === 'survey sent')?.properties).toMatchObject({
+    const complete = answers(true);
+    expect(complete).toHaveLength(1);
+    expect(complete[0]?.properties).toMatchObject({
       $survey_id: surveyId,
-      '$survey_response_question-type': 'Bug',
-      $survey_completed: true,
-      $survey_language: 'fr',
+      '$survey_response_feedback-type': 'Usability difficulty',
+      '$survey_response_feedback-description': '[TEST] The save indicator is unclear.',
+      '$survey_response_author-profile': 'Game studio',
+      $survey_language: 'en',
       $current_url: '/stories/:storyId/edit',
       ...context,
       $geoip_disable: true,
       $process_person_profile: false,
     });
-    expect(JSON.stringify(events)).not.toMatch(
+    expect(JSON.stringify(sentEvents())).not.toMatch(
       /story-secret|panel=context|\$session_id|\$window_id|\$referrer|\$browser|\$device_id|\$set/,
     );
   }, 15_000);
 });
 
 describe('real SDK reopening', () => {
-  it('opens the survey again in another language after a response', async () => {
+  it('opens the survey again in Italian after a response', async () => {
     // Close the thank-you message, as a tester would.
     await closeSurvey();
 
     await expect(client.openFeedback('it', context)).resolves.toBe('opened');
-    expect(surveyRoot()?.textContent).toContain('Che tipo di feedback?');
+    await showsQuestion('Che tipo di feedback?');
+    await closeSurvey();
   });
-
-  it('reopens after a dismissal', async () => {
-    await closeSurvey();
-    await waitForSentEvent('survey dismissed');
-
-    await expect(client.openFeedback('en', context)).resolves.toBe('opened');
-    expect(surveyRoot()?.textContent).toContain('What kind of feedback?');
-    await closeSurvey();
-  }, 15_000);
 });
 
 describe('real SDK failures and event allowlist', () => {
@@ -192,7 +247,10 @@ describe('real SDK failures and event allowlist', () => {
     expect(surveyRoot()).toBeNull();
   });
 
-  it('never sends events other than the survey lifecycle', () => {
+  it('never sends events other than the survey lifecycle', async () => {
+    await waitForSentEvent(
+      (events) => events.filter(({ event }) => event === 'survey dismissed').length >= 2,
+    );
     expect(new Set(sentEvents().map(({ event }) => event))).toEqual(
       new Set(['survey shown', 'survey sent', 'survey dismissed']),
     );

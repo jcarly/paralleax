@@ -56,9 +56,12 @@ ignoreDelay: true, properties })`. Because `displaySurvey()` returns nothing
    the configured survey, keeps only `$survey_*` answers, `paralleax_*` context
    and the minimal ingestion fields, replaces `$current_url` and `$pathname`
    with the normalized route, and sets `$geoip_disable`.
-7. **Confirmation.** The PostHog survey's translated thank-you screen is the
-   visible confirmation; Paralleax announces the submission to assistive
-   technology only after a completed `survey sent` event.
+7. **Acknowledgement, not delivery confirmation.** The PostHog survey's
+   translated thank-you screen is the visible acknowledgement; Paralleax
+   announces `Thank you for your feedback!` to assistive technology after a
+   completed `survey sent` event. `before_send` runs before the SDK sends the
+   batch, and the public API exposes no reception callback, so the wording
+   never claims the response was received.
 
 ## Consequences
 

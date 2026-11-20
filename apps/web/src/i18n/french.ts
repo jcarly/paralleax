@@ -59,7 +59,7 @@ export const frenchTranslation = {
     signOut: 'Se déconnecter',
     account: 'Paramètres du compte',
     feedback: 'Donner un retour',
-    feedbackSent: 'Merci, votre retour a été envoyé.',
+    feedbackThanks: 'Merci pour votre retour !',
     feedbackUnavailable: 'Le formulaire de retour est indisponible. Réessayez plus tard.',
     help: 'Guide',
     loading: 'Chargement…',

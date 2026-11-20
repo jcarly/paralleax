@@ -77,12 +77,22 @@ test('opens the PostHog survey only on request and sends a minimal response', as
   await expect(survey(page).getByText('What kind of feedback?')).toBeVisible();
   await survey(page).getByText('Bug', { exact: true }).click();
   await survey(page).getByRole('button', { name: 'Submit survey' }).click();
-  await expect(page.getByText('Thank you, your feedback was sent.')).toBeAttached();
+  await survey(page).getByRole('textbox').fill('[TEST] The save indicator is unclear.');
+  await survey(page).getByRole('button', { name: 'Submit survey' }).click();
+  await survey(page).getByText('Game studio', { exact: true }).click();
+  await survey(page).getByRole('button', { name: 'Submit survey' }).click();
+  await expect(page.getByText('Thank you for your feedback!')).toBeAttached();
   await expect(survey(page).getByText('Thank you!')).toBeVisible();
 
-  await expect.poll(() => postHog.events.map(({ event }) => event)).toContain('survey sent');
-  const answer = postHog.events.find(({ event }) => event === 'survey sent');
-  expect(answer?.properties).toMatchObject({
+  const completed = () =>
+    postHog.events.find(
+      ({ event, properties }) => event === 'survey sent' && properties.$survey_completed === true,
+    );
+  await expect.poll(() => completed() !== undefined).toBe(true);
+  expect(completed()?.properties).toMatchObject({
+    '$survey_response_feedback-type': 'Bug',
+    '$survey_response_feedback-description': '[TEST] The save indicator is unclear.',
+    '$survey_response_author-profile': 'Game studio',
     $survey_id: surveyId,
     $current_url: '/stories/:storyId/edit',
     paralleax_route: '/stories/:storyId/edit',

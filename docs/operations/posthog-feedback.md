@@ -25,26 +25,29 @@ removed; the context fields keep the same names.
 | Survey     | `01a1f88c-830b-0000-a431-e0f5703c21fc` (`DEFAULT_FEEDBACK_SURVEY_ID`)                                |
 | Management | <https://eu.posthog.com/project/336282/surveys/01a1f88c-830b-0000-a431-e0f5703c21fc>                 |
 | Questions  | Feedback type (bug, usability difficulty, suggestion, other); optional description; optional profile |
-| Languages  | French, English, Italian                                                                             |
+| Languages  | French (base), English and Italian translations                                                      |
 
 Required survey configuration, checked before publication:
 
-1. **Type `widget` is compatible.** Paralleax disables PostHog's automatic
-   display, so the widget tab or selector never renders by itself. The button
-   opens the survey with `displaySurvey()` as a popover. Do not convert the
-   survey to `popover` or `api`.
+1. **Type `widget` (button selector) is compatible.** Paralleax disables
+   PostHog's automatic display, so PostHog attaches no click handler to the
+   configured selector and renders no tab. The Paralleax button opens the
+   survey itself with `displaySurvey()` as a popover, whatever selector is
+   configured. Do not convert the survey to `popover` or `api`.
 2. **No URL, selector, device, or wait-period condition.** Conditions are
    ignored when the button opens the survey, but a URL condition is still
    checked by the renderer and can hide it.
 3. **Repeated responses allowed** and **partial responses enabled**, so the
    same visitor can report several times.
 4. **Thank-you message enabled** (`Display thank you message`), translated in
-   the three languages. It is the visible confirmation after submission.
+   the three languages. It is the visible acknowledgement after submission.
    Enabling `Auto disappear` is recommended: while the thank-you screen is
    open, a new click reports the form as unavailable instead of reopening it.
-5. **Translations** for `fr` and `it` on every question and on the thank-you
-   message. English is the base language. Paralleax passes its interface
-   language (`en`, `fr`, `it`) as `override_display_language`.
+5. **Translations.** French is the base language; `en` and `it` translations
+   cover every question, choice, and the thank-you message. Paralleax passes
+   its interface language (`fr`, `en`, `it`) as `override_display_language`:
+   `fr` matches no translation and keeps the base text, `en` and `it` select
+   their translation. Keep the short translation keys `en` and `it`.
 6. **Project settings:** enable **Discard client IP data**, and keep session
    replay, autocapture, heatmaps, and web analytics off for this project's web
    client. The SDK disables them locally as well.
@@ -55,6 +58,11 @@ survey is launched. Launching the survey is an operator decision made after the
 privacy notice is ready; deployment never launches it.
 
 ## Application configuration
+
+`posthog-js` is pinned to an exact version (`1.448.0`): the privacy filter and
+the display checks depend on SDK behavior, so each upgrade is a reviewed change
+that must keep `posthogFeedbackClient.sdk.test.ts` and the feedback end-to-end
+tests green.
 
 The token and the API host are required. Leaving either one empty keeps the
 SDK and the button disabled:
@@ -149,9 +157,11 @@ window ids.
   localStorage. They hold survey state, not identity.
 - **Free text.** The optional description and profile are typed by the user.
   The survey should tell testers not to include Story content or personal data.
-- **Delivery.** The confirmation reflects a response handed to the SDK. The SDK
-  batches and retries sending; a network failure right after submission can
-  still lose it.
+- **Delivery.** Neither PostHog's thank-you screen nor the Paralleax
+  announcement (`Thank you for your feedback!`) confirms reception: they follow
+  the response being handed to the SDK, which batches and retries sending. A
+  network failure right after submission can still lose it, which is why the
+  wording thanks the user instead of claiming the response was sent.
 - **Close animation.** PostHog removes a closed popover after a short
   animation. A click during that animation can display the survey and then lose
   it to the delayed cleanup; clicking again opens it.
@@ -169,15 +179,15 @@ must not be added by changing these SDK options.
 
 ## Failure behavior
 
-| Situation                                        | Result                                                                                        |
-| ------------------------------------------------ | --------------------------------------------------------------------------------------------- |
-| Variables missing or invalid (`phx_`, path...)   | No button, no SDK                                                                             |
-| SDK chunk blocked or offline                     | `The feedback form is unavailable. Try again later.`                                          |
-| PostHog unreachable, blocked, or timing out      | Same message after at most about 10 seconds                                                   |
-| Survey draft, archived, ended, or unknown        | Same message; no popover                                                                      |
-| Survey loaded but not displayed within 4 seconds | Same message                                                                                  |
-| User closes the survey                           | Nothing announced; the button reopens it                                                      |
-| Response submitted                               | PostHog thank-you screen; `Thank you, your feedback was sent.` is announced to screen readers |
+| Situation                                        | Result                                                                                  |
+| ------------------------------------------------ | --------------------------------------------------------------------------------------- |
+| Variables missing or invalid (`phx_`, path...)   | No button, no SDK                                                                       |
+| SDK chunk blocked, offline, or stalled over 15 s | `The feedback form is unavailable. Try again later.`                                    |
+| PostHog unreachable, blocked, or timing out      | Same message after at most about 10 seconds                                             |
+| Survey draft, archived, ended, or unknown        | Same message; no popover                                                                |
+| Survey loaded but not displayed within 4 seconds | Same message                                                                            |
+| User closes the survey                           | Nothing announced; the button reopens it                                                |
+| Response submitted                               | PostHog thank-you screen; `Thank you for your feedback!` is announced to screen readers |
 
 The button is disabled only while a request is in progress. No error escapes
 to the application, and a later click retries the SDK load.

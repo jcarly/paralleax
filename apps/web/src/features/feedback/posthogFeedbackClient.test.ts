@@ -17,7 +17,7 @@ const config: PostHogFeedbackConfig = {
   projectToken: 'phc_token',
   surveyId: 'survey-1',
 };
-const timeouts = { surveyLoadMs: 50, displayMs: 50 };
+const timeouts = { sdkLoadMs: 50, surveyLoadMs: 50, displayMs: 50 };
 
 interface FakeSdkOptions {
   surveys?: Survey[];
@@ -164,6 +164,18 @@ describe('PostHog feedback client failures', () => {
     const client = createClient(createFakeSdk(options));
 
     await expect(client.openFeedback('en', {})).resolves.toBe('unavailable');
+  });
+
+  it('reports a stalled SDK download as unavailable', async () => {
+    const fake = createFakeSdk();
+    const loader = vi.fn(
+      (_token: string, _initConfig: Partial<PostHogConfig>) =>
+        new Promise<PostHogSurveySdk>(() => undefined),
+    );
+    const client = new PostHogFeedbackClient(loader, config, timeouts);
+
+    await expect(client.openFeedback('en', {})).resolves.toBe('unavailable');
+    expect(fake.sdk.getSurveys).not.toHaveBeenCalled();
   });
 
   it('reports a surveys request that never answers as unavailable', async () => {

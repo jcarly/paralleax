@@ -37,7 +37,7 @@ function useFeedbackSurvey() {
 
   const announcements: Record<FeedbackStatus, string> = {
     idle: '',
-    sent: t('shell.feedbackSent'),
+    sent: t('shell.feedbackThanks'),
     unavailable: t('shell.feedbackUnavailable'),
   };
   return { announcement: announcements[status], label: t('shell.feedback'), open, opening };

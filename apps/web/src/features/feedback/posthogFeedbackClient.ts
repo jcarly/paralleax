@@ -24,13 +24,32 @@ export type PostHogSdkLoader = (
 export type FeedbackOpenResult = 'opened' | 'unavailable';
 
 export interface FeedbackClientTimeouts {
+  /** Maximum wait for the lazily imported SDK chunk and its initialization. */
+  sdkLoadMs: number;
   /** Maximum wait for the survey definition request. */
   surveyLoadMs: number;
   /** Maximum wait between `displaySurvey()` and the `survey shown` event. */
   displayMs: number;
 }
 
-const DEFAULT_TIMEOUTS: FeedbackClientTimeouts = { surveyLoadMs: 10_000, displayMs: 4_000 };
+const DEFAULT_TIMEOUTS: FeedbackClientTimeouts = {
+  sdkLoadMs: 15_000,
+  surveyLoadMs: 10_000,
+  displayMs: 4_000,
+};
+
+/** Resolves to `undefined` when `promise` does not settle in time. */
+function withTimeout<T>(promise: Promise<T>, timeoutMs: number): Promise<T | undefined> {
+  let timer: ReturnType<typeof setTimeout> | undefined;
+  const timeout = new Promise<undefined>((resolve) => {
+    timer = setTimeout(() => {
+      resolve(undefined);
+    }, timeoutMs);
+  });
+  return Promise.race([promise, timeout]).finally(() => {
+    clearTimeout(timer);
+  });
+}
 
 function findPublishedSurvey(
   sdk: PostHogSurveySdk,
@@ -138,7 +157,11 @@ export class PostHogFeedbackClient {
     }
   }
 
-  /** Notifies after a completed response has been handed to PostHog. */
+  /**
+   * Notifies when a completed response is handed to the SDK. Delivery is not
+   * confirmed: the SDK batches and retries the request, so callers thank the
+   * user without claiming the response was received.
+   */
   onSubmitted(listener: () => void): () => void {
     return this.observer.onSubmitted(listener);
   }
@@ -148,7 +171,12 @@ export class PostHogFeedbackClient {
     language: string,
     context: Properties,
   ): Promise<FeedbackOpenResult> {
-    const sdk = await this.load(config, language);
+    // A stalled chunk download must not keep the button busy indefinitely; a
+    // later click awaits the same load again.
+    const sdk = await withTimeout(this.load(config, language), this.timeouts.sdkLoadMs);
+    if (sdk === undefined) {
+      return 'unavailable';
+    }
     sdk.set_config({ override_display_language: language });
     if (this.observer.isVisible) {
       return 'opened';

@@ -57,9 +57,9 @@ describe('FeedbackButton opening', () => {
 
 describe('FeedbackButton languages', () => {
   it.each([
-    ['fr', 'Donner un retour', 'Merci, votre retour a été envoyé.'],
-    ['it', 'Dai un feedback', 'Grazie, il tuo feedback è stato inviato.'],
-    ['en', 'Give feedback', 'Thank you, your feedback was sent.'],
+    ['fr', 'Donner un retour', 'Merci pour votre retour !'],
+    ['it', 'Dai un feedback', 'Grazie per il tuo feedback!'],
+    ['en', 'Give feedback', 'Thank you for your feedback!'],
   ])('uses the %s label, survey language, and confirmation', async (language, label, sent) => {
     await changeInterfaceLanguage(language);
     render(
@@ -98,7 +98,7 @@ describe('FeedbackButton states', () => {
     await user.click(button);
 
     expect(postHogFeedbackClient.openFeedback).toHaveBeenCalledTimes(2);
-    expect(screen.queryByText('Thank you, your feedback was sent.')).not.toBeInTheDocument();
+    expect(screen.queryByText('Thank you for your feedback!')).not.toBeInTheDocument();
   });
   it('stays absent when disabled and announces an unavailable survey', async () => {
     postHogFeedbackClient.isConfigured = false;
