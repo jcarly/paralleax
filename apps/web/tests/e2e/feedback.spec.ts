@@ -34,11 +34,14 @@ function decodeBatch(request: Request): SentEvent[] {
 }
 
 async function mockPostHog(page: Page) {
-  // posthog-js drops every event from automated browsers (`navigator.webdriver`)
-  // before `before_send`. Present the test browser as an ordinary one instead
-  // of weakening the production configuration.
+  // posthog-js drops every event from automated browsers before `before_send`:
+  // it checks `navigator.webdriver` and the `HeadlessChrome` brand that the
+  // headless shell used in CI exposes through `navigator.userAgentData`.
+  // Present the test browser as an ordinary one instead of weakening the
+  // production configuration.
   await page.addInitScript(() => {
     Object.defineProperty(Navigator.prototype, 'webdriver', { get: () => false });
+    Object.defineProperty(Navigator.prototype, 'userAgentData', { get: () => undefined });
   });
   const thirdPartyRequests: string[] = [];
   const events: SentEvent[] = [];
