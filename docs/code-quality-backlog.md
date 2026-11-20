@@ -368,7 +368,7 @@ solution with a guided task or a browser reproduction before implementation.
   neither is an interface-only quick win.
 - **Comments, history, saves, and feedback:** comments have recoverable deletion
   and confirmation; named save deletion already confirms; history and
-  save-recovery work remain separately tracked. Keep Formbricks feedback
+  save-recovery work remain separately tracked. Keep PostHog survey feedback
   distinct from issue #26's opt-in subscription.
 - **Import and export:** import diagnostics/retention remain the conditional P1
   durability task. No static evidence from this pass justifies presenting the
