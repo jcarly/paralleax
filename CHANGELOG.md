@@ -2,6 +2,11 @@
 
 ## Unreleased
 
+- The Story settings gear now sits on the Story title line, vertically centred,
+  as a toolbar icon action, and is redrawn with eight regular teeth (PAR-7). It
+  wrapped under the title as a smaller icon, and its outline was irregular, so
+  it looked off-centre. Where supported, the title field fits its text so the
+  gear stays beside the title.
 - Added a private, local MCP server prototype (`apps/mcp`, ADR-047) built on
   the official MCP TypeScript SDK v2 over stdio. It calls the existing HTTP API
   as the signed-in user (`paralleax-mcp login`) and exposes six tools:
