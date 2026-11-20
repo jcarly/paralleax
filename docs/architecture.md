@@ -500,14 +500,17 @@ locations, characters, stats, and items remain exactly as written. Components
 compose translated diagnostic phrases around those authored values without
 mutating them.
 
-`apps/web/src/features/feedback/` owns the optional Formbricks adapter and its
-header control. It initializes only when both public Vite settings are present,
-tracks React Router navigation, and emits the `paralleax_feedback_opened` code
-action with normalized, non-content hidden fields. It deliberately does not
-identify the signed-in account or send authored story content. Formbricks remains
-a browser integration and has no dependency on the shared domain, API, or
-persistence layers. The production Nginx template permits the configured
-Formbricks URL in `script-src` and `connect-src` only when that URL is supplied.
+`apps/web/src/features/feedback/` owns the optional PostHog survey adapter and
+its header control ([ADR-048](decisions/ADR-048-posthog-survey-feedback.md)).
+`PostHogFeedbackClient` is the only importer of `posthog-js`: it loads the
+bundled, no-external SDK on the first click, opens the configured survey with
+`displaySurvey()`, and filters every outgoing event through a `before_send`
+allowlist (survey answers, normalized non-content context, minimal ingestion
+fields). It deliberately does not identify the signed-in account or send
+authored story content, and keeps no persistent identity. PostHog remains a
+browser integration and has no dependency on the shared domain, API, or
+persistence layers. The production Nginx template adds the configured PostHog
+API host to `connect-src` only; `script-src` stays `'self'`.
 
 Supporting editor modules keep pure or focused behavior outside the page
 component:
@@ -588,8 +591,9 @@ component:
   interaction nodes, trigger nodes, and trigger edges.
 - `features/graph-decorations/`: focused projection, rendering, resizing, and
   inspector UI for authored frame and text decorations.
-- `features/feedback/`: optional Formbricks configuration, route-context
-  normalization, SDK isolation, and the global feedback control.
+- `features/feedback/`: optional PostHog survey configuration, route-context
+  normalization, event privacy filter, SDK isolation, and the global feedback
+  control.
 - `features/story-settings/`: tabbed Story-property and access configuration,
   including the reusable access-policy and collaborator-grant form.
 - `storySelection.ts`: selected interaction and trigger lookup helpers.
