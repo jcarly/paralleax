@@ -1822,26 +1822,6 @@
       "count": 1
     }
   },
-  "apps/web/src/features/story-player/useReaderSessionState.ts": {
-    "@typescript-eslint/no-unnecessary-condition": {
-      "count": 3
-    },
-    "@typescript-eslint/prefer-nullish-coalescing": {
-      "count": 2
-    },
-    "@typescript-eslint/strict-boolean-expressions": {
-      "count": 3
-    },
-    "max-lines-per-function": {
-      "count": 1
-    },
-    "max-params": {
-      "count": 1
-    },
-    "no-duplicate-imports": {
-      "count": 1
-    }
-  },
   "apps/web/src/features/story-player/useSimulationMutationPersistence.ts": {
     "max-lines-per-function": {
       "count": 1
