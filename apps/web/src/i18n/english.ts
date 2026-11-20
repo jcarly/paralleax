@@ -13,6 +13,7 @@ export const englishTranslation = {
     signOut: 'Sign out',
     account: 'Account settings',
     feedback: 'Give feedback',
+    feedbackThanks: 'Thank you for your feedback!',
     feedbackUnavailable: 'The feedback form is unavailable. Try again later.',
     help: 'Guide',
     loading: 'Loading…',
