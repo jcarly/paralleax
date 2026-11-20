@@ -402,11 +402,6 @@
       "count": 1
     }
   },
-  "apps/api/src/stories/application/story-metadata.ts": {
-    "@typescript-eslint/strict-boolean-expressions": {
-      "count": 1
-    }
-  },
   "apps/api/src/stories/application/story-mutations.spec.ts": {
     "@typescript-eslint/no-unsafe-type-assertion": {
       "count": 2
