@@ -1840,14 +1840,6 @@
       "count": 1
     }
   },
-  "apps/web/src/features/story-player/useReaderProgressPersistence.ts": {
-    "@typescript-eslint/strict-boolean-expressions": {
-      "count": 1
-    },
-    "max-lines-per-function": {
-      "count": 1
-    }
-  },
   "apps/web/src/features/story-player/useReaderSessionState.ts": {
     "@typescript-eslint/no-unnecessary-condition": {
       "count": 3
