@@ -50,6 +50,7 @@ This folder records accepted architecture and product-shaping decisions.
 - [ADR-044 - Railway App Services as a Named IaC Partial](ADR-044-railway-apps-partial-iac.md)
 - [ADR-045 - Shared Interaction Presentation Across Authoring and Reading Views](ADR-045-shared-interaction-presentation.md)
 - [ADR-046 - Target Project Structure: Pragmatic Ports and Adapters](ADR-046-target-project-structure.md)
+- [ADR-047 - PostHog Surveys for Voluntary In-App Feedback](ADR-047-posthog-survey-feedback.md)
 
 ## Proposals
 

@@ -13,6 +13,7 @@ export const italianTranslation = {
     signOut: 'Esci',
     account: "Impostazioni dell'account",
     feedback: 'Dai un feedback',
+    feedbackSent: 'Grazie, il tuo feedback è stato inviato.',
     feedbackUnavailable: 'Il modulo di feedback non è disponibile. Riprova più tardi.',
     help: 'Guida',
     loading: 'Caricamento…',
