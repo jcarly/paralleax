@@ -170,7 +170,7 @@
   grid-template-columns: 260px minmax(0, 1fr) var(--editor-inspector-width, 340px);
 }
 .editor-layout.with-navigation-collapsed.with-inspector {
-  grid-template-columns: 48px minmax(0, 1fr) var(--editor-inspector-width, 340px);
+  grid-template-columns: 0px minmax(0, 1fr) var(--editor-inspector-width, 340px);
 }
 .editor-layout.with-inspector.with-comment-rail {
   grid-template-columns: minmax(0, 1fr) var(--editor-inspector-width, 340px);
@@ -179,7 +179,7 @@
   grid-template-columns: 260px minmax(0, 1fr) var(--editor-inspector-width, 340px);
 }
 .editor-layout.with-navigation-collapsed.with-inspector.with-comment-rail {
-  grid-template-columns: 48px minmax(0, 1fr) var(--editor-inspector-width, 340px);
+  grid-template-columns: 0px minmax(0, 1fr) var(--editor-inspector-width, 340px);
 }
 .editor-layout.is-inspector-maximized .inspector {
   grid-column: 2 / 4;
@@ -398,10 +398,6 @@
   border-radius: 5px;
   box-shadow: var(--shadow-card);
 }
-.location-panel.collapsed {
-  padding: 0;
-  overflow: visible;
-}
 .location-panel-content {
   position: absolute;
   inset: 0;
@@ -442,20 +438,6 @@
   font-size: 0.75rem;
   font-variant-numeric: tabular-nums;
   white-space: nowrap;
-}
-.navigation-toggle {
-  position: absolute;
-  top: -1rem;
-  right: -16px;
-  z-index: 6;
-  width: 32px;
-  height: 32px;
-  padding: 0;
-  border: 1px solid var(--color-border);
-  border-radius: 999px;
-  background: var(--color-surface);
-  font-size: 1.35rem;
-  box-shadow: var(--shadow-card);
 }
 .editor-heading-row {
   display: flex;

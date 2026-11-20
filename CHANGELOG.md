@@ -2,6 +2,11 @@
 
 ## Unreleased
 
+- The story context menu now collapses from the first button of the graph tool
+  rail, and leaves no empty strip when collapsed (PAR-7). Its former toggle sat
+  half under the editor title bar, so a click on its centre missed it, and a
+  48px empty strip remained. On narrow screens the open menu overlays the graph
+  beside the rail, which previously hid the only way to close it.
 - Added a private, local MCP server prototype (`apps/mcp`, ADR-047) built on
   the official MCP TypeScript SDK v2 over stdio. It calls the existing HTTP API
   as the signed-in user (`paralleax-mcp login`) and exposes six tools:
