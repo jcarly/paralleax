@@ -80,10 +80,10 @@ the guide remains usable for the current session.
   Simulation entry point was chosen and Simulation for that Story opened. `StoryPlayer.tsx` also recognizes a
   Simulation journey that advanced beyond its starting Interaction.
 
-The guide is separate from Formbricks and application analytics. No guide
+The guide is separate from the PostHog feedback survey and application analytics. No guide
 progress or automatic Story milestone is sent to a third party. The existing
 feedback survey opens only after the user clicks its button; see the
-[Formbricks runbook](operations/formbricks-feedback.md).
+[PostHog feedback runbook](operations/posthog-feedback.md).
 
 ## Adding or changing a step
 
@@ -99,7 +99,7 @@ feedback survey opens only after the user clicks its button; see the
 5. Review whether the step still fits the guided-session tasks and refresh this
    map when the architecture changes.
 
-Do not emit journey milestones to Formbricks as part of adding a step unless a
+Do not emit journey milestones to PostHog as part of adding a step unless a
 product consent flow and the alpha privacy notice explicitly cover that
 behavioral tracking. Consent and retention details are documented in the
 [alpha runbook](operations/alpha-deployment.md).
