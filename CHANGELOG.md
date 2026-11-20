@@ -2,6 +2,13 @@
 
 ## Unreleased
 
+- Fixed the Inspector field comment controls (PAR-7). Hovering a location,
+  cast or duration control showed two overlapping controls, and moving the
+  pointer towards the control replaced it with the one for the surrounding
+  context row. One control is now shown at a time, it stays while the pointer
+  travels towards it, and another field takes it only when the pointer rests
+  on that field. The control follows its field in the keyboard order and works
+  with touch.
 - Added a private, local MCP server prototype (`apps/mcp`, ADR-047) built on
   the official MCP TypeScript SDK v2 over stdio. It calls the existing HTTP API
   as the signed-in user (`paralleax-mcp login`) and exposes six tools:
