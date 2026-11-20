@@ -3058,6 +3058,46 @@ it('enforces invited reader, editor, and revoked permissions on existing story e
   await promoteAndRevokeEditor(fixture);
 });
 
+it('atomically opens editing when a collaborator is promoted to editor', async () => {
+  const story = await createStory('Atomic editor grant');
+  const ownerCookie = 'paralleax_session=test-user';
+  const editorCookie = 'paralleax_session=user-two';
+  await request(httpServer)
+    .patch(`/api/stories/${story.id}/access`)
+    .set('Cookie', ownerCookie)
+    .send({ visibility: 'invitation', editPolicy: 'owner', commentPolicy: 'editors' })
+    .expect(200);
+
+  // An invalid grant must not modify the access policy.
+  await request(httpServer)
+    .post(`/api/stories/${story.id}/access/collaborators`)
+    .set('Cookie', ownerCookie)
+    .send({ email: 'missing@example.com', role: 'editor' })
+    .expect(400);
+  const viewer = await request(httpServer)
+    .post(`/api/stories/${story.id}/access/collaborators`)
+    .set('Cookie', ownerCookie)
+    .send({ email: 'user-two@paralleax.invalid', role: 'viewer' })
+    .expect(201);
+  expect(responseStringAt(parseResponse(viewer), 'editPolicy')).toBe('owner');
+
+  // One request commits both the Editor grant and the policy change.
+  const editor = await request(httpServer)
+    .post(`/api/stories/${story.id}/access/collaborators`)
+    .set('Cookie', ownerCookie)
+    .send({ email: 'user-two@paralleax.invalid', role: 'editor' })
+    .expect(201);
+  expect(responseStringAt(parseResponse(editor), 'editPolicy')).toBe('collaborators');
+  expect(responseObjectArrayAt(parseResponse(editor), 'collaborators')).toEqual([
+    expect.objectContaining({ userId: 'user-2', role: 'editor' }),
+  ]);
+  await request(httpServer)
+    .patch(`/api/stories/${story.id}`)
+    .set('Cookie', editorCookie)
+    .send({ title: 'Editor can now edit' })
+    .expect(200);
+});
+
 it('publishes story invalidations for authored, access, and deletion mutations', async () => {
   const events = app.get(StoryEventsService);
   const publish = jest.spyOn(events, 'publish');
