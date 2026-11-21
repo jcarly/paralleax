@@ -86,7 +86,7 @@ test('CI distinguishes integration branches from protected main promotions', asy
   const dependabot = await readRepositoryFile('.github/dependabot.yml');
 
   assert.equal(
-    (workflow.match(/^    branches: \[dev, main, 'release\/\*\*'\]$/gm) ?? []).length,
+    (workflow.match(/^ {4}branches: \[dev, main, 'release\/\*\*'\]$/gm) ?? []).length,
     2,
   );
   assert.match(workflow, /Only dev or release\/\* branches in this repository/);
@@ -95,9 +95,9 @@ test('CI distinguishes integration branches from protected main promotions', asy
   );
   assert.ok(workflow.includes("github.base_ref == 'main'"));
   assert.ok(workflow.includes("startsWith(github.base_ref, 'release/')"));
-  assert.match(workflow, /^    name: Integration readiness$/m);
-  assert.match(workflow, /^    name: Main readiness$/m);
-  assert.equal((dependabot.match(/^    target-branch: 'dev'$/gm) ?? []).length, 4);
+  assert.match(workflow, /^ {4}name: Integration readiness$/m);
+  assert.match(workflow, /^ {4}name: Main readiness$/m);
+  assert.equal((dependabot.match(/^ {4}target-branch: 'dev'$/gm) ?? []).length, 4);
 });
 
 test('Railway IaC partial explicitly retains GitHub sources for the initial migration', async () => {
