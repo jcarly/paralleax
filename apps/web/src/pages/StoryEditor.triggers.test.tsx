@@ -198,9 +198,8 @@ describe('StoryEditor triggers', () => {
     expect(deleteGroupButtons).toHaveLength(2);
     expect(deleteGroupButtons[0]).toHaveTextContent('×');
     expect(await screen.findByLabelText('Appearance probability')).toHaveValue(75);
-    expect(screen.getByRole('button', { name: 'Delete trigger' })).toHaveClass(
-      'trigger-delete-action',
-    );
+    // The delete action sits in the Inspector header, like Maximize and Close.
+    expect(screen.getByRole('button', { name: 'Delete trigger' })).toHaveClass('inspector-delete');
   });
 
   it('deletes one OR condition group from the trigger inspector', async () => {
@@ -445,9 +444,8 @@ describe('StoryEditor triggers', () => {
     );
 
     expect(await screen.findByRole('heading', { name: 'Path conditions' })).toBeInTheDocument();
-    expect(screen.getByRole('button', { name: 'Delete trigger' })).toHaveClass(
-      'trigger-delete-action',
-    );
+    // The delete action sits in the Inspector header, like Maximize and Close.
+    expect(screen.getByRole('button', { name: 'Delete trigger' })).toHaveClass('inspector-delete');
   });
 
   it('turns the last linked trigger into a root trigger when deleting the trigger', async () => {

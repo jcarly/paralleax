@@ -125,7 +125,6 @@ describe('InteractionInspector rich text preview', () => {
         interaction={interaction}
         onChange={vi.fn()}
         onPatch={vi.fn().mockResolvedValue(true)}
-        onDelete={vi.fn()}
         onSelectInteraction={onSelectInteraction}
       />,
     );
@@ -171,7 +170,6 @@ describe('InteractionInspector time', () => {
         onChange={vi.fn()}
         onPatch={onPatch}
         onContentSaved={onContentSaved}
-        onDelete={vi.fn()}
       />,
     );
 
@@ -213,7 +211,6 @@ describe('InteractionInspector time', () => {
         onChange={vi.fn()}
         onPatch={onPatch}
         onContentSaved={onContentSaved}
-        onDelete={vi.fn()}
       />,
     );
 
@@ -259,7 +256,6 @@ describe('InteractionInspector time', () => {
             interaction={story.interactions[0]}
             onChange={setStory}
             onPatch={onPatch}
-            onDelete={vi.fn()}
           />
         );
       }
@@ -326,7 +322,6 @@ describe('InteractionInspector time', () => {
         interaction={interaction}
         onChange={vi.fn()}
         onPatch={onPatch}
-        onDelete={vi.fn()}
       />,
     );
     fireEvent.click(screen.getByRole('button', { name: 'Add effect' }));
@@ -346,7 +341,6 @@ describe('InteractionInspector time', () => {
         interaction={interaction}
         onChange={vi.fn()}
         onPatch={vi.fn().mockResolvedValue(undefined)}
-        onDelete={vi.fn()}
       />,
     );
 
@@ -424,7 +418,6 @@ describe('InteractionInspector time', () => {
         interaction={interaction}
         onChange={vi.fn()}
         onPatch={vi.fn().mockResolvedValue(undefined)}
-        onDelete={vi.fn()}
         onAddOption={onAddOption}
         onSelectInteraction={onSelectInteraction}
       />,
@@ -462,7 +455,6 @@ describe('InteractionInspector time', () => {
         interaction={interaction}
         onChange={onChange}
         onPatch={onPatch}
-        onDelete={vi.fn()}
       />,
     );
 
@@ -502,7 +494,6 @@ describe('InteractionInspector time', () => {
         interaction={interaction}
         onChange={vi.fn()}
         onPatch={onPatch}
-        onDelete={vi.fn()}
       />,
     );
 
@@ -575,7 +566,6 @@ describe('InteractionInspector time', () => {
         interaction={interaction}
         onChange={vi.fn()}
         onPatch={onPatch}
-        onDelete={vi.fn()}
       />,
     );
 
@@ -632,7 +622,6 @@ describe('InteractionInspector time', () => {
         interaction={interaction}
         onChange={vi.fn()}
         onPatch={onPatch}
-        onDelete={vi.fn()}
       />,
     );
 
@@ -684,7 +673,6 @@ describe('InteractionInspector time', () => {
         interaction={interaction}
         onChange={onChange}
         onPatch={onPatch}
-        onDelete={vi.fn()}
       />,
     );
 
@@ -716,7 +704,6 @@ describe('InteractionInspector time', () => {
         interaction={withEffect}
         onChange={onChange}
         onPatch={onPatch}
-        onDelete={vi.fn()}
       />,
     );
     openEffectEditor(/Mira: obtain Key/);
@@ -796,7 +783,6 @@ describe('InteractionInspector time', () => {
         interaction={interaction}
         onChange={vi.fn()}
         onPatch={onPatch}
-        onDelete={vi.fn()}
       />,
     );
 
@@ -834,7 +820,6 @@ describe('InteractionInspector time', () => {
         interaction={withEffect}
         onChange={vi.fn()}
         onPatch={onPatch}
-        onDelete={vi.fn()}
       />,
     );
     openEffectEditor(/Durability: add/);

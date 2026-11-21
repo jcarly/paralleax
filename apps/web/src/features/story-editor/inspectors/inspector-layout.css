@@ -37,13 +37,28 @@
   outline: 2px solid var(--color-primary);
   outline-offset: -2px;
 }
-.inspector-maximize {
+.inspector-maximize,
+.inspector-delete {
   flex: none;
   width: 32px;
   height: 32px;
   padding: 0;
   border: 1px solid var(--color-border);
   background: var(--color-surface-secondary);
+}
+.inspector-delete {
+  display: inline-grid;
+  place-items: center;
+  color: var(--color-danger);
+}
+.inspector-delete svg {
+  width: 18px;
+  height: 18px;
+  fill: none;
+  stroke: currentColor;
+  stroke-linecap: round;
+  stroke-linejoin: round;
+  stroke-width: 1.8;
 }
 .inspector-maximize span {
   display: inline-block;

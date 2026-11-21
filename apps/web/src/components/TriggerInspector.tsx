@@ -24,7 +24,6 @@ export function TriggerInspector({
   interaction,
   trigger,
   onSaveTrigger,
-  onDeleteTrigger,
   semanticCommentCounts,
   onOpenSemanticComments,
 }: {
@@ -36,7 +35,6 @@ export function TriggerInspector({
     triggerId: string,
     input: UpdateTriggerInput,
   ) => Promise<void>;
-  onDeleteTrigger: (interactionId: string, triggerId: string) => Promise<void>;
 } & InspectorSemanticCommentProps) {
   const { t } = useTranslation();
   const groups = getTriggerConditionGroups(trigger);
@@ -307,13 +305,6 @@ export function TriggerInspector({
           </div>
         </div>
       </InspectorCommentSlot>
-      <hr />
-      <button
-        className="danger trigger-delete-action"
-        onClick={() => void onDeleteTrigger(interaction.id, trigger.id)}
-      >
-        {t('triggerInspector.deleteTrigger')}
-      </button>
     </div>
   );
 }
