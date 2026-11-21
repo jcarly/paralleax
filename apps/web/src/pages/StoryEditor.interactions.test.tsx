@@ -126,7 +126,10 @@ it('creates root and child interactions', async () => {
       expect.objectContaining({ nodes: [{ id: 'interaction-2' }] }),
     );
   });
-  expect(screen.getByRole('button', { name: 'Title: Second interaction' })).toBeInTheDocument();
+  // The Inspector renders the new selection after the viewport request.
+  expect(
+    await screen.findByRole('button', { name: 'Title: Second interaction' }),
+  ).toBeInTheDocument();
 });
 
 it('adds an Inspector option through canonical child Interaction creation', async () => {

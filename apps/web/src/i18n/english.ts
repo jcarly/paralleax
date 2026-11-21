@@ -546,7 +546,7 @@ export const englishTranslation = {
     clickCanvas: 'Click on the graph',
     commentEntity: 'Comment on this element',
     commentScene: 'Comment on this scene',
-    selectTextHelp: 'Select text in a title or description, then use this action.',
+    commentSelectedText: 'Comment on the selected text',
     triggerSummary_one: '{{count}} condition in this trigger.',
     triggerSummary_other: '{{count}} conditions in this trigger.',
     anchor: {

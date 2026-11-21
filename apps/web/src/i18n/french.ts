@@ -562,8 +562,7 @@ export const frenchTranslation = {
     clickCanvas: 'Cliquez sur le graphe',
     commentEntity: 'Commenter cet élément',
     commentScene: 'Commenter cette scène',
-    selectTextHelp:
-      'Sélectionnez du texte dans un titre ou une description, puis utilisez cette action.',
+    commentSelectedText: 'Commenter le texte sélectionné',
     triggerSummary_one: '{{count}} condition dans ce trigger.',
     triggerSummary_other: '{{count}} conditions dans ce trigger.',
     anchor: {

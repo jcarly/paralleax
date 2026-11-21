@@ -125,8 +125,10 @@ URL redirects that account to the player.
 Editors can use `Place a post-it`, then click the graph to start a discussion at
 that canvas position. Select an interaction, trigger, character, location, item,
 or stat and use `Comment on this element` to attach the thread to that exact
-entity. To target part of a title, body, name, or description, select the text
-before choosing `Selected text`.
+entity. To target part of a title, body, name, or description, select the text:
+the `Comment on the selected text` action (✎) then appears in the Inspector
+header and stays hidden otherwise. From the keyboard, select the text, press Tab
+to reach the action, and press Enter.
 
 When reader comments are enabled, a signed-in reader opens the story with `Read`.
 The Comments control shows discussions attached to the interaction currently on

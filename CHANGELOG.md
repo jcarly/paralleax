@@ -2,6 +2,11 @@
 
 ## Unreleased
 
+- The Inspector's text-comment action (✎) now appears only while commentable
+  text is selected, and works from the keyboard (PAR-7). It was always shown,
+  even with nothing selected, and reacted only to a mouse press, so keyboard
+  users could not start a comment on selected text. The selection is captured
+  when it changes and kept while focus moves to the action.
 - Simplified the Simulation header and start screen (PAR-7). The `Simulation
 synced live` text and the `Saving Story changes` / `Story changes saved`
   messages become the editor's sync icon, shared through one `SyncIndicator`
