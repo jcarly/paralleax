@@ -116,15 +116,6 @@
   opacity: 1;
   transform: translateY(0);
 }
-.story-realtime-status {
-  display: inline-flex;
-  align-items: center;
-  gap: 0.35rem;
-  align-self: center;
-  color: var(--color-muted);
-  font-size: 0.72rem;
-  white-space: nowrap;
-}
 .save-error {
   display: flex;
   align-items: center;

@@ -68,10 +68,10 @@ describe('StoryPlayer simulation authoring', () => {
     await renderPlayer('/stories/story-1/play?mode=simulation&startInteractionId=next');
 
     expect(screen.getByText('Simulation')).toBeInTheDocument();
-    expect(document.querySelector('.story-realtime-status .realtime-status-dot')).toHaveAttribute(
-      'aria-hidden',
-      'true',
+    expect(screen.getByRole('status', { name: 'Live updates unavailable' })).toHaveClass(
+      'editor-sync-indicator',
     );
+    expect(screen.queryByText('Simulation synced live')).not.toBeInTheDocument();
     expect(screen.getByLabelText('Current interaction title')).toHaveValue('Next');
     expect(screen.getByRole('button', { name: 'Back' })).toBeDisabled();
     expect(screen.queryByRole('button', { name: 'Start' })).not.toBeInTheDocument();
@@ -162,7 +162,11 @@ describe('StoryPlayer simulation authoring', () => {
     expect(screen.getByRole('alert')).toHaveTextContent('Connection lost');
     await user.click(screen.getByRole('button', { name: 'Retry' }));
 
-    expect(await screen.findByText('Story changes saved')).toBeInTheDocument();
+    await waitFor(() => {
+      expect(screen.queryByRole('alert')).not.toBeInTheDocument();
+    });
+    expect(document.querySelector('.editor-sync-indicator')).not.toHaveClass('error');
+    expect(document.querySelector('.editor-sync-indicator')).not.toHaveClass('saving');
     expect(api.updateInteraction).toHaveBeenCalledTimes(2);
     expect(screen.getByLabelText('Current interaction title')).toHaveValue('Recovered title');
   });
@@ -184,7 +188,11 @@ describe('StoryPlayer simulation authoring', () => {
     await waitFor(() => {
       expect(api.getStoryRuntimeBootstrap).toHaveBeenCalled();
     });
-    expect(await screen.findByText('Story changes saved')).toBeInTheDocument();
+    await waitFor(() => {
+      expect(screen.queryByRole('alert')).not.toBeInTheDocument();
+    });
+    expect(document.querySelector('.editor-sync-indicator')).not.toHaveClass('error');
+    expect(document.querySelector('.editor-sync-indicator')).not.toHaveClass('saving');
     expect(api.createInteraction).toHaveBeenCalledOnce();
   });
 

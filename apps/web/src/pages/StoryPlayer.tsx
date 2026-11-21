@@ -1128,11 +1128,9 @@ export function StoryPlayer({
               )}
             </>
           ) : (
-            <>
-              <span className="product-eyebrow">{t('player.ready')}</span>
-              <h1>{t('player.startStory')}</h1>
-              <p>{t('player.chooseStartingInteraction')}</p>
-            </>
+            // The starting choices below speak for themselves; the heading keeps
+            // the screen orientated for assistive technologies only.
+            <h1 className="sr-only">{t('player.startStory')}</h1>
           )}
           {runtimeOptionsError ? (
             <p className="error" role="alert">

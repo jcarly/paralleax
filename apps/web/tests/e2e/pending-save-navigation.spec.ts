@@ -167,13 +167,15 @@ test('guards Simulation edits and clears the guard after saving', async ({ page 
   await expect(title).toHaveValue('Original title');
   await title.fill('Edited in Simulation');
   await title.blur();
-  await expect(page.getByText(/Saving Story changes/)).toBeVisible();
+  await expect(page.getByRole('status', { name: 'Saving…' })).toBeVisible();
   await page.getByRole('link', { name: 'Stories', exact: true }).click();
   await expect(page.getByRole('dialog', { name: 'Unsaved changes' })).toBeVisible();
   await page.getByRole('button', { name: 'Stay on this page' }).click();
   await expect(page).toHaveURL(/mode=simulation/);
   releaseSave();
-  await expect(page.getByText('Story changes saved')).toBeVisible();
+  await expect(
+    page.getByRole('status', { name: 'Changes saved and live updates connected' }),
+  ).toBeVisible();
   await page.getByRole('link', { name: 'Stories', exact: true }).click();
   await expect(page).toHaveURL('/');
 });

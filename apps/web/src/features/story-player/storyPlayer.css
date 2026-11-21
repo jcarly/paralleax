@@ -102,11 +102,13 @@
   color: #aabdb4;
 }
 
-.player-top .save-status.saved {
+.player-top .save-status.saved,
+.player-top .editor-sync-indicator:is(.saved, .saving) {
   color: #b9d6c7;
 }
 
-.player-top .save-status.error {
+.player-top .save-status.error,
+.player-top .editor-sync-indicator.error {
   color: #f0aaa5;
 }
 
