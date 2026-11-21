@@ -209,7 +209,7 @@ the [milestone detail](roadmap-history.md).
 - **V0.7:** authoring beta usability requirements.
 - **V0.8:** collaboration and review beyond the current foundation.
 - **V0.9:** publishing readiness: immutable published versions, publication
-  validation, stable public reader URLs, reader-journey analytics with their
+  validation (including an alert on choices without labels), stable public reader URLs, reader-journey analytics with their
   privacy gates, moderation and licensing rules.
 - Production operations and recovery gates in
   [Production readiness](production-readiness.md) (P0 to P2).

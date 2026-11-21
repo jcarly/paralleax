@@ -88,6 +88,26 @@
   text-overflow: ellipsis;
   white-space: nowrap;
 }
+/* A placeholder title reads as a placeholder, not as authored text. */
+.interaction-node > .interaction-label-bubble.interaction-label-fallback {
+  color: var(--color-muted);
+  font-weight: 500;
+}
+/* An untitled Interaction among several choices: readers would see `Option N`. */
+.interaction-node .interaction-label-warning {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 1.1rem;
+  height: 1.1rem;
+  margin: 0 0 0 0.4rem;
+  border-radius: 999px;
+  background: var(--color-trigger-soft);
+  color: var(--color-trigger-strong);
+  font-size: 0.72rem;
+  font-weight: 800;
+  line-height: 1;
+}
 .interaction-node .interaction-occurrence-count {
   display: inline-flex;
   align-items: center;

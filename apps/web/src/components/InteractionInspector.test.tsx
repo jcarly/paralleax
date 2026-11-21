@@ -866,3 +866,70 @@ describe('InteractionInspector time', () => {
     });
   });
 });
+
+function storyWithOptions(titles: string[]): {
+  story: Story;
+  interaction: Story['interactions'][number];
+} {
+  const interaction: Story['interactions'][number] = {
+    id: 'source',
+    title: '',
+    body: '',
+    position: { x: 0, y: 0 },
+    triggers: [{ id: 'source-trigger', inputInteractionIds: [], conditions: [] }],
+  };
+  const options = titles.map((title, index) => ({
+    id: `option-${String(index)}`,
+    title,
+    body: '',
+    position: { x: index * 200, y: 400 },
+    triggers: [{ id: `trigger-${String(index)}`, inputInteractionIds: ['source'], conditions: [] }],
+  }));
+  return {
+    interaction,
+    story: {
+      id: 'story-1',
+      title: 'Story',
+      interactions: [interaction, ...options],
+      createdAt: '2026-11-20T08:00:00Z',
+      updatedAt: '2026-11-20T08:00:00Z',
+    },
+  };
+}
+
+function renderOptions(titles: string[]) {
+  const { story, interaction } = storyWithOptions(titles);
+  render(
+    <InteractionInspector
+      story={story}
+      interaction={interaction}
+      onChange={vi.fn()}
+      onPatch={vi.fn().mockResolvedValue(true)}
+      onDelete={vi.fn()}
+    />,
+  );
+}
+
+describe('InteractionInspector option labels', () => {
+  it('shows the reader label of a lone untitled option without a warning', () => {
+    renderOptions(['']);
+
+    expect(screen.getByText('Continue').closest('.interaction-label-bubble')).toHaveClass(
+      'interaction-label-fallback',
+    );
+    expect(screen.queryByText('New interaction')).not.toBeInTheDocument();
+    expect(screen.queryByText('Several options: add a label.')).not.toBeInTheDocument();
+  });
+
+  it('asks for a label on each untitled option among several', () => {
+    renderOptions(['Leave', '']);
+
+    expect(screen.getByText('Leave').closest('.interaction-label-bubble')).not.toHaveClass(
+      'interaction-label-fallback',
+    );
+    expect(screen.getByText('Option 2').closest('.interaction-label-bubble')).toHaveClass(
+      'interaction-label-fallback',
+    );
+    expect(screen.getAllByText('Several options: add a label.')).toHaveLength(1);
+  });
+});
