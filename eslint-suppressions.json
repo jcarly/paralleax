@@ -2696,9 +2696,6 @@
     }
   },
   "packages/shared/src/import-export/choicescript/mapping.ts": {
-    "@typescript-eslint/no-non-null-assertion": {
-      "count": 6
-    },
     "@typescript-eslint/strict-boolean-expressions": {
       "count": 1
     },
@@ -2817,9 +2814,6 @@
     }
   },
   "packages/shared/src/import-export/qsp/mapping.ts": {
-    "@typescript-eslint/no-non-null-assertion": {
-      "count": 8
-    },
     "max-depth": {
       "count": 1
     },
