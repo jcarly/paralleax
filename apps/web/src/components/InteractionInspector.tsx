@@ -313,7 +313,6 @@ type InteractionInspectorProps = {
   onChange: (story: Story) => void;
   onPatch: (id: string, patch: Partial<Interaction>) => Promise<boolean | void>;
   onContentSaved?: (body: string) => void;
-  onDelete: () => Promise<void>;
   onSelectInteraction?: (interactionId: string) => void;
   onAddOption?: () => void | Promise<void>;
 } & InspectorTextCommentProps &
@@ -329,7 +328,6 @@ function InteractionInspectorView({
   onChange,
   onPatch,
   onContentSaved,
-  onDelete,
   onSelectInteraction,
   onAddOption,
   textCommentCounts,
@@ -1178,10 +1176,6 @@ function InteractionInspectorView({
           <p className="hint">{t('interactionInspector.noOptions')}</p>
         )}
       </section>
-      <hr />
-      <button className="danger" onClick={() => void onDelete()}>
-        {t('interactionInspector.deleteInteraction')}
-      </button>
     </div>
   );
 }

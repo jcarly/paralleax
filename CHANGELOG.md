@@ -18,6 +18,19 @@
   Inviting or promoting an Editor now commits the grant and any required
   editing-policy change atomically in one database statement, rather than
   two requests that could leave the new Editor unable to edit.
+- Tidied the Inspector (PAR-7). Deleting the selected Interaction, Trigger or
+  graph decoration moves from a large red button at the bottom to a trash icon
+  in the header, beside Maximize and Close, with the same behaviour; the
+  separators and the trailing border left around it are removed. The Inspector
+  has no fixed 720px width cap on wide screens, and widening it past 70% of the
+  editor maximizes it; Restore returns to the width from before.
+- Fixed the Inspector field comment controls (PAR-7). Hovering a location,
+  cast or duration control showed two overlapping controls, and moving the
+  pointer towards the control replaced it with the one for the surrounding
+  context row. One control is now shown at a time, it stays while the pointer
+  travels towards it, and another field takes it only when the pointer rests
+  on that field. The control follows its field in the keyboard order and works
+  with touch.
 - Re-centred each Interaction's output `+` at the bottom of its card, where its
   links start, as `docs/story-canvas.md` specifies (PAR-7). It had been moved to
   the bottom right because the child's Trigger marker covered it; default

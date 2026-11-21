@@ -1,4 +1,5 @@
 import {
+  useEffect,
   useId,
   useLayoutEffect,
   useRef,
@@ -6,15 +7,16 @@ import {
   type CSSProperties,
   type PropsWithChildren,
   type FocusEvent,
-  type MouseEvent,
+  type PointerEvent,
+  type RefObject,
 } from 'react';
 import {
   commentSemanticSlotKey,
   type CommentSemanticSlot,
   type CommentTextField,
 } from '@paralleax/shared';
-import { createPortal } from 'react-dom';
 import { useTranslation } from 'react-i18next';
+import { commentBadgeOwner, useCommentBadgeOwner } from './commentBadgeOwner';
 
 function useCommentBadgePosition() {
   const fieldRef = useRef<HTMLDivElement>(null);
@@ -51,70 +53,85 @@ function useCommentBadgePosition() {
 }
 
 function CommentBadge({
-  badgeId,
   position,
   label,
   count,
   onClick,
-  onMouseEnter,
-  onMouseLeave,
 }: {
-  badgeId: string;
   position?: CSSProperties;
   label: string;
   count?: number;
   onClick: () => void;
-  onMouseEnter: () => void;
-  onMouseLeave: () => void;
 }) {
   if (!position) {
     return null;
   }
-  return createPortal(
+  // Rendered inside its field so it follows the field in the tab order and
+  // counts as part of the field for pointer events; fixed positioning places it
+  // in the inspector gutter.
+  return (
     <button
       className="inspector-field-comment-badge inspector-comment-toggle"
-      data-comment-badge={badgeId}
       style={position}
       type="button"
       aria-label={label}
       title={label}
       onClick={onClick}
-      onMouseEnter={onMouseEnter}
-      onMouseLeave={onMouseLeave}
     >
       <span aria-hidden="true">◆</span>
       <small>{count || '+'}</small>
-    </button>,
-    document.body,
+    </button>
   );
 }
 
-function useCommentBadgeVisibility() {
+function isInnermostCommentableField(target: EventTarget | null, field: Element) {
+  return target instanceof Element && target.closest('.inspector-commentable-field') === field;
+}
+
+const commentGutterWidth = 24;
+
+function useCommentBadgeVisibility(fieldRef: RefObject<HTMLDivElement | null>) {
   const badgeId = useId();
-  const [hovered, setHovered] = useState(false);
-  const isCommentBadgeTarget = (target: EventTarget | null) =>
-    target instanceof Element && Boolean(target.closest(`[data-comment-badge="${badgeId}"]`));
+  // The area between the field and its badge in the inspector gutter.
+  const corridor = () => {
+    const field = fieldRef.current;
+    if (!field) {
+      return undefined;
+    }
+    const bounds = field.getBoundingClientRect();
+    const left =
+      (field.closest('.inspector')?.getBoundingClientRect().left ?? bounds.left) -
+      commentGutterWidth;
+    return new DOMRect(left, bounds.top, bounds.right - left, Math.max(bounds.height, 32));
+  };
+  const visible = useCommentBadgeOwner(badgeId);
+
+  useEffect(
+    () => () => {
+      commentBadgeOwner.release(badgeId);
+    },
+    [badgeId],
+  );
 
   return {
-    badgeId,
-    hovered,
-    setHovered,
+    visible,
     fieldHandlers: {
-      onMouseEnter: () => {
-        setHovered(true);
-      },
-      onMouseLeave: (event: MouseEvent<HTMLDivElement>) => {
-        if (!isCommentBadgeTarget(event.relatedTarget)) {
-          setHovered(false);
+      onPointerOver: (event: PointerEvent<HTMLDivElement>) => {
+        if (isInnermostCommentableField(event.target, event.currentTarget)) {
+          commentBadgeOwner.hover(badgeId, corridor);
         }
       },
-      onFocus: () => {
-        setHovered(true);
+      onPointerLeave: (event: PointerEvent<HTMLDivElement>) => {
+        commentBadgeOwner.leave(badgeId, event);
+      },
+      onFocus: (event: FocusEvent<HTMLDivElement>) => {
+        if (isInnermostCommentableField(event.target, event.currentTarget)) {
+          commentBadgeOwner.focus(badgeId, corridor);
+        }
       },
       onBlur: (event: FocusEvent<HTMLDivElement>) => {
-        const target = event.relatedTarget;
-        if (!event.currentTarget.contains(target) && !isCommentBadgeTarget(target)) {
-          setHovered(false);
+        if (!event.currentTarget.contains(event.relatedTarget)) {
+          commentBadgeOwner.leave(badgeId);
         }
       },
     },
@@ -146,7 +163,7 @@ export function InspectorCommentField({
   const { t } = useTranslation();
   const count = textCommentCounts?.[field] ?? 0;
   const { fieldRef, position } = useCommentBadgePosition();
-  const visibility = useCommentBadgeVisibility();
+  const visibility = useCommentBadgeVisibility(fieldRef);
 
   return (
     <div
@@ -155,20 +172,13 @@ export function InspectorCommentField({
       {...visibility.fieldHandlers}
     >
       {children}
-      {count > 0 && onOpenTextComments && visibility.hovered ? (
+      {count > 0 && onOpenTextComments && visibility.visible ? (
         <CommentBadge
-          badgeId={visibility.badgeId}
           position={position}
           label={t('comments.openForField', { field: label })}
           count={count}
           onClick={() => {
             onOpenTextComments(field);
-          }}
-          onMouseEnter={() => {
-            visibility.setHovered(true);
-          }}
-          onMouseLeave={() => {
-            visibility.setHovered(false);
           }}
         />
       ) : null}
@@ -191,7 +201,7 @@ export function InspectorCommentSlot({
   const { t } = useTranslation();
   const count = semanticCommentCounts?.[commentSemanticSlotKey(slot)] ?? 0;
   const { fieldRef, position } = useCommentBadgePosition();
-  const visibility = useCommentBadgeVisibility();
+  const visibility = useCommentBadgeVisibility(fieldRef);
 
   return (
     <div
@@ -202,20 +212,13 @@ export function InspectorCommentSlot({
       {...visibility.fieldHandlers}
     >
       {children}
-      {onOpenSemanticComments && visibility.hovered ? (
+      {onOpenSemanticComments && visibility.visible ? (
         <CommentBadge
-          badgeId={visibility.badgeId}
           position={position}
           label={t(count > 0 ? 'comments.openForField' : 'comments.commentField', { field: label })}
           count={count}
           onClick={() => {
             onOpenSemanticComments(slot);
-          }}
-          onMouseEnter={() => {
-            visibility.setHovered(true);
-          }}
-          onMouseLeave={() => {
-            visibility.setHovered(false);
           }}
         />
       ) : null}
