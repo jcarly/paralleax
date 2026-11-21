@@ -1263,11 +1263,6 @@
       "count": 1
     }
   },
-  "apps/web/src/features/story-editor/navigation/StoryContextEntitySections.tsx": {
-    "@typescript-eslint/strict-boolean-expressions": {
-      "count": 1
-    }
-  },
   "apps/web/src/features/story-editor/navigation/StoryGroupRow.tsx": {
     "complexity": {
       "count": 1
@@ -1284,7 +1279,7 @@
   },
   "apps/web/src/features/story-editor/navigation/StoryGroupTreeContent.tsx": {
     "@typescript-eslint/strict-boolean-expressions": {
-      "count": 2
+      "count": 1
     }
   },
   "apps/web/src/features/story-editor/navigation/StoryGroupTreePanel.drag.test.tsx": {
@@ -1305,9 +1300,6 @@
     }
   },
   "apps/web/src/features/story-editor/navigation/StoryGroupTreeRows.tsx": {
-    "@typescript-eslint/strict-boolean-expressions": {
-      "count": 1
-    },
     "no-duplicate-imports": {
       "count": 1
     }
@@ -1332,30 +1324,14 @@
       "count": 3
     }
   },
-  "apps/web/src/features/story-editor/navigation/StoryGroupsPanel.tsx": {
-    "@typescript-eslint/strict-boolean-expressions": {
-      "count": 2
-    }
-  },
   "apps/web/src/features/story-editor/navigation/groupTree.ts": {
     "@typescript-eslint/no-unnecessary-condition": {
       "count": 2
-    },
-    "@typescript-eslint/strict-boolean-expressions": {
-      "count": 1
-    }
-  },
-  "apps/web/src/features/story-editor/navigation/interactionSearch.ts": {
-    "@typescript-eslint/strict-boolean-expressions": {
-      "count": 6
     }
   },
   "apps/web/src/features/story-editor/navigation/useGroupTreeCommands.ts": {
     "@typescript-eslint/no-unnecessary-condition": {
       "count": 2
-    },
-    "@typescript-eslint/strict-boolean-expressions": {
-      "count": 1
     }
   },
   "apps/web/src/features/story-editor/navigation/useGroupTreeDrag.ts": {
@@ -1369,9 +1345,6 @@
   "apps/web/src/features/story-editor/navigation/useGroupTreeNavigation.ts": {
     "@typescript-eslint/no-unnecessary-condition": {
       "count": 1
-    },
-    "@typescript-eslint/strict-boolean-expressions": {
-      "count": 7
     }
   },
   "apps/web/src/features/story-editor/navigation/useStoryContextNavigation.test.ts": {

@@ -247,7 +247,7 @@ function isGroupExpanded(groupId: string, options: GroupExplorerVisibilityOption
   return (
     options.expandedIds.has(groupId) ||
     options.forcedOpenIds?.has(groupId) === true ||
-    (options.tree.expandedMatches.has(groupId) && !options.collapsedSearchIds?.has(groupId))
+    (options.tree.expandedMatches.has(groupId) && options.collapsedSearchIds?.has(groupId) !== true)
   );
 }
 

@@ -141,7 +141,7 @@ function hasChildren(group: Group, props: StoryGroupTreeRowsProps) {
 }
 
 function isInvalidDrop(groupId: string, props: StoryGroupTreeRowsProps) {
-  if (!props.activeId || props.target?.groupId !== groupId) {
+  if (props.activeId === undefined || props.activeId === '' || props.target?.groupId !== groupId) {
     return false;
   }
   return !getGroupDropInput(props.groups, props.activeId, props.target);

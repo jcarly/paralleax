@@ -84,6 +84,23 @@ describe('interaction search index', () => {
     }
   });
 
+  it('ignores missing and empty location references while indexing a normal reference', () => {
+    const source = story.interactions[0];
+    const index = createInteractionSearchIndex({
+      ...story,
+      locations: [...(story.locations ?? []), { id: '', name: 'Phantom', description: '' }],
+      interactions: [
+        { ...source, id: 'missing', locationId: undefined },
+        { ...source, id: 'null', locationId: null },
+        { ...source, id: 'empty', locationId: '' },
+        { ...source, id: 'present', locationId: 'harbor' },
+      ],
+    });
+
+    expect(searchInteractionIds(index, 'phantom')).toEqual([]);
+    expect(searchInteractionIds(index, 'harbor')).toEqual(['present']);
+  });
+
   it('keeps Story order and returns no results for an empty query', () => {
     const index = createInteractionSearchIndex(story);
     expect(searchInteractionIds(index, 'the')).toEqual(['source', 'target']);

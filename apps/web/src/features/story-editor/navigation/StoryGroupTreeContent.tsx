@@ -140,7 +140,7 @@ function createTreeRowProps({
 function GroupDragOverlay({ activeId, navigation }: { activeId?: string; navigation: Navigation }) {
   return createPortal(
     <DragOverlay dropAnimation={null} style={{ pointerEvents: 'none' }}>
-      {activeId ? (
+      {activeId !== undefined && activeId !== '' ? (
         <div className="story-group-drag-preview">{navigation.tree.byId.get(activeId)?.title}</div>
       ) : null}
     </DragOverlay>,

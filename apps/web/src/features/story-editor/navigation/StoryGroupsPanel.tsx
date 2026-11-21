@@ -22,7 +22,7 @@ export function StoryGroupsPanel(props: StoryGroupsPanelProps) {
 
 function GroupsWithoutTree({ props }: { props: StoryGroupsPanelProps }) {
   const { t } = useTranslation();
-  const interactions = props.story.interactions.filter(({ id }) => !isGrouped(props, id));
+  const interactions = props.story.interactions.filter(({ id }) => isGrouped(props, id) !== true);
   const hasSearchResults = props.matchingInteractionIds.length > 0;
   const open = props.open || Boolean(props.editingGroupId);
 
@@ -54,7 +54,9 @@ function GroupsLoadingFallback({ props }: { props: StoryGroupsPanelProps }) {
   return (
     <section className="story-groups-panel" aria-label={t('editor.groups.title')}>
       <GroupsHeader props={props} count={props.story.groups?.length ?? 0} />
-      {props.open || props.editingGroupId ? <p className="hint">{t('shell.loading')}</p> : null}
+      {props.open || (props.editingGroupId !== undefined && props.editingGroupId !== '') ? (
+        <p className="hint">{t('shell.loading')}</p>
+      ) : null}
     </section>
   );
 }
