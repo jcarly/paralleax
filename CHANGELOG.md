@@ -2,6 +2,12 @@
 
 ## Unreleased
 
+- The Inspector shows where an Interaction comes from and drops repeated
+  headings (PAR-7, B5 and B3). A `←` row above the title lists the incoming
+  Interactions as clickable chips, or `Start` for a starting point. The
+  `Effects` and `Options` headings become screen-reader headings: effects show
+  as `Δ` and `◇` counters with a `Δ+` add button, and the add-option `+` follows
+  the option list.
 - Grouped the graph tool rail (PAR-7, B9). Thin separators split the panel
   toggle, history (undo and redo now side by side, then Story history),
   creation (start, frame, text, post-it) and Organize. The zoom controls run

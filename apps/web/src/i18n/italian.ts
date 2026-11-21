@@ -1057,6 +1057,8 @@ export const italianTranslation = {
     target: 'Obiettivo',
     content: 'Contenuto',
     title: 'Titolo',
+    inputs: 'Interazioni in entrata',
+    startInput: 'Inizio',
     startTitlePlaceholder: 'Inizio',
     newTitlePlaceholder: 'Nuova interazione',
     contextAndTiming: 'Contesto e tempistica',

@@ -1038,6 +1038,8 @@ export const frenchTranslation = {
     target: 'Cible',
     content: 'Contenu',
     title: 'Titre',
+    inputs: 'Interactions entrantes',
+    startInput: 'Départ',
     startTitlePlaceholder: 'Départ',
     newTitlePlaceholder: 'Nouvelle interaction',
     contextAndTiming: 'Contexte et temporalité',

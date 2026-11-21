@@ -297,6 +297,11 @@ nothing during reading.
 
 The title is used as the reader choice label. The content is displayed when the reader reaches that interaction.
 
+The Inspector reads in story order. Above the title, `←` lists the
+interactions that lead to this one (or `Start` for a starting point); click one
+to select it. Below the content, effects show as counters, `Δ` for variables and
+`◇` for items, with `Δ+` to add one. The options follow, with `+` to add one.
+
 When several options follow the same interaction, each one needs a title. An
 untitled option keeps an empty label with a red outline and a `!` icon in the
 graph, the Inspector and the Simulation; hover the icon for the detail. Readers

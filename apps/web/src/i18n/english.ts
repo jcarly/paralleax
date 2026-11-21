@@ -1020,6 +1020,8 @@ export const englishTranslation = {
     target: 'Target',
     content: 'Content',
     title: 'Title',
+    inputs: 'Incoming interactions',
+    startInput: 'Start',
     startTitlePlaceholder: 'Start',
     newTitlePlaceholder: 'New interaction',
     contextAndTiming: 'Context and timing',
