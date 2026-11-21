@@ -4,6 +4,7 @@ import type {
   LocationMutationResult,
   StoryGraphPositionUpdates,
 } from '@paralleax/shared';
+import { requireValue } from '../../src/test/assertions';
 import { createLargeEditorStoryFixture } from '../../src/test/largeEditorStoryFixture';
 import { mockGraphPositionUpdates, prepareEditorPage } from '../e2e/editorTestHarness';
 import {
@@ -86,18 +87,20 @@ test('measures large-Story editor loading and common interactions', async ({ pag
   const selectedNode = page.locator(
     `.react-flow__node[data-id="interaction-${Math.floor(interactionCount / 2)}"]`,
   );
-  const selectedBox = await selectedNode.boundingBox();
-  expect(selectedBox).not.toBeNull();
+  const selectedBox = requireValue(
+    await selectedNode.boundingBox(),
+    'selected interaction bounding box',
+  );
   const dragReactBefore = await readReactCommitSnapshot(page);
   const dragStartedAt = performance.now();
   await page.mouse.move(
-    selectedBox!.x + selectedBox!.width / 2,
-    selectedBox!.y + selectedBox!.height / 2,
+    selectedBox.x + selectedBox.width / 2,
+    selectedBox.y + selectedBox.height / 2,
   );
   await page.mouse.down();
   await page.mouse.move(
-    selectedBox!.x + selectedBox!.width / 2 + 80,
-    selectedBox!.y + selectedBox!.height / 2 + 50,
+    selectedBox.x + selectedBox.width / 2 + 80,
+    selectedBox.y + selectedBox.height / 2 + 50,
     { steps: 8 },
   );
   await page.mouse.up();

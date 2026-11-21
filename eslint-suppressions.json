@@ -2359,9 +2359,6 @@
     }
   },
   "apps/web/tests/acceptance/editor-reliability.spec.ts": {
-    "@typescript-eslint/no-non-null-assertion": {
-      "count": 8
-    },
     "@typescript-eslint/no-unsafe-type-assertion": {
       "count": 1
     },
@@ -2497,9 +2494,6 @@
     }
   },
   "apps/web/tests/e2e/editor.persistence.spec.ts": {
-    "@typescript-eslint/no-non-null-assertion": {
-      "count": 8
-    },
     "max-lines-per-function": {
       "count": 3
     }
@@ -2575,9 +2569,6 @@
     }
   },
   "apps/web/tests/performance/editor.performance.spec.ts": {
-    "@typescript-eslint/no-non-null-assertion": {
-      "count": 8
-    },
     "max-lines-per-function": {
       "count": 1
     }
