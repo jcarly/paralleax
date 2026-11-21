@@ -626,6 +626,10 @@ describe('StoryEditor graph collaboration and layout', () => {
       expect(button.querySelector('svg')).toBeInTheDocument();
       expect(button.textContent).toBe('');
     }
+    expect(within(toolbar).getAllByRole('separator')).toHaveLength(3);
+    expect(
+      within(toolbar).getByRole('button', { name: 'Undo last Story change' }).parentElement,
+    ).toBe(within(toolbar).getByRole('button', { name: 'Redo Story change' }).parentElement);
   });
 
   it('collapses the story context panel from the tool rail without leaving a strip', async () => {

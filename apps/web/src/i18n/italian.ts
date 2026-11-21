@@ -915,6 +915,8 @@ export const italianTranslation = {
     forced: ' Costretto per questo test.',
     addOption: 'Aggiungi opzione',
     addOptionHelp: "Crea un'interazione connessa da questo punto.",
+    untitledInteraction: 'Senza titolo',
+    startChoice: 'Inizia',
     continueChoice: 'Continua',
     untitledChoice: 'Opzione {{number}}',
     choiceLabelNeeded:
@@ -1091,6 +1093,8 @@ export const italianTranslation = {
     target: 'Obiettivo',
     content: 'Contenuto',
     title: 'Titolo',
+    inputs: 'Interazioni in entrata',
+    startInput: 'Inizio',
     startTitlePlaceholder: 'Inizio',
     newTitlePlaceholder: 'Nuova interazione',
     contextAndTiming: 'Contesto e tempistica',

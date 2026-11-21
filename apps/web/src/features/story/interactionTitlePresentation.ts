@@ -29,12 +29,12 @@ export interface ChoiceLabelPresentation {
 
 /**
  * A choice label is the destination Interaction's title. Without a title, a lone
- * choice reads as `Continue`. One of several untitled choices reads as `Option N`
+ * choice reads as `Continue`, or `Start` on the start screen. One of several untitled choices reads as `Option N`
  * for readers only: authoring surfaces keep the label empty and show an error.
  */
 export function choiceLabelForDisplay(
   destination: Pick<Interaction, 'title'>,
-  position: { index: number; count: number },
+  position: { index: number; count: number; start?: boolean },
   t: TFunction,
   audience: 'reader' | 'author' = 'reader',
 ): ChoiceLabelPresentation {
@@ -43,11 +43,35 @@ export function choiceLabelForDisplay(
     return { label: title, authored: true, needsLabel: false };
   }
   if (position.count <= 1) {
-    return { label: t('player.continueChoice'), authored: false, needsLabel: false };
+    return {
+      label: t(position.start === true ? 'player.startChoice' : 'player.continueChoice'),
+      authored: false,
+      needsLabel: false,
+    };
   }
   return {
     label: audience === 'reader' ? t('player.untitledChoice', { number: position.index + 1 }) : '',
     authored: false,
     needsLabel: audience === 'author',
   };
+}
+
+/**
+ * The hint for an untitled Interaction in Simulation, from how it was reached:
+ * `Start` for the starting point, `Continue` after a lone option, and an empty
+ * label flagged as an error after several options.
+ */
+export function simulationTitleHint(
+  arrival: 'start' | { optionCount: number } | undefined,
+  t: TFunction,
+): { hint: string; needsLabel: boolean } {
+  if (arrival === 'start') {
+    return { hint: t('player.startChoice'), needsLabel: false };
+  }
+  if (arrival === undefined) {
+    return { hint: '', needsLabel: false };
+  }
+  return arrival.optionCount > 1
+    ? { hint: '', needsLabel: true }
+    : { hint: t('player.continueChoice'), needsLabel: false };
 }

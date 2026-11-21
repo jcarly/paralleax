@@ -308,6 +308,11 @@ nothing during reading.
 
 The title is used as the reader choice label. The content is displayed when the reader reaches that interaction.
 
+The Inspector reads in story order. Above the title, `←` lists the
+interactions that lead to this one (or `Start` for a starting point); click one
+to select it. Below the content, effects show as counters, `Δ` for variables and
+`◇` for items, with `Δ+` to add one. The options follow, with `+` to add one.
+
 When several options follow the same interaction, each one needs a title. An
 untitled option keeps an empty label with a red outline and a `!` icon in the
 graph, the Inspector and the Simulation; hover the icon for the detail. Readers
@@ -541,6 +546,11 @@ independently. Collapse or expand the whole story context menu with the first
 button of the graph tool rail. Collapsed, the menu takes no space; the setting is
 remembered in this browser. On narrow screens the open menu overlays the graph
 beside the tool rail, so the same button closes it.
+
+The tool rail groups its actions, separated by thin lines: the context menu
+toggle; undo and redo side by side, then the Story history; creation (new
+starting point, frame, text, post-it); and Organize. The zoom and fit-view
+controls sit in one horizontal row at the bottom left of the graph.
 
 Open any location, character, reusable variable, or reusable item and fill in
 **Category** to organize it. The field suggests categories already used for the

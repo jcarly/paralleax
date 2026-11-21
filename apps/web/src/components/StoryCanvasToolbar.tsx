@@ -70,6 +70,16 @@ export function StoryCanvasToolbar({
     : t('editor.organizeGraph');
   const postItLabel = t(placingComment ? 'comments.clickCanvas' : 'comments.placeOnCanvas');
 
+  const postIt = canComment ? (
+    <CanvasToolButton
+      label={postItLabel}
+      icon="postIt"
+      active={placingComment}
+      pressed={placingComment}
+      onClick={onToggleCommentPlacement}
+    />
+  ) : null;
+
   return (
     <div className="canvas-tools" role="toolbar" aria-label={t('editor.canvasTools')}>
       <CanvasToolButton
@@ -82,18 +92,21 @@ export function StoryCanvasToolbar({
       />
       {canEdit ? (
         <>
-          <CanvasToolButton
-            label={t('editor.undo')}
-            icon="undo"
-            disabled={!canUndo || historyBusy}
-            onClick={onUndo}
-          />
-          <CanvasToolButton
-            label={t('editor.redo')}
-            icon="redo"
-            disabled={!canRedo || historyBusy}
-            onClick={onRedo}
-          />
+          <CanvasToolsSeparator />
+          <div className="canvas-tools-row">
+            <CanvasToolButton
+              label={t('editor.undo')}
+              icon="undo"
+              disabled={!canUndo || historyBusy}
+              onClick={onUndo}
+            />
+            <CanvasToolButton
+              label={t('editor.redo')}
+              icon="redo"
+              disabled={!canRedo || historyBusy}
+              onClick={onRedo}
+            />
+          </div>
           <CanvasToolButton
             label={t('editor.history.open')}
             icon="history"
@@ -101,9 +114,12 @@ export function StoryCanvasToolbar({
             pressed={historyOpen}
             onClick={onToggleHistory}
           />
+          <CanvasToolsSeparator />
           <CanvasToolButton label={t('editor.addRoot')} icon="root" onClick={onCreateRoot} />
           <CanvasToolButton label={t('decoration.addFrame')} icon="frame" onClick={onAddFrame} />
           <CanvasToolButton label={t('decoration.addText')} icon="text" onClick={onAddText} />
+          {postIt}
+          <CanvasToolsSeparator />
           <CanvasToolButton
             label={organizeLabel}
             icon="organize"
@@ -111,18 +127,19 @@ export function StoryCanvasToolbar({
             onClick={onOrganize}
           />
         </>
-      ) : null}
-      {canComment ? (
-        <CanvasToolButton
-          label={postItLabel}
-          icon="postIt"
-          active={placingComment}
-          pressed={placingComment}
-          onClick={onToggleCommentPlacement}
-        />
+      ) : postIt ? (
+        <>
+          <CanvasToolsSeparator />
+          {postIt}
+        </>
       ) : null}
     </div>
   );
+}
+
+/** Splits the rail into groups: panel, history, creation, layout. */
+function CanvasToolsSeparator() {
+  return <div className="canvas-tools-separator" role="separator" aria-orientation="horizontal" />;
 }
 
 function CanvasToolButton({
