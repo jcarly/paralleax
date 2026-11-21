@@ -49,7 +49,7 @@ export function CommentDiscussionCard({
 
   function collapseReplyOnBlur(event: FocusEvent<HTMLFormElement>) {
     const discussion = event.currentTarget.closest('.comment-discussion-card');
-    if (discussion?.contains(event.relatedTarget)) {
+    if (discussion?.contains(event.relatedTarget) === true) {
       return;
     }
     onCollapse?.();
@@ -59,7 +59,7 @@ export function CommentDiscussionCard({
     <article
       className={`comment-discussion-card ${variant} ${expanded ? 'expanded' : ''} ${
         thread.status === 'resolved' ? 'resolved' : ''
-      } ${thread.detached ? 'detached' : ''}`}
+      } ${thread.detached === true ? 'detached' : ''}`}
     >
       <button
         className="comment-discussion-summary"
@@ -86,7 +86,7 @@ export function CommentDiscussionCard({
 
       {variant === 'rail' || expanded ? (
         <div className="comment-discussion-detail">
-          {thread.detached ? (
+          {thread.detached === true ? (
             <div className="comment-detached inline">
               <p>{t('comments.detached')}</p>
               {onReattach ? (

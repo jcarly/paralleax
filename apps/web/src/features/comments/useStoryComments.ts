@@ -104,7 +104,7 @@ export function useStoryComments(storyId: string, enabled: boolean) {
 
   const selectThread = useCallback((threadId: string | undefined) => {
     setSelectedThreadId(threadId);
-    if (threadId) {
+    if (threadId !== undefined && threadId !== '') {
       setDraftAnchor(undefined);
     }
   }, []);

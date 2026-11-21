@@ -65,7 +65,8 @@ export function StoryCommentsPanel({
       threads.filter((thread) =>
         filter === 'deleted'
           ? Boolean(thread.deletedAt)
-          : !thread.deletedAt && (filter === 'all' || thread.status === filter),
+          : (thread.deletedAt === undefined || thread.deletedAt === '') &&
+            (filter === 'all' || thread.status === filter),
       ),
     [filter, threads],
   );
@@ -145,13 +146,14 @@ export function StoryCommentsPanel({
               <b>{selectedThread.anchorLabel}</b>
               <small>
                 {t(
-                  selectedThread.deletedAt
+                  selectedThread.deletedAt !== undefined && selectedThread.deletedAt !== ''
                     ? 'comments.status.deleted'
                     : `comments.status.${selectedThread.status}`,
                 )}
               </small>
             </div>
-            {!selectedThread.deletedAt && canManageThread ? (
+            {(selectedThread.deletedAt === undefined || selectedThread.deletedAt === '') &&
+            canManageThread ? (
               <button
                 className="secondary"
                 type="button"
@@ -165,7 +167,9 @@ export function StoryCommentsPanel({
                 {t(selectedThread.status === 'open' ? 'comments.resolve' : 'comments.reopen')}
               </button>
             ) : null}
-            {!selectedThread.deletedAt && canDeleteThread && onDelete ? (
+            {(selectedThread.deletedAt === undefined || selectedThread.deletedAt === '') &&
+            canDeleteThread &&
+            onDelete ? (
               <button
                 className="secondary danger"
                 type="button"
@@ -174,7 +178,10 @@ export function StoryCommentsPanel({
                 {t('comments.delete')}
               </button>
             ) : null}
-            {selectedThread.deletedAt && canDeleteThread && onRestore ? (
+            {selectedThread.deletedAt !== undefined &&
+            selectedThread.deletedAt !== '' &&
+            canDeleteThread &&
+            onRestore ? (
               <button
                 className="secondary"
                 type="button"
@@ -184,7 +191,8 @@ export function StoryCommentsPanel({
               </button>
             ) : null}
           </div>
-          {!selectedThread.deletedAt && selectedThread.detached ? (
+          {(selectedThread.deletedAt === undefined || selectedThread.deletedAt === '') &&
+          selectedThread.detached === true ? (
             <div className="comment-detached">
               <p>{t('comments.detached')}</p>
               {onReattach ? (
@@ -266,7 +274,10 @@ export function StoryCommentsPanel({
           )}
         </section>
       )}
-      {(draftAnchor || (selectedThread && !selectedThread.deletedAt)) && canComment ? (
+      {(draftAnchor ||
+        (selectedThread &&
+          (selectedThread.deletedAt === undefined || selectedThread.deletedAt === ''))) &&
+      canComment ? (
         <form className="comment-reply-form" onSubmit={(event) => void submit(event)}>
           <label className="form-field form-field--compact">
             <span className="form-field-label">

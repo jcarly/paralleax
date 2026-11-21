@@ -91,6 +91,29 @@ describe('StoryCommentsPanel', () => {
     expect(onStatus).toHaveBeenCalledWith('thread-1', 'resolved');
   });
 
+  it('treats an empty deletion timestamp as an active thread', () => {
+    render(
+      <StoryCommentsPanel
+        open
+        loading={false}
+        error=""
+        threads={[{ ...thread, deletedAt: '' }]}
+        selectedThread={{ ...thread, deletedAt: '' }}
+        canComment
+        canManageThread
+        onClose={vi.fn()}
+        onSelect={vi.fn()}
+        onCancelDraft={vi.fn()}
+        onCreate={vi.fn()}
+        onReply={vi.fn()}
+        onStatus={vi.fn()}
+      />,
+    );
+
+    expect(screen.getByRole('button', { name: 'Resolve' })).toBeInTheDocument();
+    expect(screen.getByRole('textbox', { name: 'Reply' })).toBeInTheDocument();
+  });
+
   it('offers reattachment for a detached thread', async () => {
     const user = userEvent.setup();
     const onReattach = vi.fn().mockResolvedValue(thread);
