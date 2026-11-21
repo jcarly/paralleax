@@ -10,6 +10,7 @@ import {
   interactionNode,
   registerAndCreateStory,
   requestApiJson,
+  UNLABELLED_OPTION,
   waitForApiResponse,
   waitForInteractionPatch,
   waitForTriggerPatch,
@@ -88,7 +89,7 @@ test('an author creates, persists, resumes, and simulates a conditional story', 
   await expect(createBranch).toBeInViewport();
   await createBranch.click();
   const alternative = await createdInteraction(alternativeCreation);
-  await editInteraction(page, 'New interaction', 'Leave the atrium', 'Alice takes another path.');
+  await editInteraction(page, UNLABELLED_OPTION, 'Leave the atrium', 'Alice takes another path.');
   await page.getByRole('button', { name: 'Fit View' }).click();
 
   await page.getByRole('button', { name: 'Collapse story context' }).click();
