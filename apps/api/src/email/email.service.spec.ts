@@ -47,6 +47,18 @@ describe('EmailService', () => {
     );
   });
 
+  it.each([undefined, '', '   '])('omits blank HTML bodies: %j', async (html) => {
+    const outbox = new TestEmailOutbox();
+    const service = new EmailService(
+      Object.assign(configuredEmailConfig(), { testEmailOutbox: true }),
+      outbox,
+    );
+
+    await service.send({ to: 'reader@example.com', subject: 'Subject', text: 'Body', html });
+
+    expect(outbox.latestFor('reader@example.com')).not.toHaveProperty('html');
+  });
+
   it('does not create a Brevo client until the first delivery attempt', () => {
     const service = new EmailService(configuredEmailConfig());
     expect(service.isConfigured).toBe(true);
@@ -141,6 +153,23 @@ describe('EmailService', () => {
     );
   });
 
+  it.each([0, NaN])('omits an invalid provider status from logs: %s', async (statusCode) => {
+    const error = new BrevoError({ message: 'failure', statusCode });
+    const sendTransacEmail = jest.fn().mockRejectedValue(error);
+    mockClient(sendTransacEmail);
+    const loggerError = jest.spyOn(Logger.prototype, 'error').mockImplementation();
+    const service = new EmailService(configuredEmailConfig());
+
+    await expect(
+      service.send({ to: 'reader@example.com', subject: 'Subject', text: 'Body' }),
+    ).rejects.toThrow();
+    expect(loggerError).toHaveBeenCalledWith({
+      event: 'email_delivery_failed',
+      provider: 'brevo',
+      errorType: 'api',
+    });
+  });
+
   it('identifies Brevo timeouts without logging their message', async () => {
     const sendTransacEmail = jest
       .fn()
@@ -163,25 +192,28 @@ describe('EmailService', () => {
     expect(JSON.stringify(loggerError.mock.calls)).not.toContain('reader@example.com');
   });
 
-  it('fails safely when Brevo accepts a request without returning a message id', async () => {
-    const sendTransacEmail = jest.fn().mockResolvedValue({});
-    mockClient(sendTransacEmail);
-    const loggerError = jest.spyOn(Logger.prototype, 'error').mockImplementation();
-    const service = new EmailService(configuredEmailConfig());
+  it.each([undefined, null, ''])(
+    'fails safely when Brevo returns a missing or empty message id: %j',
+    async (messageId) => {
+      const sendTransacEmail = jest.fn().mockResolvedValue({ messageId });
+      mockClient(sendTransacEmail);
+      const loggerError = jest.spyOn(Logger.prototype, 'error').mockImplementation();
+      const service = new EmailService(configuredEmailConfig());
 
-    await expect(
-      service.send({ to: 'reader@example.com', subject: 'Subject', text: 'Body' }),
-    ).rejects.toMatchObject({
-      response: expect.objectContaining({ code: 'EMAIL_DELIVERY_UNAVAILABLE' }),
-    });
+      await expect(
+        service.send({ to: 'reader@example.com', subject: 'Subject', text: 'Body' }),
+      ).rejects.toMatchObject({
+        response: expect.objectContaining({ code: 'EMAIL_DELIVERY_UNAVAILABLE' }),
+      });
 
-    expect(loggerError).toHaveBeenCalledWith({
-      event: 'email_delivery_rejected',
-      provider: 'brevo',
-      reason: 'missing_message_id',
-    });
-    expect(JSON.stringify(loggerError.mock.calls)).not.toContain('reader@example.com');
-  });
+      expect(loggerError).toHaveBeenCalledWith({
+        event: 'email_delivery_rejected',
+        provider: 'brevo',
+        reason: 'missing_message_id',
+      });
+      expect(JSON.stringify(loggerError.mock.calls)).not.toContain('reader@example.com');
+    },
+  );
 
   it('rejects header-injection input before it reaches Brevo', async () => {
     const service = new EmailService(configuredEmailConfig());
