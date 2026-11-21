@@ -148,6 +148,20 @@ export async function chooseTriggerConditionType(
   await user.click(within(picker).getByRole('button', { name: typeName }));
 }
 
+/** Neutralizes layout geometry that jsdom does not implement but rich-text and graph code reads. */
+export function stubEditorDomGeometry() {
+  const empty = { configurable: true, value: () => [] };
+  const rect = { configurable: true, value: () => new DOMRect(0, 0, 0, 0) };
+  Object.defineProperty(Range.prototype, 'getClientRects', empty);
+  Object.defineProperty(Range.prototype, 'getBoundingClientRect', rect);
+  Object.defineProperty(HTMLElement.prototype, 'getClientRects', empty);
+  Object.defineProperty(HTMLElement.prototype, 'getBoundingClientRect', rect);
+  Object.defineProperty(document, 'elementFromPoint', {
+    configurable: true,
+    value: () => document.body,
+  });
+}
+
 export function setupStoryEditorTestSuite() {
   afterEach(() => {
     cleanup();
