@@ -81,6 +81,25 @@ test('Docker images and CI use the Node major declared in package.json engines',
   assert.deepEqual(new Set(workflowMajors), new Set([nodeMajor]));
 });
 
+test('CI distinguishes integration branches from protected main promotions', async () => {
+  const workflow = await readRepositoryFile('.github/workflows/ci.yml');
+  const dependabot = await readRepositoryFile('.github/dependabot.yml');
+
+  assert.equal(
+    (workflow.match(/^    branches: \[dev, main, 'release\/\*\*'\]$/gm) ?? []).length,
+    2,
+  );
+  assert.match(workflow, /Only dev or release\/\* branches in this repository/);
+  assert.ok(
+    workflow.includes('HEAD_REPOSITORY: ${{ github.event.pull_request.head.repo.full_name }}'),
+  );
+  assert.ok(workflow.includes('github.base_ref == \'main\''));
+  assert.ok(workflow.includes("startsWith(github.base_ref, 'release/')"));
+  assert.match(workflow, /^    name: Integration readiness$/m);
+  assert.match(workflow, /^    name: Main readiness$/m);
+  assert.equal((dependabot.match(/^    target-branch: 'dev'$/gm) ?? []).length, 4);
+});
+
 test('Railway IaC partial explicitly retains GitHub sources for the initial migration', async () => {
   const { default: defineProject, partial } = await import('../.railway/railway.ts');
   const configuration = await defineProject(createRailwayContext({ environment: 'production' }));
