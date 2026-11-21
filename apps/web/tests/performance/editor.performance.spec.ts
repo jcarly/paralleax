@@ -79,7 +79,9 @@ test('measures large-Story editor loading and common interactions', async ({ pag
     .fill(selectedTitle);
   await page.getByRole('button', { name: 'Next interaction result' }).click();
   const inspector = page.getByRole('complementary', { name: 'Inspector' });
-  await expect(inspector.getByLabel('Title')).toHaveValue(selectedTitle);
+  await expect(
+    inspector.getByRole('button', { name: `Title: ${selectedTitle}`, exact: true }),
+  ).toBeVisible();
   const selectionReactAfter = await waitForReactCommitQuiescence(page);
   const selectionMs = performance.now() - selectionStartedAt;
   const selectionReact = reactCommitDifference(selectionReactAfter, selectionReactBefore);
