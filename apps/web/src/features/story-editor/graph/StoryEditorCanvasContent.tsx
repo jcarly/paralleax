@@ -117,7 +117,7 @@ function StoryEditorFlow({
   return (
     <ReactFlow {...flowProps} onInit={onInit}>
       <Background />
-      <Controls />
+      <Controls orientation="horizontal" />
     </ReactFlow>
   );
 }

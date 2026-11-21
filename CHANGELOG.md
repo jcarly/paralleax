@@ -2,6 +2,10 @@
 
 ## Unreleased
 
+- Grouped the graph tool rail (PAR-7, B9). Thin separators split the panel
+  toggle, history (undo and redo now side by side, then Story history),
+  creation (start, frame, text, post-it) and Organize. The zoom controls run
+  horizontally at the bottom left.
 - An untitled option among several is now shown as an error while authoring
   (PAR-7). The graph, Inspector and Simulation leave its label empty, outline it
   in red and add a `!` icon whose tooltip explains the problem, instead of

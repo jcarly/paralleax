@@ -531,6 +531,11 @@ button of the graph tool rail. Collapsed, the menu takes no space; the setting i
 remembered in this browser. On narrow screens the open menu overlays the graph
 beside the tool rail, so the same button closes it.
 
+The tool rail groups its actions, separated by thin lines: the context menu
+toggle; undo and redo side by side, then the Story history; creation (new
+starting point, frame, text, post-it); and Organize. The zoom and fit-view
+controls sit in one horizontal row at the bottom left of the graph.
+
 Open any location, character, reusable variable, or reusable item and fill in
 **Category** to organize it. The field suggests categories already used for the
 same entity type, while still accepting a new name. The four context lists group
