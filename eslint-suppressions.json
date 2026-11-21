@@ -618,9 +618,6 @@
     }
   },
   "apps/web/src/components/ContextMenu.tsx": {
-    "@typescript-eslint/no-non-null-assertion": {
-      "count": 2
-    },
     "@typescript-eslint/no-unsafe-type-assertion": {
       "count": 3
     },
@@ -723,9 +720,6 @@
     }
   },
   "apps/web/src/components/ItemDefinitionInspector.tsx": {
-    "@typescript-eslint/no-non-null-assertion": {
-      "count": 2
-    },
     "max-lines-per-function": {
       "count": 2
     }
@@ -923,9 +917,6 @@
     }
   },
   "apps/web/src/components/TriggerEdge.tsx": {
-    "@typescript-eslint/no-non-null-assertion": {
-      "count": 1
-    },
     "@typescript-eslint/strict-boolean-expressions": {
       "count": 2
     },
@@ -1053,9 +1044,6 @@
     }
   },
   "apps/web/src/features/comments/CommentPinNode.tsx": {
-    "@typescript-eslint/no-non-null-assertion": {
-      "count": 4
-    },
     "@typescript-eslint/no-unsafe-type-assertion": {
       "count": 1
     },

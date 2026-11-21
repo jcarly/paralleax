@@ -23,6 +23,7 @@ export type CommentPinFlowNode = Node<CommentPinNodeData, 'commentPin'>;
 export function CommentPinNode({ data }: NodeProps) {
   const { t } = useTranslation();
   const comment = data as CommentPinNodeData;
+  const thread = comment.thread;
 
   return (
     <div
@@ -31,7 +32,7 @@ export function CommentPinNode({ data }: NodeProps) {
         event.stopPropagation();
       }}
     >
-      {comment.thread && comment.canManageThread ? (
+      {thread && comment.canManageThread ? (
         <div className="comment-post-it-drag-handle" title={t('comments.movePostIt')}>
           <span aria-hidden="true">⠿</span>
         </div>
@@ -42,20 +43,20 @@ export function CommentPinNode({ data }: NodeProps) {
           event.stopPropagation();
         }}
       >
-        {comment.thread ? (
+        {thread ? (
           <CommentDiscussionCard
-            thread={comment.thread}
+            thread={thread}
             expanded={comment.expanded}
             canComment={comment.canComment}
             canManageThread={comment.canManageThread}
             canDeleteThread={comment.canDeleteThread}
             variant="post-it"
             onExpand={() => {
-              comment.onOpen(comment.thread!.id);
+              comment.onOpen(thread.id);
             }}
-            onReply={(body) => comment.onReply(comment.thread!.id, body)}
-            onStatus={(status) => comment.onStatus(comment.thread!.id, status)}
-            onDelete={() => comment.onDelete(comment.thread!.id)}
+            onReply={(body) => comment.onReply(thread.id, body)}
+            onStatus={(status) => comment.onStatus(thread.id, status)}
+            onDelete={() => comment.onDelete(thread.id)}
           />
         ) : comment.draftAnchor ? (
           <CommentDraftCard

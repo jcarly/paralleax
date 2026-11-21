@@ -98,7 +98,10 @@ export function ItemDefinitionInspector({
             onClick={() => {
               const candidate = statDefinitions.find(
                 ({ id }) => !itemStats.some(({ statDefinitionId }) => statDefinitionId === id),
-              )!;
+              );
+              if (!candidate) {
+                throw new Error('Expected an unused stat definition when adding an item stat.');
+              }
               const valueType = getStatValueType(candidate);
               const stats = [
                 ...itemStats,
@@ -122,7 +125,10 @@ export function ItemDefinitionInspector({
               aria-label={t('inspector.itemStat')}
               value={stat.statDefinitionId}
               onChange={(event) => {
-                const definition = statDefinitions.find(({ id }) => id === event.target.value)!;
+                const definition = statDefinitions.find(({ id }) => id === event.target.value);
+                if (!definition) {
+                  throw new Error(`Expected stat definition ${event.target.value} to exist.`);
+                }
                 const valueType = getStatValueType(definition);
                 const stats = [...itemStats];
                 stats[index] = {

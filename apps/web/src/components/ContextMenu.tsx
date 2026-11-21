@@ -21,7 +21,10 @@ export function ContextMenu({
     close.current = onClose;
   });
   useLayoutEffect(() => {
-    const menu = ref.current!;
+    const menu = ref.current;
+    if (!menu) {
+      throw new Error('Expected the context menu to be mounted before positioning it.');
+    }
     const bounds = menu.getBoundingClientRect();
     menu.style.left = `${Math.max(8, Math.min(position.x, window.innerWidth - bounds.width - 8))}px`;
     menu.style.top = `${Math.max(8, Math.min(position.y, window.innerHeight - bounds.height - 8))}px`;
@@ -83,9 +86,11 @@ export function ContextMenu({
         }
         event.preventDefault();
         event.stopPropagation();
-        const buttons = [
-          ...ref.current!.querySelectorAll<HTMLButtonElement>('button:not(:disabled)'),
-        ];
+        const menu = ref.current;
+        if (!menu) {
+          throw new Error('Expected the context menu to be mounted during keyboard navigation.');
+        }
+        const buttons = [...menu.querySelectorAll<HTMLButtonElement>('button:not(:disabled)')];
         const index = buttons.indexOf(document.activeElement as HTMLButtonElement);
         const next =
           event.key === 'Home'
