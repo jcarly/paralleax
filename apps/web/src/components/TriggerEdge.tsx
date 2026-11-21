@@ -96,7 +96,11 @@ export function TriggerEdge({
       travelled += segment.length;
     }
 
-    return points.at(-1)!;
+    const lastPoint = points.at(-1);
+    if (!lastPoint) {
+      throw new Error('Expected a last point when computing a polyline midpoint.');
+    }
+    return lastPoint;
   }
 
   return (
