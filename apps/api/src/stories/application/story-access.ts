@@ -4,7 +4,7 @@ import {
   Injectable,
   NotFoundException,
 } from '@nestjs/common';
-import type { StoryAccessSettings } from '@paralleax/shared';
+import { assertStoryAccessCoherent, type StoryAccessSettings } from '@paralleax/shared';
 import type { SetStoryCollaboratorDto, UpdateStoryAccessDto } from '../dto/stories.dto';
 import { StoriesRepository } from '../stories.repository';
 import { StoryEventsService } from '../story.events';
@@ -35,6 +35,7 @@ export class StoryAccessService {
       editPolicy: input.editPolicy,
       commentPolicy: input.commentPolicy,
     };
+    assertStoryAccessCoherent(settings);
     if (!(await this.repository.updateAccess(storyId, userId, settings))) {
       throw new NotFoundException(apiErrorResponse('STORY_NOT_FOUND', 'Story not found'));
     }

@@ -218,7 +218,7 @@ and 11 are new. Where an acceptance criterion says "observed evidence" or
    secret/container scanning, manual keyboard/focus, and measured performance
    gates in [Production readiness](production-readiness.md), configure the
    feedback survey described in
-   [Formbricks feedback](operations/formbricks-feedback.md#open-alpha-survey),
+   [Formbricks feedback, now PostHog](operations/posthog-feedback.md#open-alpha-survey),
    publish the alpha notice, rehearse the manual account export and deletion
    procedure (see [Production readiness](production-readiness.md)), then repeat
    the essential author tasks on staging.
@@ -1427,7 +1427,10 @@ versioned publication workflow.
 ### Scope
 
 - Separate mutable drafts from immutable published versions.
-- Validate before publication.
+- Validate before publication. Validation must alert on choices without a label
+  (untitled Interactions offered among several choices), which readers would see
+  as `Option N`; drafts stay unblocked (decided 2026-11-20, PAR-7). Until then,
+  the graph, Inspector and Simulation only warn about them.
 - Stable public reader URLs.
 - Separate author simulation from public reader UX.
 - Reporting and moderation foundations.

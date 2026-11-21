@@ -91,7 +91,14 @@ Select `Access` from a story card, or open the gear beside the Story title and
 select the `Access` tab. The creator or an administrator can choose who may read
 the story: only the owner, every signed-in user, anyone with the public link, or
 accounts with a direct grant. Editing can remain with the owner, be granted to
-editors, or be opened to every signed-in user.
+editors, or be opened to every signed-in user. Editing is never open to more
+people than reading: an owner-only Story is edited by its owner only, and an
+invitation-only Story by its owner or invited editors. Options outside the
+reading audience are shown but cannot be selected; narrowing reading narrows
+editing to the widest option still allowed, and the screen says so. With
+`Owner only` editing, invited Editors cannot edit: inviting or promoting an
+Editor switches editing to `Editors` when reading allows it, and says so.
+The invitation and any required policy change succeed or fail together.
 
 Direct grants target an existing Paralleax account by email and grant either
 reader or editor access. An existing grant can be changed in place or removed.
@@ -127,8 +134,10 @@ URL redirects that account to the player.
 Editors can use `Place a post-it`, then click the graph to start a discussion at
 that canvas position. Select an interaction, trigger, character, location, item,
 or stat and use `Comment on this element` to attach the thread to that exact
-entity. To target part of a title, body, name, or description, select the text
-before choosing `Selected text`.
+entity. To target part of a title, body, name, or description, select the text:
+the `Comment on the selected text` action (✎) then appears in the Inspector
+header and stays hidden otherwise. From the keyboard, select the text, press Tab
+to reach the action, and press Enter.
 
 When reader comments are enabled, a signed-in reader opens the story with `Read`.
 The Comments control shows discussions attached to the interaction currently on
@@ -521,8 +530,10 @@ for Story, location, and item-definition variables; no separate characteristic
 model is created.
 
 The **Locations**, **Characters**, **Variables**, and **Items** lists can be collapsed
-independently. Collapse or expand the whole story context menu from the control
-in its top-right corner.
+independently. Collapse or expand the whole story context menu with the first
+button of the graph tool rail. Collapsed, the menu takes no space; the setting is
+remembered in this browser. On narrow screens the open menu overlays the graph
+beside the tool rail, so the same button closes it.
 
 Open any location, character, reusable variable, or reusable item and fill in
 **Category** to organize it. The field suggests categories already used for the

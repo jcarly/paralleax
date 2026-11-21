@@ -48,7 +48,7 @@ function StoryTitleControl({
       {!reviewOnly ? (
         <button
           ref={settingsTriggerRef}
-          className="story-settings-button"
+          className="canvas-tool-action editor-toolbar-icon-action story-settings-button"
           type="button"
           aria-label={t('storySettings.open')}
           data-tooltip={t('storySettings.open')}

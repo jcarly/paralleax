@@ -2,7 +2,7 @@
 import { cleanup, render, screen, within } from '@testing-library/react';
 import type userEvent from '@testing-library/user-event';
 import { createMemoryRouter, RouterProvider } from 'react-router-dom';
-import { afterEach, beforeEach, vi } from 'vitest';
+import { afterEach, beforeEach, expect, vi } from 'vitest';
 import type {
   GraphDecorationMutationResult,
   InteractionMutationResult,
@@ -148,6 +148,20 @@ export async function chooseTriggerConditionType(
   await user.click(within(picker).getByRole('button', { name: typeName }));
 }
 
+/** Neutralizes layout geometry that jsdom does not implement but rich-text and graph code reads. */
+export function stubEditorDomGeometry() {
+  const empty = { configurable: true, value: () => [] };
+  const rect = { configurable: true, value: () => new DOMRect(0, 0, 0, 0) };
+  Object.defineProperty(Range.prototype, 'getClientRects', empty);
+  Object.defineProperty(Range.prototype, 'getBoundingClientRect', rect);
+  Object.defineProperty(HTMLElement.prototype, 'getClientRects', empty);
+  Object.defineProperty(HTMLElement.prototype, 'getBoundingClientRect', rect);
+  Object.defineProperty(document, 'elementFromPoint', {
+    configurable: true,
+    value: () => document.body,
+  });
+}
+
 export function setupStoryEditorTestSuite() {
   afterEach(() => {
     cleanup();
@@ -206,4 +220,13 @@ function requiredLoadedStory(story: Story | undefined): Story {
     throw new Error('The editor bootstrap must be loaded first.');
   }
   return story;
+}
+
+/** Tab reaches the formatting toolbar (one stop) below the text, then leaves the body editor. */
+export async function leaveBodyEditor(user: ReturnType<typeof userEvent.setup>) {
+  await user.tab();
+  expect(
+    screen.getByRole('toolbar', { name: 'Content formatting' }).contains(document.activeElement),
+  ).toBe(true);
+  await user.tab();
 }

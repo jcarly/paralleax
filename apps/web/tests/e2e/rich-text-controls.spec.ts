@@ -151,3 +151,49 @@ async function readRemovalStyle(button: Locator) {
     };
   });
 }
+
+test('keeps the body text in place with the same typography when editing starts', async ({
+  page,
+}) => {
+  const story = storyWithConditionCandidate();
+  story.interactions[0].body =
+    '<p>The ship docks at dawn. A longer sentence that wraps across the inspector width.</p>';
+
+  await prepareEditorPage(page, story);
+  await page.goto('/stories/story-1/edit');
+  await page.getByTestId('interaction-node').filter({ hasText: 'Original title' }).click();
+
+  const paragraphMetrics = (root: Locator) =>
+    root
+      .locator('p')
+      .first()
+      .evaluate((paragraph) => {
+        const style = getComputedStyle(paragraph);
+        const box = paragraph.getBoundingClientRect();
+        return {
+          fontFamily: style.fontFamily,
+          fontSize: style.fontSize,
+          lineHeight: style.lineHeight,
+          left: Math.round(box.left),
+          top: Math.round(box.top),
+          width: Math.round(box.width),
+          height: Math.round(box.height),
+        };
+      });
+  const reading = await paragraphMetrics(page.locator('.interaction-content-preview'));
+  const content = await openInteractionBodyEditor(page);
+  await expect(content).toBeFocused();
+  const editing = await paragraphMetrics(content);
+  expect(editing).toEqual(reading);
+
+  // One frame around the text and its toolbar.
+  const editor = page.locator('.rich-text-editor');
+  await expect(editor).toHaveCSS('outline-style', 'solid');
+  await expect(editor).toHaveCSS('box-shadow', /rgb\(47, 98, 80\)/);
+  await expect(page.locator('.rich-text-surface')).toHaveCSS('border-top-width', '0px');
+  const [frame, toolbar] = await Promise.all([
+    editor.boundingBox(),
+    page.getByRole('toolbar', { name: 'Content formatting' }).boundingBox(),
+  ]);
+  expect(toolbar && frame && toolbar.y + toolbar.height <= frame.y + frame.height + 1).toBe(true);
+});

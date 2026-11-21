@@ -115,7 +115,7 @@ group IDs to their trigger. The remapping is revalidated before any insert.
 A trigger whose ID changes retains its original probability identity in
 `probabilityKey`, or retains an already present key. With the same run seed,
 step and semantic choices this preserves its deterministic probability roll;
-without a key, the Trigger ID is used. See [ADR-048](decisions/ADR-048-portable-trigger-probability.md).
+without a key, the Trigger ID is used. See [ADR-049](decisions/ADR-049-portable-trigger-probability.md).
 
 Identifiers must be non-empty and cannot be `__proto__`, `prototype` or
 `constructor`: existing runtime and history objects use IDs as keys. Strings

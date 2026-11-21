@@ -1,3 +1,4 @@
+import type { TextCommentSelection } from '../../comments/useTextCommentSelection';
 import type { bindStoryEditorCommentActions } from '../../comments/storyEditorCommentActions';
 import type {
   useStoryEditorCommentProjection,
@@ -55,7 +56,7 @@ export type StoryEditorInspectorActions = Pick<
   closeInspector: () => void;
   toggleContextualComments: () => void;
   startEntityComment: () => void;
-  startTextComment: () => void;
+  startTextComment: (selection?: TextCommentSelection) => void;
   openTextComments: (field: CommentTextField) => void;
   openSemanticComments: (slot: CommentSemanticSlot) => void;
   closeContextualComments: () => void;

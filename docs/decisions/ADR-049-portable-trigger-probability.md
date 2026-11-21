@@ -1,4 +1,4 @@
-# ADR-048 - Portable Trigger Probability Identity
+# ADR-049 - Portable Trigger Probability Identity
 
 Status: Accepted
 

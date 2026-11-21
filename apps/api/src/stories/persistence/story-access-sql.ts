@@ -65,7 +65,11 @@ export function storyEditableSql(userParameter: SqlParameter) {
     OR (
       actor.id IS NOT NULL AND (
         stories.edit_policy = 'authenticated'
-        OR (stories.visibility <> 'private' AND permission.role = 'editor')
+        OR (
+          stories.visibility <> 'private'
+          AND stories.edit_policy <> 'owner'
+          AND permission.role = 'editor'
+        )
       )
     ))`;
 }

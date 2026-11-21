@@ -1,6 +1,6 @@
 # Roadmap
 
-Status reviewed: 2026-11-19.
+Status reviewed: 2026-11-20.
 
 This page answers one question: **what comes next, and in which order?** It is
 deliberately short. What exists today is in [Current scope](current-scope.md).
@@ -40,7 +40,7 @@ Consequences:
 **Goal: open the creator alpha to everyone and collect feedback continuously**,
 instead of running guided author sessions first. Organizing guided sessions is
 too costly; feedback comes from the in-app feedback button
-([Formbricks](operations/formbricks-feedback.md)) and from real use.
+([PostHog survey](operations/posthog-feedback.md)) and from real use.
 
 Consequences:
 
@@ -67,7 +67,7 @@ Consequences:
   feedback survey asks the author's profile so the
   [audience hypothesis](positioning.md#audience-hypothesis) can still be tested;
   its questions and verification are in
-  [Formbricks feedback](operations/formbricks-feedback.md#open-alpha-survey).
+  [PostHog feedback](operations/posthog-feedback.md#open-alpha-survey).
 - Feedback is self-selected: authors who give up early rarely answer it. The
   absence of negative feedback is not evidence that the editor is clear; task 10
   reads feedback together with simple activity counts.
@@ -162,6 +162,19 @@ explicit decision before they change the order above.
   the recommendation is to decide the model (locale variants inside one Story
   versus an export/import workflow through the Story format) soon after the Story
   format exists.
+- **Author documentation, then topic guides** (requested 2026-11-20, PAR-7).
+  The first-story guide now stops at the first Simulation launch: it covers
+  writing a scene, creating a choice and testing, not a finished Story. Next:
+  1. complete author-facing documentation for characters, locations, variables
+     (stats), items, conditions and effects, building on the
+     [Author guide](author-guide.md);
+  2. then consider optional guides by topic (characters, variables, conditions,
+     and so on), each opened from the `Guide` control and linking to that
+     documentation, reusing the existing guide overlay
+     ([Onboarding](onboarding.md)).
+
+  Acceptance for step 2 to define when it is scheduled.
+
 - **Ink-inspired source mode.** Keep as planned in
   [ADR-043](decisions/ADR-043-ink-inspired-narrative-source.md); writers in
   studios often prefer text and version control.
@@ -195,7 +208,7 @@ the [milestone detail](roadmap-history.md).
 - **V0.7:** authoring beta usability requirements.
 - **V0.8:** collaboration and review beyond the current foundation.
 - **V0.9:** publishing readiness: immutable published versions, publication
-  validation, stable public reader URLs, reader-journey analytics with their
+  validation (including an alert on choices without labels), stable public reader URLs, reader-journey analytics with their
   privacy gates, moderation and licensing rules.
 - Production operations and recovery gates in
   [Production readiness](production-readiness.md) (P0 to P2).

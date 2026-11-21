@@ -856,20 +856,36 @@ export class StoriesRepository implements NativeStoryImportPort {
     email: string,
     role: StoryCollaboratorRole,
   ): Promise<boolean> {
-    const result = await this.database.pool.query(
-      `INSERT INTO story_user_permissions (story_id, user_id, role, updated_at)
-       SELECT stories.id, invited.id, $4, now()
-       FROM stories
-       JOIN users AS actor ON actor.id = $2
-       JOIN users AS invited ON invited.email = $3
-       WHERE stories.id = $1
-         AND invited.id <> stories.creator_user_id
-         AND ${storyManageableSql('$2')}
-       ON CONFLICT (story_id, user_id) DO UPDATE
-       SET role = EXCLUDED.role, updated_at = now()`,
+    // Granting an Editor and opening owner-only editing must be atomic. Otherwise a
+    // failed second request leaves an invited editor unable to edit the Story.
+    const result = await this.database.pool.query<{ granted: boolean }>(
+      `WITH granted AS (
+         INSERT INTO story_user_permissions (story_id, user_id, role, updated_at)
+         SELECT stories.id, invited.id, $4, now()
+         FROM stories
+         JOIN users AS actor ON actor.id = $2
+         JOIN users AS invited ON invited.email = $3
+         WHERE stories.id = $1
+           AND invited.id <> stories.creator_user_id
+           AND ${storyManageableSql('$2')}
+         ON CONFLICT (story_id, user_id) DO UPDATE
+         SET role = EXCLUDED.role, updated_at = now()
+         RETURNING story_id
+       ), opened_for_editors AS (
+         UPDATE stories
+         SET edit_policy = 'collaborators', updated_at = now()
+         WHERE stories.id = $1
+           AND $4 = 'editor'
+           AND stories.edit_policy = 'owner'
+           AND stories.visibility <> 'private'
+           AND EXISTS (SELECT 1 FROM granted)
+         RETURNING stories.id
+       )
+       SELECT EXISTS (SELECT 1 FROM granted) AS granted,
+              (SELECT COUNT(*) FROM opened_for_editors) AS policy_updates`,
       [id, userId, email, role],
     );
-    return (result.rowCount ?? 0) > 0;
+    return result.rows[0]?.granted === true;
   }
 
   async removeCollaborator(id: string, userId: string, collaboratorId: string): Promise<boolean> {

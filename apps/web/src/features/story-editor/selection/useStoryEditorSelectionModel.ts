@@ -35,7 +35,6 @@ function useStoryEditorInteractionState(input: StoryEditorInteractionStateInput)
   const onboarding = useStoryEditorOnboardingEffects({
     storyId: input.storyId,
     story: input.story,
-    selectedId: editorSelection.selectedId,
     loadPhase: input.loadPhase,
     storyRouteInaccessible: input.storyRouteInaccessible,
   });

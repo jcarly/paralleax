@@ -102,11 +102,13 @@
   color: #aabdb4;
 }
 
-.player-top .save-status.saved {
+.player-top .save-status.saved,
+.player-top .editor-sync-indicator:is(.saved, .saving) {
   color: #b9d6c7;
 }
 
-.player-top .save-status.error {
+.player-top .save-status.error,
+.player-top .editor-sync-indicator.error {
   color: #f0aaa5;
 }
 
@@ -313,8 +315,8 @@
 
 .story-body {
   font-family: var(--font-narrative);
-  font-size: 1.15rem;
-  line-height: 1.7;
+  font-size: var(--type-size-narrative);
+  line-height: var(--type-leading-narrative);
   white-space: pre-wrap;
 }
 
@@ -346,9 +348,6 @@
 
 .player-story-content .rich-text-surface {
   color: #454944;
-  font-family: var(--font-narrative);
-  font-size: 1.15rem;
-  line-height: 1.7;
 }
 
 .story-body .interaction-link {

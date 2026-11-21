@@ -31,7 +31,8 @@
     "typecheck": "npm run build -w @paralleax/shared && npm run typecheck -w @paralleax/api && npm run typecheck -w @paralleax/web && npm run typecheck -w @paralleax/mcp",
     "docker:up": "docker compose up",
     "docker:down": "docker compose down",
-    "docker:logs": "docker compose logs -f"
+    "docker:logs": "docker compose logs -f",
+    "quality:report": "node scripts/quality/report.mjs"
   },
   "devDependencies": {
     "@eslint-react/eslint-plugin": "^5.30.3",

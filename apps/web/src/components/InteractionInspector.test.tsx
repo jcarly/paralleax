@@ -125,7 +125,6 @@ describe('InteractionInspector rich text preview', () => {
         interaction={interaction}
         onChange={vi.fn()}
         onPatch={vi.fn().mockResolvedValue(true)}
-        onDelete={vi.fn()}
         onSelectInteraction={onSelectInteraction}
       />,
     );
@@ -171,7 +170,6 @@ describe('InteractionInspector time', () => {
         onChange={vi.fn()}
         onPatch={onPatch}
         onContentSaved={onContentSaved}
-        onDelete={vi.fn()}
       />,
     );
 
@@ -213,7 +211,6 @@ describe('InteractionInspector time', () => {
         onChange={vi.fn()}
         onPatch={onPatch}
         onContentSaved={onContentSaved}
-        onDelete={vi.fn()}
       />,
     );
 
@@ -259,7 +256,6 @@ describe('InteractionInspector time', () => {
             interaction={story.interactions[0]}
             onChange={setStory}
             onPatch={onPatch}
-            onDelete={vi.fn()}
           />
         );
       }
@@ -326,7 +322,6 @@ describe('InteractionInspector time', () => {
         interaction={interaction}
         onChange={vi.fn()}
         onPatch={onPatch}
-        onDelete={vi.fn()}
       />,
     );
     fireEvent.click(screen.getByRole('button', { name: 'Add effect' }));
@@ -346,7 +341,6 @@ describe('InteractionInspector time', () => {
         interaction={interaction}
         onChange={vi.fn()}
         onPatch={vi.fn().mockResolvedValue(undefined)}
-        onDelete={vi.fn()}
       />,
     );
 
@@ -424,7 +418,6 @@ describe('InteractionInspector time', () => {
         interaction={interaction}
         onChange={vi.fn()}
         onPatch={vi.fn().mockResolvedValue(undefined)}
-        onDelete={vi.fn()}
         onAddOption={onAddOption}
         onSelectInteraction={onSelectInteraction}
       />,
@@ -462,7 +455,6 @@ describe('InteractionInspector time', () => {
         interaction={interaction}
         onChange={onChange}
         onPatch={onPatch}
-        onDelete={vi.fn()}
       />,
     );
 
@@ -502,7 +494,6 @@ describe('InteractionInspector time', () => {
         interaction={interaction}
         onChange={vi.fn()}
         onPatch={onPatch}
-        onDelete={vi.fn()}
       />,
     );
 
@@ -575,7 +566,6 @@ describe('InteractionInspector time', () => {
         interaction={interaction}
         onChange={vi.fn()}
         onPatch={onPatch}
-        onDelete={vi.fn()}
       />,
     );
 
@@ -632,7 +622,6 @@ describe('InteractionInspector time', () => {
         interaction={interaction}
         onChange={vi.fn()}
         onPatch={onPatch}
-        onDelete={vi.fn()}
       />,
     );
 
@@ -684,7 +673,6 @@ describe('InteractionInspector time', () => {
         interaction={interaction}
         onChange={onChange}
         onPatch={onPatch}
-        onDelete={vi.fn()}
       />,
     );
 
@@ -716,7 +704,6 @@ describe('InteractionInspector time', () => {
         interaction={withEffect}
         onChange={onChange}
         onPatch={onPatch}
-        onDelete={vi.fn()}
       />,
     );
     openEffectEditor(/Mira: obtain Key/);
@@ -796,7 +783,6 @@ describe('InteractionInspector time', () => {
         interaction={interaction}
         onChange={vi.fn()}
         onPatch={onPatch}
-        onDelete={vi.fn()}
       />,
     );
 
@@ -834,7 +820,6 @@ describe('InteractionInspector time', () => {
         interaction={withEffect}
         onChange={vi.fn()}
         onPatch={onPatch}
-        onDelete={vi.fn()}
       />,
     );
     openEffectEditor(/Durability: add/);
@@ -879,5 +864,71 @@ describe('InteractionInspector time', () => {
     expect(onPatch).toHaveBeenLastCalledWith('interaction-1', {
       statEffects: [],
     });
+  });
+});
+
+function storyWithOptions(titles: string[]): {
+  story: Story;
+  interaction: Story['interactions'][number];
+} {
+  const interaction: Story['interactions'][number] = {
+    id: 'source',
+    title: '',
+    body: '',
+    position: { x: 0, y: 0 },
+    triggers: [{ id: 'source-trigger', inputInteractionIds: [], conditions: [] }],
+  };
+  const options = titles.map((title, index) => ({
+    id: `option-${String(index)}`,
+    title,
+    body: '',
+    position: { x: index * 200, y: 400 },
+    triggers: [{ id: `trigger-${String(index)}`, inputInteractionIds: ['source'], conditions: [] }],
+  }));
+  return {
+    interaction,
+    story: {
+      id: 'story-1',
+      title: 'Story',
+      interactions: [interaction, ...options],
+      createdAt: '2026-11-20T08:00:00Z',
+      updatedAt: '2026-11-20T08:00:00Z',
+    },
+  };
+}
+
+function renderOptions(titles: string[]) {
+  const { story, interaction } = storyWithOptions(titles);
+  render(
+    <InteractionInspector
+      story={story}
+      interaction={interaction}
+      onChange={vi.fn()}
+      onPatch={vi.fn().mockResolvedValue(true)}
+    />,
+  );
+}
+
+describe('InteractionInspector option labels', () => {
+  it('shows the reader label of a lone untitled option without a warning', () => {
+    renderOptions(['']);
+
+    expect(screen.getByText('Continue').closest('.interaction-label-bubble')).toHaveClass(
+      'interaction-label-fallback',
+    );
+    expect(screen.queryByText('New interaction')).not.toBeInTheDocument();
+    expect(screen.queryByText('Several options: add a label.')).not.toBeInTheDocument();
+  });
+
+  it('asks for a label on each untitled option among several', () => {
+    renderOptions(['Leave', '']);
+
+    expect(screen.getByText('Leave').closest('.interaction-label-bubble')).not.toHaveClass(
+      'interaction-label-fallback',
+    );
+    expect(screen.getByText('Option 2').closest('.interaction-label-bubble')).toHaveClass(
+      'interaction-label-fallback',
+    );
+    expect(screen.getAllByText('Several options: add a label.')).toHaveLength(1);
   });
 });

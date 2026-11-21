@@ -22,6 +22,25 @@
   border-radius: 10px;
   background: var(--color-surface);
   box-shadow: var(--shadow-card);
+  animation: onboarding-card-enter 180ms ease-out;
+}
+
+.onboarding-guide-layer.is-leaving .onboarding-card {
+  animation: onboarding-card-leave 180ms ease-in forwards;
+}
+
+@keyframes onboarding-card-enter {
+  from {
+    opacity: 0;
+    transform: translateY(6px);
+  }
+}
+
+@keyframes onboarding-card-leave {
+  to {
+    opacity: 0;
+    transform: translateY(6px);
+  }
 }
 
 .onboarding-target-highlight {

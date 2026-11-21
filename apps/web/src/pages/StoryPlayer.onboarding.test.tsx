@@ -1,4 +1,4 @@
-import { cleanup, render, screen } from '@testing-library/react';
+import { cleanup, render, screen, waitFor } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import { Route, Routes } from 'react-router-dom';
 import { afterEach, describe, expect, it, vi } from 'vitest';
@@ -21,7 +21,7 @@ function prepareTestStep() {
     JSON.stringify({
       status: 'active',
       storyId: 'story-1',
-      completedSteps: ['discover-interactions', 'write-scene', 'create-branch'],
+      completedSteps: ['write-scene', 'create-branch'],
       skippedSteps: [],
     }),
   );
@@ -41,6 +41,10 @@ function prepareTestStep() {
     },
     updatedAt: '2026-07-27T09:00:00.000Z',
   });
+}
+
+function storedGuide(): unknown {
+  return JSON.parse(window.localStorage.getItem(onboardingStorageKey('owner-1')) ?? 'null');
 }
 
 function renderWithGuide(initialEntry: string) {
@@ -68,10 +72,11 @@ describe('StoryPlayer onboarding', () => {
     await user.click(screen.getByRole('button', { name: 'Next' }));
 
     await screen.findByDisplayValue('Next');
-    expect(screen.getByRole('heading', { name: 'Test your story' })).toBeInTheDocument();
-    expect(
-      screen.queryByRole('region', { name: 'Story ready to explore' }),
-    ).not.toBeInTheDocument();
+    expect(screen.queryByRole('region')).not.toBeInTheDocument();
+    expect(storedGuide()).toMatchObject({
+      status: 'active',
+      completedSteps: ['write-scene', 'create-branch'],
+    });
   });
 
   it('completes the guide after a path is played from the start screen', async () => {
@@ -83,12 +88,9 @@ describe('StoryPlayer onboarding', () => {
     await screen.findByDisplayValue('Start');
     await user.click(screen.getByRole('button', { name: 'Next' }));
 
-    expect(
-      await screen.findByRole('region', { name: 'Story ready to explore' }),
-    ).toBeInTheDocument();
-    expect(screen.getByRole('link', { name: 'Share for testing' })).toHaveAttribute(
-      'href',
-      '/stories/story-1/edit?settings=access',
-    );
+    await waitFor(() => {
+      expect(storedGuide()).toMatchObject({ status: 'complete' });
+    });
+    expect(screen.queryByRole('region')).not.toBeInTheDocument();
   });
 });

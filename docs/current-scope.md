@@ -28,10 +28,10 @@ Paralleax currently includes:
   only in browser storage scoped by the signed-in account, and completion follows
   loaded or successfully saved state. Guide activity is not sent to an analytics
   service. See [Authoring guide architecture](onboarding.md).
-- An optional Formbricks feedback button in the product header when configured.
-  The SDK and feedback context load only after a user clicks it. Formbricks'
-  standard response metadata can still include the full URL and Story id; see the
-  [feedback runbook](operations/formbricks-feedback.md). Automatic journey
+- An optional PostHog feedback survey in the product header when configured.
+  The SDK loads only after a user clicks it, and only sanitized survey answers
+  with normalized, non-content context are sent; see the
+  [feedback runbook](operations/posthog-feedback.md). Automatic journey
   milestones and post-Simulation surveys are not enabled pending explicit
   consent and privacy-notice coverage.
 - Story authoring and PostgreSQL persistence.
@@ -186,6 +186,11 @@ Paralleax currently includes:
   add-comment action visible and clickable across the pane border. Inspector
   panes can be resized with the pointer or keyboard and maximized over the graph
   area; restoring returns to the previous width while keeping the navigation visible.
+  Their width has no fixed cap on wide screens (the graph keeps 280px), and
+  widening an Inspector past 70% of the editor maximizes it, keeping the earlier
+  width for Restore (not on screens of 800px or less). The selected Interaction,
+  Trigger, or graph decoration is deleted from a trash icon in the Inspector
+  header, beside Maximize and Close.
   Authorized thread managers can move a graph post-it by updating its
   existing canvas anchor; failed moves restore the persisted position and remain
   visible as an operational error. A discussion author or Story manager can
@@ -353,12 +358,13 @@ Paralleax currently includes:
   created, can be restarted from the authenticated header, saves progress in
   account-scoped browser storage, and advances from observed editor/Simulation
   actions. It can be skipped or closed and does not change the Story model.
-- Optional Formbricks feedback from the application header, with localized
+- Optional PostHog survey feedback from the application header, with localized
   controls and non-content route, surface, version, viewport, and language
-  context. The SDK now loads only after a tester clicks the button. It remains
-  disabled when not configured. Formbricks' standard full-URL metadata can still
-  contain a Story id after that user-initiated action; automatic journey events
-  and the post-Simulation survey remain disabled until explicit consent exists.
+  context. The SDK loads only after a tester clicks the button and remains
+  disabled when not configured. Its events are filtered to survey answers: no
+  browser URL, Story id, session, or persistent identity is sent. Automatic
+  journey events and the post-Simulation survey remain disabled until explicit
+  consent exists.
 - Unit, integration, PostgreSQL, component, fast mocked Playwright UI testing,
   and a real-stack Playwright alpha-acceptance path covering registration,
   authoring, reload, reconnection, persistence, Simulation Mode, durable content

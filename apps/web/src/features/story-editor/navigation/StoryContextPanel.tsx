@@ -47,20 +47,13 @@ type StoryContextPanelProps = {
 
 export function StoryContextPanel(props: StoryContextPanelProps) {
   const { navigation, t } = props;
-  const open = navigation.isContextPanelOpen;
+  // Collapsed, the panel takes no space; the canvas tool rail reopens it.
+  if (!navigation.isContextPanelOpen) {
+    return null;
+  }
   return (
-    <nav className={`location-panel ${open ? '' : 'collapsed'}`} aria-label={t('editor.context')}>
-      <button
-        className="ghost navigation-toggle"
-        type="button"
-        aria-label={t(open ? 'editor.collapseContext' : 'editor.expandContext')}
-        aria-expanded={open}
-        aria-controls="story-context-panel-content"
-        onClick={navigation.toggleContextPanel}
-      >
-        {open ? '‹' : '›'}
-      </button>
-      {open ? <StoryContextPanelContent {...props} /> : null}
+    <nav className="location-panel" aria-label={t('editor.context')}>
+      <StoryContextPanelContent {...props} />
     </nav>
   );
 }

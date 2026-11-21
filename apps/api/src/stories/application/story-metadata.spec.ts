@@ -127,7 +127,7 @@ it('creates a trimmed story with current defaults', async () => {
     {
       title: '',
       body: '',
-      position: { x: 80, y: 252 },
+      position: { x: 80, y: 496 },
       triggers: [{ conditionGroups: [{ conditions: [] }] }],
     },
   ]);

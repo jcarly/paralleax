@@ -59,6 +59,7 @@ export const frenchTranslation = {
     signOut: 'Se déconnecter',
     account: 'Paramètres du compte',
     feedback: 'Donner un retour',
+    feedbackThanks: 'Merci pour votre retour !',
     feedbackUnavailable: 'Le formulaire de retour est indisponible. Réessayez plus tard.',
     help: 'Guide',
     loading: 'Chargement…',
@@ -87,27 +88,15 @@ export const frenchTranslation = {
     openStoryPrompt: 'Votre nouvelle histoire est prête. Ouvrez-la pour continuer.',
     returnToEditorPrompt: 'Retournez dans l’éditeur pour continuer le guide.',
     openStory: 'Ouvrir l’histoire',
-    completeTitle: 'Votre histoire est prête à explorer',
-    completeDescription: 'Vous avez créé et testé un premier parcours.',
-    completeSkippedDescription: 'Continuez à créer ou relancez le guide quand vous le souhaitez.',
-    completeAccessDescription:
-      'Choisissez qui peut lire, commenter ou modifier. L’histoire reste privée tant que vous ne changez pas ses paramètres d’accès.',
-    continueCreating: 'Continuer la création',
-    shareForTesting: 'Partager pour faire tester',
     stepCount: 'Étape {{current}} sur {{total}}',
     skipStep: 'Passer l’étape',
     close: 'Fermer le guide',
     restart: 'Relancer le guide',
     steps: {
-      'discover-interactions': {
-        title: 'Découvrir le graphe',
-        description:
-          'Sélectionnez une interaction. Les connexions montrent comment les scènes se suivent.',
-      },
       'write-scene': {
         title: 'Écrire une scène',
         description:
-          'L’interaction sélectionnée apparaît dans l’inspecteur. Ajoutez sa scène, puis quittez le champ pour l’enregistrer.',
+          'L’interaction de départ est sélectionnée. Choisissez Ajouter du contenu, écrivez sa scène, puis cliquez hors du champ pour l’enregistrer.',
       },
       'create-branch': {
         title: 'Créer un choix',
@@ -117,7 +106,7 @@ export const frenchTranslation = {
       'test-story': {
         title: 'Tester votre histoire',
         description:
-          'Dans l’éditeur, choisissez Tester depuis le début, puis suivez un parcours en simulation.',
+          'Choisissez Tester depuis le début. Le guide se ferme et la simulation s’ouvre sur votre histoire.',
       },
     },
   },
@@ -455,7 +444,17 @@ export const frenchTranslation = {
       authenticated: 'Utilisateurs connectés',
       public: 'Tout le monde',
       unlisted: 'Par lien (non répertoriée)',
-      help: 'Toute personne disposant de l’URL peut lire l’histoire sans compte. Elle reste absente du catalogue public.',
+      help: {
+        public:
+          'Tout le monde peut lire l’histoire sans compte. Elle apparaît dans le catalogue public.',
+        unlisted:
+          'Toute personne disposant de l’URL peut lire l’histoire sans compte. Elle reste absente du catalogue public.',
+        authenticated:
+          'Tout utilisateur connecté peut lire l’histoire et la trouver dans le catalogue.',
+        invitation: 'Seuls les utilisateurs ajoutés ci-dessous peuvent lire l’histoire.',
+        private:
+          'Vous seul pouvez lire l’histoire. Les accès donnés aux utilisateurs ci-dessous restent inactifs.',
+      },
       invitation: 'Par invitation',
     },
     edit: {
@@ -463,12 +462,28 @@ export const frenchTranslation = {
       owner: 'Propriétaire uniquement',
       collaborators: 'Éditeurs',
       authenticated: 'Utilisateurs connectés',
+      adjusted:
+        'Modification ramenée à « {{policy}} » : elle ne peut pas être plus ouverte que la lecture.',
+      limitedByReading: 'Limitée par le réglage Lecture.',
+      openedForEditors:
+        'Modification ouverte aux Éditeurs pour que l’éditeur invité puisse modifier.',
+      help: {
+        owner: 'Vous seul pouvez modifier l’histoire.',
+        collaborators:
+          'Vous et les utilisateurs ajoutés ci-dessous comme Éditeur pouvez la modifier.',
+        authenticated: 'Tout utilisateur connecté peut lire et modifier l’histoire.',
+      },
     },
     comments: {
       label: 'Commentaires',
       readers: 'Lecteurs',
       editors: 'Éditeurs',
-      help: 'Les éditeurs commentent dans l’éditeur. Les lecteurs connectés commentent uniquement depuis le lecteur.',
+      help: {
+        readers:
+          'Les utilisateurs connectés qui peuvent lire l’histoire commentent depuis le lecteur. Les éditeurs commentent dans l’éditeur.',
+        editors:
+          'Seuls les utilisateurs qui peuvent modifier l’histoire commentent, dans l’éditeur.',
+      },
     },
     collaborators: 'Utilisateurs',
     collaboratorsHelp:
@@ -580,8 +595,7 @@ export const frenchTranslation = {
     clickCanvas: 'Cliquez sur le graphe',
     commentEntity: 'Commenter cet élément',
     commentScene: 'Commenter cette scène',
-    selectTextHelp:
-      'Sélectionnez du texte dans un titre ou une description, puis utilisez cette action.',
+    commentSelectedText: 'Commenter le texte sélectionné',
     triggerSummary_one: '{{count}} condition dans ce trigger.',
     triggerSummary_other: '{{count}} conditions dans ce trigger.',
     anchor: {
@@ -825,16 +839,9 @@ export const frenchTranslation = {
     preview: 'Aperçu Paralleax',
     reader: 'Lecteur Paralleax',
     simulation: 'Simulation',
-    realtime: {
-      live: 'Simulation synchronisée en direct',
-      reconnecting: 'Reconnexion de la simulation…',
-      unavailable: 'Mises à jour en direct indisponibles',
-    },
     savingProgress: 'Enregistrement de la progression…',
     progressSaved: 'Progression enregistrée',
     progressSaveFailed: 'Échec de l’enregistrement de la progression',
-    savingStoryChanges: 'Enregistrement des modifications de la Story…',
-    storyChangesSaved: 'Modifications de la Story enregistrées',
     storyChangesSaveFailed: "Les modifications de la Story n'ont pas pu être enregistrées",
     retryStoryChanges: 'Réessayer',
     reloadStoryAfterSaveFailure: 'Recharger la Story',
@@ -883,15 +890,16 @@ export const frenchTranslation = {
     liveEditingHelp: 'Les changements sont enregistrés lorsqu’un champ perd le focus.',
     currentInteractionTitle: 'Titre de l’interaction actuelle',
     currentInteractionContent: 'Contenu de l’interaction actuelle',
-    ready: 'Quand vous voulez',
     startStory: 'Commencer l’histoire',
-    chooseStartingInteraction: 'Choisissez une interaction de départ.',
     newOptionTitle: 'Titre de la nouvelle option',
     optionTimer: 'Temps restant pour cette option',
     unavailable: 'Indisponible dans l’état actuel de la simulation',
     forced: ' Forcée pour ce test.',
     addOption: 'Ajouter une option',
     addOptionHelp: 'Créer une interaction reliée à partir de ce point.',
+    continueChoice: 'Continuer',
+    untitledChoice: 'Option {{number}}',
+    choiceLabelNeeded: 'Plusieurs options : ajoutez un libellé.',
     branchEnd: 'Fin de cette branche.',
     branchEndHelp: 'Vous pouvez recommencer l’histoire pour explorer un autre chemin.',
     playedCharacter: 'Personnage joué',

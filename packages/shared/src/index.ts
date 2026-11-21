@@ -1,4 +1,5 @@
 export * from './access-control.js';
+export * from './domain-errors.js';
 export * from './comments.js';
 export * from './demo/index.js';
 export * from './expressions/index.js';

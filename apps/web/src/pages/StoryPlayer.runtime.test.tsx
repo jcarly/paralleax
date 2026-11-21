@@ -58,6 +58,10 @@ it('uses a dedicated autosave for author simulation', async () => {
   await renderPlayer('/stories/story-1/play?mode=simulation');
 
   expect(screen.getByRole('heading', { name: /Start the story/ })).toBeInTheDocument();
+  // The starting choices speak for themselves: no eyebrow or instruction text.
+  expect(screen.getByRole('heading', { name: /Start the story/ })).toHaveClass('sr-only');
+  expect(screen.queryByText('Ready when you are')).not.toBeInTheDocument();
+  expect(screen.queryByText('Choose a starting interaction.')).not.toBeInTheDocument();
   expect(screen.getByRole('button', { name: 'Start' })).toBeInTheDocument();
   await user.click(screen.getByRole('button', { name: 'Start' }));
   await user.click(screen.getByRole('button', { name: 'Restart' }));

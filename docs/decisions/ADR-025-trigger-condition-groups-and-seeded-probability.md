@@ -4,7 +4,7 @@ Status: Accepted
 
 Date: 2026-08-31
 
-Update (2026-11-20): [ADR-048](ADR-048-portable-trigger-probability.md)
+Update (2026-11-20): [ADR-049](ADR-049-portable-trigger-probability.md)
 adds an optional stable probability identity for imported Triggers. When it is
 absent, the Trigger ID remains the probability input described below.
 
