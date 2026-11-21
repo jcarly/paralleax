@@ -3,6 +3,7 @@ import type { Interaction } from '../../model/interactions.js';
 import type { Story } from '../../model/stories.js';
 import type { StatValue, StatValueType } from '../../model/stats.js';
 import { buildImportedTrigger, groupImportedTriggerRoutes } from '../story-builders.js';
+import { requireMappedValue } from '../require-mapped-value.js';
 import { layoutChoiceScriptGraph } from './graph-builder.js';
 import { escapeHtml, humanizeIdentifier, normalizeIdentifier, truncate } from './helpers.js';
 import type {
@@ -54,7 +55,9 @@ export function mapChoiceScriptGraphToStory(
         : routeGroups.map((group) =>
             buildImportedTrigger(
               options.createId(),
-              group.inputInteractionIds.map((key) => interactionIds.get(key)!),
+              group.inputInteractionIds.map((key) =>
+                requireMappedValue(interactionIds.get(key), `ChoiceScript interaction "${key}"`),
+              ),
               group.conditionGroups,
             ),
           );
@@ -90,10 +93,16 @@ export function mapChoiceScriptGraphToStory(
       ];
     });
     return {
-      id: interactionIds.get(node.key)!,
+      id: requireMappedValue(
+        interactionIds.get(node.key),
+        `ChoiceScript interaction "${node.key}"`,
+      ),
       title: node.title,
       body: renderVariableInterpolations(node.body, node.sceneName, declarations, variableIds),
-      position: positions.get(node.key)!,
+      position: requireMappedValue(
+        positions.get(node.key),
+        `ChoiceScript layout position for "${node.key}"`,
+      ),
       ...(statEffects.length > 0 ? { statEffects } : {}),
       triggers,
     };
@@ -111,19 +120,31 @@ export function mapChoiceScriptGraphToStory(
     startDateTime: options.timestamp.slice(0, 16),
     locations: [],
     characters: [],
-    statDefinitions: declarations.map((declaration) => ({
-      id: variableIds.get(declaration.sourceKey)!.definitionId,
-      name: declaration.temporary
-        ? `${humanizeIdentifier(declaration.name)} (${humanizeIdentifier(declaration.sceneName ?? '')})`
-        : humanizeIdentifier(declaration.name),
-      valueType: declaration.valueType,
-      category: declaration.temporary ? 'ChoiceScript temp' : 'ChoiceScript',
-    })),
-    stats: declarations.map((declaration) => ({
-      id: variableIds.get(declaration.sourceKey)!.assignmentId,
-      statDefinitionId: variableIds.get(declaration.sourceKey)!.definitionId,
-      initialValue: declaration.value,
-    })),
+    statDefinitions: declarations.map((declaration) => {
+      const ids = requireMappedValue(
+        variableIds.get(declaration.sourceKey),
+        `ChoiceScript variable "${declaration.sourceKey}"`,
+      );
+      return {
+        id: ids.definitionId,
+        name: declaration.temporary
+          ? `${humanizeIdentifier(declaration.name)} (${humanizeIdentifier(declaration.sceneName ?? '')})`
+          : humanizeIdentifier(declaration.name),
+        valueType: declaration.valueType,
+        category: declaration.temporary ? 'ChoiceScript temp' : 'ChoiceScript',
+      };
+    }),
+    stats: declarations.map((declaration) => {
+      const ids = requireMappedValue(
+        variableIds.get(declaration.sourceKey),
+        `ChoiceScript variable "${declaration.sourceKey}"`,
+      );
+      return {
+        id: ids.assignmentId,
+        statDefinitionId: ids.definitionId,
+        initialValue: declaration.value,
+      };
+    }),
     itemDefinitions: [],
     graphDecorations: [],
     interactions,

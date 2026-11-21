@@ -5,6 +5,7 @@ import type { StatEffect, StatValueType } from '../../model/stats.js';
 import { layoutImportedGraph } from '../layout.js';
 import { truncateImportedText } from '../source-utils.js';
 import { buildImportedTrigger, groupImportedTriggerRoutes } from '../story-builders.js';
+import { requireMappedValue } from '../require-mapped-value.js';
 import { analyzeQspCode } from './analyzer.js';
 import { qspVariableInitialValue, qspVariableKey, qspVariableValueType } from './expressions.js';
 import type { ParsedQspLocation, QspSourceCondition, QspVariableEffect } from './models.js';
@@ -115,18 +116,26 @@ export function mapQspLocationsToStory(
       routeGroups.push({ inputInteractionIds: [], conditionGroups: [[]] });
     }
     const interaction = {
-      id: ids.get(node.key)!,
+      id: requireMappedValue(ids.get(node.key), `QSP interaction "${node.key}"`),
       title: node.title,
       body: node.body,
-      position: positions.get(node.key)!,
+      position: requireMappedValue(
+        positions.get(node.key),
+        `QSP layout position for "${node.key}"`,
+      ),
       ...(statEffects.length > 0 ? { statEffects } : {}),
       triggers: routeGroups.map(({ inputInteractionIds, conditionGroups }) => {
         const trigger = buildImportedTrigger(
           options.createId(),
-          inputInteractionIds.map((key) => ids.get(key)!),
+          inputInteractionIds.map((key) =>
+            requireMappedValue(ids.get(key), `QSP interaction "${key}"`),
+          ),
           conditionGroups.map((group) =>
             group.map((condition) => ({
-              statId: variableIds.get(qspVariableKey(condition.variableName))!.assignmentId,
+              statId: requireMappedValue(
+                variableIds.get(qspVariableKey(condition.variableName)),
+                `QSP variable "${condition.variableName}"`,
+              ).assignmentId,
               operator: condition.operator,
               value: condition.value,
             })),
@@ -150,19 +159,31 @@ export function mapQspLocationsToStory(
     startDateTime: options.timestamp.slice(0, 16),
     locations: [],
     characters: [],
-    statDefinitions: variables.map((variable) => ({
-      id: variableIds.get(variable.key)!.definitionId,
-      name: returnVariables.has(variable.name)
-        ? variable.name.slice(1)
-        : displayQspVariableName(variable.name),
-      valueType: variable.valueType,
-      category: 'QSP',
-    })),
-    stats: variables.map((variable) => ({
-      id: variableIds.get(variable.key)!.assignmentId,
-      statDefinitionId: variableIds.get(variable.key)!.definitionId,
-      initialValue: qspVariableInitialValue(variable.name),
-    })),
+    statDefinitions: variables.map((variable) => {
+      const variableIdsForKey = requireMappedValue(
+        variableIds.get(variable.key),
+        `QSP variable "${variable.key}"`,
+      );
+      return {
+        id: variableIdsForKey.definitionId,
+        name: returnVariables.has(variable.name)
+          ? variable.name.slice(1)
+          : displayQspVariableName(variable.name),
+        valueType: variable.valueType,
+        category: 'QSP',
+      };
+    }),
+    stats: variables.map((variable) => {
+      const variableIdsForKey = requireMappedValue(
+        variableIds.get(variable.key),
+        `QSP variable "${variable.key}"`,
+      );
+      return {
+        id: variableIdsForKey.assignmentId,
+        statDefinitionId: variableIdsForKey.definitionId,
+        initialValue: qspVariableInitialValue(variable.name),
+      };
+    }),
     itemDefinitions: [],
     graphDecorations: [],
     interactions,
@@ -228,7 +249,7 @@ function mapQspEffects(
     });
   }
   return [...collapsed].map(([key, effect]) => ({
-    statId: variableIds.get(key)!.assignmentId,
+    statId: requireMappedValue(variableIds.get(key), `QSP variable "${key}"`).assignmentId,
     ...effect,
   }));
 }
