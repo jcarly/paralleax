@@ -48,17 +48,24 @@ it('numbers untitled options for readers without an authoring warning', async ()
 
   expect(await screen.findByRole('button', { name: 'Option 1' })).toBeInTheDocument();
   expect(screen.getByRole('button', { name: 'Option 2' })).toBeInTheDocument();
-  expect(screen.queryByText('Several options: add a label.')).not.toBeInTheDocument();
+  expect(screen.queryByRole('img', { name: /Label required/ })).not.toBeInTheDocument();
+  expect(document.querySelector('.choice-label-error')).toBeNull();
 });
 
-it('asks the author for labels when several untitled options follow in Simulation', async () => {
+it('flags untitled options with an empty, outlined label in Simulation', async () => {
   await renderPlayer(
     '/stories/story-1/play?mode=simulation&startInteractionId=start',
     untitledStory(2),
   );
 
-  expect(await screen.findByRole('button', { name: /Option 1/ })).toBeInTheDocument();
-  expect(screen.getAllByText('Several options: add a label.')).toHaveLength(2);
+  const errors = await screen.findAllByRole('img', { name: /Label required/ });
+  expect(errors).toHaveLength(2);
+  expect(screen.queryByText(/Option \d/)).not.toBeInTheDocument();
+  for (const error of errors) {
+    const choice = error.closest('button');
+    expect(choice).toHaveClass('choice-label-error');
+    expect(choice?.querySelector('.choice-copy strong')).toHaveTextContent(/^$/);
+  }
 });
 
 it('keeps authored choice titles unchanged', async () => {

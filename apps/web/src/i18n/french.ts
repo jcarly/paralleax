@@ -866,7 +866,8 @@ export const frenchTranslation = {
     addOptionHelp: 'Créer une interaction reliée à partir de ce point.',
     continueChoice: 'Continuer',
     untitledChoice: 'Option {{number}}',
-    choiceLabelNeeded: 'Plusieurs options : ajoutez un libellé.',
+    choiceLabelNeeded:
+      'Libellé requis : cette interaction fait partie de plusieurs options. Les lecteurs voient « Option N » tant qu’elle n’a pas de titre.',
     branchEnd: 'Fin de cette branche.',
     branchEndHelp: 'Vous pouvez recommencer l’histoire pour explorer un autre chemin.',
     playedCharacter: 'Personnage joué',

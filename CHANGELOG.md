@@ -2,6 +2,11 @@
 
 ## Unreleased
 
+- An untitled option among several is now shown as an error while authoring
+  (PAR-7). The graph, Inspector and Simulation leave its label empty, outline it
+  in red and add a `!` icon whose tooltip explains the problem, instead of
+  showing `New interaction` or `Option N` with a separate warning text.
+  `Option N` remains the Reader fallback, and nothing blocks drafting.
 - On a phone, the Inspector no longer covers the tool rail (PAR-7). At 390 px its
   border comment button sat over the story context toggle, so the left panel
   could not be collapsed while an Interaction was selected; the Inspector now
