@@ -123,7 +123,7 @@ export class LocalImportReportStorage extends ImportReportStorage implements OnM
 
   async streamReport(importId: string): Promise<Readable | undefined> {
     const filePath = await this.getReportPath(importId);
-    if (!filePath) {
+    if (filePath === undefined || filePath === '') {
       return undefined;
     }
     return createReadStream(filePath, { encoding: 'utf8' });
@@ -132,7 +132,7 @@ export class LocalImportReportStorage extends ImportReportStorage implements OnM
   async deleteReport(importId: string): Promise<void> {
     validateImportId(importId);
     const filePath = await this.getReportPath(importId);
-    if (!filePath) {
+    if (filePath === undefined || filePath === '') {
       return;
     }
     try {
@@ -151,7 +151,7 @@ export async function copyImportReportFile(
   destination: string,
 ): Promise<void> {
   const source = await storage.getReportPath(importId);
-  if (!source) {
+  if (source === undefined || source === '') {
     return;
   }
   await mkdir(destination, { recursive: true });

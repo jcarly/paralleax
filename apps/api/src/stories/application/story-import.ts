@@ -72,7 +72,7 @@ export class StoryImportService {
         reportPath,
       );
     } catch (caught) {
-      if (effectiveAbortSignal?.aborted || this.jobs.isCancelled(job.id)) {
+      if (effectiveAbortSignal?.aborted === true || this.jobs.isCancelled(job.id)) {
         this.jobs.cancel(job.id);
         return this.finishCancelledImport(job.id);
       }
@@ -174,7 +174,7 @@ export class StoryImportService {
         reportPath,
       );
     } catch (caught) {
-      if (effectiveAbortSignal?.aborted || this.jobs.isCancelled(job.id)) {
+      if (effectiveAbortSignal?.aborted === true || this.jobs.isCancelled(job.id)) {
         this.jobs.cancel(job.id);
         return this.finishCancelledImport(job.id);
       }
@@ -221,7 +221,7 @@ export class StoryImportService {
     abortSignal?: AbortSignal,
     onSaving?: () => void,
   ) {
-    if (abortSignal?.aborted) {
+    if (abortSignal?.aborted === true) {
       this.jobs.cancel(importId);
     }
     if (this.jobs.isCancelled(importId)) {
@@ -255,7 +255,7 @@ export class StoryImportService {
       this.jobs.complete(importId);
       return { status: 'confirmation_required' as const, importId, report };
     }
-    if (abortSignal?.aborted) {
+    if (abortSignal?.aborted === true) {
       this.jobs.cancel(importId);
     }
     if (this.jobs.isCancelled(importId)) {

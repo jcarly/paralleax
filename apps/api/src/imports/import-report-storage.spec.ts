@@ -67,3 +67,18 @@ describe('LocalImportReportStorage', () => {
     expect(await storage.getReportPath('9d4d0c5b-71a6-4aa6-b091-da4cdd4ca947')).toBeUndefined();
   });
 });
+
+it.each([undefined, ''])('ignores a missing or empty report path: %j', async (path) => {
+  const directory = await mkdtemp(join(tmpdir(), 'paralleax-import-storage-'));
+  try {
+    const storage = new LocalImportReportStorage(directory);
+    jest.spyOn(storage, 'getReportPath').mockResolvedValue(path);
+    await expect(storage.streamReport(importId)).resolves.toBeUndefined();
+    await expect(storage.deleteReport(importId)).resolves.toBeUndefined();
+    await expect(
+      copyImportReportFile(storage, importId, join(directory, 'copy')),
+    ).resolves.toBeUndefined();
+  } finally {
+    await rm(directory, { recursive: true, force: true });
+  }
+});

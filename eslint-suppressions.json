@@ -163,11 +163,6 @@
       "count": 1
     }
   },
-  "apps/api/src/imports/import-report-storage.ts": {
-    "@typescript-eslint/strict-boolean-expressions": {
-      "count": 3
-    }
-  },
   "apps/api/src/imports/import-report-writer.spec.ts": {
     "@typescript-eslint/no-unsafe-type-assertion": {
       "count": 1
@@ -328,7 +323,7 @@
   },
   "apps/api/src/stories/application/story-import.ts": {
     "@typescript-eslint/strict-boolean-expressions": {
-      "count": 5
+      "count": 1
     },
     "complexity": {
       "count": 2
@@ -1456,10 +1451,10 @@
       "count": 4
     },
     "@typescript-eslint/prefer-nullish-coalescing": {
-      "count": 2
+      "count": 1
     },
     "@typescript-eslint/strict-boolean-expressions": {
-      "count": 8
+      "count": 5
     },
     "complexity": {
       "count": 1

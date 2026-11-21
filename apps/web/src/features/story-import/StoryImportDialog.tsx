@@ -672,7 +672,7 @@ async function openQspImportProgress(
   if (typeof EventSource === 'undefined') {
     return { close: () => undefined };
   }
-  if (signal?.aborted) {
+  if (signal?.aborted === true) {
     throw new DOMException('The QSP import was cancelled.', 'AbortError');
   }
 
@@ -743,7 +743,7 @@ function registerQspProgressListeners({
   receiveProgress: EventListener;
   rejectUnavailableStream: EventListener;
 }) {
-  if (signal?.aborted) {
+  if (signal?.aborted === true) {
     abort();
     return;
   }
@@ -836,7 +836,7 @@ function qspLocationsSourceName(files: File[]) {
   const relativeRoot = files
     .map(({ webkitRelativePath }) => (webkitRelativePath ?? '').split('/').filter(Boolean)[0])
     .find(Boolean);
-  return `${relativeRoot || 'QSP locations'}.qsrc`;
+  return `${relativeRoot ?? 'QSP locations'}.qsrc`;
 }
 
 function summarizeFileNames(files: File[], t: ReturnType<typeof useTranslation>['t']) {
