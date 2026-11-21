@@ -14,7 +14,7 @@ import { api } from '../../api';
 import { apiErrorMessage, isApiErrorLike } from '../../apiErrorMessages';
 
 type Stage = 'idle' | 'checking' | 'importing';
-type ImportError = { message: string; path?: string };
+type ImportError = { message: string; path?: string; outcomeUnknown?: boolean };
 type NativeImportState = {
   file?: File;
   summary?: NativeStoryImportSummary;
@@ -27,18 +27,27 @@ type NativeImportState = {
   active: MutableRefObject<AbortController | undefined>;
   onClose: () => void;
   onPendingChange: (pending: boolean) => void;
+  onImportOutcomeUnknown: () => void;
   navigate: NavigateFunction;
   t: TFunction;
 };
 
-type NativeImportProps = { onClose: () => void; onPendingChange: (pending: boolean) => void };
+type NativeImportProps = {
+  onClose: () => void;
+  onPendingChange: (pending: boolean) => void;
+  onImportOutcomeUnknown: () => void;
+};
 
 export function NativeStoryImportForm(props: NativeImportProps) {
   const state = useNativeStoryImport(props);
   return <NativeStoryImportView state={state} />;
 }
 
-function useNativeStoryImport({ onClose, onPendingChange }: NativeImportProps): NativeImportState {
+function useNativeStoryImport({
+  onClose,
+  onPendingChange,
+  onImportOutcomeUnknown,
+}: NativeImportProps): NativeImportState {
   const { t } = useTranslation();
   const navigate = useNavigate();
   const [file, setFile] = useState<File>();
@@ -59,6 +68,7 @@ function useNativeStoryImport({ onClose, onPendingChange }: NativeImportProps): 
     active,
     onClose,
     onPendingChange,
+    onImportOutcomeUnknown,
     navigate,
     t,
   };
@@ -111,7 +121,11 @@ async function createNativeStory(state: NativeImportState) {
     void state.navigate(`/stories/${encodeURIComponent(result.id)}/edit`);
   } catch (caught) {
     if (!operation.signal.aborted) {
-      state.setError(nativeImportError(caught, state.t));
+      const outcomeUnknown = importOutcomeMayBeUnknown(caught);
+      state.setError({ ...nativeImportError(caught, state.t), outcomeUnknown });
+      if (outcomeUnknown) {
+        state.onImportOutcomeUnknown();
+      }
     }
   } finally {
     finishNativeRequest(state, operation);
@@ -205,11 +219,19 @@ function NativeStoryError({ error }: { error: ImportError }) {
   return (
     <div className="library-error" role="alert">
       <p>{error.message}</p>
+      {error.outcomeUnknown === true ? <p>{t('library.import.native.outcomeUnknown')}</p> : null}
       {error.path !== undefined && error.path !== '' ? (
         <small>{t('library.import.native.path', { path: error.path })}</small>
       ) : null}
     </div>
   );
+}
+
+function importOutcomeMayBeUnknown(caught: unknown): boolean {
+  if (!isApiErrorLike(caught)) {
+    return true;
+  }
+  return caught.status === 0 || caught.status >= 500 || caught.code === 'INVALID_SERVER_RESPONSE';
 }
 
 function NativeStorySummary({ summary }: { summary: NativeStoryImportSummary }) {

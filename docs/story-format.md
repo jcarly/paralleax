@@ -152,8 +152,19 @@ are deliberately excluded rather than partially restored.
   the global JSON request limit remains 128 KiB. Configured Story quotas also
   apply, including the default 32 MiB serialized Story limit. The import is
   bounded and uses one transaction, not one HTTP request per entity.
+- The production Nginx proxy keeps its global 128 KiB body limit and grants
+  33 MiB only to the native preview and import routes. Those routes stream
+  uploads through the proxy and allow up to one hour for the transfer and API
+  response.
 - Invalid structure, unsupported versions, duplicate IDs, missing references,
   invalid graph or stat data, unsafe content and quota failures return a stable
   error code and, when available, a JSON path. Database details and other
   users' identities are not returned. A failed transaction leaves no partial
   Story. Imports do not replace or merge an existing Story.
+
+Native imports do not have a persisted idempotency key. If the connection is
+lost after the server commits but before the browser receives the Story ID, the
+library refreshes and the dialog asks the author to check for the new Story
+before retrying. Repeating the import can create a second copy; exactly-once
+recovery across interrupted requests would require additional persisted request
+state and is not implemented.

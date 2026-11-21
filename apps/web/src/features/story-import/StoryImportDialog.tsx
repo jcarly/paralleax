@@ -42,11 +42,13 @@ interface StoryImportDialogProps {
   isAdministrator: boolean;
   onClose: () => void;
   onImported: (story: StorySummary) => void;
+  onImportOutcomeUnknown: () => void;
 }
 
 interface StoryImportController {
   isAdministrator: boolean;
   onClose: () => void;
+  onImportOutcomeUnknown: () => void;
   format: StoryImportFormat;
   setFormat: Dispatch<SetStateAction<StoryImportFormat>>;
   files: File[];
@@ -73,6 +75,7 @@ function useStoryImportController({
   isAdministrator,
   onClose,
   onImported,
+  onImportOutcomeUnknown,
 }: StoryImportDialogProps): StoryImportController {
   const { t } = useTranslation();
   const [format, setFormat] = useState<StoryImportFormat>('choicescript');
@@ -117,6 +120,7 @@ function useStoryImportController({
   return {
     isAdministrator,
     onClose,
+    onImportOutcomeUnknown,
     format,
     setFormat,
     files,
@@ -284,6 +288,7 @@ function StoryImportDialogView({ controller }: { controller: StoryImportControll
               <NativeStoryImportForm
                 onClose={controller.onClose}
                 onPendingChange={controller.setPending}
+                onImportOutcomeUnknown={controller.onImportOutcomeUnknown}
               />
             </>
           ) : controller.outcome ? (

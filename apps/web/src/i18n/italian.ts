@@ -279,6 +279,8 @@ export const italianTranslation = {
         tooLarge: 'Il file supera il limite di 33 MiB.',
         invalidFile: 'Seleziona un file JSON.',
         failed: 'Impossibile importare la storia.',
+        outcomeUnknown:
+          'Il server potrebbe aver creato la storia. Controlla la libreria aggiornata prima di riprovare.',
         path: 'Posizione: {{path}}',
         interactions: 'Interazioni',
         triggers: 'Trigger',

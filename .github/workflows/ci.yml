@@ -460,6 +460,9 @@ jobs:
       - name: Build production web image
         run: docker build --target web --tag paralleax-web:ci .
 
+      - name: Verify native Story upload limits through production Nginx
+        run: npm run test:production-proxy -- paralleax-web:ci
+
   release:
     name: Alpha release
     needs: [changes, quality, workflow-validation, postgres, mcp, browser]

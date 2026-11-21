@@ -268,6 +268,8 @@ export const frenchTranslation = {
         tooLarge: 'Le fichier dépasse la limite de 33 Mio.',
         invalidFile: 'Sélectionnez un fichier JSON.',
         failed: 'L’histoire n’a pas pu être importée.',
+        outcomeUnknown:
+          'Le serveur a peut-être créé cette histoire. Vérifiez la bibliothèque actualisée avant de réessayer.',
         path: 'Emplacement : {{path}}',
         interactions: 'Interactions',
         triggers: 'Déclencheurs',

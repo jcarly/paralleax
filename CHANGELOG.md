@@ -6,6 +6,10 @@
   library, with an author-only export permission, validation and preview,
   collision-safe references and atomic creation. The format and its exclusions
   are documented in [docs/story-format.md](docs/story-format.md).
+- Allowed native Story preview and import files up to 33 MiB through the
+  production Nginx proxy without changing the global 128 KiB request limit. If
+  an import response is lost, the library refreshes and warns authors to check
+  for the new Story before retrying.
 - Added a persisted Trigger probability identity, preserving existing seeded
   rolls when native Story import needs to remap a Trigger ID (ADR-049).
 - The Inspector's text-comment action (✎) now appears only while commentable

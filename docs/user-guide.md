@@ -49,7 +49,9 @@ review the title and content counts, then confirm. The new private Story opens
 in the editor and belongs to the importing account. Collaborators, comments
 and reader progress are not transferred; external media URLs are retained but
 the media files are not copied. See [Story format](story-format.md) for version
-compatibility, limits and the full list of included content.
+compatibility, limits and the full list of included content. If the connection
+fails during import, close the dialog and check the refreshed library before
+trying again; the server may already have created the private copy.
 
 To inspect an external story, select `Import a story` beside `New story`, then
 choose its source format. For a small ChoiceScript project, select all of its

@@ -22,6 +22,7 @@ const summary = {
   groupCount: 1,
   graphDecorationCount: 1,
 };
+const onImportOutcomeUnknown = vi.fn();
 
 beforeEach(() => vi.resetAllMocks());
 afterEach(cleanup);
@@ -33,7 +34,12 @@ async function openNativeImport(user: ReturnType<typeof userEvent.setup>) {
         <Route
           path="/library"
           element={
-            <StoryImportDialog isAdministrator={false} onClose={vi.fn()} onImported={vi.fn()} />
+            <StoryImportDialog
+              isAdministrator={false}
+              onClose={vi.fn()}
+              onImported={vi.fn()}
+              onImportOutcomeUnknown={onImportOutcomeUnknown}
+            />
           }
         />
         <Route path="/stories/:id/edit" element={<h1>Imported editor</h1>} />
@@ -79,4 +85,26 @@ it('shows a localized validation error and permits a different file', async () =
   expect(within(dialog).getByRole('button', { name: 'Import story' })).toBeDisabled();
   await user.upload(input, new File(['{}'], 'good.json', { type: 'application/json' }));
   expect(await within(dialog).findByText('Complex Story')).toBeInTheDocument();
+});
+
+it('refreshes the Story library when an import response is lost', async () => {
+  const user = userEvent.setup();
+  vi.mocked(api.previewNativeStory).mockResolvedValue(summary);
+  vi.mocked(api.importNativeStory).mockRejectedValue(
+    Object.assign(new Error('The server could not be reached'), {
+      status: 0,
+      code: 'NETWORK_UNAVAILABLE',
+    }),
+  );
+  const dialog = await openNativeImport(user);
+  await user.upload(
+    within(dialog).getByLabelText('Story JSON file'),
+    new File(['{}'], 'story.json', { type: 'application/json' }),
+  );
+  await within(dialog).findByText('Complex Story');
+  await user.click(within(dialog).getByRole('button', { name: 'Import story' }));
+  expect(await within(dialog).findByRole('alert')).toHaveTextContent(
+    'The server may have created this Story',
+  );
+  expect(onImportOutcomeUnknown).toHaveBeenCalledOnce();
 });

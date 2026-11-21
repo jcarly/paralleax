@@ -117,5 +117,9 @@ function useStoryListOperations(options: StoryListOperationOptions) {
     ...countsAndStories,
     resetLibraryView: search.resetLibraryView,
   });
-  return { creation, createDemos, ...deletion, onImported };
+  const onImportOutcomeUnknown = () => {
+    search.resetLibraryView();
+    options.setRefreshVersion((version) => version + 1);
+  };
+  return { creation, createDemos, ...deletion, onImported, onImportOutcomeUnknown };
 }

@@ -265,6 +265,8 @@ export const englishTranslation = {
         tooLarge: 'The file exceeds the 33 MiB upload limit.',
         invalidFile: 'Select a JSON file.',
         failed: 'The story could not be imported.',
+        outcomeUnknown:
+          'The server may have created this Story. Check the refreshed library before retrying.',
         path: 'Location: {{path}}',
         interactions: 'Interactions',
         triggers: 'Triggers',
