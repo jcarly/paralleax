@@ -25,11 +25,18 @@ const story: Story = {
   updatedAt: '2026-08-28T08:00:00.000Z',
 };
 
+function requireDelta(delta: ReturnType<typeof createStoryChangeDelta>) {
+  if (delta === undefined) {
+    throw new Error('Expected a story change delta');
+  }
+  return delta;
+}
+
 describe('Story authored change history', () => {
   it('reverses one field without overwriting an unrelated later edit', () => {
     const moved = structuredClone(story);
     moved.interactions[0].position = { x: 200, y: 300 };
-    const delta = createStoryChangeDelta(story, moved)!;
+    const delta = requireDelta(createStoryChangeDelta(story, moved));
     const later = structuredClone(moved);
     later.interactions[0].title = 'Later title';
 
@@ -47,7 +54,7 @@ describe('Story authored change history', () => {
     const moved = structuredClone(story);
     moved.interactions[0].position = { x: 200, y: 300 };
     moved.interactions[0].triggers[0].position = { x: 200, y: 220 };
-    const delta = createStoryChangeDelta(story, moved)!;
+    const delta = requireDelta(createStoryChangeDelta(story, moved));
     const inverse = invertStoryChangeDelta(delta);
 
     expect(isStoryGraphPositionDelta(delta)).toBe(true);
@@ -65,7 +72,9 @@ describe('Story authored change history', () => {
     const renamed = structuredClone(story);
     renamed.interactions[0].title = 'Renamed';
 
-    expect(isStoryGraphPositionDelta(createStoryChangeDelta(story, renamed)!)).toBe(false);
+    expect(isStoryGraphPositionDelta(requireDelta(createStoryChangeDelta(story, renamed)))).toBe(
+      false,
+    );
   });
 
   it('reverses and reapplies an entity creation at its authored position', () => {
@@ -77,7 +86,7 @@ describe('Story authored change history', () => {
       position: { x: 10, y: 200 },
       triggers: [],
     });
-    const delta = createStoryChangeDelta(story, created)!;
+    const delta = requireDelta(createStoryChangeDelta(story, created));
 
     const undone = applyStoryChangeDelta(created, delta, 'backward');
     expect(undone.applied && undone.story.interactions.map(({ id }) => id)).toEqual([
@@ -96,7 +105,7 @@ describe('Story authored change history', () => {
   it('reports an overlapping later change instead of overwriting it', () => {
     const changed = structuredClone(story);
     changed.interactions[0].title = 'First change';
-    const delta = createStoryChangeDelta(story, changed)!;
+    const delta = requireDelta(createStoryChangeDelta(story, changed));
     const later = structuredClone(changed);
     later.interactions[0].title = 'Conflicting change';
 
@@ -167,7 +176,7 @@ describe('Story authored change history', () => {
   it('preserves an unrelated later entity while reversing an authored reorder', () => {
     const before = storyWithInteractions('interaction-1', 'interaction-2', 'interaction-3');
     const reordered = storyWithInteractions('interaction-2', 'interaction-1', 'interaction-3');
-    const delta = createStoryChangeDelta(before, reordered)!;
+    const delta = requireDelta(createStoryChangeDelta(before, reordered));
     const later = structuredClone(reordered);
     later.interactions.push(interaction('interaction-4'));
 
@@ -184,7 +193,7 @@ describe('Story authored change history', () => {
   it('reports a later overlapping entity reorder instead of replacing it', () => {
     const before = storyWithInteractions('interaction-1', 'interaction-2', 'interaction-3');
     const reordered = storyWithInteractions('interaction-2', 'interaction-1', 'interaction-3');
-    const delta = createStoryChangeDelta(before, reordered)!;
+    const delta = requireDelta(createStoryChangeDelta(before, reordered));
     const later = storyWithInteractions('interaction-2', 'interaction-3', 'interaction-1');
 
     expect(applyStoryChangeDelta(later, delta, 'backward')).toEqual({
@@ -220,7 +229,7 @@ describe('Story authored change history', () => {
     }
 
     const startedAt = performance.now();
-    const delta = createStoryChangeDelta(before, after)!;
+    const delta = requireDelta(createStoryChangeDelta(before, after));
     const restored = applyStoryChangeDelta(after, delta, 'backward');
     const durationMs = performance.now() - startedAt;
 

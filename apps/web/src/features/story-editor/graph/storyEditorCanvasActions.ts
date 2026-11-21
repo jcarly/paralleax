@@ -12,6 +12,8 @@ import type { useStoryEditorRelatedCreation } from './useStoryEditorConnectionRu
 import type { useStoryGraphOrganization } from './useStoryGraphOrganization';
 
 type StoryEditorCanvasToolbarInput = {
+  contextPanelOpen: boolean;
+  toggleContextPanel: () => void;
   story: Story;
   reviewOnly: boolean;
   isOrganizing: boolean;
@@ -33,6 +35,8 @@ type StoryEditorCanvasToolbarInput = {
 
 export function buildStoryEditorCanvasToolbarProps(input: StoryEditorCanvasToolbarInput) {
   return {
+    contextPanelOpen: input.contextPanelOpen,
+    onToggleContextPanel: input.toggleContextPanel,
     canEdit: !input.reviewOnly,
     canComment: input.story.capabilities?.canComment === true,
     canOrganize: input.story.interactions.length > 0 && !input.isOrganizing,

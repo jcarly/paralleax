@@ -110,7 +110,7 @@ export function useStoryEditorGraphDeletion(input: StoryEditorGraphDeletionInput
   return { deleteGraphElement, deleteSelectedTrigger, remove };
 }
 
-function getSelectedGraphElementTarget(
+export function getSelectedGraphElementTarget(
   selected: Interaction | undefined,
   selectedTriggerTarget: ReturnType<typeof useStoryEditorSelection>['selectedTriggerTarget'],
   selectedGraphDecoration: GraphDecoration | undefined,

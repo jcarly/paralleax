@@ -109,6 +109,49 @@ test('styles the Story settings toolbar button before its dialog loads', async (
   const settingsButton = page.getByRole('button', { name: 'Story settings' });
   // The dialog loads on demand; the button's stylesheet must already apply.
   await expect(page.getByRole('dialog', { name: 'Story settings' })).toHaveCount(0);
-  await expect(settingsButton).toHaveCSS('width', '34px');
-  await expect(settingsButton.locator('svg')).toHaveCSS('width', '20px');
+  await expect(settingsButton).toHaveCSS('width', '40px');
+  await expect(settingsButton.locator('svg')).toHaveCSS('width', '21px');
+  // On the title line, vertically centred with the title field.
+  const [title, button] = await Promise.all([
+    page.getByRole('textbox', { name: 'Story title' }).boundingBox(),
+    settingsButton.boundingBox(),
+  ]);
+  expect(title && button).toBeTruthy();
+  if (title && button) {
+    expect(Math.abs(title.y + title.height / 2 - (button.y + button.height / 2))).toBeLessThan(1);
+    expect(button.x).toBeGreaterThan(title.x + title.width - 1);
+  }
+});
+
+test('renders the Test toolbar links like the other toolbar actions', async ({ page }) => {
+  await prepareEditorPage(page);
+  await page.goto('/stories/story-1/edit');
+  await expect(page.getByTestId('interaction-node')).toBeVisible();
+  const comments = page.getByRole('button', { name: 'Comments' });
+  const testFromStart = page.getByRole('link', { name: 'Test from start' });
+  await expect(testFromStart).toBeVisible();
+
+  const [reference, link] = await Promise.all(
+    [comments, testFromStart].map((action) =>
+      action.evaluate((element) => {
+        const box = element.getBoundingClientRect();
+        const icon = element.querySelector('svg')?.getBoundingClientRect();
+        const style = getComputedStyle(element);
+        return {
+          width: box.width,
+          height: box.height,
+          top: box.top,
+          iconOffsetX: icon ? icon.x + icon.width / 2 - (box.x + box.width / 2) : NaN,
+          iconOffsetY: icon ? icon.y + icon.height / 2 - (box.y + box.height / 2) : NaN,
+          border: `${style.borderTopWidth} ${style.borderTopStyle}`,
+          radius: style.borderTopLeftRadius,
+          background: style.backgroundColor,
+        };
+      }),
+    ),
+  );
+  expect(link).toEqual({ ...reference, top: link.top });
+  expect(link.top).toBeCloseTo(reference.top, 0);
+  expect(Math.abs(link.iconOffsetX)).toBeLessThan(1);
+  expect(Math.abs(link.iconOffsetY)).toBeLessThan(1);
 });

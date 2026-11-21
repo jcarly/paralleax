@@ -2,6 +2,7 @@ import type { ReactNode } from 'react';
 import { useTranslation } from 'react-i18next';
 
 export type CanvasActionIconName =
+  | 'sidebar'
   | 'undo'
   | 'redo'
   | 'history'
@@ -21,6 +22,8 @@ export type CanvasActionIconName =
   | 'syncError';
 
 interface StoryCanvasToolbarProps {
+  contextPanelOpen: boolean;
+  onToggleContextPanel: () => void;
   canEdit: boolean;
   canComment: boolean;
   canOrganize: boolean;
@@ -41,6 +44,8 @@ interface StoryCanvasToolbarProps {
 }
 
 export function StoryCanvasToolbar({
+  contextPanelOpen,
+  onToggleContextPanel,
   canEdit,
   canComment,
   canOrganize,
@@ -67,6 +72,14 @@ export function StoryCanvasToolbar({
 
   return (
     <div className="canvas-tools" role="toolbar" aria-label={t('editor.canvasTools')}>
+      <CanvasToolButton
+        label={t(contextPanelOpen ? 'editor.collapseContext' : 'editor.expandContext')}
+        icon="sidebar"
+        active={contextPanelOpen}
+        expanded={contextPanelOpen}
+        controls="story-context-panel-content"
+        onClick={onToggleContextPanel}
+      />
       {canEdit ? (
         <>
           <CanvasToolButton
@@ -118,6 +131,8 @@ function CanvasToolButton({
   active = false,
   disabled = false,
   pressed,
+  expanded,
+  controls,
   onClick,
 }: {
   label: string;
@@ -125,6 +140,8 @@ function CanvasToolButton({
   active?: boolean;
   disabled?: boolean;
   pressed?: boolean;
+  expanded?: boolean;
+  controls?: string;
   onClick: () => void;
 }) {
   return (
@@ -133,6 +150,8 @@ function CanvasToolButton({
       type="button"
       aria-label={label}
       aria-pressed={pressed}
+      aria-expanded={expanded}
+      aria-controls={controls}
       data-tooltip={label}
       disabled={disabled}
       onClick={onClick}
@@ -144,6 +163,12 @@ function CanvasToolButton({
 
 export function CanvasActionIcon({ name }: { name: CanvasActionIconName }) {
   const paths = {
+    sidebar: (
+      <>
+        <rect x="3" y="4" width="18" height="16" rx="2" />
+        <path d="M9 4v16M5.5 8h1.5M5.5 11h1.5" />
+      </>
+    ),
     undo: (
       <>
         <path d="M9 7 4 12l5 5" />

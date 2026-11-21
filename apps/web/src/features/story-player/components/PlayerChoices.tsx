@@ -51,10 +51,7 @@ export function PlayerChoices({
   const { t } = useTranslation();
 
   return (
-    <div
-      className="choices"
-      data-onboarding-target={isSimulationMode ? 'simulation-choices' : undefined}
-    >
+    <div className="choices">
       {choices.map(({ interaction, available, timerState, unavailableReason }, index) => {
         const choiceLabel = choiceLabelForDisplay(interaction, { index, count: choices.length }, t);
         return (

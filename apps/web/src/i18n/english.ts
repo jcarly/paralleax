@@ -42,27 +42,15 @@ export const englishTranslation = {
     openStoryPrompt: 'Your new story is ready. Open it to continue.',
     returnToEditorPrompt: 'Return to the editor to continue the guide.',
     openStory: 'Open story',
-    completeTitle: 'Story ready to explore',
-    completeDescription: 'You created and tested your first path.',
-    completeSkippedDescription: 'You can keep creating or restart the guide at any time.',
-    completeAccessDescription:
-      'Choose who can read, comment, or edit. Your story stays private until you change its access settings.',
-    continueCreating: 'Continue creating',
-    shareForTesting: 'Share for testing',
     stepCount: 'Step {{current}} of {{total}}',
     skipStep: 'Skip step',
     close: 'Close guide',
     restart: 'Restart guide',
     steps: {
-      'discover-interactions': {
-        title: 'Explore the graph',
-        description:
-          'Select an interaction. Connections show how story moments lead to each other.',
-      },
       'write-scene': {
         title: 'Write a scene',
         description:
-          'The selected interaction appears in Inspector. Add its scene, then leave the field to save it.',
+          'The starting interaction is selected. Choose Add content, write its scene, then click outside the field to save it.',
       },
       'create-branch': {
         title: 'Create a choice',
@@ -71,7 +59,7 @@ export const englishTranslation = {
       },
       'test-story': {
         title: 'Test your story',
-        description: 'Choose Test from start in the editor, then follow a path in Simulation Mode.',
+        description: 'Choose Test from start. The guide closes and Simulation opens on your story.',
       },
     },
   },
@@ -418,7 +406,14 @@ export const englishTranslation = {
       authenticated: 'Signed-in users',
       public: 'Everyone',
       unlisted: 'By link (unlisted)',
-      help: "Anyone with the URL can read the Story without signing in. It won't appear in the public catalog.",
+      help: {
+        public: 'Anyone can read the Story without signing in. It appears in the public catalog.',
+        unlisted:
+          "Anyone with the URL can read the Story without signing in. It won't appear in the public catalog.",
+        authenticated: 'Any signed-in user can read the Story and find it in the catalog.',
+        invitation: 'Only the users added below can read the Story.',
+        private: 'Only you can read the Story. Access given to the users below stays inactive.',
+      },
       invitation: 'By invitation',
     },
     edit: {
@@ -426,12 +421,24 @@ export const englishTranslation = {
       owner: 'Owner only',
       collaborators: 'Editors',
       authenticated: 'Signed-in users',
+      adjusted: 'Editing set to {{policy}}: it cannot be wider than reading.',
+      limitedByReading: 'Limited by the Reading setting.',
+      openedForEditors: 'Editing set to Editors so the invited editor can edit.',
+      help: {
+        owner: 'Only you can edit the Story.',
+        collaborators: 'You and the users added below as Editor can edit the Story.',
+        authenticated: 'Any signed-in user can read and edit the Story.',
+      },
     },
     comments: {
       label: 'Comments',
       readers: 'Readers',
       editors: 'Editors',
-      help: 'Editors can comment while editing. Signed-in readers comment from the reader only.',
+      help: {
+        readers:
+          'Signed-in users who can read the Story comment from the reader. Editors comment while editing.',
+        editors: 'Only users who can edit the Story comment, while editing.',
+      },
     },
     collaborators: 'Users',
     collaboratorsHelp: 'Add an existing Paralleax account with reading or editing access.',

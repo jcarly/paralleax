@@ -5,6 +5,7 @@ import {
   Logger,
   ServiceUnavailableException,
 } from '@nestjs/common';
+import { DomainValidationError } from '@paralleax/shared';
 import type { Response } from 'express';
 import { ApiExceptionFilter } from './api-exception.filter';
 import type { RequestWithId } from './request-context';
@@ -68,6 +69,30 @@ describe('ApiExceptionFilter', () => {
       message: 'The database is not ready.',
       requestId: 'request-1',
     });
+  });
+
+  it('maps a domain rule violation to a 400 with its code and details without capturing it', () => {
+    const response = host();
+    const capture = jest.spyOn(sentry, 'captureApiException').mockImplementation();
+    const logError = jest.spyOn(Logger.prototype, 'error').mockImplementation();
+
+    new ApiExceptionFilter().catch(
+      new DomainValidationError('STORY_ACCESS_INCOHERENT', 'Editing must stay within reading.', {
+        allowedEditPolicies: ['owner'],
+      }),
+      response.host,
+    );
+
+    expect(response.status).toHaveBeenCalledWith(HttpStatus.BAD_REQUEST);
+    expect(response.json).toHaveBeenCalledWith({
+      status: HttpStatus.BAD_REQUEST,
+      code: 'STORY_ACCESS_INCOHERENT',
+      message: 'Editing must stay within reading.',
+      requestId: 'request-1',
+      details: { allowedEditPolicies: ['owner'] },
+    });
+    expect(capture).not.toHaveBeenCalled();
+    expect(logError).not.toHaveBeenCalled();
   });
 
   it('preserves explicit structured error details', () => {

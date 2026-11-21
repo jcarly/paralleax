@@ -32,7 +32,8 @@ type StepAction = Extract<OnboardingAction, { type: 'skip' | 'complete' }>;
 type StoryAction = Extract<OnboardingAction, { type: 'story-state' | 'story-deleted' }>;
 
 function openGuide(progress: OnboardingProgress, storyId?: string): OnboardingProgress {
-  if (!storyId || storyId === progress.storyId) {
+  const finished = currentOnboardingStep(progress) === null;
+  if ((!storyId || storyId === progress.storyId) && !finished) {
     if (progress.status === 'active') {
       return progress;
     }

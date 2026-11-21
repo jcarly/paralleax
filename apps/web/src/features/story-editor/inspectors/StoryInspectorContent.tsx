@@ -94,12 +94,6 @@ function StoryGraphDecorationContent({ model }: { model: StoryEditorInspectorMod
     <GraphDecorationInspector
       decoration={decoration}
       onPatch={(patch) => void model.actions.updateGraphDecoration(decoration.id, patch)}
-      onDelete={() =>
-        void model.actions.deleteGraphElement({
-          kind: 'graphDecoration',
-          decorationId: decoration.id,
-        })
-      }
     />
   );
 }
@@ -177,7 +171,6 @@ function StoryInteractionContent({ model }: { model: StoryEditorInspectorModel }
             actions.reportStepComplete(model.storyId, 'write-scene');
           }
         }}
-        onDelete={actions.remove}
         onSelectInteraction={(interactionId) => {
           actions.selectExclusive({ type: 'interaction', id: interactionId });
         }}
@@ -209,7 +202,6 @@ function StoryTriggerContent({ model }: { model: StoryEditorInspectorModel }) {
         interaction={target.interaction}
         trigger={target.trigger}
         onSaveTrigger={model.actions.saveTrigger}
-        onDeleteTrigger={model.actions.deleteSelectedTrigger}
         semanticCommentCounts={model.commentSummary.selectedSemanticCommentCounts}
         onOpenSemanticComments={model.actions.openSemanticComments}
       />

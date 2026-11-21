@@ -6,6 +6,13 @@ import { createQspImportFailureResult, importQsp } from './importer.js';
 import { parseQspLocationBundle, serializeQspLocationBundle } from './source-bundle.js';
 import type { QspImportProgress } from './types.js';
 
+function requireValue<T>(value: T | null | undefined, description: string): T {
+  if (value === null || value === undefined) {
+    throw new Error(`Expected ${description} to exist`);
+  }
+  return value;
+}
+
 function importSource(source: Parameters<typeof importQsp>[0]) {
   let id = 0;
   return importQsp(source, {
@@ -50,7 +57,7 @@ gt 'End'
 --- End ---`,
     });
 
-    const [start, end] = result.story!.interactions;
+    const [start, end] = requireValue(result.story, 'imported story').interactions;
     expect(end.triggers).toHaveLength(1);
     expect(end.triggers[0].inputInteractionIds).toEqual([start.id]);
   });
@@ -97,7 +104,10 @@ end
       'room',
       'room · inside',
     ]);
-    const [start, menu, enter, , inside] = result.story!.interactions;
+    const [start, menu, enter, , inside] = requireValue(
+      result.story,
+      'imported story',
+    ).interactions;
     expect(menu.body).toBe('<p>Main menu</p>');
     expect(menu.triggers[0].inputInteractionIds).toEqual([start.id]);
     expect(enter.triggers[0].inputInteractionIds).toEqual([menu.id]);
@@ -142,7 +152,7 @@ end
       'event_sequence',
       'event_sequence · entry',
     ]);
-    const [start, , variant] = result.story!.interactions;
+    const [start, , variant] = requireValue(result.story, 'imported story').interactions;
     expect(variant.body).toBe('<p>First part.</p><p>Second part.</p>');
     expect(variant.triggers[0].inputInteractionIds).toEqual([start.id]);
     expect(result.report.issues).toContainEqual(
@@ -234,7 +244,7 @@ end
       revision: 1,
       access: { visibility: 'private', editPolicy: 'owner', commentPolicy: 'editors' },
     });
-    const [start, action, ending] = result.story!.interactions;
+    const [start, action, ending] = requireValue(result.story, 'imported story').interactions;
     expect(start).toMatchObject({ title: 'Start', body: '<p>You reach the lighthouse.</p>' });
     expect(action).toMatchObject({ title: 'Open the door', body: '<p>The lock gives way.</p>' });
     expect(action.triggers[0].inputInteractionIds).toEqual([start.id]);
@@ -477,7 +487,10 @@ end
       expect.objectContaining({ name: 'Rank', valueType: 'string', category: 'QSP' }),
       expect.objectContaining({ name: 'Blocked', valueType: 'number', category: 'QSP' }),
     ]);
-    const [score, rank, blocked] = result.story!.stats!;
+    const [score, rank, blocked] = requireValue(
+      requireValue(result.story, 'imported story').stats,
+      'story stats',
+    );
     expect(result.story?.interactions[0].statEffects).toEqual([
       { statId: score.id, operation: 'set', value: 10 },
       { statId: rank.id, operation: 'set', value: 'captain' },
@@ -485,7 +498,11 @@ end
     expect(result.story?.interactions[1].statEffects).toEqual([
       { statId: score.id, operation: 'add', value: 2 },
     ]);
-    expect(getTriggerConditionGroups(result.story!.interactions[2].triggers[0])).toEqual([
+    expect(
+      getTriggerConditionGroups(
+        requireValue(result.story, 'imported story').interactions[2].triggers[0],
+      ),
+    ).toEqual([
       {
         id: expect.any(String),
         conditions: [
@@ -533,8 +550,8 @@ end
         expect.objectContaining({ code: 'unsupported_condition' }),
       ]),
     );
-    const story = result.story!;
-    const [score] = story.stats!;
+    const story = requireValue(result.story, 'imported story');
+    const [score] = requireValue(story.stats, 'story stats');
     const [start, continueInteraction] = story.interactions;
     const statValues = getJourneyStatValues(story, [start.id]);
 
@@ -583,19 +600,30 @@ end
       }),
       expect.objectContaining({ name: 'Points [2]', valueType: 'number', category: 'QSP' }),
     ]);
-    const [inventory, weapon, points] = result.story!.stats!;
+    const [inventory, weapon, points] = requireValue(
+      requireValue(result.story, 'imported story').stats,
+      'story stats',
+    );
     expect(result.story?.interactions[0].statEffects).toEqual([
       { statId: inventory.id, operation: 'set', value: 'pack' },
       { statId: weapon.id, operation: 'set', value: 'sword' },
       { statId: points.id, operation: 'set', value: 10 },
     ]);
-    expect(getTriggerConditionGroups(result.story!.interactions[1].triggers[0])).toEqual([
+    expect(
+      getTriggerConditionGroups(
+        requireValue(result.story, 'imported story').interactions[1].triggers[0],
+      ),
+    ).toEqual([
       {
         id: expect.any(String),
         conditions: [{ statId: points.id, operator: 'gte', value: 8 }],
       },
     ]);
-    expect(getTriggerConditionGroups(result.story!.interactions[2].triggers[0])).toEqual([
+    expect(
+      getTriggerConditionGroups(
+        requireValue(result.story, 'imported story').interactions[2].triggers[0],
+      ),
+    ).toEqual([
       {
         id: expect.any(String),
         conditions: [
@@ -604,7 +632,11 @@ end
         ],
       },
     ]);
-    expect(getTriggerConditionGroups(result.story!.interactions[3].triggers[0])).toEqual([
+    expect(
+      getTriggerConditionGroups(
+        requireValue(result.story, 'imported story').interactions[3].triggers[0],
+      ),
+    ).toEqual([
       {
         id: expect.any(String),
         conditions: [
@@ -643,20 +675,29 @@ end
 --- End ---`,
     });
 
-    const story = result.story!;
-    const score = story.stats!.find((stat) =>
-      story.statDefinitions!.some(
-        (definition) => definition.id === stat.statDefinitionId && definition.name === 'Score',
+    const story = requireValue(result.story, 'imported story');
+    const score = requireValue(
+      requireValue(story.stats, 'story stats').find((stat) =>
+        requireValue(story.statDefinitions, 'story stat definitions').some(
+          (definition) => definition.id === stat.statDefinitionId && definition.name === 'Score',
+        ),
       ),
-    )!;
-    const rank = story.stats!.find((stat) =>
-      story.statDefinitions!.some(
-        (definition) => definition.id === stat.statDefinitionId && definition.name === 'Rank',
+      'Score stat',
+    );
+    const rank = requireValue(
+      requireValue(story.stats, 'story stats').find((stat) =>
+        requireValue(story.statDefinitions, 'story stat definitions').some(
+          (definition) => definition.id === stat.statDefinitionId && definition.name === 'Rank',
+        ),
       ),
-    )!;
+      'Rank stat',
+    );
     const conditionsFor = (title: string) =>
       getTriggerConditionGroups(
-        story.interactions.find((interaction) => interaction.title === title)!.triggers[0],
+        requireValue(
+          story.interactions.find((interaction) => interaction.title === title),
+          `interaction ${title}`,
+        ).triggers[0],
       );
 
     expect(story.interactions.map(({ title }) => title)).toEqual([

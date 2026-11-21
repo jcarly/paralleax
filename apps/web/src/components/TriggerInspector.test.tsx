@@ -33,7 +33,6 @@ function renderInspector(story: Story, onSaveTrigger = vi.fn().mockResolvedValue
       interaction={interaction}
       trigger={interaction.triggers[0]}
       onSaveTrigger={onSaveTrigger}
-      onDeleteTrigger={vi.fn()}
     />,
   );
   return onSaveTrigger;

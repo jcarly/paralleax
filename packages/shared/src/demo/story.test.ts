@@ -6,7 +6,13 @@ import { createDemoStories } from './story.js';
 
 const timestamp = '2026-07-14T08:00:00.000Z';
 const stories = createDemoStories(timestamp, (kind) => `demo-${kind}`);
-const storyByTitle = (title: string) => stories.find((story) => story.title === title)!;
+const storyByTitle = (title: string) => {
+  const story = stories.find((candidate) => candidate.title === title);
+  if (!story) {
+    throw new Error(`Expected demo story ${title} to exist`);
+  }
+  return story;
+};
 const id = (story: Story, localId: string) => `${story.id}:${localId}`;
 
 describe('demo stories', () => {

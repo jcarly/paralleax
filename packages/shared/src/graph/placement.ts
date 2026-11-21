@@ -1,7 +1,13 @@
 import type { Interaction, Position, Story } from '../model/index.js';
 
 export const childOffsetX = 0;
-export const childOffsetY = 132;
+/**
+ * Vertical distance from a parent to its first child (and from a child to a new
+ * parent) when no layout engine runs: one ELK layered step, which keeps a layer
+ * for the Trigger marker between the parent output and the child input. The web
+ * editor checks that this matches ELK (`storyGraphDefaultPlacement.test.ts`).
+ */
+export const childOffsetY = 376;
 export const childVerticalGap = 132;
 export const minNodeVerticalDistance = 112;
 export const sameColumnTolerance = 260;
