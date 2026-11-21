@@ -66,8 +66,8 @@ it('creates a branch from a parent with the shared placement rule, then saves co
     `POST ${base}/interactions`,
     `PATCH ${base}/interactions/created`,
   ]);
-  // getNextChildPosition places the child one row below its parent.
-  expect(api.requests[1]?.body).toEqual({ parentId: 'parent', position: { x: 80, y: 252 } });
+  // getNextChildPosition places the child one ELK layer step below its parent.
+  expect(api.requests[1]?.body).toEqual({ parentId: 'parent', position: { x: 80, y: 496 } });
   expect(api.requests[2]?.body).toEqual({ title: 'Encrypted message', body });
   expect(result.data).toMatchObject({
     interaction: { id: 'created', title: 'Encrypted message', excerpt: body.slice(3, -4) },

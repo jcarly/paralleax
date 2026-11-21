@@ -24,7 +24,9 @@ Creating a child or parent Interaction builds a temporary Story that includes
 the pending Interaction and its link, runs the same scoped ELK layout, and uses
 only the pending Interaction position in the create request. Existing elements
 therefore stay in place. A toolbar root and every unavailable or failed ELK
-result retain the collision-free fallback position. Creating a root at an
+result retain the collision-free fallback position. That fallback, also used
+for a new Story's starting child and by API and MCP creation, puts a first
+child or parent where ELK would; a web test compares both. Creating a root at an
 explicit canvas coordinate retains that coordinate.
 
 Current behavior:

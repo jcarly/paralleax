@@ -138,11 +138,12 @@ test('an author creates, persists, resumes, and simulates a conditional story', 
   await expect(interactionNode(page, 'Opening')).toBeVisible();
   await expect(interactionNode(page, 'Gain courage')).toBeVisible();
   await expect(interactionNode(page, 'Resolve')).toBeVisible();
-  const storyContext = page.getByRole('navigation', { name: 'Story context' });
-  const expandStoryContext = storyContext.getByRole('button', { name: 'Expand story context' });
+  // The story context panel opens from the canvas tool rail.
+  const expandStoryContext = page.getByRole('button', { name: 'Expand story context' });
   if (await expandStoryContext.count()) {
     await expandStoryContext.click();
   }
+  const storyContext = page.getByRole('navigation', { name: 'Story context' });
   for (const section of ['Locations', 'Characters', 'Variables']) {
     const toggle = storyContext.getByRole('button', { name: new RegExp(section) });
     if ((await toggle.getAttribute('aria-expanded')) === 'false') {

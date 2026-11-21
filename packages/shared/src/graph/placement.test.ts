@@ -21,14 +21,14 @@ describe('interaction placement', () => {
   it('finds the next child position below occupied vertical outputs', () => {
     const story = storyFixture();
 
-    expect(getNextChildPosition(story, story.interactions[0])).toEqual({ x: 80, y: 648 });
+    expect(getNextChildPosition(story, story.interactions[0])).toEqual({ x: 80, y: 628 });
   });
 
   it('finds the next child position when the parent has no stored position', () => {
     const story = storyFixture();
     delete (story.interactions[1] as Partial<Story['interactions'][number]>).position;
 
-    expect(getNextChildPosition(story, story.interactions[1])).toEqual({ x: 80, y: 648 });
+    expect(getNextChildPosition(story, story.interactions[1])).toEqual({ x: 80, y: 628 });
   });
 
   it('finds the next parent position above the target without overlap', () => {
@@ -41,7 +41,7 @@ describe('interaction placement', () => {
       triggers: [{ id: 'trigger-other-parent', inputInteractionIds: [], conditions: [] }],
     });
 
-    expect(getNextParentPosition(story, story.interactions[2])).toEqual({ x: 80, y: -108 });
+    expect(getNextParentPosition(story, story.interactions[2])).toEqual({ x: 80, y: -88 });
   });
 
   it('finds the next root position below the lowest existing root', () => {

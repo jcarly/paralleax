@@ -122,7 +122,11 @@ describe('StoryGroupService', () => {
     expect(current.groups[0].interactionIds).toEqual([]);
     expect(current.groups[1].interactionIds).toEqual(['interaction-2']);
     await service.update('story-1', 'parent', { interactionIds: ['interaction-1'] }, 'user-1');
-    expect(current.groups.find(({ id }) => id === created.group.id)!.interactionIds).toEqual([]);
+    const createdGroup = current.groups.find(({ id }) => id === created.group.id);
+    if (!createdGroup) {
+      throw new Error(`Expected created group ${created.group.id}`);
+    }
+    expect(createdGroup.interactionIds).toEqual([]);
     expect(current.groups[0].interactionIds).toEqual(['interaction-1']);
     expect(current.groups[1].parentGroupId).toBe('parent');
   });
