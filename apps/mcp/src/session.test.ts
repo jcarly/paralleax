@@ -89,6 +89,16 @@ it('surfaces login failures from the API and stores nothing', async () => {
   await expect(stat(file)).rejects.toThrow();
 });
 
+it('reports an unreachable API on login and stores nothing', async () => {
+  const file = await tempFile();
+  const fetchImpl = () => Promise.reject(new TypeError('fetch failed'));
+  await expect(login(localApi, credentials, file, fetchImpl)).rejects.toMatchObject({
+    code: 'API_UNREACHABLE',
+    message: 'The Paralleax API at http://localhost:3000 could not be reached',
+  });
+  await expect(stat(file)).rejects.toThrow();
+});
+
 posixIt('refuses a session file other OS users can read', async () => {
   const file = await storedSessionFile();
   await chmod(file, 0o644);

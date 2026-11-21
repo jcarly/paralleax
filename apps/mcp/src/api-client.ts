@@ -54,6 +54,15 @@ async function readJson(response: Response): Promise<unknown> {
   }
 }
 
+/** The request got no HTTP response: the API is down or the URL is wrong. */
+export function apiUnreachableError(apiUrl: URL): ParalleaxApiError {
+  return new ParalleaxApiError({
+    status: 503,
+    code: 'API_UNREACHABLE',
+    message: `The Paralleax API at ${apiUrl.origin} could not be reached`,
+  });
+}
+
 /** Converts an API error response, keeping only the documented public fields. */
 export async function apiErrorFromResponse(response: Response): Promise<ParalleaxApiError> {
   const parsed = errorBodySchema.safeParse(await readJson(response));
@@ -157,11 +166,7 @@ export class ParalleaxApiClient {
           message: 'The Paralleax API did not answer in time; the change may have been saved',
         });
       }
-      throw new ParalleaxApiError({
-        status: 503,
-        code: 'API_UNREACHABLE',
-        message: `The Paralleax API at ${this.options.apiUrl.origin} could not be reached`,
-      });
+      throw apiUnreachableError(this.options.apiUrl);
     }
   }
 
