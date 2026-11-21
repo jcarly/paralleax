@@ -28,22 +28,21 @@ vi.mock('@xyflow/react', async () => {
   return createReactFlowMock();
 });
 
+// Inspector comment controls follow pointer events (mouse, touch and pen) on the
+// innermost commentable field, and keyboard focus.
 function hoverTitleCommentMarker(title: string) {
-  const marker = screen
-    .getByRole('button', { name: `Title: ${title}` })
-    .closest('.inspector-commentable-field');
-  if (!marker) {
-    throw new Error('Expected the title comment marker.');
-  }
-  fireEvent.mouseEnter(marker);
+  fireEvent.pointerOver(screen.getByRole('button', { name: `Title: ${title}` }));
 }
 
 function hoverCommentField(fieldButton: HTMLElement) {
-  const marker = fieldButton.closest('.inspector-commentable-field');
-  if (!marker) {
-    throw new Error('Expected the Inspector comment field.');
-  }
-  fireEvent.mouseEnter(marker);
+  fireEvent.pointerOver(fieldButton);
+}
+
+/** Keyboard focus on a field control reveals its comment control right after it. */
+function focusCommentField(fieldButton: HTMLElement) {
+  act(() => {
+    fieldButton.focus();
+  });
 }
 
 describe('StoryEditor graph collaboration and layout', () => {
@@ -400,6 +399,8 @@ describe('StoryEditor graph collaboration and layout', () => {
 
     await renderEditor(story);
     await user.click(screen.getByTestId('flow-node-interaction-2'));
+    focusCommentField(screen.getByRole('button', { name: 'Duration: No time change' }));
+    expect(screen.getByRole('button', { name: 'Comment on Duration' })).toBeInTheDocument();
     hoverCommentField(screen.getByRole('button', { name: 'Duration: No time change' }));
     fireEvent.click(screen.getByRole('button', { name: 'Comment on Duration' }));
 

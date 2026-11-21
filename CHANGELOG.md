@@ -2,6 +2,13 @@
 
 ## Unreleased
 
+- Fixed the Inspector field comment controls (PAR-7). Hovering a location,
+  cast or duration control showed two overlapping controls, and moving the
+  pointer towards the control replaced it with the one for the surrounding
+  context row. One control is now shown at a time, it stays while the pointer
+  travels towards it, and another field takes it only when the pointer rests
+  on that field. The control follows its field in the keyboard order and works
+  with touch.
 - Re-centred each Interaction's output `+` at the bottom of its card, where its
   links start, as `docs/story-canvas.md` specifies (PAR-7). It had been moved to
   the bottom right because the child's Trigger marker covered it; default
