@@ -522,11 +522,13 @@ function parseConditionalBranches(
   if (!openingGroups) {
     return undefined;
   }
+  const firstBranch = { startIndex: startIndex + 1, endIndex, conditionGroups: openingGroups };
   const branches: Array<{
     startIndex: number;
     endIndex: number;
     conditionGroups?: NonNullable<ParsedActBlock['conditionGroups']>;
-  }> = [{ startIndex: startIndex + 1, endIndex, conditionGroups: openingGroups }];
+  }> = [firstBranch];
+  let currentBranch: (typeof branches)[number] = firstBranch;
   let depth = 1;
   let hasElse = false;
   for (let index = startIndex + 1; index < endIndex; index += 1) {
@@ -548,8 +550,9 @@ function parseConditionalBranches(
         if (!conditionGroups) {
           return undefined;
         }
-        branches.at(-1)!.endIndex = index;
-        branches.push({ startIndex: index + 1, endIndex, conditionGroups });
+        currentBranch.endIndex = index;
+        currentBranch = { startIndex: index + 1, endIndex, conditionGroups };
+        branches.push(currentBranch);
         continue;
       }
       if (/^\s*else\s*:?\s*$/i.test(lines[index])) {
@@ -557,8 +560,9 @@ function parseConditionalBranches(
           return undefined;
         }
         hasElse = true;
-        branches.at(-1)!.endIndex = index;
-        branches.push({ startIndex: index + 1, endIndex });
+        currentBranch.endIndex = index;
+        currentBranch = { startIndex: index + 1, endIndex };
+        branches.push(currentBranch);
         continue;
       }
     }

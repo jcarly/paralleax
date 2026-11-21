@@ -290,7 +290,10 @@ function parseChoice(
   }
   const options = optionStarts.map((optionStart, optionIndex) => {
     const source = lines[optionStart];
-    const header = readOptionHeader(source.text)!;
+    const header = readOptionHeader(source.text);
+    if (!header) {
+      throw new Error(`Expected a ChoiceScript option at line ${source.number}`);
+    }
     const condition = header.conditionExpression
       ? readSourceCondition(header.conditionExpression, source)
       : undefined;

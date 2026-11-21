@@ -149,77 +149,36 @@ export function StoryAccessSettings({ storyId, onInaccessible }: StoryAccessSett
             email: `${access.owner.displayName} · ${access.owner.email}`,
           })}
         </p>
-        <div className="form-field form-field--standard">
-          <div className="field-label-with-help">
-            <label htmlFor="story-access-visibility">{t('access.visibility.label')}</label>
-            <FieldHelpTooltip
-              label={t('access.visibility.label')}
-              help={t('access.visibility.help')}
-            />
-          </div>
-          <select
-            className="form-control form-control--standard"
-            id="story-access-visibility"
-            value={access.visibility}
-            disabled={pending}
-            onChange={(event) =>
-              void updateAccessSetting(
-                'visibility',
-                event.currentTarget.value as StoryAccessConfiguration['visibility'],
-              )
-            }
-          >
-            {visibilityOptions.map((value) => (
-              <option key={value} value={value}>
-                {t(`access.visibility.${value}`)}
-              </option>
-            ))}
-          </select>
-        </div>
-        <label className="form-field form-field--standard">
-          <span>{t('access.edit.label')}</span>
-          <select
-            className="form-control form-control--standard"
-            value={access.editPolicy}
-            disabled={pending}
-            onChange={(event) =>
-              void updateAccessSetting(
-                'editPolicy',
-                event.currentTarget.value as StoryAccessConfiguration['editPolicy'],
-              )
-            }
-          >
-            {editOptions.map((value) => (
-              <option key={value} value={value}>
-                {t(`access.edit.${value}`)}
-              </option>
-            ))}
-          </select>
-        </label>
-        <div className="form-field form-field--standard">
-          <div className="field-label-with-help">
-            <label htmlFor="story-access-comments">{t('access.comments.label')}</label>
-            <FieldHelpTooltip label={t('access.comments.label')} help={t('access.comments.help')} />
-          </div>
-          <select
-            className="form-control form-control--standard"
-            id="story-access-comments"
-            value={access.commentPolicy}
-            disabled={pending}
-            onChange={(event) =>
-              void updateAccessSetting(
-                'commentPolicy',
-                event.currentTarget.value as StoryAccessConfiguration['commentPolicy'],
-              )
-            }
-          >
-            {commentOptions.map((value) => (
-              <option key={value} value={value}>
-                {t(`access.comments.${value}`)}
-              </option>
-            ))}
-          </select>
-        </div>
+        <AccessPolicyField
+          id="story-access-visibility"
+          policy="visibility"
+          options={visibilityOptions}
+          value={access.visibility}
+          disabled={pending}
+          note={
+            access.editPolicy === 'authenticated' &&
+            (access.visibility === 'private' || access.visibility === 'invitation')
+              ? t('access.visibility.widenedByEditing')
+              : undefined
+          }
+          onChange={(value) => void updateAccessSetting('visibility', value)}
+        />
+        <AccessPolicyField
+          id="story-access-edit"
+          policy="edit"
+          options={editOptions}
+          value={access.editPolicy}
+          disabled={pending}
+          onChange={(value) => void updateAccessSetting('editPolicy', value)}
+        />
+        <AccessPolicyField
+          id="story-access-comments"
+          policy="comments"
+          options={commentOptions}
+          value={access.commentPolicy}
+          disabled={pending}
+          onChange={(value) => void updateAccessSetting('commentPolicy', value)}
+        />
         {accessStatus === 'saving' ? (
           <p className="product-help" role="status">
             {t('access.saving')}
@@ -284,6 +243,51 @@ export function StoryAccessSettings({ storyId, onInaccessible }: StoryAccessSett
           </p>
         ) : null}
       </section>
+    </div>
+  );
+}
+
+function AccessPolicyField<Value extends string>({
+  id,
+  policy,
+  options,
+  value,
+  disabled,
+  note,
+  onChange,
+}: {
+  id: string;
+  policy: 'visibility' | 'edit' | 'comments';
+  options: readonly Value[];
+  value: Value;
+  disabled: boolean;
+  note?: string;
+  onChange: (value: Value) => void;
+}) {
+  const { t } = useTranslation();
+  const label = t(`access.${policy}.label`);
+  return (
+    <div className="form-field form-field--standard">
+      <div className="field-label-with-help">
+        <label htmlFor={id}>{label}</label>
+        <FieldHelpTooltip label={label} help={t(`access.${policy}.help.${value}`)} />
+      </div>
+      <select
+        className="form-control form-control--standard"
+        id={id}
+        value={value}
+        disabled={disabled}
+        onChange={(event) => {
+          onChange(event.currentTarget.value as Value);
+        }}
+      >
+        {options.map((option) => (
+          <option key={option} value={option}>
+            {t(`access.${policy}.${option}`)}
+          </option>
+        ))}
+      </select>
+      {note === undefined ? null : <p className="product-help">{note}</p>}
     </div>
   );
 }
