@@ -90,10 +90,9 @@ describe('RichTextEditor', () => {
     );
 
     fireEvent.blur(screen.getByRole('textbox', { name: 'Content' }));
-    const published = onBlur.mock.lastCall?.[0];
-    expect(published).toContain('<video');
-    expect(published).not.toContain('src=');
-    expect(published).not.toContain('poster=');
+    expect(onBlur).toHaveBeenCalledWith(expect.stringContaining('<video'));
+    expect(onBlur).toHaveBeenCalledWith(expect.not.stringContaining('src='));
+    expect(onBlur).toHaveBeenCalledWith(expect.not.stringContaining('poster='));
   });
 
   it('places the toolbar after the text so revealing it does not move the text', () => {
