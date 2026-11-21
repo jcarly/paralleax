@@ -120,10 +120,26 @@ docker build --target api --tag registry.example/paralleax-api:<commit> .
 docker build --target web --tag registry.example/paralleax-web:<commit> .
 ```
 
-Use immutable commit or digest references. GitHub Actions builds both targets
-when Docker, production Compose, deployment, or dependency-manifest files change.
-Application pull requests still run the affected workspace build and tests. A
-newly created version tag in the exact `x.y.z` format runs exhaustive CI first;
+Use immutable commit or digest references. Normal pull requests target `dev` or
+`release/*` and run affected-area validation (including lint, typechecking,
+workspace coverage and builds, PostgreSQL and browser/MCP checks as applicable).
+Docker, production Compose, deployment, or dependency-manifest changes also
+trigger production image validation. The `Integration readiness` check requires
+all applicable jobs to succeed.
+
+Only promotion PRs from this repository's `dev` or `release/*` may target
+`main`. They and pushes to `main` run exhaustive validation, including
+performance, stress, restore, large-story acceptance and production image
+checks. The `Main readiness` check requires every validation job to succeed.
+Protect `main` with required PRs, up-to-date branches, no force pushes, and
+the required `Main readiness` check; protect `dev` and `release/*` with
+required PRs and `Integration readiness`. Configure these repository rules
+outside the workflow. Use merge commits for promotion, then synchronize
+`main` back into integration branches.
+
+Create a version tag only on the intended commit of `main` after its own
+exhaustive CI succeeds. A newly created version tag in the exact `x.y.z`
+format runs exhaustive CI first;
 only after all required checks pass does the release job publish API and web
 images to GHCR and deploy those image digests to the Railway alpha. The job
 deploys the API first, waits for its healthcheck, then deploys the web image and
