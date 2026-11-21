@@ -155,27 +155,32 @@ function getStatConditionFields(
 }
 
 function getStatName(references: SearchReferences, statId?: string | null) {
-  if (!statId) {
+  if (statId === null || statId === undefined || statId === '') {
     return undefined;
   }
   return references.statAssignmentNames.get(statId) ?? references.statDefinitions.get(statId);
 }
 
 function getItemName(references: SearchReferences, itemId?: string | null) {
-  const definitionId = itemId ? references.itemDefinitionIdsByItemId.get(itemId) : undefined;
-  return definitionId ? references.itemDefinitions.get(definitionId) : undefined;
+  const definitionId =
+    itemId !== null && itemId !== undefined && itemId !== ''
+      ? references.itemDefinitionIdsByItemId.get(itemId)
+      : undefined;
+  return definitionId !== undefined && definitionId !== ''
+    ? references.itemDefinitions.get(definitionId)
+    : undefined;
 }
 
 function getNamedReference(references: ReadonlyMap<string, string>, id?: string | null) {
-  return id ? references.get(id) : undefined;
+  return id !== null && id !== undefined && id !== '' ? references.get(id) : undefined;
 }
 
 function optionalFields(value?: string) {
-  return value ? [value] : [];
+  return value !== undefined && value !== '' ? [value] : [];
 }
 
 function addOptionalField(fields: string[], value?: string) {
-  if (value) {
+  if (value !== undefined && value !== '') {
     fields.push(value);
   }
 }

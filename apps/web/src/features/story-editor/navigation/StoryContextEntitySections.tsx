@@ -135,7 +135,7 @@ export function CharacterContextSection(props: EntitySectionProps<Character>) {
               selected={character.id === props.selectedId}
               metadata={
                 <>
-                  {character.isPlayable ? `${t('editor.playable')} · ` : ''}
+                  {character.isPlayable === true ? `${t('editor.playable')} · ` : ''}
                   {countLabel(t, props.referenceCounts.get(character.id) ?? 0, 'interaction')}
                 </>
               }
