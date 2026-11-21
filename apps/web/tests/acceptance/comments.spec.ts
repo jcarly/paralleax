@@ -8,6 +8,7 @@ import {
   openInteractionTitleEditor,
   openStoryAccess,
   registerAndCreateStory,
+  selectInteraction,
   registerUser,
   waitForApiResponse,
   waitForInteractionPatch,
@@ -19,7 +20,7 @@ test('a reader and an author review an interaction through persisted live commen
 }, testInfo) => {
   const { storyId, storyTitle } = await registerAndCreateStory(ownerPage, 'Review acceptance');
 
-  await interactionNode(ownerPage, 'New interaction').click();
+  await selectInteraction(ownerPage, 'New interaction');
   const ownerInspector = ownerPage.getByRole('complementary', { name: 'Inspector' });
   const ownerTitleField = await openInteractionTitleEditor(ownerInspector, 'New interaction');
   await expect(ownerTitleField).toBeVisible();

@@ -9,6 +9,7 @@ import {
   openInteractionTitleEditor,
   openStoryAccess,
   registerAndCreateStory,
+  selectInteraction,
   registerUser,
   waitForInteractionPatch,
 } from './realStackTestHarness';
@@ -22,7 +23,7 @@ test('an owner grants reader then editor access and receives the collaborator ed
     'Collaboration acceptance',
   );
 
-  await interactionNode(ownerPage, 'New interaction').click();
+  await selectInteraction(ownerPage, 'New interaction');
   const ownerInspector = ownerPage.getByRole('complementary', { name: 'Inspector' });
   const ownerTitleField = await openInteractionTitleEditor(ownerInspector, 'New interaction');
   await expect(ownerTitleField).toBeVisible();
