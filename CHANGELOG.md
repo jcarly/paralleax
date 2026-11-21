@@ -2,6 +2,8 @@
 
 ## Unreleased
 
+- `paralleax-mcp login` reports `API_UNREACHABLE` with the API address when the
+  API cannot be reached, instead of a generic `INTERNAL_ERROR`.
 - The Inspector shows where an Interaction comes from and drops repeated
   headings (PAR-7, B5 and B3). A `←` row above the title lists the incoming
   Interactions as clickable chips, or `Start` for a starting point. The

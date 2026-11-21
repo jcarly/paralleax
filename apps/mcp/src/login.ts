@@ -1,5 +1,6 @@
 import {
   apiErrorFromResponse,
+  apiUnreachableError,
   defaultFetch,
   parseApiResponse,
   ParalleaxApiError,
@@ -31,13 +32,19 @@ export async function login(
   sessionFile: string,
   fetchImpl: FetchLike = defaultFetch,
 ): Promise<PublicUser> {
-  const response = await fetchImpl(apiEndpoint(apiUrl, '/auth/login'), {
-    method: 'POST',
-    headers: { 'Content-Type': 'application/json', Accept: 'application/json' },
-    body: JSON.stringify(credentials),
-    redirect: 'error',
-    signal: AbortSignal.timeout(15_000),
-  });
+  let response: Response;
+  try {
+    response = await fetchImpl(apiEndpoint(apiUrl, '/auth/login'), {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json', Accept: 'application/json' },
+      body: JSON.stringify(credentials),
+      redirect: 'error',
+      signal: AbortSignal.timeout(15_000),
+    });
+  } catch {
+    // A session created by a login that timed out is never stored, so retrying is safe.
+    throw apiUnreachableError(apiUrl);
+  }
   if (!response.ok) {
     throw await apiErrorFromResponse(response);
   }
