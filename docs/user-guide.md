@@ -308,6 +308,11 @@ nothing during reading.
 
 The title is used as the reader choice label. The content is displayed when the reader reaches that interaction.
 
+When several options follow the same interaction, each one needs a title. An
+untitled option keeps an empty label with a red outline and a `!` icon in the
+graph, the Inspector and the Simulation; hover the icon for the detail. Readers
+see `Option N` until you add the title. This never blocks saving or testing.
+
 ## Move Graph Elements
 
 Drag an interaction on the canvas. Its position is saved without changing its title, content, or triggers.

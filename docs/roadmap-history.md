@@ -1430,7 +1430,7 @@ versioned publication workflow.
 - Validate before publication. Validation must alert on choices without a label
   (untitled Interactions offered among several choices), which readers would see
   as `Option N`; drafts stay unblocked (decided 2026-11-20, PAR-7). Until then,
-  the graph, Inspector and Simulation only warn about them.
+  the graph, Inspector and Simulation show them as non-blocking errors.
 - Stable public reader URLs.
 - Separate author simulation from public reader UX.
 - Reporting and moderation foundations.

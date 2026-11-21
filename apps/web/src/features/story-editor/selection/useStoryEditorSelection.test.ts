@@ -1,3 +1,4 @@
+import { requireValue } from '../../../test/assertions';
 import { act, renderHook } from '@testing-library/react';
 import { describe, expect, it } from 'vitest';
 import type { Story } from '@paralleax/shared';
@@ -127,7 +128,9 @@ describe('story editor selection', () => {
     act(() => {
       result.current.selectExclusive({ type: 'group', id: 'group' });
     });
-    expect([...result.current.groupInteractionIds!]).toEqual(['source', 'target']);
+    expect([
+      ...requireValue(result.current.groupInteractionIds, 'selected group interaction IDs'),
+    ]).toEqual(['source', 'target']);
     expect(result.current.hasInspectorSelection).toBe(false);
     expect(result.current.selectedGraphNodeIds.size).toBe(0);
     act(() => {

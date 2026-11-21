@@ -917,7 +917,8 @@ export const italianTranslation = {
     addOptionHelp: "Crea un'interazione connessa da questo punto.",
     continueChoice: 'Continua',
     untitledChoice: 'Opzione {{number}}',
-    choiceLabelNeeded: "Più opzioni: aggiungi un'etichetta.",
+    choiceLabelNeeded:
+      'Etichetta richiesta: questa interazione è una di più opzioni. I lettori vedono «Opzione N» finché non ha un titolo.',
     branchEnd: 'Fine di questo ramo.',
     branchEndHelp: 'Puoi riavviare la storia per esplorare un altro percorso.',
     playedCharacter: 'Personaggio interpretato',

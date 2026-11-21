@@ -1,4 +1,5 @@
 import { expect, test } from '@playwright/test';
+import { requireValue } from '../../src/test/assertions';
 import {
   cloneStory,
   mockAuthenticatedUser,
@@ -74,7 +75,7 @@ test.describe('Constrained overlays and editor panels', () => {
     }) => {
       await page.setViewportSize({ width, height: 540 });
       const current = cloneStory();
-      current.capabilities!.canComment = true;
+      requireValue(current.capabilities, 'story capabilities').canComment = true;
       current.interactions[0].body = Array.from(
         { length: 30 },
         (_, index) => `<p>Inspector paragraph ${index + 1}.</p>`,
@@ -96,8 +97,8 @@ test.describe('Constrained overlays and editor panels', () => {
       await expect(inspector.locator('.interaction-content-preview')).toContainText(
         'Inspector paragraph 30.',
       );
-      const inspectorBox = (await inspector.boundingBox())!;
-      const toggleBefore = (await toggle.boundingBox())!;
+      const inspectorBox = requireValue(await inspector.boundingBox(), 'inspector bounding box');
+      const toggleBefore = requireValue(await toggle.boundingBox(), 'comment toggle bounding box');
       const canvasBefore = await canvas.boundingBox();
       const transformBefore = await viewport.evaluate(
         (element) => getComputedStyle(element).transform,
@@ -121,7 +122,10 @@ test.describe('Constrained overlays and editor panels', () => {
       await toggle.click({ position: graphSide });
       await expect(rail).toBeHidden();
 
-      const contentBox = (await content.boundingBox())!;
+      const contentBox = requireValue(
+        await content.boundingBox(),
+        'inspector content bounding box',
+      );
       await content.hover({ position: { x: contentBox.width - 10, y: contentBox.height / 2 } });
       await page.mouse.wheel(0, 600);
       await expect.poll(() => content.evaluate((element) => element.scrollTop)).toBeGreaterThan(0);
@@ -153,26 +157,62 @@ test.describe('Constrained overlays and editor panels', () => {
     });
   }
 
+  test('keeps the story context toggle usable beside an open inspector on a phone', async ({
+    page,
+  }) => {
+    await page.setViewportSize({ width: 390, height: 844 });
+    const current = cloneStory();
+    if (current.capabilities) {
+      current.capabilities.canComment = true;
+    }
+    await prepareEditorPage(page, current);
+    // The context panel opens over the graph, so select through the focus link.
+    await page.goto('/stories/story-1/edit?focusInteractionId=interaction-1');
+
+    const inspector = page.getByRole('complementary', { name: 'Inspector' });
+    const contextToggle = page.getByRole('button', { name: 'Collapse story context' });
+    await expect(inspector.locator('.inspector-comment-toggle')).toBeVisible();
+    // The Inspector's border comment toggle must not sit over the rail toggle.
+    expect(
+      await contextToggle.evaluate((element) => {
+        const box = element.getBoundingClientRect();
+        const top = document.elementFromPoint(box.x + box.width / 2, box.y + box.height / 2);
+        return element.contains(top);
+      }),
+    ).toBe(true);
+
+    await contextToggle.click();
+    await expect(page.getByRole('button', { name: 'Expand story context' })).toHaveAttribute(
+      'aria-expanded',
+      'false',
+    );
+  });
+
   test('keeps Story settings sections separated in a short viewport', async ({ page }) => {
     await page.setViewportSize({ width: 520, height: 320 });
     await prepareEditorPage(page);
 
     await page.goto('/stories/story-1/edit');
-    await page
-      .getByRole('button', { name: 'Story settings' })
-      .evaluate((button: HTMLButtonElement) => {
-        button.click();
-      });
+    const settingsButton = page.getByRole('button', { name: 'Story settings' });
+    await settingsButton.evaluate((button: HTMLButtonElement) => {
+      button.click();
+    });
 
     const dialog = page.getByRole('dialog', { name: 'Story settings' });
     await expect(dialog).toBeVisible();
     const layout = await dialog.evaluate((element) => {
       const dialogBox = element.getBoundingClientRect();
-      const headerBox = element.querySelector('header')!.getBoundingClientRect();
-      const tabsBox = element.querySelector('[role="tablist"]')!.getBoundingClientRect();
-      const content = element.querySelector<HTMLElement>('.story-settings-content')!;
+      const header = element.querySelector('header');
+      const tabs = element.querySelector('[role="tablist"]');
+      const content = element.querySelector<HTMLElement>('.story-settings-content');
+      const input = element.querySelector('input');
+      if (!header || !tabs || !content || !input) {
+        throw new Error('Expected Story settings DOM elements to exist.');
+      }
+      const headerBox = header.getBoundingClientRect();
+      const tabsBox = tabs.getBoundingClientRect();
       const contentBox = content.getBoundingClientRect();
-      const inputBox = element.querySelector('input')!.getBoundingClientRect();
+      const inputBox = input.getBoundingClientRect();
       content.scrollTop = content.scrollHeight;
       return {
         dialog: { top: dialogBox.top, bottom: dialogBox.bottom },

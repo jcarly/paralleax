@@ -1,4 +1,5 @@
 import { expect, test } from '@playwright/test';
+import { requireValue } from '../../src/test/assertions';
 import type {
   CharacterMutationResult,
   InteractionMutationResult,
@@ -47,10 +48,12 @@ test('a reader save reconstructs variables, inventory, time, probability, and ti
       initialValue: 2,
     },
   );
-  const courage = storyWithCourage.stats?.find(
-    ({ statDefinitionId }) => statDefinitionId === courageDefinition.id,
+  const courage = requireValue(
+    storyWithCourage.stats?.find(
+      ({ statDefinitionId }) => statDefinitionId === courageDefinition.id,
+    ),
+    'courage stat',
   );
-  expect(courage).toBeDefined();
 
   const { statDefinition: durabilityDefinition } =
     await requestApiJson<StatDefinitionMutationResult>(
@@ -68,8 +71,7 @@ test('a reader save reconstructs variables, inventory, time, probability, and ti
       stats: [{ statDefinitionId: durabilityDefinition.id, initialValue: 10 }],
     },
   );
-  const durability = itemDefinition.stats?.[0];
-  expect(durability).toBeDefined();
+  const durability = requireValue(itemDefinition.stats?.[0], 'durability stat');
 
   const initialStory = await requestApiJson<Story>(page, 'GET', `/api/stories/${storyId}`);
   const opening = initialStory.interactions.find(({ triggers }) =>
@@ -100,7 +102,7 @@ test('a reader save reconstructs variables, inventory, time, probability, and ti
       body: '<p>Courage: {{story.Courage}}</p>',
       characterIds: [character.id],
       durationMinutes: 60,
-      statEffects: [{ statId: courage!.id, operation: 'add', value: 3 }],
+      statEffects: [{ statId: courage.id, operation: 'add', value: 3 }],
       itemEffects: [
         {
           itemDefinitionId: itemDefinition.id,
@@ -151,13 +153,13 @@ test('a reader save reconstructs variables, inventory, time, probability, and ti
   const savedResponse = await expectSuccessful(progressSave);
   const saved = (await savedResponse.json()) as ReaderProgress;
 
-  expect(saved.state.statValues[courage!.id]).toBe(6);
+  expect(saved.state.statValues[courage.id]).toBe(6);
   expect(saved.state.currentDateTime).toBe('2026-07-27T10:00');
   expect(saved.state.ownedItemIds).toHaveLength(1);
   expect(saved.state.randomSeed).toEqual(expect.any(String));
   expect(saved.state.stepStartedAt).toHaveLength(2);
   expect(
-    Object.values(saved.state.itemStatValues ?? {}).some((values) => values[durability!.id] === 10),
+    Object.values(saved.state.itemStatValues ?? {}).some((values) => values[durability.id] === 10),
   ).toBe(true);
 
   await expect(page.getByRole('heading', { name: 'Opening' })).toBeVisible();
@@ -196,6 +198,6 @@ test('a reader save reconstructs variables, inventory, time, probability, and ti
   );
   expect(reloaded.progress.state.randomSeed).toBe(saved.state.randomSeed);
   expect(reloaded.progress.state.stepStartedAt).toEqual(saved.state.stepStartedAt);
-  expect(reloaded.progress.state.statValues[courage!.id]).toBe(6);
+  expect(reloaded.progress.state.statValues[courage.id]).toBe(6);
   expect(reloaded.progress.state.ownedItemIds).toEqual(saved.state.ownedItemIds);
 });

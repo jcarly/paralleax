@@ -1,4 +1,5 @@
 import { expect, test } from '@playwright/test';
+import { requireValue } from '../../src/test/assertions';
 import {
   cloneStory,
   mockGraphPositionUpdates,
@@ -378,12 +379,11 @@ test.describe('Story editor persistence', () => {
 
     await page.goto('/stories/story-1/edit');
     const node = page.getByTestId('interaction-node').filter({ hasText: 'Original title' });
-    const box = await node.boundingBox();
-    expect(box).not.toBeNull();
+    const box = requireValue(await node.boundingBox(), 'interaction node bounding box');
 
-    await page.mouse.move(box!.x + box!.width / 2, box!.y + box!.height / 2);
+    await page.mouse.move(box.x + box.width / 2, box.y + box.height / 2);
     await page.mouse.down();
-    await page.mouse.move(box!.x + box!.width / 2 + 120, box!.y + box!.height / 2 + 40, {
+    await page.mouse.move(box.x + box.width / 2 + 120, box.y + box.height / 2 + 40, {
       steps: 8,
     });
     await page.mouse.up();

@@ -1,3 +1,4 @@
+import { requireValue } from '../../../test/assertions';
 import { cleanup, fireEvent, render, screen } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import { useState } from 'react';
@@ -75,7 +76,7 @@ function setup(
           setStory((old) => {
             let next: Story = {
               ...old,
-              groups: old.groups!.map((group) =>
+              groups: requireValue(old.groups, 'story groups').map((group) =>
                 group.id === id
                   ? { ...group, ...(patch.title ? { title: patch.title } : {}) }
                   : group,
@@ -102,7 +103,10 @@ function setup(
           const id = await callbacks.onCreate(title, ids, parentGroupId);
           setStory((old) => ({
             ...old,
-            groups: [...old.groups!, { id, title, interactionIds: ids, parentGroupId }],
+            groups: [
+              ...requireValue(old.groups, 'story groups'),
+              { id, title, interactionIds: ids, parentGroupId },
+            ],
           }));
           setSelected(id);
           setEditing(id);
@@ -266,7 +270,7 @@ describe('Groups navigation', () => {
       {
         ...story,
         groups: [
-          ...story.groups!,
+          ...requireValue(story.groups, 'story groups'),
           ...Array.from({ length: 997 }, (_, index) => ({
             id: 'g' + index,
             title: 'Group ' + index,

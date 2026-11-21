@@ -10,10 +10,23 @@ export function getOptionDestinations(
   );
 }
 
+/** True when `interactionId` is one of several choices from a source and has no title. */
+export function interactionNeedsChoiceLabel(
+  story: Pick<Story, 'interactions'>,
+  interaction: Interaction,
+): boolean {
+  if (interaction.title.trim()) {
+    return false;
+  }
+  return interaction.triggers.some(({ inputInteractionIds }) =>
+    inputInteractionIds.some((sourceId) => getOptionDestinations(story, sourceId).length > 1),
+  );
+}
+
 /**
  * Interactions offered as one of several choices without a title of their own.
- * Readers would see a numbered fallback (`Option N`), so authors are warned; the
- * label is not enforced before a future version publication.
+ * Readers would see a numbered fallback (`Option N`), so authoring surfaces show an
+ * error; the label is not enforced before a future version publication.
  */
 export function getInteractionsNeedingChoiceLabel(
   story: Pick<Story, 'interactions'>,

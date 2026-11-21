@@ -883,7 +883,8 @@ export const englishTranslation = {
     addOptionHelp: 'Create a connected interaction from this point.',
     continueChoice: 'Continue',
     untitledChoice: 'Option {{number}}',
-    choiceLabelNeeded: 'Several options: add a label.',
+    choiceLabelNeeded:
+      'Label required: this is one of several options. Readers see “Option N” until it has a title.',
     branchEnd: 'End of this branch.',
     branchEndHelp: 'You can restart the story to explore another path.',
     playedCharacter: 'Played character',

@@ -1,3 +1,4 @@
+import { requireValue } from '../test/assertions';
 import { cleanup, fireEvent, render, screen } from '@testing-library/react';
 import { afterEach, describe, expect, it, vi } from 'vitest';
 import { TriggerNode, type TriggerNodeData } from './TriggerNode';
@@ -38,7 +39,9 @@ describe('TriggerNode', () => {
       '1 input, "Start" has been visited AND Owns "Key", 1 trigger variant',
     );
     fireEvent.click(screen.getByTestId('flow-trigger-interaction-1-trigger-1'));
-    fireEvent.click(container.querySelector('.trigger-comment-badge')!);
+    fireEvent.click(
+      requireValue(container.querySelector('.trigger-comment-badge'), 'trigger comment badge'),
+    );
 
     expect(onSelectTrigger).toHaveBeenCalledWith('interaction-1', 'trigger-1');
     expect(onOpenComments).toHaveBeenCalledWith('trigger', 'comment-target-1');

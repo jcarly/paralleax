@@ -46,13 +46,21 @@ describe('interaction title presentation', () => {
     expect(choiceLabelForDisplay({ title: ' ' }, { index: 1, count: 3 }, t)).toEqual({
       label: 'Option 2',
       authored: false,
-      needsLabel: true,
+      needsLabel: false,
     });
     expect(choiceLabelForDisplay({ title: 'Leave' }, { index: 0, count: 3 }, t)).toEqual({
       label: 'Leave',
       authored: true,
       needsLabel: false,
     });
+    expect(choiceLabelForDisplay({ title: ' ' }, { index: 1, count: 3 }, t, 'author')).toEqual({
+      label: '',
+      authored: false,
+      needsLabel: true,
+    });
+    expect(choiceLabelForDisplay({ title: '' }, { index: 0, count: 1 }, t, 'author').label).toBe(
+      'Continue',
+    );
     await changeInterfaceLanguage('fr');
     expect(
       choiceLabelForDisplay({ title: '' }, { index: 0, count: 1 }, i18n.t.bind(i18n)).label,

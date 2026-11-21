@@ -2,6 +2,7 @@ import { useEffect, useRef, type KeyboardEvent, type MouseEvent } from 'react';
 import { Handle, Position, useUpdateNodeInternals, type Node, type NodeProps } from '@xyflow/react';
 import { useTranslation } from 'react-i18next';
 import { InteractionContext } from '../features/story/InteractionContext';
+import { ChoiceLabelErrorIcon } from '../features/story/ChoiceLabelError';
 import { InteractionLabel } from '../features/story/InteractionLabel';
 export interface InteractionNodeData extends Record<string, unknown> {
   title: string;
@@ -60,11 +61,9 @@ export function InteractionNode({ id, data }: NodeProps<Node<InteractionNodeData
       : 'interactionInspector.newTitlePlaceholder',
   );
   const authoredTitle = d.title.trim();
+  const needsChoiceLabel = d.needsChoiceLabel === true && !authoredTitle;
   const title =
-    authoredTitle ||
-    ((rootTriggerId !== undefined && rootTriggerId.length > 0) || d.needsChoiceLabel === true
-      ? fallbackTitle
-      : '');
+    authoredTitle || (rootTriggerId !== undefined && rootTriggerId.length > 0 ? fallbackTitle : '');
   const commentEntityTitle = authoredTitle || fallbackTitle;
   const characters = d.characters ?? [];
   const createParent = (event: NodeActionEvent) => {
@@ -172,23 +171,16 @@ export function InteractionNode({ id, data }: NodeProps<Node<InteractionNodeData
           isConnectable={false}
         />
       ))}
-      {title ? (
+      {title || needsChoiceLabel ? (
         <InteractionLabel
           label={title}
-          className={`interaction-node-label${authoredTitle ? '' : ' interaction-label-fallback'}`}
+          className={`interaction-node-label${authoredTitle ? '' : ' interaction-label-fallback'}${
+            needsChoiceLabel ? ' choice-label-error' : ''
+          }`}
           leadingIcon="→"
           suffix={
             <>
-              {d.needsChoiceLabel === true ? (
-                <span
-                  className="interaction-label-warning"
-                  role="img"
-                  aria-label={t('player.choiceLabelNeeded')}
-                  title={t('player.choiceLabelNeeded')}
-                >
-                  !
-                </span>
-              ) : null}
+              {needsChoiceLabel ? <ChoiceLabelErrorIcon /> : null}
               {(d.occurrenceCount ?? 0) > 0 ? (
                 <span
                   className="interaction-occurrence-count"

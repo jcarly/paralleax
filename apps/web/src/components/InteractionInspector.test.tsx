@@ -1,3 +1,4 @@
+import { requireValue } from '../test/assertions';
 import { cleanup, fireEvent, render, screen, waitFor, within } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
@@ -582,7 +583,9 @@ describe('InteractionInspector time', () => {
       target: { value: 'variable:character:luc-trust' },
     });
     expect(onPatch).toHaveBeenLastCalledWith('interaction-1', {
-      statEffects: [{ ...interaction.statEffects![0], statId: 'luc-trust' }],
+      statEffects: [
+        { ...requireValue(interaction.statEffects?.[0], 'first stat effect'), statId: 'luc-trust' },
+      ],
     });
 
     fireEvent.change(within(target).getAllByRole('combobox')[0], {
@@ -592,7 +595,12 @@ describe('InteractionInspector time', () => {
       target: { value: 'variable:character:mira-health' },
     });
     expect(onPatch).toHaveBeenLastCalledWith('interaction-1', {
-      statEffects: [{ ...interaction.statEffects![0], statId: 'mira-health' }],
+      statEffects: [
+        {
+          ...requireValue(interaction.statEffects?.[0], 'first stat effect'),
+          statId: 'mira-health',
+        },
+      ],
     });
   });
 
@@ -633,7 +641,12 @@ describe('InteractionInspector time', () => {
     fireEvent.blur(expressionField);
 
     expect(onPatch).toHaveBeenLastCalledWith('interaction-1', {
-      statEffects: [{ ...interaction.statEffects![0], expression: '@{score} * 3' }],
+      statEffects: [
+        {
+          ...requireValue(interaction.statEffects?.[0], 'first stat effect'),
+          expression: '@{score} * 3',
+        },
+      ],
     });
   });
 
@@ -917,18 +930,34 @@ describe('InteractionInspector option labels', () => {
       'interaction-label-fallback',
     );
     expect(screen.queryByText('New interaction')).not.toBeInTheDocument();
-    expect(screen.queryByText('Several options: add a label.')).not.toBeInTheDocument();
+    expect(screen.queryByRole('img', { name: /Label required/ })).not.toBeInTheDocument();
   });
 
-  it('asks for a label on each untitled option among several', () => {
+  it('leaves an untitled option among several empty and flags it as an error', () => {
     renderOptions(['Leave', '']);
 
     expect(screen.getByText('Leave').closest('.interaction-label-bubble')).not.toHaveClass(
-      'interaction-label-fallback',
+      'choice-label-error',
     );
-    expect(screen.getByText('Option 2').closest('.interaction-label-bubble')).toHaveClass(
-      'interaction-label-fallback',
+    const error = screen.getByRole('img', { name: /Label required/ });
+    expect(error.closest('.interaction-label-bubble')).toHaveClass('choice-label-error');
+    expect(error.closest('.interaction-label-bubble')).toHaveTextContent(/^!$/);
+    expect(screen.queryByText('Option 2')).not.toBeInTheDocument();
+  });
+
+  it('flags the selected Interaction title when it is an unlabelled option', () => {
+    const { story } = storyWithOptions(['Leave', '']);
+    render(
+      <InteractionInspector
+        story={story}
+        interaction={story.interactions[2]}
+        onChange={vi.fn()}
+        onPatch={vi.fn().mockResolvedValue(true)}
+      />,
     );
-    expect(screen.getAllByText('Several options: add a label.')).toHaveLength(1);
+
+    const title = screen.getByRole('button', { name: /^Title: Label required/ });
+    expect(title).toHaveClass('choice-label-error');
+    expect(screen.queryByText('New interaction')).not.toBeInTheDocument();
   });
 });

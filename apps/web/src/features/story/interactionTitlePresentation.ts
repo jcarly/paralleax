@@ -23,19 +23,20 @@ export interface ChoiceLabelPresentation {
   label: string;
   /** False when the label is a reader fallback rather than the authored title. */
   authored: boolean;
-  /** True when several options follow and this one has no authored title. */
+  /** Authoring only: several options follow and this one has no authored title. */
   needsLabel: boolean;
 }
 
 /**
  * A choice label is the destination Interaction's title. Without a title, a lone
- * choice reads as `Continue` and one of several choices as `Option N`, so readers
- * never see an authoring placeholder such as `New interaction`.
+ * choice reads as `Continue`. One of several untitled choices reads as `Option N`
+ * for readers only: authoring surfaces keep the label empty and show an error.
  */
 export function choiceLabelForDisplay(
   destination: Pick<Interaction, 'title'>,
   position: { index: number; count: number },
   t: TFunction,
+  audience: 'reader' | 'author' = 'reader',
 ): ChoiceLabelPresentation {
   const title = destination.title.trim();
   if (title) {
@@ -45,8 +46,8 @@ export function choiceLabelForDisplay(
     return { label: t('player.continueChoice'), authored: false, needsLabel: false };
   }
   return {
-    label: t('player.untitledChoice', { number: position.index + 1 }),
+    label: audience === 'reader' ? t('player.untitledChoice', { number: position.index + 1 }) : '',
     authored: false,
-    needsLabel: true,
+    needsLabel: audience === 'author',
   };
 }

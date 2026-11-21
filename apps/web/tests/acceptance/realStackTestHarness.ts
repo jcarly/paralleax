@@ -191,11 +191,11 @@ export async function changeStoryCollaboratorRole(
 export function interactionNode(page: Page, title: string) {
   const nodes = page.getByTestId('interaction-node');
   if (title === 'New interaction') {
-    // Untitled Interactions have no authored graph label: either none at all, or only the
-    // greyed fallback shown for roots and unlabelled choices.
-    return nodes.filter({
-      hasNot: page.locator('.interaction-node-label:not(.interaction-label-fallback)'),
-    });
+    // Untitled non-root Interactions have no authored graph label: either none at all, or only
+    // the greyed fallback shown for unlabelled choices. The root reads `Start`.
+    return nodes
+      .filter({ hasNot: page.locator('.interaction-node-label:not(.interaction-label-fallback)') })
+      .filter({ hasNotText: 'Start' });
   }
   return nodes.filter({ hasText: title });
 }
@@ -240,6 +240,14 @@ export async function openInteractionTitleEditor(inspector: Locator, title: stri
   return interactionTitleField(inspector);
 }
 
+/** Fits the graph, which renders only visible nodes, then selects the last matching Interaction. */
+export async function selectInteraction(page: Page, title: string) {
+  await page.getByRole('button', { name: 'Fit View' }).click();
+  const target = interactionNode(page, title).last();
+  await expect(target).toBeInViewport();
+  await target.click();
+}
+
 export async function editInteraction(
   page: Page,
   currentTitle: string,
@@ -247,10 +255,7 @@ export async function editInteraction(
   body: string,
 ) {
   const inspector = page.getByRole('complementary', { name: 'Inspector' });
-  await page.getByRole('button', { name: 'Fit View' }).click();
-  const target = interactionNode(page, currentTitle).last();
-  await expect(target).toBeInViewport();
-  await target.click();
+  await selectInteraction(page, currentTitle);
   const titleValue = interactionTitleValue(inspector, currentTitle);
   await expect(titleValue).toBeVisible();
   const titleField = await openInteractionTitleEditor(inspector, currentTitle);
