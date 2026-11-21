@@ -420,7 +420,15 @@ export const italianTranslation = {
       authenticated: 'Utenti registrati',
       public: 'Tutti',
       unlisted: 'Tramite link (non in elenco)',
-      help: 'Chiunque abbia l’URL può leggere la Storia senza accedere. Non apparirà nel catalogo pubblico.',
+      help: {
+        public: 'Chiunque può leggere la Storia senza accedere. Appare nel catalogo pubblico.',
+        unlisted:
+          'Chiunque abbia l’URL può leggere la Storia senza accedere. Non apparirà nel catalogo pubblico.',
+        authenticated: 'Ogni utente registrato può leggere la Storia e trovarla nel catalogo.',
+        invitation: 'Solo gli utenti aggiunti qui sotto possono leggere la Storia.',
+        private:
+          'Solo tu puoi leggere la Storia. Gli accessi dati agli utenti qui sotto restano inattivi.',
+      },
       invitation: 'Su invito',
     },
     edit: {
@@ -428,12 +436,24 @@ export const italianTranslation = {
       owner: 'Solo proprietario',
       collaborators: 'Editori',
       authenticated: 'Utenti registrati',
+      adjusted: 'Modifica impostata su «{{policy}}»: non può essere più aperta della lettura.',
+      limitedByReading: 'Limitata dall’impostazione Lettura.',
+      openedForEditors: 'Modifica aperta agli Editori perché l’editore invitato possa modificare.',
+      help: {
+        owner: 'Solo tu puoi modificare la Storia.',
+        collaborators: 'Tu e gli utenti aggiunti qui sotto come Editore potete modificarla.',
+        authenticated: 'Ogni utente registrato può leggere e modificare la Storia.',
+      },
     },
     comments: {
       label: 'Commenti',
       readers: 'Lettori',
       editors: 'Editori',
-      help: "Gli editor possono commentare durante la modifica. I lettori che hanno effettuato l'accesso commentano solo dal lettore.",
+      help: {
+        readers:
+          'Gli utenti registrati che possono leggere la Storia commentano dal lettore. Gli editori commentano durante la modifica.',
+        editors: 'Solo chi può modificare la Storia commenta, durante la modifica.',
+      },
     },
     collaborators: 'Utenti',
     collaboratorsHelp: 'Aggiungi un account Paralleax esistente con accesso in lettura o modifica.',

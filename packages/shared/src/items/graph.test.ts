@@ -7,6 +7,13 @@ import {
   moveItemInstanceInStory,
 } from './graph.js';
 
+function requireValue<T>(value: T | undefined, description: string): T {
+  if (value === undefined) {
+    throw new Error(`Expected ${description} to exist`);
+  }
+  return value;
+}
+
 describe('item graph operations', () => {
   it('indexes children and collects every descendant once', () => {
     const items: ItemInstance[] = [
@@ -31,7 +38,7 @@ describe('item graph operations', () => {
 
   it('resolves only instances connected to a character or location root', () => {
     const story = storyFixture();
-    story.characters![0].items!.push(
+    requireValue(requireValue(story.characters, 'characters')[0].items, 'Mira items').push(
       {
         id: 'orphan',
         itemDefinitionId: 'orphan-definition',
@@ -73,9 +80,9 @@ describe('item graph operations', () => {
     if (!result.ok) {
       return;
     }
-    expect(story.characters![0].items).toHaveLength(2);
-    expect(result.story.characters![0].items).toEqual([]);
-    expect(result.story.locations![0].items).toEqual([
+    expect(requireValue(story.characters, 'characters')[0].items).toHaveLength(2);
+    expect(requireValue(result.story.characters, 'result characters')[0].items).toEqual([]);
+    expect(requireValue(result.story.locations, 'result locations')[0].items).toEqual([
       { id: 'cabinet', itemDefinitionId: 'cabinet-definition' },
       { id: 'bag', itemDefinitionId: 'bag-definition' },
       {
@@ -95,7 +102,10 @@ describe('item graph operations', () => {
       relationshipType: 'attached',
       slotKey: 'side',
     });
-    expect(nested.ok && nested.story.characters![0].items?.at(-1)).toMatchObject({
+    expect(
+      nested.ok &&
+        requireValue(nested.story.characters, 'nested result characters')[0].items?.at(-1),
+    ).toMatchObject({
       id: 'cabinet',
       parentItemId: 'bag',
       relationshipType: 'attached',
@@ -106,9 +116,9 @@ describe('item graph operations', () => {
       return;
     }
     const rooted = moveItemInstanceInStory(nested.story, 'cabinet', { characterId: 'luc' });
-    expect(rooted.ok && rooted.story.characters![1].items).toEqual([
-      { id: 'cabinet', itemDefinitionId: 'cabinet-definition' },
-    ]);
+    expect(
+      rooted.ok && requireValue(rooted.story.characters, 'rooted result characters')[1].items,
+    ).toEqual([{ id: 'cabinet', itemDefinitionId: 'cabinet-definition' }]);
   });
 
   it('rejects invalid targets, missing relationships, and ancestor cycles', () => {

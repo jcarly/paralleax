@@ -1676,4 +1676,16 @@ export const databaseMigrations: DatabaseMigration[] = [
         CHECK (visibility IN ('private', 'authenticated', 'public', 'unlisted', 'invitation'));
     `,
   },
+  {
+    id: '202611200046_coherent_story_access',
+    sql: `
+      -- Editing must not be open to more people than reading (shared
+      -- getAllowedStoryEditPolicies): narrow incoherent Stories to the broadest
+      -- editing policy their reading policy allows. Decided 2026-11-20 (PAR-7).
+      UPDATE stories SET edit_policy = 'owner'
+        WHERE visibility = 'private' AND edit_policy <> 'owner';
+      UPDATE stories SET edit_policy = 'collaborators'
+        WHERE visibility = 'invitation' AND edit_policy = 'authenticated';
+    `,
+  },
 ];

@@ -1,6 +1,7 @@
 import type { Editor } from '@tiptap/core';
-import type { MouseEvent } from 'react';
+import { useRef, type MouseEvent } from 'react';
 import { useTranslation } from 'react-i18next';
+import { useRovingToolbar } from './useRovingToolbar';
 
 type ToolbarAction =
   'bold' | 'italic' | 'underline' | 'heading' | 'bulletList' | 'orderedList' | 'blockquote';
@@ -20,8 +21,17 @@ type RichTextEditorToolbarProps = {
 
 export function RichTextEditorToolbar(props: RichTextEditorToolbarProps) {
   const { t } = useTranslation();
+  const toolbarRef = useRef<HTMLDivElement>(null);
+  const roving = useRovingToolbar(toolbarRef);
   return (
-    <div className="rich-text-toolbar" role="toolbar" aria-label={t('richText.formatting')}>
+    <div
+      className="rich-text-toolbar"
+      role="toolbar"
+      aria-label={t('richText.formatting')}
+      ref={toolbarRef}
+      onKeyDown={roving.onKeyDown}
+      onFocus={roving.onFocus}
+    >
       <FormattingButtons editor={props.editor} t={t} />
       <MediaButtons t={t} onAddImage={props.onAddImage} onAddVideo={props.onAddVideo} />
       <NarrativeButtons {...props} t={t} />

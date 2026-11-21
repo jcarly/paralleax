@@ -28,22 +28,21 @@ vi.mock('@xyflow/react', async () => {
   return createReactFlowMock();
 });
 
+// Inspector comment controls follow pointer events (mouse, touch and pen) on the
+// innermost commentable field, and keyboard focus.
 function hoverTitleCommentMarker(title: string) {
-  const marker = screen
-    .getByRole('button', { name: `Title: ${title}` })
-    .closest('.inspector-commentable-field');
-  if (!marker) {
-    throw new Error('Expected the title comment marker.');
-  }
-  fireEvent.mouseEnter(marker);
+  fireEvent.pointerOver(screen.getByRole('button', { name: `Title: ${title}` }));
 }
 
 function hoverCommentField(fieldButton: HTMLElement) {
-  const marker = fieldButton.closest('.inspector-commentable-field');
-  if (!marker) {
-    throw new Error('Expected the Inspector comment field.');
-  }
-  fireEvent.mouseEnter(marker);
+  fireEvent.pointerOver(fieldButton);
+}
+
+/** Keyboard focus on a field control reveals its comment control right after it. */
+function focusCommentField(fieldButton: HTMLElement) {
+  act(() => {
+    fieldButton.focus();
+  });
 }
 
 describe('StoryEditor graph collaboration and layout', () => {
@@ -400,6 +399,8 @@ describe('StoryEditor graph collaboration and layout', () => {
 
     await renderEditor(story);
     await user.click(screen.getByTestId('flow-node-interaction-2'));
+    focusCommentField(screen.getByRole('button', { name: 'Duration: No time change' }));
+    expect(screen.getByRole('button', { name: 'Comment on Duration' })).toBeInTheDocument();
     hoverCommentField(screen.getByRole('button', { name: 'Duration: No time change' }));
     fireEvent.click(screen.getByRole('button', { name: 'Comment on Duration' }));
 
@@ -606,9 +607,10 @@ describe('StoryEditor graph collaboration and layout', () => {
 
     const toolbar = screen.getByRole('toolbar', { name: 'Canvas tools' });
     expect(toolbar).toHaveClass('canvas-tools');
-    expect(within(toolbar).getAllByRole('button')).toHaveLength(8);
+    expect(within(toolbar).getAllByRole('button')).toHaveLength(9);
 
     for (const label of [
+      'Collapse story context',
       'Undo last Story change',
       'Redo Story change',
       'Open Story history',
@@ -624,6 +626,24 @@ describe('StoryEditor graph collaboration and layout', () => {
       expect(button.querySelector('svg')).toBeInTheDocument();
       expect(button.textContent).toBe('');
     }
+  });
+
+  it('collapses the story context panel from the tool rail without leaving a strip', async () => {
+    const user = userEvent.setup();
+    await renderEditor();
+    const toolbar = screen.getByRole('toolbar', { name: 'Canvas tools' });
+    const toggle = within(toolbar).getByRole('button', { name: 'Collapse story context' });
+    expect(toggle).toHaveAttribute('aria-expanded', 'true');
+    expect(toggle).toHaveAttribute('aria-controls', 'story-context-panel-content');
+    expect(screen.getByRole('navigation', { name: 'Story context' })).toBeInTheDocument();
+
+    await user.click(toggle);
+
+    expect(screen.queryByRole('navigation', { name: 'Story context' })).not.toBeInTheDocument();
+    const expand = within(toolbar).getByRole('button', { name: 'Expand story context' });
+    expect(expand).toHaveAttribute('aria-expanded', 'false');
+    await user.click(expand);
+    expect(screen.getByRole('navigation', { name: 'Story context' })).toBeInTheDocument();
   });
 
   it('opens a position-aware canvas context menu for creation and comments', async () => {

@@ -9,6 +9,77 @@
   start finishes and closes the guide instead of leaving its card over
   Simulation, and there is no longer a Story ready card. The card fades in and
   out, and the Guide control restarts a finished guide.
+- Story access settings no longer allow editing to be open to more people than
+  reading (PAR-7). An owner-only Story is edited by its owner only, and an
+  invitation-only Story by its owner or invited editors. The settings screen
+  disables the other editing options and, when reading is narrowed, narrows
+  editing and says so. The API rejects other combinations with
+  `400 STORY_ACCESS_INCOHERENT`, using the first shared domain error class
+  mapped by the exception filter (ADR-046). A migration narrows existing
+  Stories: private ones to owner-only editing, invitation-only ones from
+  signed-in editing to invited editors. ADR-017 is amended. "Owner only"
+  editing now really means the owner: an invited Editor could still edit a
+  non-private Story with that policy. Inviting or promoting an Editor switches
+  editing to Editors when reading allows it, with a note; existing Stories are
+  not migrated, so their invited Editors need editing opened to Editors.
+  Inviting or promoting an Editor now commits the grant and any required
+  editing-policy change atomically in one database statement, rather than
+  two requests that could leave the new Editor unable to edit.
+- Tidied the Inspector (PAR-7). Deleting the selected Interaction, Trigger or
+  graph decoration moves from a large red button at the bottom to a trash icon
+  in the header, beside Maximize and Close, with the same behaviour; the
+  separators and the trailing border left around it are removed. The Inspector
+  has no fixed 720px width cap on wide screens, and widening it past 70% of the
+  editor maximizes it; Restore returns to the width from before.
+- Fixed the Inspector field comment controls (PAR-7). Hovering a location,
+  cast or duration control showed two overlapping controls, and moving the
+  pointer towards the control replaced it with the one for the surrounding
+  context row. One control is now shown at a time, it stays while the pointer
+  travels towards it, and another field takes it only when the pointer rests
+  on that field. The control follows its field in the keyboard order and works
+  with touch.
+- Re-centred each Interaction's output `+` at the bottom of its card, where its
+  links start, as `docs/story-canvas.md` specifies (PAR-7). It had been moved to
+  the bottom right because the child's Trigger marker covered it; default
+  placement now leaves room for the marker. Stories created before that fix keep
+  tight spacing until Organize lays them out.
+- New Stories place their starting child where ELK places a child, one layer
+  below the start, instead of 16px under it (PAR-7). The Trigger marker covered
+  the child's input `+`, and links to later choices ran under the child card so
+  they seemed to leave its sides. API and MCP creation and the editor fallback
+  use the same distance. Existing Stories are not moved; Organize lays them out.
+- The story context menu now collapses from the first button of the graph tool
+  rail, and leaves no empty strip when collapsed (PAR-7). Its former toggle sat
+  half under the editor title bar, so a click on its centre missed it, and a
+  48px empty strip remained. On narrow screens the open menu overlays the graph
+  beside the rail, which previously hid the only way to close it.
+- The Story settings gear now sits on the Story title line, vertically centred,
+  as a toolbar icon action, and is redrawn with eight regular teeth (PAR-7). It
+  wrapped under the title as a smaller icon, and its outline was irregular, so
+  it looked off-centre. Where supported, the title field fits its text so the
+  gear stays beside the title.
+- Fixed the editor toolbar's Test from start and Test from current interaction
+  icons, which sat 9.5px off-centre with no border because the links did not
+  get the shared button styles (PAR-7). They now use the existing `button` class
+  and match the Comments action in size, border, centring, hover, focus and
+  tooltip.
+- Editing a Story body no longer changes how it looks (PAR-7). In the Inspector
+  the text switched from the narrative serif at 18.4px to the interface sans at
+  16px and moved down by about 100px when the toolbar appeared; it now keeps the
+  same font, size, line height and position, through shared narrative type
+  tokens. The editor is one frame around the text, its formatting toolbar (now
+  below the text) and the character count; the editable-field focus indicator
+  now surrounds that whole frame instead of the text only. The toolbar is a single Tab stop
+  navigated with arrow keys, Home and End. The Tiptap editor chunk now preloads
+  when the editor is idle for authors who can edit, so the first edit opens
+  without the Loading state (about 345ms to 75ms in development).
+- Noted author documentation, then optional topic guides (characters,
+  variables, conditions), as a proposed roadmap item (PAR-7).
+- Fixed the Story access settings help, which always described the By link
+  option whatever reading policy was selected. Reading, Editing and Comments
+  now each describe the selected value, and a short note states when the
+  Signed-in users editing policy also lets signed-in users read a private or
+  invitation-only Story, as the access rules already did (PAR-7).
 - Replaced the Formbricks feedback integration with PostHog Surveys
   (ADR-048). The header button still loads nothing before a click; it now
   opens the configured PostHog survey through `displaySurvey()`, announces a

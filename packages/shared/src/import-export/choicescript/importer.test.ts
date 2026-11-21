@@ -4,6 +4,13 @@ import { createChoiceScriptImportReport } from './report.js';
 import { importChoiceScript } from './importer.js';
 import { mapChoiceScriptGraphToStory } from './mapping.js';
 
+function requireValue<T>(value: T | null | undefined, description: string): T {
+  if (value === null || value === undefined) {
+    throw new Error(`Expected ${description} to exist`);
+  }
+  return value;
+}
+
 function importFiles(files: Array<{ name: string; content: string }>) {
   let id = 0;
   return importChoiceScript(files, {
@@ -58,7 +65,10 @@ The hall is dark.
       access: { visibility: 'private', editPolicy: 'owner', commentPolicy: 'editors' },
     });
     expect(result.story?.interactions).toHaveLength(4);
-    const [opening, openDoor, waitOutside, inside] = result.story!.interactions;
+    const [opening, openDoor, waitOutside, inside] = requireValue(
+      result.story,
+      'imported story',
+    ).interactions;
     expect(opening.body).toContain('You reach the lighthouse');
     expect(openDoor).toMatchObject({ title: 'Open the door' });
     expect(waitOutside).toMatchObject({ title: 'Wait outside' });
@@ -176,7 +186,7 @@ Welcome.
       'Chapter',
       'Ending',
     ]);
-    const [startup, chapter, ending] = result.story!.interactions;
+    const [startup, chapter, ending] = requireValue(result.story, 'imported story').interactions;
     expect(chapter.triggers[0].inputInteractionIds).toEqual([startup.id]);
     expect(ending.triggers[0].inputInteractionIds).toEqual([chapter.id]);
   });
@@ -203,8 +213,11 @@ Choose with ${'${courage}'} courage.
       expect.objectContaining({ name: 'Courage', valueType: 'number' }),
     ]);
     expect(result.story?.statDefinitions?.[0]).not.toHaveProperty('key');
-    const assignment = result.story!.stats![0];
-    const [opening, choice] = result.story!.interactions;
+    const assignment = requireValue(
+      requireValue(result.story, 'imported story').stats,
+      'story stats',
+    )[0];
+    const [opening, choice] = requireValue(result.story, 'imported story').interactions;
     expect(opening.body).toContain(`data-stat-value="${assignment.id}"`);
     expect(getTriggerConditions(choice.triggers[0])).toEqual([
       { statId: assignment.id, operator: 'gt', value: 40 },

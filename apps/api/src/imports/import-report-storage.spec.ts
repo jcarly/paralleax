@@ -26,15 +26,17 @@ describe('LocalImportReportStorage', () => {
 
     expect(await storage.getReportPath(importId)).toBe(reportPath);
     const stream = await storage.streamReport(importId);
+    if (!stream) {
+      throw new Error(`Expected report stream for ${importId}`);
+    }
     const rows: Buffer[] = [];
-    for await (const row of stream!) {
+    for await (const row of stream) {
       rows.push(Buffer.from(row));
     }
     expect(Buffer.concat(rows).toString('utf8')).toBe('{"code":"warning"}\n');
 
-    const copyDirectory = join(directory, 'copy');
-    await copyImportReportFile(storage, importId, copyDirectory);
-    expect(await readFile(join(copyDirectory, `${importId}.jsonl`), 'utf8')).toBe(
+    await copyImportReportFile(storage, importId, join(directory, 'copy'));
+    expect(await readFile(join(directory, 'copy', `${importId}.jsonl`), 'utf8')).toBe(
       '{"code":"warning"}\n',
     );
 
