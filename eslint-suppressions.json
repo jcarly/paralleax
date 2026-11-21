@@ -532,7 +532,7 @@
   },
   "apps/web/playwright.acceptance.config.ts": {
     "@typescript-eslint/strict-boolean-expressions": {
-      "count": 2
+      "count": 1
     }
   },
   "apps/web/src/App.test.tsx": {

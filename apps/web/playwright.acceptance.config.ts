@@ -6,18 +6,24 @@ const apiPort = localPort(process.env.PARALLEAX_ACCEPTANCE_API_PORT, 3331);
 const webPort = localPort(process.env.PARALLEAX_ACCEPTANCE_WEB_PORT, 5174);
 const baseURL = externalBaseUrl ?? `http://127.0.0.1:${webPort}`;
 const repositoryRoot = resolve(import.meta.dirname, '../..');
+const isCi = process.env.CI !== undefined && process.env.CI !== '';
 
 export default defineConfig({
   testDir: './tests/acceptance',
   fullyParallel: false,
   workers: 1,
-  retries: process.env.CI ? 1 : 0,
-  timeout: 300_000,
+  retries: isCi ? 1 : 0,
+  // Fail fast: a stuck step used to wait for the whole test timeout (5 minutes, twice with the
+  // retry) before reporting. Tests that need longer set their own timeout.
+  maxFailures: isCi ? 3 : 0,
+  timeout: 90_000,
   expect: { timeout: 30_000 },
   outputDir: './test-results/acceptance',
   reporter: [['list'], ['html', { open: 'never', outputFolder: './playwright-report/acceptance' }]],
   use: {
     baseURL,
+    actionTimeout: 30_000,
+    navigationTimeout: 30_000,
     locale: 'en-US',
     trace: 'retain-on-failure',
     screenshot: 'only-on-failure',
