@@ -879,6 +879,8 @@ export const italianTranslation = {
     forced: ' Costretto per questo test.',
     addOption: 'Aggiungi opzione',
     addOptionHelp: "Crea un'interazione connessa da questo punto.",
+    untitledInteraction: 'Senza titolo',
+    startChoice: 'Inizia',
     continueChoice: 'Continua',
     untitledChoice: 'Opzione {{number}}',
     choiceLabelNeeded:

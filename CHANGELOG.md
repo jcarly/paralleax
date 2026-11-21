@@ -7,6 +7,10 @@
   in red and add a `!` icon whose tooltip explains the problem, instead of
   showing `New interaction` or `Option N` with a separate warning text.
   `Option N` remains the Reader fallback, and nothing blocks drafting.
+  Simulation no longer shows `New interaction`: an untitled starting point reads
+  `Start`, its title hint is `Start` or `Continue` depending on how it was
+  reached, and an Interaction reached among several untitled options is flagged
+  the same way, in its title and in the Simulation history.
 - On a phone, the Inspector no longer covers the tool rail (PAR-7). At 390 px its
   border comment button sat over the story context toggle, so the left panel
   could not be collapsed while an Interaction was selected; the Inspector now

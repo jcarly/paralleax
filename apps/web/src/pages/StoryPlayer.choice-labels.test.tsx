@@ -1,4 +1,4 @@
-import { screen } from '@testing-library/react';
+import { fireEvent, screen, waitFor } from '@testing-library/react';
 import { expect, it, vi } from 'vitest';
 import type { Story } from '@paralleax/shared';
 import { renderPlayer, setupStoryPlayerTestSuite, story } from '../test/storyPlayerTestHarness';
@@ -75,4 +75,29 @@ it('keeps authored choice titles unchanged', async () => {
 
   expect(await screen.findByRole('button', { name: 'Open the gate' })).toBeInTheDocument();
   expect(screen.queryByRole('button', { name: 'Continue' })).not.toBeInTheDocument();
+});
+
+it('labels a lone untitled starting point Start in Simulation', async () => {
+  await renderPlayer('/stories/story-1/play?mode=simulation', untitledStory(1));
+
+  expect(await screen.findByRole('button', { name: 'Start' })).toBeInTheDocument();
+});
+
+it('flags the reached title after choosing one of several untitled options', async () => {
+  await renderPlayer(
+    '/stories/story-1/play?mode=simulation&startInteractionId=start',
+    untitledStory(2),
+  );
+  const [firstOption] = await screen.findAllByRole('img', { name: /Label required/ });
+  const choice = firstOption.closest('button');
+  if (!choice) {
+    throw new Error('The flagged option is not a button.');
+  }
+  fireEvent.click(choice);
+
+  const title = await screen.findByRole('textbox', { name: 'Current interaction title' });
+  await waitFor(() => {
+    expect(title).toHaveAttribute('aria-invalid', 'true');
+  });
+  expect(title).toHaveAttribute('placeholder', '');
 });

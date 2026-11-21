@@ -5,6 +5,7 @@ import {
   choiceLabelForDisplay,
   interactionTitleForDisplay,
   interactionTitlePlaceholder,
+  simulationTitleHint,
 } from './interactionTitlePresentation';
 
 function interaction(title: string, inputInteractionIds: string[]): Interaction {
@@ -66,5 +67,23 @@ describe('interaction title presentation', () => {
       choiceLabelForDisplay({ title: '' }, { index: 0, count: 1 }, i18n.t.bind(i18n)).label,
     ).toBe('Continuer');
     await i18n.changeLanguage('en');
+  });
+});
+
+describe('simulation title hint', () => {
+  it('follows how the Simulation reached the Interaction', async () => {
+    await i18n.changeLanguage('en');
+    const t = i18n.t.bind(i18n);
+
+    expect(simulationTitleHint('start', t)).toEqual({ hint: 'Start', needsLabel: false });
+    expect(simulationTitleHint({ optionCount: 1 }, t)).toEqual({
+      hint: 'Continue',
+      needsLabel: false,
+    });
+    expect(simulationTitleHint({ optionCount: 3 }, t)).toEqual({ hint: '', needsLabel: true });
+    expect(simulationTitleHint(undefined, t)).toEqual({ hint: '', needsLabel: false });
+    expect(choiceLabelForDisplay({ title: '' }, { index: 0, count: 1, start: true }, t).label).toBe(
+      'Start',
+    );
   });
 });

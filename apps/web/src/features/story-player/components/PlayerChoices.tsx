@@ -56,7 +56,7 @@ export function PlayerChoices({
       {choices.map(({ interaction, available, timerState, unavailableReason }, index) => {
         const choiceLabel = choiceLabelForDisplay(
           interaction,
-          { index, count: choices.length },
+          { index, count: choices.length, start: currentInteractionId === undefined },
           t,
           isSimulationMode ? 'author' : 'reader',
         );

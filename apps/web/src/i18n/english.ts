@@ -847,6 +847,8 @@ export const englishTranslation = {
     forced: ' Forced for this test.',
     addOption: 'Add option',
     addOptionHelp: 'Create a connected interaction from this point.',
+    untitledInteraction: 'Untitled',
+    startChoice: 'Start',
     continueChoice: 'Continue',
     untitledChoice: 'Option {{number}}',
     choiceLabelNeeded:

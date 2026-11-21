@@ -22,7 +22,13 @@ titles are unchanged. `Option N` is a Reader fallback only: the graph,
 Simulation and Inspector leave the label of each untitled option among several
 empty and show it as an error (red outline and an alert icon whose tooltip
 explains it), on both the option and the destination Interaction's title. This
-error never blocks drafting, saving, or testing. Requiring labels is deferred to the
+error never blocks drafting, saving, or testing. On the start screen, a lone
+untitled starting Interaction reads `Start` instead of `Continue`. In Simulation,
+the current untitled Interaction's title hint follows how it was reached during
+the session: `Start` for the starting point, `Continue` after a lone option, and
+an empty, flagged label after several options. The Simulation loads only part of
+the graph, so it remembers this in memory only; after a reload, an untitled
+Interaction past the start shows no hint. Requiring labels is deferred to the
 validation of a future version publication (see the roadmap, V0.9). Authors customize the label by writing the
 destination Interaction's title.
 

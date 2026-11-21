@@ -864,6 +864,8 @@ export const frenchTranslation = {
     forced: ' Forcée pour ce test.',
     addOption: 'Ajouter une option',
     addOptionHelp: 'Créer une interaction reliée à partir de ce point.',
+    untitledInteraction: 'Sans titre',
+    startChoice: 'Commencer',
     continueChoice: 'Continuer',
     untitledChoice: 'Option {{number}}',
     choiceLabelNeeded:
