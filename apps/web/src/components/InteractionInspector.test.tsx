@@ -918,7 +918,6 @@ function renderOptions(titles: string[]) {
       interaction={interaction}
       onChange={vi.fn()}
       onPatch={vi.fn().mockResolvedValue(true)}
-      onDelete={vi.fn()}
     />,
   );
 }
