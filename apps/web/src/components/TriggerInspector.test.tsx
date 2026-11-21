@@ -1,3 +1,4 @@
+import { requireValue } from '../test/assertions';
 import { cleanup, fireEvent, render, screen, within } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import { afterEach, describe, expect, it, vi } from 'vitest';
@@ -45,8 +46,7 @@ function openConditionEditor(indexOrText: number | string = 0) {
       : screen
           .getAllByTestId('condition-summary')
           .find((candidate) => candidate.textContent?.includes(indexOrText));
-  expect(summary).toBeDefined();
-  fireEvent.click(summary!);
+  fireEvent.click(requireValue(summary, 'condition summary'));
 }
 
 describe('TriggerInspector temporal conditions', () => {

@@ -1,3 +1,4 @@
+import { requireValue } from '../../../test/assertions';
 import { renderHook } from '@testing-library/react';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 import { mergeServerStory, type Interaction, type Story } from '@paralleax/shared';
@@ -216,10 +217,13 @@ describe('story graph persistence', () => {
       async (_storyId, interactionId, triggerId, patch) => ({
         interactionId,
         trigger: {
-          ...harness
-            .story()
-            .interactions.find(({ id }) => id === interactionId)!
-            .triggers.find(({ id }) => id === triggerId)!,
+          ...requireValue(
+            requireValue(
+              harness.story().interactions.find(({ id }) => id === interactionId),
+              `interaction ${interactionId}`,
+            ).triggers.find(({ id }) => id === triggerId),
+            `trigger ${triggerId}`,
+          ),
           ...patch,
         },
         ...metadata(2),

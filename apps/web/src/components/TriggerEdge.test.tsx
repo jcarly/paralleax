@@ -1,3 +1,4 @@
+import { requireValue } from '../test/assertions';
 import type { ReactNode } from 'react';
 import { cleanup, fireEvent, render, screen } from '@testing-library/react';
 import { getSmoothStepPath, Position } from '@xyflow/react';
@@ -71,9 +72,9 @@ describe('TriggerEdge', () => {
     const deleteButton = screen.getByRole('button', { name: 'Remove trigger input' });
     expect(deleteButton).not.toHaveClass('visible');
 
-    fireEvent.mouseEnter(hitbox!);
+    fireEvent.mouseEnter(requireValue(hitbox, 'trigger edge hitbox'));
     expect(deleteButton).toHaveClass('visible');
-    fireEvent.mouseLeave(hitbox!);
+    fireEvent.mouseLeave(requireValue(hitbox, 'trigger edge hitbox'));
     expect(deleteButton).not.toHaveClass('visible');
     fireEvent.mouseEnter(deleteButton);
     expect(deleteButton).toHaveClass('visible');

@@ -1,3 +1,4 @@
+import { requireValue } from '../../test/assertions';
 import { describe, expect, it } from 'vitest';
 import type { Interaction, Story, Trigger } from '@paralleax/shared';
 import {
@@ -41,15 +42,19 @@ describe('story mutation result adapters', () => {
       updatedAt,
     };
     const next = applyGroupResult(story, result);
-    expect(next.groups!.map(({ id }) => id)).toEqual(['second', 'first', 'local']);
-    expect(next.groups![0].parentGroupId).toBe('first');
-    expect(next.revision).toBe(3);
-    const newer = { ...story, revision: 4 };
-    expect(applyGroupResult(newer, result).groups!.map(({ id }) => id)).toEqual([
-      'first',
+    expect(requireValue(next.groups, 'next story groups').map(({ id }) => id)).toEqual([
       'second',
+      'first',
       'local',
     ]);
+    expect(requireValue(next.groups, 'next story groups')[0].parentGroupId).toBe('first');
+    expect(next.revision).toBe(3);
+    const newer = { ...story, revision: 4 };
+    expect(
+      requireValue(applyGroupResult(newer, result).groups, 'updated story groups').map(
+        ({ id }) => id,
+      ),
+    ).toEqual(['first', 'second', 'local']);
     expect(applyGroupResult(newer, result).revision).toBe(4);
   });
   it('reads revision metadata from successful Story mutation results', () => {
