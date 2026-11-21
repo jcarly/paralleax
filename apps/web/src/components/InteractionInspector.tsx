@@ -27,7 +27,11 @@ import { RichTextEditor } from './RichTextEditor';
 import { RichTextContent } from './RichTextContent';
 import { hasAuthoredRichTextContent } from './richTextProjection';
 import { VariablePicker } from './VariablePicker';
-import { getOptionDestinations } from '../features/story/choiceLabelDiagnostics';
+import { ChoiceLabelErrorIcon } from '../features/story/ChoiceLabelError';
+import {
+  getOptionDestinations,
+  interactionNeedsChoiceLabel,
+} from '../features/story/choiceLabelDiagnostics';
 import {
   choiceLabelForDisplay,
   interactionTitleForDisplay,
@@ -394,6 +398,8 @@ function InteractionInspectorView({
     : t('interactionInspector.noDuration');
   const durationTooltip = durationSummary;
   const optionDestinations = getOptionDestinations(story, interaction.id);
+  const needsChoiceLabel = interactionNeedsChoiceLabel(story, interaction);
+  const displayedTitle = needsChoiceLabel ? '' : interactionTitleForDisplay(interaction, t);
   const effectUnavailableReasons: Record<EffectType, string | undefined> = {
     stat: availableStatTarget
       ? undefined
@@ -529,13 +535,16 @@ function InteractionInspectorView({
             onOpenTextComments={onOpenTextComments}
           >
             <InteractionLabel
-              label={interactionTitleForDisplay(interaction, t)}
+              label={displayedTitle}
               className={`interaction-inspector-title-bubble${
                 interaction.title.trim() ? '' : ' interaction-label-fallback'
-              }`}
+              }${needsChoiceLabel ? ' choice-label-error' : ''}`}
               leadingIcon="→"
+              suffix={needsChoiceLabel ? <ChoiceLabelErrorIcon /> : undefined}
               dataCommentField="title"
-              ariaLabel={`${t('interactionInspector.title')}: ${interactionTitleForDisplay(interaction, t)}`}
+              ariaLabel={`${t('interactionInspector.title')}: ${
+                needsChoiceLabel ? t('player.choiceLabelNeeded') : displayedTitle
+              }`}
               onActivate={() => {
                 setEditingTitle(true);
               }}
@@ -544,7 +553,10 @@ function InteractionInspectorView({
                   ? {
                       className: 'interaction-inspector-title-input',
                       'aria-label': t('interactionInspector.title'),
-                      placeholder: interactionTitlePlaceholder(interaction, t),
+                      placeholder: needsChoiceLabel
+                        ? ''
+                        : interactionTitlePlaceholder(interaction, t),
+                      'aria-invalid': needsChoiceLabel ? true : undefined,
                       value: interaction.title,
                       onChange: (event) => {
                         updateLocalInteraction({ title: event.target.value });
@@ -1165,6 +1177,7 @@ function InteractionInspectorView({
                 destination,
                 { index, count: optionDestinations.length },
                 t,
+                'author',
               );
               return (
                 <li key={destination.id}>
@@ -1175,17 +1188,15 @@ function InteractionInspectorView({
                   >
                     <InteractionLabel
                       label={choiceLabel.label}
-                      className={choiceLabel.authored ? undefined : 'interaction-label-fallback'}
+                      className={`${choiceLabel.authored ? '' : 'interaction-label-fallback'}${
+                        choiceLabel.needsLabel ? ' choice-label-error' : ''
+                      }`}
+                      suffix={choiceLabel.needsLabel ? <ChoiceLabelErrorIcon /> : undefined}
                     />
                     <i className="interaction-inspector-option-arrow" aria-hidden="true">
                       →
                     </i>
                   </button>
-                  {choiceLabel.needsLabel ? (
-                    <p className="hint interaction-inspector-option-warning">
-                      {t('player.choiceLabelNeeded')}
-                    </p>
-                  ) : null}
                 </li>
               );
             })}

@@ -2,6 +2,7 @@ import type { Ref } from 'react';
 import { useTranslation } from 'react-i18next';
 import type { Interaction, Story, TriggerTimerResult } from '@paralleax/shared';
 import { ChoiceTimerBar } from '../ChoiceTimerBar';
+import { ChoiceLabelErrorIcon } from '../../story/ChoiceLabelError';
 import { getConditionSummary } from '../storyPlayerPresentation';
 import {
   choiceLabelForDisplay,
@@ -53,7 +54,12 @@ export function PlayerChoices({
   return (
     <div className="choices">
       {choices.map(({ interaction, available, timerState, unavailableReason }, index) => {
-        const choiceLabel = choiceLabelForDisplay(interaction, { index, count: choices.length }, t);
+        const choiceLabel = choiceLabelForDisplay(
+          interaction,
+          { index, count: choices.length },
+          t,
+          isSimulationMode ? 'author' : 'reader',
+        );
         return (
           <div className="choice-row" key={interaction.id}>
             {timerState ? (
@@ -69,7 +75,10 @@ export function PlayerChoices({
                   ref={editingChoiceInputRef}
                   className="choice-title-input"
                   aria-label={t('player.newOptionTitle')}
-                  placeholder={interactionTitlePlaceholder(interaction, t)}
+                  placeholder={
+                    choiceLabel.needsLabel ? '' : interactionTitlePlaceholder(interaction, t)
+                  }
+                  aria-invalid={choiceLabel.needsLabel ? true : undefined}
                   value={interaction.title}
                   onChange={(event) => {
                     onPatchInteraction(interaction.id, { title: event.target.value });
@@ -85,7 +94,7 @@ export function PlayerChoices({
               </>
             ) : (
               <button
-                className={`choice ${available ? 'available' : 'unavailable'} ${isSimulationMode && !available && forceUnavailableOptions ? 'forced' : ''}`}
+                className={`choice ${available ? 'available' : 'unavailable'} ${isSimulationMode && !available && forceUnavailableOptions ? 'forced' : ''}${choiceLabel.needsLabel ? ' choice-label-error' : ''}`}
                 disabled={isSimulationMode && !available && !forceUnavailableOptions}
                 onClick={() => {
                   onChoose(interaction);
@@ -100,9 +109,6 @@ export function PlayerChoices({
                   <strong className={choiceLabel.authored ? undefined : 'choice-label-fallback'}>
                     {choiceLabel.label}
                   </strong>
-                  {isSimulationMode && choiceLabel.needsLabel ? (
-                    <small className="choice-label-needed">{t('player.choiceLabelNeeded')}</small>
-                  ) : null}
                   {isSimulationMode && !available ? (
                     <small>
                       {unavailableReason ?? t('player.unavailable')}
@@ -110,6 +116,7 @@ export function PlayerChoices({
                     </small>
                   ) : null}
                 </span>
+                {choiceLabel.needsLabel ? <ChoiceLabelErrorIcon /> : null}
                 <span className="choice-arrow" aria-hidden="true">
                   →
                 </span>

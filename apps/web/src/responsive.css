@@ -25,12 +25,13 @@
   .canvas {
     grid-column: 1;
   }
+  /* Like the context panel, leave the tool rail and its border comment toggle clear. */
   .inspector {
     position: absolute;
     right: 0;
     top: 122px;
     bottom: 0;
-    width: min(var(--editor-inspector-width, 340px), 90vw);
+    width: min(var(--editor-inspector-width, 340px), calc(100vw - 5rem));
     z-index: 5;
   }
   .editor-layout.is-inspector-maximized .inspector {
