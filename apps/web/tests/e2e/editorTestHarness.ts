@@ -1,4 +1,4 @@
-import type { Page } from '@playwright/test';
+import { expect, type Locator, type Page } from '@playwright/test';
 import type {
   PaginatedResult,
   Story,
@@ -126,6 +126,28 @@ export function storyWithHorizontalLink(): Story {
     triggers: [{ id: 'trigger-2', inputInteractionIds: ['interaction-1'], conditions: [] }],
   });
   return next;
+}
+
+/**
+ * Reads the graph viewport transform once the initial fit has been applied. Reading it right
+ * after navigation can return the identity transform on a slow runner, before the fit moves it.
+ */
+export async function readSettledViewportTransform(page: Page, viewport: Locator): Promise<string> {
+  await expect(page.locator('.react-flow__node').first()).toBeVisible();
+  const read = () => viewport.evaluate((element) => getComputedStyle(element).transform);
+  let previous = await read();
+  await expect
+    .poll(
+      async () => {
+        const current = await read();
+        const settled = current === previous;
+        previous = current;
+        return settled;
+      },
+      { intervals: [200] },
+    )
+    .toBe(true);
+  return previous;
 }
 
 export async function getEdgeEndDirection(page: Page, edgeId: string) {

@@ -5,6 +5,7 @@ import {
   mockGraphPositionUpdates,
   mockStory,
   prepareEditorPage,
+  readSettledViewportTransform,
   story,
   storyWithConditionCandidate,
   storyWithHorizontalLink,
@@ -447,7 +448,7 @@ test('keeps the graph stable while the comment list opens inside the inspector',
   await page.goto('/stories/story-1/edit');
   const canvas = page.locator('.canvas');
   const viewport = page.locator('.react-flow__viewport');
-  const transformBefore = await viewport.evaluate((element) => getComputedStyle(element).transform);
+  const transformBefore = await readSettledViewportTransform(page, viewport);
 
   await page.getByRole('button', { name: /^Comments/ }).click();
   await expectCommentsInspectorLayout(page, canvas, viewport, transformBefore);
@@ -589,7 +590,7 @@ test('pans the graph with the middle button or Space plus primary drag', async (
   const start = { x: bounds.x + bounds.width - 90, y: bounds.y + bounds.height - 90 };
   const transform = () => viewport.evaluate((element) => getComputedStyle(element).transform);
 
-  const initial = await transform();
+  const initial = await readSettledViewportTransform(page, viewport);
   await page.mouse.move(start.x, start.y);
   await page.mouse.down();
   await page.mouse.move(start.x - 70, start.y - 40, { steps: 5 });
