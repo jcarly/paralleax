@@ -426,7 +426,6 @@ export const englishTranslation = {
         invitation: 'Only the users added below can read the Story.',
         private: 'Only you can read the Story. Access given to the users below stays inactive.',
       },
-      widenedByEditing: 'Signed-in users can also read it, because they can edit it.',
       invitation: 'By invitation',
     },
     edit: {
@@ -434,10 +433,12 @@ export const englishTranslation = {
       owner: 'Owner only',
       collaborators: 'Editors',
       authenticated: 'Signed-in users',
+      adjusted: 'Editing set to {{policy}}: it cannot be wider than reading.',
+      limitedByReading: 'Limited by the Reading setting.',
+      openedForEditors: 'Editing set to Editors so the invited editor can edit.',
       help: {
         owner: 'Only you can edit the Story.',
-        collaborators:
-          'You and the users added below as Editor can edit the Story, unless reading is Owner only.',
+        collaborators: 'You and the users added below as Editor can edit the Story.',
         authenticated: 'Any signed-in user can read and edit the Story.',
       },
     },

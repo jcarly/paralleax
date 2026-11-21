@@ -2,6 +2,22 @@
 
 ## Unreleased
 
+- Story access settings no longer allow editing to be open to more people than
+  reading (PAR-7). An owner-only Story is edited by its owner only, and an
+  invitation-only Story by its owner or invited editors. The settings screen
+  disables the other editing options and, when reading is narrowed, narrows
+  editing and says so. The API rejects other combinations with
+  `400 STORY_ACCESS_INCOHERENT`, using the first shared domain error class
+  mapped by the exception filter (ADR-046). A migration narrows existing
+  Stories: private ones to owner-only editing, invitation-only ones from
+  signed-in editing to invited editors. ADR-017 is amended. "Owner only"
+  editing now really means the owner: an invited Editor could still edit a
+  non-private Story with that policy. Inviting or promoting an Editor switches
+  editing to Editors when reading allows it, with a note; existing Stories are
+  not migrated, so their invited Editors need editing opened to Editors.
+  Inviting or promoting an Editor now commits the grant and any required
+  editing-policy change atomically in one database statement, rather than
+  two requests that could leave the new Editor unable to edit.
 - Tidied the Inspector (PAR-7). Deleting the selected Interaction, Trigger or
   graph decoration moves from a large red button at the bottom to a trash icon
   in the header, beside Maximize and Close, with the same behaviour; the

@@ -6,6 +6,7 @@ import {
   HttpStatus,
   Logger,
 } from '@nestjs/common';
+import { DomainValidationError } from '@paralleax/shared';
 import type { Response } from 'express';
 import { captureApiException } from '../observability/sentry';
 import { getRequestId, type RequestWithId } from './request-context';
@@ -63,6 +64,17 @@ type ResolvedApiException = {
 };
 
 function resolveApiException(exception: unknown): ResolvedApiException {
+  if (exception instanceof DomainValidationError) {
+    // An expected rule violation (ADR-046): 400 with its own code, never captured.
+    return {
+      isHttpException: true,
+      statusError: HttpStatus.BAD_REQUEST,
+      status: HttpStatus.BAD_REQUEST,
+      code: exception.code,
+      message: exception.message,
+      details: exception.details,
+    };
+  }
   const { isHttpException, statusError, status } = resolveExceptionStatus(exception);
   const source = exception instanceof HttpException ? exception.getResponse() : undefined;
   const body = typeof source === 'object' && source !== null ? (source as HttpExceptionBody) : {};

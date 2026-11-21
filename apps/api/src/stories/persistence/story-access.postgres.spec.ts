@@ -288,6 +288,12 @@ async function managementAccess(entry: AccessParticipant, settings: StoryAccessS
     inviteeId,
   ]);
   await grantCollaborator(storyId, viewerId, 'viewer');
+  // A successful editor promotion now atomically opens owner-only editing.
+  // Restore *all* policies before the next participant in the parity matrix.
+  await pool.query(
+    'UPDATE stories SET visibility = $2, edit_policy = $3, comment_policy = $4 WHERE id = $1',
+    [storyId, settings.visibility, settings.editPolicy, settings.commentPolicy],
+  );
 
   await prepareDisposableStory(settings);
   const deleted = await repository.delete(disposableStoryId, entry.userId);

@@ -1,6 +1,6 @@
 # ADR-017: Global Administration and Story Access Control
 
-Status: Accepted; visibility extended by ADR-033; denial responses clarified 2026-11-04
+Status: Accepted; visibility extended by ADR-033; denial responses clarified 2026-11-04; edit policy bounded by visibility 2026-11-20
 
 Comment-policy values and defaults are superseded by
 [ADR-019](ADR-019-editor-graph-reader-comments.md).
@@ -11,6 +11,32 @@ Amendment (2026-10-17): [ADR-033](ADR-033-unlisted-story-visibility.md)
 adds `unlisted` as a fifth accepted visibility policy. Implementation completed
 on 2026-10-24; see ADR-033 for its behavior and consequences. This note preserves
 the original amendment date and status history.
+
+Amendment (2026-11-20, PAR-7): editing must not be open to more people than
+reading. A `private` Story only allows `owner` editing and an `invitation`
+Story only allows `owner` or `collaborators` editing; `authenticated`,
+`unlisted` and `public` allow every edit policy. The rule lives in
+`packages/shared` (`getAllowedStoryEditPolicies`, `assertStoryAccessCoherent`)
+and the API rejects other combinations with `400 STORY_ACCESS_INCOHERENT`.
+Rationale: the previous combinations let an "Owner only" reading policy be
+silently widened by "Signed-in users" editing, which the settings screen could
+not express. Consequence: migration `202611200046_coherent_story_access`
+narrowed existing incoherent Stories to the widest allowed edit policy
+(`owner` for private, `collaborators` for invitation), as decided by the product
+owner; this removes access some signed-in users had on such Stories. The
+settings screen disables incompatible options and narrows editing when reading
+is narrowed.
+
+The same review found that `resolveStoryAccess` let an `editor` grant edit a
+non-private Story whose edit policy is `owner`, so "Owner only" did not hold.
+An editor grant now edits only under the `collaborators` or `authenticated`
+edit policy, in the shared rule and its SQL projection. Product decision: no
+migration; invited editors on such Stories lose editing until the owner opens
+editing to Editors. Inviting or promoting an Editor from the settings screen
+while editing is `owner` opens editing to `collaborators` when reading allows
+it, and says so. The grant and policy change are performed atomically by the
+collaborator endpoint (one PostgreSQL data-modifying CTE statement), so a failed
+request does not leave a partially applied invitation or promotion.
 
 ## Context
 

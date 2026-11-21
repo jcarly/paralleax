@@ -1,9 +1,11 @@
 import { useEffect, useState } from 'react';
 import { useTranslation } from 'react-i18next';
-import type {
-  StoryAccessConfiguration,
-  StoryAccessSettings,
-  StoryCollaboratorRole,
+import {
+  fitStoryEditPolicy,
+  getAllowedStoryEditPolicies,
+  type StoryAccessConfiguration,
+  type StoryAccessSettings,
+  type StoryCollaboratorRole,
 } from '@paralleax/shared';
 import { api } from '../../api';
 import { apiErrorMessage } from '../../apiErrorMessages';
@@ -25,6 +27,7 @@ export function StoryAccessSettings({ storyId, onInaccessible }: StoryAccessSett
   const [pending, setPending] = useState(false);
   const [error, setError] = useState('');
   const [accessStatus, setAccessStatus] = useState<'idle' | 'saving' | 'saved' | 'error'>('idle');
+  const [editPolicyChange, setEditPolicyChange] = useState<'narrowed' | 'openedForEditors'>();
 
   useEffect(() => {
     let cancelled = false;
@@ -54,7 +57,13 @@ export function StoryAccessSettings({ storyId, onInaccessible }: StoryAccessSett
       return;
     }
     const previous = access;
-    const next = { ...access, [key]: value };
+    const changed = { ...access, [key]: value };
+    // Editing stays within reading: narrowing reading narrows editing too.
+    const next = {
+      ...changed,
+      editPolicy: fitStoryEditPolicy(changed.visibility, changed.editPolicy),
+    };
+    setEditPolicyChange(next.editPolicy === changed.editPolicy ? undefined : 'narrowed');
     setAccess(next);
     setAccessStatus('saving');
     const updated = await runAccessOperation(
@@ -65,26 +74,37 @@ export function StoryAccessSettings({ storyId, onInaccessible }: StoryAccessSett
       setAccessStatus('saved');
     } else {
       setAccess(previous);
+      setEditPolicyChange(undefined);
       setAccessStatus('error');
     }
   }
 
-  async function addUser(email: string, role: StoryCollaboratorRole): Promise<boolean> {
+  /** A single API operation atomically creates the grant and opens editing if needed. */
+  async function saveCollaborator(
+    email: string,
+    role: StoryCollaboratorRole,
+    errorMessage: string,
+  ): Promise<boolean> {
+    const previousEditPolicy = access?.editPolicy;
     const updated = await runAccessOperation(
       () => api.setStoryCollaborator(storyId, email.trim(), role),
-      t('access.inviteFailed'),
+      errorMessage,
     );
+    if (updated && previousEditPolicy === 'owner' && updated.editPolicy === 'collaborators') {
+      setEditPolicyChange('openedForEditors');
+    }
     return Boolean(updated);
+  }
+
+  async function addUser(email: string, role: StoryCollaboratorRole): Promise<boolean> {
+    return saveCollaborator(email, role, t('access.inviteFailed'));
   }
 
   async function changeRole(emailAddress: string, nextRole: StoryCollaboratorRole) {
     if (pending) {
       return;
     }
-    await runAccessOperation(
-      () => api.setStoryCollaborator(storyId, emailAddress, nextRole),
-      t('access.roleUpdateFailed'),
-    );
+    await saveCollaborator(emailAddress, nextRole, t('access.roleUpdateFailed'));
   }
 
   async function remove(userId: string) {
@@ -129,6 +149,21 @@ export function StoryAccessSettings({ storyId, onInaccessible }: StoryAccessSett
     }
   }
 
+  function editPolicyNote() {
+    if (!access) {
+      return undefined;
+    }
+    if (editPolicyChange === 'narrowed') {
+      return t('access.edit.adjusted', { policy: t(`access.edit.${access.editPolicy}`) });
+    }
+    if (editPolicyChange === 'openedForEditors') {
+      return t('access.edit.openedForEditors');
+    }
+    return getAllowedStoryEditPolicies(access.visibility).length < editOptions.length
+      ? t('access.edit.limitedByReading')
+      : undefined;
+  }
+
   if (error && !access) {
     return (
       <p className="library-error" role="alert">
@@ -155,12 +190,6 @@ export function StoryAccessSettings({ storyId, onInaccessible }: StoryAccessSett
           options={visibilityOptions}
           value={access.visibility}
           disabled={pending}
-          note={
-            access.editPolicy === 'authenticated' &&
-            (access.visibility === 'private' || access.visibility === 'invitation')
-              ? t('access.visibility.widenedByEditing')
-              : undefined
-          }
           onChange={(value) => void updateAccessSetting('visibility', value)}
         />
         <AccessPolicyField
@@ -169,6 +198,8 @@ export function StoryAccessSettings({ storyId, onInaccessible }: StoryAccessSett
           options={editOptions}
           value={access.editPolicy}
           disabled={pending}
+          allowedOptions={getAllowedStoryEditPolicies(access.visibility)}
+          note={editPolicyNote()}
           onChange={(value) => void updateAccessSetting('editPolicy', value)}
         />
         <AccessPolicyField
@@ -253,6 +284,7 @@ function AccessPolicyField<Value extends string>({
   options,
   value,
   disabled,
+  allowedOptions = options,
   note,
   onChange,
 }: {
@@ -261,6 +293,8 @@ function AccessPolicyField<Value extends string>({
   options: readonly Value[];
   value: Value;
   disabled: boolean;
+  /** Options outside this list stay visible but cannot be chosen. */
+  allowedOptions?: readonly Value[];
   note?: string;
   onChange: (value: Value) => void;
 }) {
@@ -282,12 +316,16 @@ function AccessPolicyField<Value extends string>({
         }}
       >
         {options.map((option) => (
-          <option key={option} value={option}>
+          <option key={option} value={option} disabled={!allowedOptions.includes(option)}>
             {t(`access.${policy}.${option}`)}
           </option>
         ))}
       </select>
-      {note === undefined ? null : <p className="product-help">{note}</p>}
+      {note === undefined ? null : (
+        <p className="product-help" role="status">
+          {note}
+        </p>
+      )}
     </div>
   );
 }
