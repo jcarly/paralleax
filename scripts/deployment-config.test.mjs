@@ -93,7 +93,7 @@ test('CI distinguishes integration branches from protected main promotions', asy
   assert.ok(
     workflow.includes('HEAD_REPOSITORY: ${{ github.event.pull_request.head.repo.full_name }}'),
   );
-  assert.ok(workflow.includes('github.base_ref == \'main\''));
+  assert.ok(workflow.includes("github.base_ref == 'main'"));
   assert.ok(workflow.includes("startsWith(github.base_ref, 'release/')"));
   assert.match(workflow, /^    name: Integration readiness$/m);
   assert.match(workflow, /^    name: Main readiness$/m);
