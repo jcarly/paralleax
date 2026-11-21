@@ -10,6 +10,7 @@ import {
   openInteractionBodyEditor,
   openInteractionTitleEditor,
   registerAndCreateStory,
+  selectInteraction,
   requestApiJson,
   waitForApiResponse,
   waitForInteractionPatch,
@@ -227,7 +228,7 @@ test('a response lost after creation commit recovers canonically without duplica
   page,
 }) => {
   const { storyId } = await registerAndCreateStory(page, 'Uncertain committed creation');
-  await interactionNode(page, 'New interaction').click();
+  await selectInteraction(page, 'New interaction');
   const existingTitle = await openInteractionTitleEditor(
     page.getByRole('complementary', { name: 'Inspector' }),
     'New interaction',
