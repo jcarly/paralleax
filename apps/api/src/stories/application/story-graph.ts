@@ -194,6 +194,30 @@ function assertTriggerPositionsBelongToInteractions(
 export class StoryGraphService {
   constructor(private readonly mutations: StoryMutationService) {}
 
+  /** Reuse editor reference and effect rules after a native file's structural checks. */
+  validateNativeInteractionRelations(
+    story: Story,
+    interaction: Story['interactions'][number],
+  ): string | undefined {
+    if (new Set(interaction.characterIds ?? []).size !== (interaction.characterIds ?? []).length) {
+      return 'Interaction characters must be unique';
+    }
+    const copy = { ...interaction };
+    this.updateInteractionRelationships(story, copy, interaction);
+    this.updateInteractionEffects(story, copy, interaction);
+    for (const block of interaction.conditionalTextBlocks ?? []) {
+      this.conditions(story, block.conditions);
+    }
+    for (const trigger of interaction.triggers) {
+      if (new Set(trigger.inputInteractionIds).size !== trigger.inputInteractionIds.length) {
+        return 'Trigger inputs must be unique';
+      }
+      this.assertInteractionReferences(story, trigger.inputInteractionIds);
+      this.triggerConditionGroups(story, trigger, trigger);
+    }
+    return undefined;
+  }
+
   async createInteraction(
     storyId: string,
     input: CreateInteractionDto,

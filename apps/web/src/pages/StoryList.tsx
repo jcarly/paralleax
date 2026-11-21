@@ -113,6 +113,7 @@ function StoryListDialogsSection({ controller }: { controller: StoryListControll
       closeCreationDialog={dialogs.closeCreationDialog}
       closeImportDialog={dialogs.closeImportDialog}
       onImported={operations.onImported}
+      onImportOutcomeUnknown={operations.onImportOutcomeUnknown}
     />
   );
 }

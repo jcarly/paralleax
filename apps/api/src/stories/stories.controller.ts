@@ -1,6 +1,8 @@
 import {
   Body,
+  BadRequestException,
   Controller,
+  ConflictException,
   Delete,
   ForbiddenException,
   Get,
@@ -15,6 +17,7 @@ import {
   Res,
   Sse,
   UnsupportedMediaTypeException,
+  UnprocessableEntityException,
 } from '@nestjs/common';
 import type { Request, Response } from 'express';
 import {
@@ -57,6 +60,12 @@ import {
 } from './dto/stories.dto';
 import { StoriesService } from './stories.service';
 import { StoryImportService } from './application/story-import';
+import {
+  NATIVE_STORY_FILE_LIMIT,
+  NativeStoryImportError,
+  NativeStoryImportService,
+} from './application/native-story-import';
+import { apiErrorResponse } from '../operations/api-error-response';
 import { QspImportProgressService } from './application/qsp-import-progress.service';
 import { CurrentUser, OptionalAuth, Public, type RequestUser } from '../auth/auth.decorators';
 import { Throttle } from '@nestjs/throttler';
@@ -75,6 +84,7 @@ export class StoriesController {
     private readonly stories: StoriesService,
     private readonly storyImports: StoryImportService,
     private readonly qspProgress: QspImportProgressService,
+    private readonly nativeStories: NativeStoryImportService,
   ) {}
 
   @Get()
@@ -111,6 +121,19 @@ export class StoriesController {
       input.confirmWarnings,
       responseAbortSignal(response),
     );
+  }
+
+  @Post('imports/native/preview')
+  @HttpCode(200)
+  async previewNative(@Req() request: Request) {
+    const bytes = await readNativeStoryFile(request);
+    return nativeStoryResponse(() => this.nativeStories.preview(bytes));
+  }
+
+  @Post('imports/native')
+  async importNative(@Req() request: Request, @CurrentUser() user: RequestUser) {
+    const bytes = await readNativeStoryFile(request);
+    return nativeStoryResponse(() => this.nativeStories.create(bytes, user.id));
   }
 
   @Post('imports/qsp')
@@ -158,6 +181,19 @@ export class StoriesController {
       input.progressId,
       responseAbortSignal(response),
     );
+  }
+
+  @Get(':storyId/export')
+  @Header('Cache-Control', 'private, no-store')
+  @Throttle({ default: { limit: STORY_READ_RATE_LIMIT, ttl: 60_000 } })
+  async exportNative(
+    @Param('storyId') id: string,
+    @CurrentUser() user: RequestUser,
+    @Res({ passthrough: true }) response: Response,
+  ) {
+    const file = await this.stories.exportNative(id, user.id);
+    response.attachment(nativeStoryFilename(file.story.title));
+    return file;
   }
 
   @Get(':storyId')
@@ -667,6 +703,42 @@ export class StoriesController {
     @CurrentUser() user: RequestUser,
   ) {
     return this.stories.deleteTrigger(storyId, interactionId, triggerId, user.id);
+  }
+}
+
+function nativeStoryFilename(title: string): string {
+  const name = title
+    .normalize('NFKD')
+    .replace(/[\u0300-\u036f]/g, '')
+    .replace(/[^a-zA-Z0-9_-]+/g, '-')
+    .replace(/^-+|-+$/g, '')
+    .slice(0, 80);
+  return `${name || 'story'}.paralleax.json`;
+}
+
+async function readNativeStoryFile(request: Request): Promise<Buffer> {
+  const contentType = request.get('content-type')?.split(';')[0].trim().toLowerCase();
+  if (contentType !== 'application/octet-stream') {
+    throw new UnsupportedMediaTypeException('Expected an application/octet-stream Story file');
+  }
+  return readBinaryRequestBody(request, NATIVE_STORY_FILE_LIMIT);
+}
+
+async function nativeStoryResponse<T>(work: () => T | Promise<T>): Promise<T> {
+  try {
+    return await work();
+  } catch (error) {
+    if (!(error instanceof NativeStoryImportError)) {
+      throw error;
+    }
+    const body = apiErrorResponse(error.code, error.message, { path: error.path });
+    if (error.code === 'STORY_QUOTA_EXCEEDED') {
+      throw new UnprocessableEntityException(body);
+    }
+    if (error.code === 'ID_COLLISION') {
+      throw new ConflictException(body);
+    }
+    throw new BadRequestException(body);
   }
 }
 

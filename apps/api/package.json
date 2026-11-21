@@ -10,7 +10,7 @@
     "migrate:prod": "node dist/main.js --migrate",
     "typecheck": "tsc --noEmit",
     "test": "node --experimental-vm-modules --disable-warning=ExperimentalWarning ../../node_modules/jest/bin/jest.js --runInBand",
-    "test:postgres": "node --experimental-vm-modules --disable-warning=ExperimentalWarning ../../node_modules/jest/bin/jest.js --runInBand stories.postgres.spec.ts story-access.postgres.spec.ts comments.postgres.spec.ts database.migrations.postgres.spec.ts stories.e2e.spec.ts story-context-history.e2e.spec.ts comments.e2e.spec.ts",
+    "test:postgres": "node --experimental-vm-modules --disable-warning=ExperimentalWarning ../../node_modules/jest/bin/jest.js --runInBand stories.postgres.spec.ts native-story-import.postgres.spec.ts native-story-cross-database.postgres.spec.ts story-access.postgres.spec.ts comments.postgres.spec.ts database.migrations.postgres.spec.ts stories.e2e.spec.ts story-context-history.e2e.spec.ts comments.e2e.spec.ts",
     "test:stress:postgres": "node --experimental-vm-modules --disable-warning=ExperimentalWarning ../../node_modules/jest/bin/jest.js --runInBand stories.stress.postgres.spec.ts",
     "coverage": "node --experimental-vm-modules --disable-warning=ExperimentalWarning ../../node_modules/jest/bin/jest.js --runInBand --coverage"
   },

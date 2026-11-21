@@ -59,6 +59,20 @@ describe('Story difference persistence', () => {
       ['interaction-0', JSON.stringify(after.interactions[0].conditionalTextBlocks)],
     );
   });
+
+  it('persists a changed probability identity for history replay', async () => {
+    const before = graphStory(1);
+    const after = structuredClone(before);
+    after.interactions[0].triggers[0].probabilityKey = 'original-trigger';
+    const query = jest.fn().mockResolvedValue({ rows: [], rowCount: 1 });
+
+    await persistStoryDifference({ query }, before, after);
+
+    expect(query).toHaveBeenCalledWith(
+      expect.stringContaining('probability_key = $5'),
+      expect.arrayContaining(['trigger-0', 'original-trigger']),
+    );
+  });
 });
 
 function graphStory(interactionCount: number): Story {

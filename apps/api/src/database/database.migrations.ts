@@ -1688,4 +1688,10 @@ export const databaseMigrations: DatabaseMigration[] = [
         WHERE visibility = 'invitation' AND edit_policy = 'authenticated';
     `,
   },
+  {
+    id: '202611210047_trigger_probability_key',
+    sql: `
+      ALTER TABLE triggers ADD COLUMN probability_key text;
+    `,
+  },
 ];

@@ -13,7 +13,8 @@ libellés de l'interface en français.
 
 > **Alpha.** Paralleax est en alpha privée accompagnée. Utilisez uniquement des
 > projets de test, pas un travail que vous ne pouvez pas vous permettre de
-> perdre. Une histoire ne peut pas encore être exportée.
+> perdre. Vous pouvez exporter une histoire modifiable depuis sa carte dans la
+> bibliothèque et importer le fichier JSON comme nouvelle histoire privée.
 
 ## Les idées en cinq minutes
 

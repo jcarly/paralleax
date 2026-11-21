@@ -12,6 +12,7 @@ import {
   getNextChildPosition,
   getNextRootPosition,
   isStoryDateTime,
+  projectNativeStory,
   STORY_LIST_PAGE_SIZE,
   storyHistoryOperations,
   type Story,
@@ -82,11 +83,15 @@ export class StoryMetadataService {
     return structuredClone(ensureStoryInteractionPositions(story));
   }
 
+  async exportNative(storyId: string, userId: string) {
+    const story = await this.get(storyId, userId);
+    requireEditAccess(story);
+    return projectNativeStory(story);
+  }
+
   async stream(storyId: string, userId: string) {
     const story = await this.get(storyId, userId);
-    if (story.capabilities?.canEdit !== true) {
-      throw new ForbiddenException('Story edit access required');
-    }
+    requireEditAccess(story);
     return this.events.stream(storyId);
   }
 
@@ -171,5 +176,11 @@ export class StoryMetadataService {
       throw new NotFoundException('Story not found');
     }
     return result;
+  }
+}
+
+function requireEditAccess(story: Story): void {
+  if (story.capabilities?.canEdit !== true) {
+    throw new ForbiddenException('Story edit access required');
   }
 }

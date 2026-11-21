@@ -74,6 +74,7 @@ describe('story editor loader', () => {
       triggers: [
         {
           triggerId: 'trigger',
+          probabilityKey: 'source-trigger',
           conditionGroups: [],
           appearanceProbability: 75,
           timerSeconds: 4,
@@ -96,6 +97,7 @@ describe('story editor loader', () => {
       triggers: [
         {
           id: 'trigger',
+          probabilityKey: 'source-trigger',
           appearanceProbability: 75,
           timerSeconds: 4,
         },

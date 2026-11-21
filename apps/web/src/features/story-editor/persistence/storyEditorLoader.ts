@@ -195,6 +195,7 @@ async function loadConsistentStoryEditorProjection(
           return {
             ...trigger,
             conditionGroups: next.conditionGroups,
+            ...(next.probabilityKey === undefined ? {} : { probabilityKey: next.probabilityKey }),
             appearanceProbability: next.appearanceProbability,
             timerSeconds: next.timerSeconds,
           };

@@ -226,11 +226,6 @@
       "count": 1
     }
   },
-  "apps/api/src/operations/request-body.spec.ts": {
-    "@typescript-eslint/no-unsafe-type-assertion": {
-      "count": 2
-    }
-  },
   "apps/api/src/operations/request-context.spec.ts": {
     "@typescript-eslint/no-unsafe-type-assertion": {
       "count": 5
@@ -390,7 +385,7 @@
   },
   "apps/api/src/stories/application/story-stats.ts": {
     "@typescript-eslint/strict-boolean-expressions": {
-      "count": 13
+      "count": 11
     },
     "max-lines": {
       "count": 1
@@ -2791,7 +2786,7 @@
   },
   "packages/shared/src/items/graph.ts": {
     "@typescript-eslint/strict-boolean-expressions": {
-      "count": 7
+      "count": 6
     },
     "complexity": {
       "count": 1

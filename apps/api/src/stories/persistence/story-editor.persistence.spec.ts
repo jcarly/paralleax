@@ -633,6 +633,7 @@ function triggerContentRows() {
       id: 'trigger-1',
       condition_groups: [{ id: 'group-1', conditions: [] }],
       appearance_probability: 60,
+      probability_key: 'original-trigger-id',
       timer_seconds: 12,
       interaction_sort_order: 0,
       sort_order: 0,
@@ -688,6 +689,7 @@ function expectedTriggerContentPage() {
     triggers: [
       {
         triggerId: 'trigger-1',
+        probabilityKey: 'original-trigger-id',
         conditionGroups: [{ id: 'group-1', conditions: [] }],
         appearanceProbability: 60,
         timerSeconds: 12,

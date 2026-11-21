@@ -2,6 +2,16 @@
 
 ## Unreleased
 
+- Added versioned native Story JSON export and private import from the Story
+  library, with an author-only export permission, validation and preview,
+  collision-safe references and atomic creation. The format and its exclusions
+  are documented in [docs/story-format.md](docs/story-format.md).
+- Allowed native Story preview and import files up to 33 MiB through the
+  production Nginx proxy without changing the global 128 KiB request limit. If
+  an import response is lost, the library refreshes and warns authors to check
+  for the new Story before retrying.
+- Added a persisted Trigger probability identity, preserving existing seeded
+  rolls when native Story import needs to remap a Trigger ID (ADR-049).
 - An untitled option among several is now shown as an error while authoring
   (PAR-7). The graph, Inspector and Simulation leave its label empty, outline it
   in red and add a `!` icon whose tooltip explains the problem, instead of

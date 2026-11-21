@@ -1340,6 +1340,7 @@ function expectTriggerWrites(storyId: string) {
     100,
     null,
     1,
+    null,
   ]);
   expect(mockClientQuery).toHaveBeenCalledWith(
     expect.stringContaining('UPDATE triggers AS target'),
@@ -1358,6 +1359,7 @@ function expectTriggerWrites(storyId: string) {
         },
       ]),
       100,
+      null,
       null,
     ],
   );

@@ -1,5 +1,9 @@
 import * as sanitizeHtml from 'sanitize-html';
-import { resolveStatInterpolationTarget, type Story } from '@paralleax/shared';
+import {
+  resolveStatInterpolationTarget,
+  type NativeStoryIdMaps,
+  type Story,
+} from '@paralleax/shared';
 
 const ALLOWED_TAGS = [
   'p',
@@ -65,14 +69,82 @@ type InertMarkerState = {
   depth: number;
 };
 
+export type NativeRichTextReference =
+  | { kind: 'interaction' | 'block' | 'orphanItem'; id: string }
+  | { kind: 'stat'; id: string; itemId?: string };
+
+type NativeRichTextElement = { tag: string; attributes: sanitizeHtml.Attributes };
+
 export function sanitizeRichText(value: string, story?: Story): string {
   const markerState: InertMarkerState = { spanStack: [], depth: 0 };
   return sanitizeHtml(value, createSanitizerOptions(story, markerState));
 }
 
+/** Sanitize imported HTML while rewriting only structured internal reference attributes. */
+export function sanitizeAndRemapStoryRichText(value: string, maps: NativeStoryIdMaps): string {
+  const markerState: InertMarkerState = { spanStack: [], depth: 0 };
+  return sanitizeHtml(value, createSanitizerOptions(undefined, markerState, maps));
+}
+
+/** Inspect the same parser and allowlist used to sanitize authored HTML. */
+export function inspectNativeStoryRichText(value: string): {
+  sanitized: string;
+  references: NativeRichTextReference[];
+  supported: boolean;
+} {
+  const markerState: InertMarkerState = { spanStack: [], depth: 0 };
+  const references: NativeRichTextReference[] = [];
+  const original: NativeRichTextElement[] = [];
+  const sanitized = sanitizeHtml(
+    value,
+    createSanitizerOptions(undefined, markerState, undefined, (tag, attrs) => {
+      original.push({ tag, attributes: { ...attrs } });
+      collectNativeRichTextReferences(tag, attrs, references);
+    }),
+  );
+  const normalized = collectRichTextElements(sanitized);
+  return {
+    sanitized,
+    references,
+    supported: !value.includes('<!--') && elementsPreserved(original, normalized),
+  };
+}
+
+function collectRichTextElements(value: string): NativeRichTextElement[] {
+  const elements: NativeRichTextElement[] = [];
+  const state: InertMarkerState = { spanStack: [], depth: 0 };
+  sanitizeHtml(
+    value,
+    createSanitizerOptions(undefined, state, undefined, (tag, attributes) => {
+      elements.push({ tag, attributes: { ...attributes } });
+    }),
+  );
+  return elements;
+}
+
+function elementsPreserved(
+  original: NativeRichTextElement[],
+  normalized: NativeRichTextElement[],
+): boolean {
+  if (original.length !== normalized.length) {
+    return false;
+  }
+  return original.every((element, index) => {
+    const target = normalized.at(index);
+    return (
+      element.tag === target?.tag &&
+      Object.entries(element.attributes).every(
+        ([key, value]) => Object.hasOwn(target.attributes, key) && target.attributes[key] === value,
+      )
+    );
+  });
+}
+
 function createSanitizerOptions(
   story: Story | undefined,
   markerState: InertMarkerState,
+  maps?: NativeStoryIdMaps,
+  visit?: (tag: string, attributes: sanitizeHtml.Attributes) => void,
 ): sanitizeHtml.IOptions {
   return {
     allowedTags: ALLOWED_TAGS,
@@ -85,13 +157,62 @@ function createSanitizerOptions(
       attribs['data-rich-text-conditional-controls'] !== undefined,
     onOpenTag: (tagName, attributes) => {
       trackInertMarkerOpen(tagName, attributes, markerState);
+      visit?.(tagName, attributes);
     },
     onCloseTag: (tagName) => {
       trackInertMarkerClose(tagName, markerState);
     },
     textFilter: story ? createTextFilter(story, markerState) : undefined,
-    transformTags: createTagTransformers(story),
+    transformTags: createTagTransformers(story, maps),
   };
+}
+
+function collectNativeRichTextReferences(
+  tag: string,
+  attributes: sanitizeHtml.Attributes,
+  references: NativeRichTextReference[],
+): void {
+  if (tag === 'div' || tag === 'span') {
+    addRichTextReference(attributes, 'data-conditional-text-block', 'block', references);
+  }
+  if (tag === 'div') {
+    addRichTextReference(attributes, 'data-conditional-text-target', 'interaction', references);
+  }
+  if (tag === 'button') {
+    addRichTextReference(attributes, 'data-conditional-text-link', 'interaction', references);
+  }
+  if (tag === 'span') {
+    addRichTextReference(attributes, 'data-interaction-link-target', 'interaction', references);
+    addStatRichTextReference(attributes, references);
+  }
+}
+
+function addRichTextReference(
+  attributes: sanitizeHtml.Attributes,
+  attribute: string,
+  kind: 'interaction' | 'block',
+  references: NativeRichTextReference[],
+): void {
+  if (Object.hasOwn(attributes, attribute)) {
+    references.push({ kind, id: attributes[attribute] });
+  }
+}
+
+function addStatRichTextReference(
+  attributes: sanitizeHtml.Attributes,
+  references: NativeRichTextReference[],
+): void {
+  const hasStat = Object.hasOwn(attributes, 'data-stat-value');
+  const hasItem = Object.hasOwn(attributes, 'data-stat-item');
+  if (hasStat) {
+    references.push({
+      kind: 'stat',
+      id: attributes['data-stat-value'],
+      ...(hasItem ? { itemId: attributes['data-stat-item'] } : {}),
+    });
+  } else if (hasItem) {
+    references.push({ kind: 'orphanItem', id: attributes['data-stat-item'] });
+  }
 }
 
 function trackInertMarkerOpen(
@@ -134,6 +255,7 @@ function createTextFilter(story: Story, markerState: InertMarkerState) {
 
 function createTagTransformers(
   story: Story | undefined,
+  maps?: NativeStoryIdMaps,
 ): NonNullable<sanitizeHtml.IOptions['transformTags']> {
   return {
     a: (_tagName, attributes) => ({
@@ -148,8 +270,40 @@ function createTagTransformers(
       tagName: 'video',
       attribs: { ...attributes, controls: '' },
     }),
-    span: (_tagName, attributes) => transformSpanTag(attributes, story),
+    div: (_tagName, attributes) => ({
+      tagName: 'div',
+      attribs: remapRichTextAttributes(attributes, maps),
+    }),
+    button: (_tagName, attributes) => ({
+      tagName: 'button',
+      attribs: remapRichTextAttributes(attributes, maps),
+    }),
+    span: (_tagName, attributes) =>
+      transformSpanTag(remapRichTextAttributes(attributes, maps), story),
   };
+}
+
+function remapRichTextAttributes(
+  attributes: sanitizeHtml.Attributes,
+  maps: NativeStoryIdMaps | undefined,
+): sanitizeHtml.Attributes {
+  if (!maps) {
+    return attributes;
+  }
+  const result = { ...attributes };
+  for (const [attribute, mapping] of [
+    ['data-conditional-text-target', maps.interaction],
+    ['data-conditional-text-link', maps.interaction],
+    ['data-interaction-link-target', maps.interaction],
+    ['data-stat-value', maps.statAssignment],
+    ['data-stat-item', maps.itemInstance],
+  ] as const) {
+    if (Object.hasOwn(result, attribute)) {
+      const current = result[attribute];
+      result[attribute] = mapping?.get(current) ?? current;
+    }
+  }
+  return result;
 }
 
 function transformSpanTag(

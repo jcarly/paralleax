@@ -125,6 +125,7 @@ export interface StoryEditorInteractionContentPage extends StoryEditorPageMetada
 
 export interface StoryEditorTriggerContent {
   triggerId: string;
+  probabilityKey?: string;
   conditionGroups?: TriggerConditionGroup[];
   appearanceProbability?: number;
   timerSeconds?: number | null;

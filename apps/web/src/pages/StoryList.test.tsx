@@ -312,6 +312,25 @@ it('loads and displays stories with edit and play links', async () => {
   expect(loadStoryPlayer).toHaveBeenCalledTimes(2);
 });
 
+it('offers native export only for editable stories', async () => {
+  vi.mocked(api.listStories).mockResolvedValue(storyPage(structuredClone(stories)));
+  render(
+    <MemoryRouter>
+      <StoryList user={standardUser} />
+    </MemoryRouter>,
+  );
+  const editable = (await screen.findByRole('heading', { name: 'First story' })).closest('article');
+  const readerOnly = screen.getByRole('heading', { name: 'Second story' }).closest('article');
+  if (!editable || !readerOnly) {
+    throw new Error('Missing Story cards');
+  }
+  expect(within(editable).getByRole('link', { name: 'Export' })).toHaveAttribute(
+    'href',
+    '/api/stories/story-1/export',
+  );
+  expect(within(readerOnly).queryByRole('link', { name: 'Export' })).not.toBeInTheDocument();
+});
+
 it('loads the anonymous catalogue without authoring actions', async () => {
   vi.mocked(api.listPublicStories).mockResolvedValue(
     storyPage([
