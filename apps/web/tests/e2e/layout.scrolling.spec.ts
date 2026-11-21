@@ -153,6 +153,37 @@ test.describe('Constrained overlays and editor panels', () => {
     });
   }
 
+  test('keeps the story context toggle usable beside an open inspector on a phone', async ({
+    page,
+  }) => {
+    await page.setViewportSize({ width: 390, height: 844 });
+    const current = cloneStory();
+    if (current.capabilities) {
+      current.capabilities.canComment = true;
+    }
+    await prepareEditorPage(page, current);
+    // The context panel opens over the graph, so select through the focus link.
+    await page.goto('/stories/story-1/edit?focusInteractionId=interaction-1');
+
+    const inspector = page.getByRole('complementary', { name: 'Inspector' });
+    const contextToggle = page.getByRole('button', { name: 'Collapse story context' });
+    await expect(inspector.locator('.inspector-comment-toggle')).toBeVisible();
+    // The Inspector's border comment toggle must not sit over the rail toggle.
+    expect(
+      await contextToggle.evaluate((element) => {
+        const box = element.getBoundingClientRect();
+        const top = document.elementFromPoint(box.x + box.width / 2, box.y + box.height / 2);
+        return element.contains(top);
+      }),
+    ).toBe(true);
+
+    await contextToggle.click();
+    await expect(page.getByRole('button', { name: 'Expand story context' })).toHaveAttribute(
+      'aria-expanded',
+      'false',
+    );
+  });
+
   test('keeps Story settings sections separated in a short viewport', async ({ page }) => {
     await page.setViewportSize({ width: 520, height: 320 });
     await prepareEditorPage(page);
