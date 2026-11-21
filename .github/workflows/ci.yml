@@ -37,7 +37,7 @@ jobs:
       postgres_integration: ${{ steps.full.outputs.full == 'true' || steps.filter.outputs.api == 'true' || steps.filter.outputs.shared == 'true' || steps.filter.outputs.dependencies == 'true' || steps.filter.outputs.restore == 'true' }}
       postgres_restore: ${{ steps.full.outputs.full == 'true' || steps.filter.outputs.restore == 'true' }}
       browser_e2e: ${{ steps.full.outputs.full == 'true' || steps.filter.outputs.web == 'true' || steps.filter.outputs.shared == 'true' || steps.filter.outputs.dependencies == 'true' }}
-      acceptance: ${{ steps.full.outputs.full == 'true' || (github.event_name == 'push' && steps.filter.outputs.acceptance == 'true') }}
+      acceptance: ${{ steps.full.outputs.full == 'true' || steps.filter.outputs.acceptance == 'true' }}
       docker: ${{ steps.full.outputs.full == 'true' || steps.filter.outputs.docker == 'true' }}
       security_audit: ${{ steps.full.outputs.full == 'true' || steps.filter.outputs.dependencies == 'true' }}
       operations: ${{ steps.full.outputs.full == 'true' || steps.filter.outputs.tooling == 'true' || steps.filter.outputs.docker == 'true' || steps.filter.outputs.workflow == 'true' }}
