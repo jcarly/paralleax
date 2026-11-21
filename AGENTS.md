@@ -95,6 +95,17 @@ In particular:
 
 ## Change discipline
 
+### Integration and release branches
+
+Create task branches from `dev` by default, or from the designated `release/*`
+branch when the task belongs to a specific release. Open task pull requests
+against that same integration branch, never directly against `main`.
+Only promotion PRs from `dev` or `release/*` in this repository target
+`main`. Require the appropriate integration or full-release CI gate before
+merging; preserve promotion history with a merge commit. Do not create release
+tags or merge promotion PRs without explicit authorization. See
+[CONTRIBUTING.md](CONTRIBUTING.md#branches-commits-and-pull-requests).
+
 ### Start-of-task checklist
 
 1. Assess model suitability before substantial investigation; report a material
