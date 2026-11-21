@@ -9,6 +9,7 @@ import type { InteractionNodeData } from './components/InteractionNode';
 import type { TriggerNodeData } from './components/TriggerNode';
 import type { CommentPinFlowNode } from './features/comments/CommentPinNode';
 import type { GraphDecorationFlowNode } from './features/graph-decorations/GraphDecorationNode';
+import { getInteractionsNeedingChoiceLabel } from './features/story/choiceLabelDiagnostics';
 import type { TriggerEdgeRoutePoint, TriggerEdgeRoutes } from './triggerEdgeRouting';
 
 export type InteractionFlowNode = Node<InteractionNodeData, 'interaction'>;
@@ -74,6 +75,7 @@ const storyInteractionIndexes = new WeakMap<
 >();
 
 type InteractionNodeContext = {
+  needsChoiceLabel: ReadonlySet<string>;
   selectedId: string | undefined;
   selectedTrigger: SelectedTrigger | undefined;
   actions: InteractionNodeActions;
@@ -93,6 +95,7 @@ export function buildInteractionNodes(
     return [];
   }
   const context = {
+    needsChoiceLabel: getInteractionsNeedingChoiceLabel(story),
     selectedId,
     selectedTrigger,
     actions,
@@ -163,6 +166,7 @@ function buildInteractionNodeData(
     ...(location ? { location: { id: location.id, name: location.name } } : {}),
     ...(characters.length > 0 ? { characters } : {}),
     ...(occurrenceCount > 0 ? { occurrenceCount } : {}),
+    ...(context.needsChoiceLabel.has(item.id) ? { needsChoiceLabel: true } : {}),
     ...(actions.emphasizedInteractionIds
       ? { dimmed: !actions.emphasizedInteractionIds.has(item.id) }
       : {}),

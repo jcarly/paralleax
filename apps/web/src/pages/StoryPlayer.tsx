@@ -52,10 +52,7 @@ import {
 } from '../features/story-player/storyPlayerPresentation';
 import { type StoryRealtimeInvalidation } from '../features/realtime/storyRealtime';
 import { useStoryRouteAccessRecovery } from '../features/story/useStoryRouteAccessRecovery';
-import {
-  interactionTitleForDisplay,
-  interactionTitlePlaceholder,
-} from '../features/story/interactionTitlePresentation';
+import { interactionTitlePlaceholder } from '../features/story/interactionTitlePresentation';
 import { StoryUnavailablePage } from '../features/story/StoryUnavailablePage';
 import { useStoryRealtime } from '../hooks/useStoryRealtime';
 import { usePendingSaveGuard } from '../hooks/usePendingSaveGuard';
@@ -974,14 +971,14 @@ export function StoryPlayer({
                 },
               }}
             />
-          ) : (
+          ) : current.title.trim() ? (
             <InteractionLabel
-              label={interactionTitleForDisplay(current, t)}
+              label={current.title}
               className="player-interaction-label"
               leadingIcon="→"
               heading
             />
-          )
+          ) : null
         ) : null}
         <PlayerScene
           location={currentLocation}

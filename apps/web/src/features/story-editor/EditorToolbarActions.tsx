@@ -102,7 +102,7 @@ function ToolbarNavigationActions({
   return (
     <>
       <Link
-        className="canvas-tool-action editor-toolbar-icon-action"
+        className="button canvas-tool-action editor-toolbar-icon-action"
         aria-label={t('editor.testFromStart')}
         data-tooltip={t('editor.testFromStart')}
         title={t('editor.testFromStart')}
@@ -113,7 +113,7 @@ function ToolbarNavigationActions({
       </Link>
       {hasCurrentSimulationTarget ? (
         <Link
-          className="canvas-tool-action editor-toolbar-icon-action"
+          className="button canvas-tool-action editor-toolbar-icon-action"
           aria-label={t('editor.testFromCurrent')}
           data-tooltip={t('editor.testFromCurrent')}
           title={t('editor.testFromCurrent')}

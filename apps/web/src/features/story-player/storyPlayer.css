@@ -315,8 +315,8 @@
 
 .story-body {
   font-family: var(--font-narrative);
-  font-size: 1.15rem;
-  line-height: 1.7;
+  font-size: var(--type-size-narrative);
+  line-height: var(--type-leading-narrative);
   white-space: pre-wrap;
 }
 
@@ -348,9 +348,6 @@
 
 .player-story-content .rich-text-surface {
   color: #454944;
-  font-family: var(--font-narrative);
-  font-size: 1.15rem;
-  line-height: 1.7;
 }
 
 .story-body .interaction-link {

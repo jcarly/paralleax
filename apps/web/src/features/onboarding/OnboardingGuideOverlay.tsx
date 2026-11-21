@@ -5,13 +5,7 @@ import { getGuideCardPosition } from './guidePlacement';
 import type { GuideCardPosition, GuideRect } from './guidePlacement';
 
 export type OnboardingGuideFocus =
-  | 'create-story'
-  | 'discover-interactions'
-  | 'write-scene'
-  | 'create-branch'
-  | 'test-story-editor'
-  | 'test-story-simulation'
-  | null;
+  'create-story' | 'write-scene' | 'create-branch' | 'test-story-editor' | null;
 
 interface GuideOverlayState {
   focus: OnboardingGuideFocus;
@@ -23,11 +17,9 @@ interface GuideOverlayState {
 
 const targetCandidates: Record<Exclude<OnboardingGuideFocus, null>, string[]> = {
   'create-story': ['story-create'],
-  'discover-interactions': ['interaction', 'graph'],
-  'write-scene': ['scene-inspector', 'interaction', 'graph'],
+  'write-scene': ['scene-content', 'scene-inspector', 'interaction', 'graph'],
   'create-branch': ['branch-add', 'interaction', 'graph'],
   'test-story-editor': ['simulation-launch'],
-  'test-story-simulation': ['simulation-choices'],
 };
 
 function findFocusTarget(focus: OnboardingGuideFocus): HTMLElement | undefined {
@@ -150,16 +142,18 @@ function useGuideOverlayPosition(
 
 export function OnboardingGuideOverlay({
   focus,
+  leaving = false,
   children,
 }: {
   focus: OnboardingGuideFocus;
+  leaving?: boolean;
   children: ReactNode;
 }) {
   const positionerRef = useRef<HTMLDivElement>(null);
   const position = useGuideOverlayPosition(focus, positionerRef);
 
   return createPortal(
-    <div className="onboarding-guide-layer">
+    <div className={`onboarding-guide-layer${leaving ? ' is-leaving' : ''}`} inert={leaving}>
       <div
         className="onboarding-guide-positioner"
         data-placement={position.placement}

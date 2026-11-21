@@ -1,9 +1,11 @@
 import { useEffect, useState } from 'react';
 import { useTranslation } from 'react-i18next';
-import type {
-  StoryAccessConfiguration,
-  StoryAccessSettings,
-  StoryCollaboratorRole,
+import {
+  fitStoryEditPolicy,
+  getAllowedStoryEditPolicies,
+  type StoryAccessConfiguration,
+  type StoryAccessSettings,
+  type StoryCollaboratorRole,
 } from '@paralleax/shared';
 import { api } from '../../api';
 import { apiErrorMessage } from '../../apiErrorMessages';
@@ -25,6 +27,7 @@ export function StoryAccessSettings({ storyId, onInaccessible }: StoryAccessSett
   const [pending, setPending] = useState(false);
   const [error, setError] = useState('');
   const [accessStatus, setAccessStatus] = useState<'idle' | 'saving' | 'saved' | 'error'>('idle');
+  const [editPolicyChange, setEditPolicyChange] = useState<'narrowed' | 'openedForEditors'>();
 
   useEffect(() => {
     let cancelled = false;
@@ -54,7 +57,13 @@ export function StoryAccessSettings({ storyId, onInaccessible }: StoryAccessSett
       return;
     }
     const previous = access;
-    const next = { ...access, [key]: value };
+    const changed = { ...access, [key]: value };
+    // Editing stays within reading: narrowing reading narrows editing too.
+    const next = {
+      ...changed,
+      editPolicy: fitStoryEditPolicy(changed.visibility, changed.editPolicy),
+    };
+    setEditPolicyChange(next.editPolicy === changed.editPolicy ? undefined : 'narrowed');
     setAccess(next);
     setAccessStatus('saving');
     const updated = await runAccessOperation(
@@ -65,26 +74,37 @@ export function StoryAccessSettings({ storyId, onInaccessible }: StoryAccessSett
       setAccessStatus('saved');
     } else {
       setAccess(previous);
+      setEditPolicyChange(undefined);
       setAccessStatus('error');
     }
   }
 
-  async function addUser(email: string, role: StoryCollaboratorRole): Promise<boolean> {
+  /** A single API operation atomically creates the grant and opens editing if needed. */
+  async function saveCollaborator(
+    email: string,
+    role: StoryCollaboratorRole,
+    errorMessage: string,
+  ): Promise<boolean> {
+    const previousEditPolicy = access?.editPolicy;
     const updated = await runAccessOperation(
       () => api.setStoryCollaborator(storyId, email.trim(), role),
-      t('access.inviteFailed'),
+      errorMessage,
     );
+    if (updated && previousEditPolicy === 'owner' && updated.editPolicy === 'collaborators') {
+      setEditPolicyChange('openedForEditors');
+    }
     return Boolean(updated);
+  }
+
+  async function addUser(email: string, role: StoryCollaboratorRole): Promise<boolean> {
+    return saveCollaborator(email, role, t('access.inviteFailed'));
   }
 
   async function changeRole(emailAddress: string, nextRole: StoryCollaboratorRole) {
     if (pending) {
       return;
     }
-    await runAccessOperation(
-      () => api.setStoryCollaborator(storyId, emailAddress, nextRole),
-      t('access.roleUpdateFailed'),
-    );
+    await saveCollaborator(emailAddress, nextRole, t('access.roleUpdateFailed'));
   }
 
   async function remove(userId: string) {
@@ -129,6 +149,21 @@ export function StoryAccessSettings({ storyId, onInaccessible }: StoryAccessSett
     }
   }
 
+  function editPolicyNote() {
+    if (!access) {
+      return undefined;
+    }
+    if (editPolicyChange === 'narrowed') {
+      return t('access.edit.adjusted', { policy: t(`access.edit.${access.editPolicy}`) });
+    }
+    if (editPolicyChange === 'openedForEditors') {
+      return t('access.edit.openedForEditors');
+    }
+    return getAllowedStoryEditPolicies(access.visibility).length < editOptions.length
+      ? t('access.edit.limitedByReading')
+      : undefined;
+  }
+
   if (error && !access) {
     return (
       <p className="library-error" role="alert">
@@ -149,77 +184,32 @@ export function StoryAccessSettings({ storyId, onInaccessible }: StoryAccessSett
             email: `${access.owner.displayName} · ${access.owner.email}`,
           })}
         </p>
-        <div className="form-field form-field--standard">
-          <div className="field-label-with-help">
-            <label htmlFor="story-access-visibility">{t('access.visibility.label')}</label>
-            <FieldHelpTooltip
-              label={t('access.visibility.label')}
-              help={t('access.visibility.help')}
-            />
-          </div>
-          <select
-            className="form-control form-control--standard"
-            id="story-access-visibility"
-            value={access.visibility}
-            disabled={pending}
-            onChange={(event) =>
-              void updateAccessSetting(
-                'visibility',
-                event.currentTarget.value as StoryAccessConfiguration['visibility'],
-              )
-            }
-          >
-            {visibilityOptions.map((value) => (
-              <option key={value} value={value}>
-                {t(`access.visibility.${value}`)}
-              </option>
-            ))}
-          </select>
-        </div>
-        <label className="form-field form-field--standard">
-          <span>{t('access.edit.label')}</span>
-          <select
-            className="form-control form-control--standard"
-            value={access.editPolicy}
-            disabled={pending}
-            onChange={(event) =>
-              void updateAccessSetting(
-                'editPolicy',
-                event.currentTarget.value as StoryAccessConfiguration['editPolicy'],
-              )
-            }
-          >
-            {editOptions.map((value) => (
-              <option key={value} value={value}>
-                {t(`access.edit.${value}`)}
-              </option>
-            ))}
-          </select>
-        </label>
-        <div className="form-field form-field--standard">
-          <div className="field-label-with-help">
-            <label htmlFor="story-access-comments">{t('access.comments.label')}</label>
-            <FieldHelpTooltip label={t('access.comments.label')} help={t('access.comments.help')} />
-          </div>
-          <select
-            className="form-control form-control--standard"
-            id="story-access-comments"
-            value={access.commentPolicy}
-            disabled={pending}
-            onChange={(event) =>
-              void updateAccessSetting(
-                'commentPolicy',
-                event.currentTarget.value as StoryAccessConfiguration['commentPolicy'],
-              )
-            }
-          >
-            {commentOptions.map((value) => (
-              <option key={value} value={value}>
-                {t(`access.comments.${value}`)}
-              </option>
-            ))}
-          </select>
-        </div>
+        <AccessPolicyField
+          id="story-access-visibility"
+          policy="visibility"
+          options={visibilityOptions}
+          value={access.visibility}
+          disabled={pending}
+          onChange={(value) => void updateAccessSetting('visibility', value)}
+        />
+        <AccessPolicyField
+          id="story-access-edit"
+          policy="edit"
+          options={editOptions}
+          value={access.editPolicy}
+          disabled={pending}
+          allowedOptions={getAllowedStoryEditPolicies(access.visibility)}
+          note={editPolicyNote()}
+          onChange={(value) => void updateAccessSetting('editPolicy', value)}
+        />
+        <AccessPolicyField
+          id="story-access-comments"
+          policy="comments"
+          options={commentOptions}
+          value={access.commentPolicy}
+          disabled={pending}
+          onChange={(value) => void updateAccessSetting('commentPolicy', value)}
+        />
         {accessStatus === 'saving' ? (
           <p className="product-help" role="status">
             {t('access.saving')}
@@ -284,6 +274,58 @@ export function StoryAccessSettings({ storyId, onInaccessible }: StoryAccessSett
           </p>
         ) : null}
       </section>
+    </div>
+  );
+}
+
+function AccessPolicyField<Value extends string>({
+  id,
+  policy,
+  options,
+  value,
+  disabled,
+  allowedOptions = options,
+  note,
+  onChange,
+}: {
+  id: string;
+  policy: 'visibility' | 'edit' | 'comments';
+  options: readonly Value[];
+  value: Value;
+  disabled: boolean;
+  /** Options outside this list stay visible but cannot be chosen. */
+  allowedOptions?: readonly Value[];
+  note?: string;
+  onChange: (value: Value) => void;
+}) {
+  const { t } = useTranslation();
+  const label = t(`access.${policy}.label`);
+  return (
+    <div className="form-field form-field--standard">
+      <div className="field-label-with-help">
+        <label htmlFor={id}>{label}</label>
+        <FieldHelpTooltip label={label} help={t(`access.${policy}.help.${value}`)} />
+      </div>
+      <select
+        className="form-control form-control--standard"
+        id={id}
+        value={value}
+        disabled={disabled}
+        onChange={(event) => {
+          onChange(event.currentTarget.value as Value);
+        }}
+      >
+        {options.map((option) => (
+          <option key={option} value={option} disabled={!allowedOptions.includes(option)}>
+            {t(`access.${policy}.${option}`)}
+          </option>
+        ))}
+      </select>
+      {note === undefined ? null : (
+        <p className="product-help" role="status">
+          {note}
+        </p>
+      )}
     </div>
   );
 }

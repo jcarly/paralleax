@@ -3,6 +3,8 @@ import { StoryCommentsPanel } from '../../comments/StoryCommentsPanel';
 import { InspectorResizeHandle } from './InspectorResizeHandle';
 import { StoryInspectorContent } from './StoryInspectorContent';
 import type { StoryEditorInspectorModel } from './storyEditorInspectorModel';
+import { CanvasActionIcon } from '../../../components/StoryCanvasToolbar';
+import { getSelectedGraphElementTarget } from '../graph/useStoryEditorGraphDeletion';
 import type { StoryEditorInspectorLayout } from './useStoryEditorInspectorLayout';
 
 export function StoryEditorInspector({
@@ -193,6 +195,7 @@ function StoryInspectorHeader({
       {model.selection.selectedCommentTarget && model.story.capabilities?.canComment === true ? (
         <StoryInspectorCommentActions model={model} />
       ) : null}
+      <InspectorDeleteButton model={model} />
       <InspectorMaximizeButton
         maximized={layout.maximized}
         maximizeLabel={model.t('editor.maximizeInspector')}
@@ -208,6 +211,39 @@ function StoryInspectorHeader({
         x
       </button>
     </div>
+  );
+}
+
+const deleteLabels = {
+  interaction: 'interactionInspector.deleteInteraction',
+  trigger: 'triggerInspector.deleteTrigger',
+  graphDecoration: 'decoration.delete',
+} as const;
+
+/** One delete action for the selected graph element, in the header like Maximize and Close. */
+function InspectorDeleteButton({ model }: { model: StoryEditorInspectorModel }) {
+  const { selection } = model;
+  const target = model.reviewOnly
+    ? undefined
+    : getSelectedGraphElementTarget(
+        selection.selected,
+        selection.selectedTriggerTarget,
+        selection.selectedGraphDecoration,
+      );
+  if (!target) {
+    return null;
+  }
+  const label = model.t(deleteLabels[target.kind]);
+  return (
+    <button
+      className="ghost inspector-delete"
+      type="button"
+      aria-label={label}
+      title={label}
+      onClick={() => void model.actions.deleteGraphElement(target)}
+    >
+      <CanvasActionIcon name="delete" />
+    </button>
   );
 }
 

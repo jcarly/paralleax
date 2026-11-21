@@ -604,3 +604,35 @@ describe('story graph mapping', () => {
     expect(buildTriggerEdges(undefined)).toEqual([]);
   });
 });
+
+describe('story graph choice label warnings', () => {
+  it('flags untitled Interactions offered among several choices', () => {
+    const interaction = (id: string, title: string, inputs: string[]) => ({
+      id,
+      title,
+      body: '',
+      position: { x: 0, y: 0 },
+      triggers: [{ id: `trigger-${id}`, inputInteractionIds: inputs, conditions: [] }],
+    });
+    const branchingStory = {
+      id: 'story-1',
+      title: 'Story',
+      createdAt: '2026-11-20T08:00:00.000Z',
+      updatedAt: '2026-11-20T08:00:00.000Z',
+      interactions: [
+        interaction('start', '', []),
+        interaction('left', '', ['start']),
+        interaction('right', 'Go right', ['start']),
+      ],
+    } satisfies Story;
+
+    const flags = Object.fromEntries(
+      buildInteractionNodes(branchingStory, undefined).map((node) => [
+        node.id,
+        node.data.needsChoiceLabel,
+      ]),
+    );
+
+    expect(flags).toEqual({ start: undefined, left: true, right: undefined });
+  });
+});
