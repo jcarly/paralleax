@@ -27,6 +27,8 @@ module.exports = {
   },
   moduleNameMapper: {
     '^@paralleax/shared$': '<rootDir>/../../packages/shared/src/index.ts',
+    '^@paralleax/shared/native-story-validation$':
+      '<rootDir>/../../packages/shared/src/native-story-validation.ts',
     '^(\\.{1,2}/.*)\\.js$': '$1',
   },
 };

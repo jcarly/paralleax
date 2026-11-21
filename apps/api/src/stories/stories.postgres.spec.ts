@@ -4,6 +4,7 @@ import {
   createDemoStories,
   setStoryGroupInteractions,
   moveStoryGroup,
+  projectNativeStory,
   type Story,
 } from '@paralleax/shared';
 import { Pool } from 'pg';
@@ -11,6 +12,7 @@ import type { DatabaseConnection } from '../database/database.connection';
 import { DatabaseMigrator } from '../database/database.migrator';
 import { resetPostgresTestDatabase } from '../database/postgres-test-database';
 import { StoriesRepository } from './stories.repository';
+import { planNativeStoryPersistenceIds } from './persistence/native-story-identifiers.persistence';
 
 const connectionString = process.env.POSTGRES_TEST_DATABASE_URL;
 const describePostgres = connectionString ? describe : describe.skip;
@@ -44,6 +46,11 @@ describePostgres('StoriesRepository PostgreSQL integration', () => {
     'round-trips expressions through full, editor and runtime PostgreSQL projections',
     runExpressionRoundTrip,
   );
+  it(
+    'preserves Trigger probability identity in PostgreSQL projections and edits',
+    runProbabilityIdentityRoundTrip,
+  );
+  it('plans collision-free native IDs against PostgreSQL without writing', runNativeIdPlanning);
   it(
     'persists interaction and trigger moves across repository instances',
     runInteractionAndTriggerMoves,
@@ -92,6 +99,101 @@ async function preparePostgresDatabase() {
       `${adminId}@example.test`,
     ],
   );
+}
+
+async function runNativeIdPlanning() {
+  const source = persistedStory();
+  await repository.save(source, ownerId);
+  const content = projectNativeStory(source).story;
+  content.interactions.push({
+    id: 'fresh-native-interaction',
+    title: '',
+    body: '',
+    position: { x: 0, y: 0 },
+    triggers: [],
+  });
+  const targetStoryId = '2d85d945-235c-4d47-96cb-75b46da76c5f';
+  const first = await planNativeStoryPersistenceIds(pool, content, targetStoryId);
+  const nextId = first.interaction?.get('interaction-1');
+  expect(nextId).toBeDefined();
+  expect(nextId).not.toBe('interaction-1');
+  expect(first.interaction?.has('fresh-native-interaction')).toBe(false);
+  expect(first.trigger?.get('trigger-2')).toBeDefined();
+  expect(await planNativeStoryPersistenceIds(pool, content, targetStoryId)).toEqual(first);
+  if (nextId === undefined) {
+    throw new Error('Missing planned identifier');
+  }
+  const occupied = persistedStory();
+  occupied.locations = [];
+  occupied.characters = [];
+  occupied.stats = [];
+  occupied.statDefinitions = [];
+  occupied.itemDefinitions = [];
+  occupied.graphDecorations = [];
+  occupied.interactions = [
+    { id: nextId, title: '', body: '', position: { x: 0, y: 0 }, triggers: [] },
+  ];
+  await repository.save(occupied, ownerId);
+  const second = await planNativeStoryPersistenceIds(pool, content, targetStoryId);
+  expect(second.interaction?.get('interaction-1')).not.toBe(nextId);
+}
+
+async function runProbabilityIdentityRoundTrip() {
+  const story = persistedStory();
+  story.interactions[1].triggers[0].probabilityKey = 'original-trigger';
+  await repository.save(story, ownerId);
+  const fresh = new StoriesRepository(database);
+  expect((await fresh.find(story.id, ownerId))?.interactions[1].triggers[0].probabilityKey).toBe(
+    'original-trigger',
+  );
+  expect(
+    (await fresh.findEditorTriggerContentPage(story.id, ownerId, 1, 100))?.triggers,
+  ).toContainEqual(
+    expect.objectContaining({ triggerId: 'trigger-2', probabilityKey: 'original-trigger' }),
+  );
+  const runtime = await fresh.findRuntimeSlice(story.id, ownerId, {
+    currentInteractionId: 'interaction-1',
+    interactionIds: ['interaction-1'],
+    page: 1,
+    pageSize: 100,
+  });
+  expect(runtime?.interactions).toContainEqual(
+    expect.objectContaining({
+      id: 'interaction-2',
+      triggers: [expect.objectContaining({ probabilityKey: 'original-trigger' })],
+    }),
+  );
+  await fresh.mutate(
+    story.id,
+    (current) => {
+      current.interactions[1].triggers[0].timerSeconds = 2;
+      current.revision = (current.revision ?? 0) + 1;
+      return current;
+    },
+    ownerId,
+  );
+  expect((await fresh.find(story.id, ownerId))?.interactions[1].triggers[0]).toMatchObject({
+    probabilityKey: 'original-trigger',
+    timerSeconds: 2,
+  });
+  await expectProbabilityIdentityHistory(fresh, story.id);
+}
+
+async function expectProbabilityIdentityHistory(fresh: StoriesRepository, storyId: string) {
+  await expect(fresh.revertHistory(storyId, ownerId, 'undo')).resolves.toMatchObject({
+    kind: 'applied',
+  });
+  expect((await fresh.find(storyId, ownerId))?.interactions[1].triggers[0]).toMatchObject({
+    probabilityKey: 'original-trigger',
+    timerSeconds: 12,
+  });
+  await expect(fresh.revertHistory(storyId, ownerId, 'redo')).resolves.toMatchObject({
+    kind: 'applied',
+  });
+  expect((await fresh.find(storyId, ownerId))?.interactions[1].triggers[0]).toMatchObject({
+    probabilityKey: 'original-trigger',
+    timerSeconds: 2,
+  });
 }
 
 function persistedStory(): Story {

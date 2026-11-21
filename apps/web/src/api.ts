@@ -5,6 +5,8 @@ import type {
   ChoiceScriptSourceFile,
   QspImportReport,
   QspSourceFormat,
+  NativeStoryImportSummary,
+  NativeStoryImportResult,
   CommentAnchor,
   CharacterItemMutationResult,
   CharacterItemDeletionResult,
@@ -433,6 +435,15 @@ export const api = {
       ...(signal ? { signal } : {}),
     }),
   importReportUrl: (importId: string) => `/api/imports/${encodeURIComponent(importId)}/report`,
+  previewNativeStory: (file: Blob, signal?: AbortSignal) =>
+    uploadBinary<NativeStoryImportSummary>(
+      '/stories/imports/native/preview',
+      file,
+      undefined,
+      signal,
+    ),
+  importNativeStory: (file: Blob, signal?: AbortSignal) =>
+    uploadBinary<NativeStoryImportResult>('/stories/imports/native', file, undefined, signal),
   importQsp: (
     file: { name: string; format: QspSourceFormat; contentBase64: string },
     confirmWarnings = false,

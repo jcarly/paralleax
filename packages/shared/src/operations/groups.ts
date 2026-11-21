@@ -84,7 +84,9 @@ function findGroupMoveSibling(
 }
 
 /** Validate canonical organization, including after history replay. */
-export function validateStoryGroups(story: Story): string | undefined {
+export function validateStoryGroups(
+  story: Pick<Story, 'interactions' | 'groups'>,
+): string | undefined {
   const groups = story.groups ?? [];
   const byId = new Map(groups.map((group) => [group.id, group]));
   if (byId.size !== groups.length) {

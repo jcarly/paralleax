@@ -71,10 +71,8 @@ Consequences:
 - Feedback is self-selected: authors who give up early rarely answer it. The
   absence of negative feedback is not evidence that the editor is clear; task 10
   reads feedback together with simple activity counts.
-- The 2026-11-18 decision (Story format and native export first in "Next") is
-  unchanged. Native export is **not** a prerequisite of the open alpha: operator
-  backups protect stored work, and the alpha notice states that authors cannot
-  export their Stories yet. Export stays the first "Next" item after opening.
+- The 2026-11-18 decision promoted native Story export. The feature is now
+  implemented; operator backups remain a separate open-alpha safety gate.
 
 ## Priority decision, 2026-11-18
 
@@ -112,17 +110,18 @@ feedback.
 
 ### 1. Stable Story format and native export / restore
 
-Former task 7, promoted.
+Former task 7, promoted. Native export and import are implemented in the
+current work; final integration remains in progress. The versioned contract and
+its limits are documented in [Story format](story-format.md). Import creates a
+new private Story; it does not replace an existing one.
 
-- Write `docs/story-format.md`: the versioned, documented JSON representation of
-  authored Story data (Interactions, Triggers, condition groups, effects, stats,
-  items, locations, characters, calendar, Groups), with stable identifiers.
-  This answers the open question in
-  [Open questions → Story Format and Examples](open-questions.md#story-format-and-examples).
-- Deliver export and restore of that format, with validation before persistence.
-- **Acceptance:** a representative Story round-trips without loss of supported
-  entities or links; invalid input is rejected with diagnostics; the format has a
-  version number and a compatibility rule.
+The foreign-format importer extraction required by ADR-046 has not yet been
+completed. It needs to move the existing adapters and their quality-gate,
+worker and deployment integration together; the current native format does
+not depend on those adapters.
+
+- Representative round-trip, invalid-input and cross-database checks exercise the
+  supported content and references. Compatibility is explicit and versioned.
 
 ### 2. Durable Story-level collaboration groundwork
 

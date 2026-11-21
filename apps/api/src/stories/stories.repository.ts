@@ -3,7 +3,6 @@ import {
   applyStoryChangeDelta,
   createStoryChangeDelta,
   createStoryHistoryMutationResult,
-  DEFAULT_STORY_DATE_TIME,
   READER_AUTOSAVE_ID,
   STORY_LIST_PAGE_SIZE,
   defaultStoryAccess,
@@ -51,10 +50,13 @@ import {
   storyManageableSql,
   storyReadableSql,
 } from './persistence/story-access-sql';
-import {
-  persistStoryDifference,
-  replaceStoryGraph,
-} from './persistence/stories.persistence.writer';
+import { persistStoryDifference } from './persistence/stories.persistence.writer';
+import { persistCompleteStory } from './persistence/story-complete.persistence';
+import { planNativeStoryPersistenceIds } from './persistence/native-story-identifiers.persistence';
+import type {
+  NativeStoryImportPort,
+  NativeStoryImportRequest,
+} from './application/native-story-import.port';
 import {
   findStoryHistoryCandidate,
   insertStoryHistoryEvent,
@@ -279,7 +281,7 @@ const storyAccessSelect = `SELECT stories.id, stories.revision, stories.title,
     ON permission.story_id = stories.id AND permission.user_id = actor.id`;
 
 @Injectable()
-export class StoriesRepository {
+export class StoriesRepository implements NativeStoryImportPort {
   constructor(private readonly database: DatabaseConnection) {}
 
   async list(
@@ -551,6 +553,20 @@ export class StoriesRepository {
   async save(story: Story, ownerId: string): Promise<void> {
     await this.transaction(async (client) => {
       await this.saveWith(client, story, ownerId);
+    });
+  }
+
+  async createNativeStory(request: NativeStoryImportRequest): Promise<Story> {
+    return this.transaction(async (client) => {
+      const maps = await planNativeStoryPersistenceIds(client, request.content, request.storyId);
+      const story: Story = {
+        ...request.prepare(maps),
+        id: request.storyId,
+        revision: 1,
+        access: { ...defaultStoryAccess },
+      };
+      await persistCompleteStory(client, story, request.ownerId, 'insert');
+      return story;
     });
   }
 
@@ -950,34 +966,7 @@ export class StoriesRepository {
   }
 
   private async saveWith(client: PoolClient, story: Story, ownerId: string): Promise<void> {
-    assertStoryWithinQuotas(story);
-    await client.query(
-      `INSERT INTO stories
-       (id, revision, title, start_date_time, created_at, updated_at, creator_user_id,
-        visibility, edit_policy, comment_policy)
-       VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10)
-       ON CONFLICT (id) DO UPDATE
-       SET title = EXCLUDED.title,
-           start_date_time = EXCLUDED.start_date_time,
-           visibility = EXCLUDED.visibility,
-           edit_policy = EXCLUDED.edit_policy,
-           comment_policy = EXCLUDED.comment_policy,
-           created_at = EXCLUDED.created_at,
-           updated_at = EXCLUDED.updated_at`,
-      [
-        story.id,
-        story.revision ?? 1,
-        story.title,
-        story.startDateTime ?? DEFAULT_STORY_DATE_TIME,
-        story.createdAt,
-        story.updatedAt,
-        ownerId,
-        story.access?.visibility ?? defaultStoryAccess.visibility,
-        story.access?.editPolicy ?? defaultStoryAccess.editPolicy,
-        story.access?.commentPolicy ?? defaultStoryAccess.commentPolicy,
-      ],
-    );
-    await replaceStoryGraph(client, story);
+    await persistCompleteStory(client, story, ownerId, 'upsert');
   }
 }
 
@@ -1165,7 +1154,7 @@ async function loadStoryTriggerRows(
     `SELECT triggers.id, interactions.story_id, triggers.output_interaction_id,
               triggers.position_x, triggers.position_y, triggers.sort_order,
               triggers.condition_groups, triggers.appearance_probability,
-              triggers.timer_seconds
+              triggers.timer_seconds, triggers.probability_key
        FROM triggers
        JOIN interactions ON interactions.id = triggers.output_interaction_id
        WHERE interactions.story_id = ANY($1::text[])

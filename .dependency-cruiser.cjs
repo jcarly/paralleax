@@ -34,7 +34,7 @@ module.exports = {
       comment: 'Application workspaces must consume the public @paralleax/shared facade.',
       severity: 'error',
       from: { path: '^apps/(web|api|mcp)/src/' },
-      to: { path: '^packages/shared/src/(?!index\\.ts$)' },
+      to: { path: '^packages/shared/src/(?!index\\.ts$|native-story-validation\\.ts$)' },
     },
     {
       name: 'controllers-not-persistence',

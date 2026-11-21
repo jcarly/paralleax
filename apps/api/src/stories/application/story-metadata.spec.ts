@@ -80,6 +80,29 @@ it('only exposes the authoring event stream to editors', async () => {
   await expect(service.stream('story-1', 'reader-1')).rejects.toThrow('Story edit access required');
 });
 
+it('exports editorial data only to users with edit access', async () => {
+  const source = storyFixture();
+  repository.find.mockResolvedValueOnce(source);
+  const exported = await service.exportNative('story-1', 'user-1');
+  expect(exported).toMatchObject({
+    format: 'paralleax.story',
+    version: 1,
+    story: { title: 'Story', interactions: [{ id: 'root', position: { x: 80, y: 120 } }] },
+  });
+  expect(exported.story).not.toHaveProperty('id');
+  expect(exported.story).not.toHaveProperty('capabilities');
+  expect(exported.story).not.toHaveProperty('createdAt');
+  expect(source.interactions[0].position).toBeUndefined();
+
+  source.capabilities = { canRead: true, canEdit: false, canManage: false, canComment: true };
+  repository.find.mockResolvedValueOnce(source);
+  await expect(service.exportNative('story-1', 'reader-1')).rejects.toThrow(
+    'Story edit access required',
+  );
+  repository.find.mockResolvedValueOnce(undefined);
+  await expect(service.exportNative('missing', 'user-1')).rejects.toThrow('Story not found');
+});
+
 it('creates a trimmed story with current defaults', async () => {
   jest.useFakeTimers().setSystemTime(new Date('2026-08-25T16:30:00.000Z'));
 

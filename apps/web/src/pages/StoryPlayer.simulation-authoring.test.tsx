@@ -1,3 +1,4 @@
+import { requireValue } from '../test/assertions';
 import { fireEvent, screen, waitFor } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
@@ -221,10 +222,10 @@ describe('StoryPlayer simulation authoring', () => {
 
   it('adds an option in simulation mode and focuses its title', async () => {
     const user = userEvent.setup();
-    const position = (await getStoryGraphClickCreationPosition(story, {
-      kind: 'child',
-      sourceId: 'next',
-    }))!;
+    const position = requireValue(
+      await getStoryGraphClickCreationPosition(story, { kind: 'child', sourceId: 'next' }),
+      'child creation position',
+    );
     const withOption = structuredClone(story);
     withOption.interactions.push({
       id: 'option-1',
@@ -275,10 +276,10 @@ describe('StoryPlayer simulation authoring', () => {
     });
     delete (withOption.interactions[3] as Partial<(typeof withOption.interactions)[number]>)
       .position;
-    const nestedPosition = (await getStoryGraphClickCreationPosition(withOption, {
-      kind: 'child',
-      sourceId: 'option-1',
-    }))!;
+    const nestedPosition = requireValue(
+      await getStoryGraphClickCreationPosition(withOption, { kind: 'child', sourceId: 'option-1' }),
+      'nested child creation position',
+    );
     const nestedOption = {
       id: 'option-2',
       title: 'Nested option',
@@ -316,7 +317,10 @@ describe('StoryPlayer simulation authoring', () => {
   it('adds a root option at the beginning of simulation mode', async () => {
     const user = userEvent.setup();
     const runtimeStory = { ...story, interactions: [story.interactions[0]] };
-    const position = (await getStoryGraphClickCreationPosition(runtimeStory, { kind: 'root' }))!;
+    const position = requireValue(
+      await getStoryGraphClickCreationPosition(runtimeStory, { kind: 'root' }),
+      'root creation position',
+    );
     const rootOption = {
       id: 'root-2',
       title: 'New option',

@@ -36,7 +36,10 @@ describePostgres('Database migrations PostgreSQL upgrade', () => {
     await pool.query(`INSERT INTO interaction_stat_effects(value) VALUES ('2'::jsonb)`);
     const migration = databaseMigrations.find(
       ({ id }) => id === '202610210044_stat_effect_expressions',
-    )!;
+    );
+    if (!migration) {
+      throw new Error('Expected the stat effect expression migration to exist.');
+    }
     await pool.query(migration.sql);
     expect(
       (await pool.query('SELECT value, expression FROM interaction_stat_effects')).rows,
@@ -856,7 +859,10 @@ describePostgres('Database migrations PostgreSQL upgrade', () => {
     const cleanupMigration = databaseMigrations.find(
       ({ id }) => id === '202608240032_remove_stat_definition_keys',
     );
-    await pool.query(cleanupMigration!.sql);
+    if (!cleanupMigration) {
+      throw new Error('Expected the stat definition key cleanup migration to exist.');
+    }
+    await pool.query(cleanupMigration.sql);
     await expect(
       pool.query(
         `SELECT column_name

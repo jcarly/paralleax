@@ -1,3 +1,4 @@
+import { requireValue } from '../../test/assertions';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 import type { Interaction, Story, StoryRuntimeSlice } from '@paralleax/shared';
 import { api } from '../../api';
@@ -75,14 +76,25 @@ describe('story runtime loader', () => {
       }),
     );
 
-    const loaded = await loadStoryRuntimeSlice(story, journey.at(-1)!, journey);
+    const loaded = await loadStoryRuntimeSlice(
+      story,
+      requireValue(journey.at(-1), 'last journey interaction'),
+      journey,
+    );
 
     expect(api.getStoryRuntimeSlice).toHaveBeenCalledTimes(2);
-    expect(vi.mocked(api.getStoryRuntimeSlice).mock.calls[0][1]!).toMatchObject({
+    expect(
+      requireValue(vi.mocked(api.getStoryRuntimeSlice).mock.calls[0]?.[1], 'first runtime request'),
+    ).toMatchObject({
       interactionIds: journey.slice(0, 200),
       includeOptions: true,
     });
-    expect(vi.mocked(api.getStoryRuntimeSlice).mock.calls[1][1]!).toMatchObject({
+    expect(
+      requireValue(
+        vi.mocked(api.getStoryRuntimeSlice).mock.calls[1]?.[1],
+        'second runtime request',
+      ),
+    ).toMatchObject({
       interactionIds: journey.slice(200),
       includeOptions: false,
     });

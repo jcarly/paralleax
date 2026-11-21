@@ -6,6 +6,8 @@ import { StoriesRepository } from './stories.repository';
 import { StoriesService } from './stories.service';
 import { StoryEventsService } from './story.events';
 import { StoryImportService } from './application/story-import';
+import { NativeStoryImportService } from './application/native-story-import';
+import { NATIVE_STORY_IMPORT_PORT } from './application/native-story-import.port';
 import { StoryAccessService } from './application/story-access';
 import { StoryContextService } from './application/story-context';
 import { StoryGraphService } from './application/story-graph';
@@ -27,6 +29,8 @@ import { QspImportProgressService } from './application/qsp-import-progress.serv
     StoriesService,
     StoryEventsService,
     StoryImportService,
+    NativeStoryImportService,
+    { provide: NATIVE_STORY_IMPORT_PORT, useExisting: StoriesRepository },
     QspImportWorkerService,
     ChoiceScriptImportWorkerService,
     QspImportProgressService,

@@ -1,4 +1,5 @@
 import { expect, test } from '@playwright/test';
+import { requireValue } from '../../src/test/assertions';
 import {
   createdInteraction,
   editorSyncIndicator,
@@ -9,6 +10,7 @@ import {
   openInteractionBodyEditor,
   openInteractionTitleEditor,
   registerAndCreateStory,
+  selectInteraction,
   requestApiJson,
   waitForApiResponse,
   waitForInteractionPatch,
@@ -177,19 +179,18 @@ test('slow reordered saves preserve graph creation, movement, and deletion acros
   await page.getByRole('button', { name: 'Fit View' }).click();
   await expect(childNode).toBeInViewport();
   const initialTransform = await childNode.evaluate((element) => element.style.transform);
-  const childBox = await childNode.boundingBox();
-  expect(childBox).not.toBeNull();
+  const childBox = requireValue(await childNode.boundingBox(), 'child interaction bounding box');
 
   const positionSave = waitForApiResponse(
     page,
     'PATCH',
     new RegExp(`/api/stories/${storyId}/graph/positions$`),
   );
-  await page.mouse.move(childBox!.x + childBox!.width / 2, childBox!.y + childBox!.height / 2);
+  await page.mouse.move(childBox.x + childBox.width / 2, childBox.y + childBox.height / 2);
   await page.mouse.down();
   await page.mouse.move(
-    childBox!.x + childBox!.width / 2 + 140,
-    childBox!.y + childBox!.height / 2 + 90,
+    childBox.x + childBox.width / 2 + 140,
+    childBox.y + childBox.height / 2 + 90,
     { steps: 8 },
   );
   await page.mouse.up();
@@ -227,7 +228,7 @@ test('a response lost after creation commit recovers canonically without duplica
   page,
 }) => {
   const { storyId } = await registerAndCreateStory(page, 'Uncertain committed creation');
-  await interactionNode(page, 'New interaction').click();
+  await selectInteraction(page, 'New interaction');
   const existingTitle = await openInteractionTitleEditor(
     page.getByRole('complementary', { name: 'Inspector' }),
     'New interaction',

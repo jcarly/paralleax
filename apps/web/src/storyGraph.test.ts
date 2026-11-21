@@ -1,3 +1,4 @@
+import { requireValue } from './test/assertions';
 import { describe, expect, it } from 'vitest';
 import { MarkerType } from '@xyflow/react';
 import type { Story } from '@paralleax/shared';
@@ -391,28 +392,30 @@ describe('story graph mapping', () => {
     ];
     const finalInteractionPosition = { x: 180, y: 220 };
     const triggerNodeId = getTriggerNodeId('interaction-2', 'trigger-linked');
-    const automaticBefore = automaticNodes.find((node) => node.id === triggerNodeId)!;
-    const automaticAfter = applyInteractionDragTriggerPreview(
+    const automaticPreview = applyInteractionDragTriggerPreview(
       automaticNodes,
       story,
       'interaction-1',
       finalInteractionPosition,
-    ).find((node) => node.id === triggerNodeId)!;
-
+    );
     const preview = applyInteractionDragTriggerPreview(
       nodes,
       positionedStory,
       'interaction-1',
       finalInteractionPosition,
     );
-    const savedBefore = nodes.find((node) => node.id === triggerNodeId)!;
-    const savedAfter = preview.find((node) => node.id === triggerNodeId)!;
+    const triggerNodes = [automaticNodes, automaticPreview, nodes, preview].map((candidateNodes) =>
+      requireValue(
+        candidateNodes.find((node) => node.id === triggerNodeId),
+        `trigger node ${triggerNodeId}`,
+      ),
+    );
+    const [automaticBefore, automaticAfter, savedBefore, savedAfter] = triggerNodes;
     const automaticMovement = automaticAfter.position.x - automaticBefore.position.x;
     const savedMovement = savedAfter.position.x - savedBefore.position.x;
 
     expect(preview).not.toBe(nodes);
-    expect(savedMovement).toBeGreaterThan(0);
-    expect(savedMovement).toBeLessThan(automaticMovement);
+    expect(savedMovement > 0 && savedMovement < automaticMovement).toBe(true);
     expect(savedAfter.position.y - savedBefore.position.y).toBe(savedMovement);
     expect(
       getInteractionDragTriggerPositionUpdates(

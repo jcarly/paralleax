@@ -1,7 +1,7 @@
 import 'reflect-metadata';
 import type { INestApplication } from '@nestjs/common';
 import * as request from 'supertest';
-import { MAX_INTERACTION_BODY_LENGTH, STORY_LIST_PAGE_SIZE } from '@paralleax/shared';
+import { MAX_INTERACTION_BODY_LENGTH, STORY_LIST_PAGE_SIZE, type Story } from '@paralleax/shared';
 import { STORY_MUTATION_RATE_LIMIT } from './stories.controller';
 import { parseResponse } from './test/api-json';
 import {
@@ -24,7 +24,7 @@ const interactionPath = `/api/stories/${storyId}/interactions/${interactionId}`;
 
 function createRepositoryStub() {
   return {
-    find: jest.fn(() => Promise.resolve(undefined)),
+    find: jest.fn((): Promise<Story | undefined> => Promise.resolve(undefined)),
     save: jest.fn(() => Promise.resolve()),
     list: jest.fn(() =>
       Promise.resolve({ items: [], page: 1, pageSize: STORY_LIST_PAGE_SIZE, totalCount: 0 }),
@@ -44,6 +44,28 @@ beforeEach(async () => {
   ({ app, httpServer } = api);
 });
 afterEach(() => api.close());
+
+it('exports an attachment only to an editor', async () => {
+  const story: Story = {
+    id: storyId,
+    title: 'Export',
+    createdAt: '2026-01-01T00:00:00.000Z',
+    updatedAt: '2026-01-01T00:00:00.000Z',
+    capabilities: { canRead: true, canEdit: true, canManage: false, canComment: true },
+    interactions: [],
+  };
+  repository.find.mockResolvedValueOnce(story);
+  const response = await getApi(`/api/stories/${storyId}/export`, 200);
+  expect(response.headers['content-disposition']).toContain('attachment');
+  expect(parseResponse(response)).toMatchObject({
+    format: 'paralleax.story',
+    version: 1,
+    story: { title: 'Export', interactions: [] },
+  });
+  story.capabilities = { canRead: true, canEdit: false, canManage: false, canComment: true };
+  repository.find.mockResolvedValueOnce(story);
+  await getApi(`/api/stories/${storyId}/export`, 403);
+});
 
 it('rate-limits story mutations independently from reads', async () => {
   // Keep Supertest from owning and closing the shared server while concurrent requests are active.

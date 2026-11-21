@@ -72,6 +72,15 @@ function StoryCardActions({
         {t('library.card.read')}
       </Link>
       {canEdit ? <StoryEditLink storyId={story.id} label={t('library.card.edit')} /> : null}
+      {canEdit ? (
+        <a
+          className="product-ghost compact"
+          href={`/api/stories/${encodeURIComponent(story.id)}/export`}
+          download
+        >
+          {t('library.card.export')}
+        </a>
+      ) : null}
       {canManage ? (
         <StoryManageActions
           story={story}

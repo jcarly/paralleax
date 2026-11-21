@@ -103,6 +103,10 @@ export class StoriesService {
     return this.metadata.listPublic(options);
   }
 
+  exportNative(id: string, userId: string) {
+    return this.metadata.exportNative(id, userId);
+  }
+
   getEditorBootstrap(id: string, userId: string) {
     return this.metadata.getEditorBootstrap(id, userId);
   }

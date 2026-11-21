@@ -1,6 +1,7 @@
 import { expect, test, type Page } from '@playwright/test';
 import { writeFile } from 'node:fs/promises';
 import { updateStoryGraphPositions, type StoryGraphPositionUpdates } from '@paralleax/shared';
+import { requireValue } from '../../src/test/assertions';
 import { buildTriggerEdges, getTriggerNodeId } from '../../src/storyGraph';
 import {
   complexLayoutStoryMotifs,
@@ -59,6 +60,7 @@ test('audits real routes after organizing a tangled 100-interaction story', asyn
   await expect(page.locator('.react-flow__edge-path')).toHaveCount(expectedEdgeCount);
   const after = await readSettledLayout(page, connections);
   const durationMs = Math.round(performance.now() - startedAt);
+  const saved = requireValue(savedPositions, 'saved graph position updates');
   expect(after.nodes.map(({ id }) => id).sort()).toEqual(before.nodes.map(({ id }) => id).sort());
   expect(after.edges.map(({ id }) => id).sort()).toEqual(connections.map(({ id }) => id).sort());
   const originalNodes = new Map(before.nodes.map((node) => [node.id, node]));
@@ -66,7 +68,7 @@ test('audits real routes after organizing a tangled 100-interaction story', asyn
     expect([node.x, node.y, node.width, node.height].every(Number.isFinite)).toBe(true);
     expect(node.width).toBeGreaterThan(0);
     expect(node.height).toBeGreaterThan(0);
-    const original = originalNodes.get(node.id)!;
+    const original = requireValue(originalNodes.get(node.id), `original layout node ${node.id}`);
     expect(Math.abs(node.width - original.width), `${node.id}: width is preserved`).toBeLessThan(
       0.25,
     );
@@ -78,14 +80,14 @@ test('audits real routes after organizing a tangled 100-interaction story', asyn
     expect(edge.points.length).toBeGreaterThan(1);
     expect(edge.points.every(({ x, y }) => Number.isFinite(x) && Number.isFinite(y))).toBe(true);
   }
-  expect(savedPositions!.interactionUpdates.length).toBeGreaterThan(0);
+  expect(saved.interactionUpdates.length).toBeGreaterThan(0);
   const appliedNodes = new Map(after.nodes.map((node) => [node.id, node]));
   const updates = [
-    ...savedPositions!.interactionUpdates.map(({ interactionId, position }) => ({
+    ...saved.interactionUpdates.map(({ interactionId, position }) => ({
       id: interactionId,
       position,
     })),
-    ...savedPositions!.triggerUpdates.flatMap(({ interactionId, triggerIds, position }) =>
+    ...saved.triggerUpdates.flatMap(({ interactionId, triggerIds, position }) =>
       triggerIds.map((triggerId) => ({
         id: getTriggerNodeId(interactionId, triggerId),
         position,
@@ -93,14 +95,13 @@ test('audits real routes after organizing a tangled 100-interaction story', asyn
     ),
   ];
   for (const { id, position } of updates) {
-    const applied = appliedNodes.get(id)!;
-    expect(applied, `Saved node ${id} must be rendered`).toBeDefined();
+    const applied = requireValue(appliedNodes.get(id), `saved layout node ${id}`);
     expect(Math.abs(applied.x - position.x), `${id}: saved x is applied`).toBeLessThan(0.25);
     expect(Math.abs(applied.y - position.y), `${id}: saved y is applied`).toBeLessThan(0.25);
   }
   expect(
     updates.some(({ id, position }) => {
-      const original = originalNodes.get(id)!;
+      const original = requireValue(originalNodes.get(id), `original layout node ${id}`);
       return Math.hypot(original.x - position.x, original.y - position.y) > 1;
     }),
   ).toBe(true);
@@ -247,14 +248,20 @@ test('audits top-input routes in a two-interaction cycle after organization and 
     expect(layout.nodes.map(({ id }) => id).sort()).toEqual(expectedNodeIds);
     expect(layout.edges.map(({ id }) => id).sort()).toEqual(connections.map(({ id }) => id).sort());
     for (const interaction of story.interactions) {
-      const node = layout.nodes.find(({ id }) => id === interaction.id)!;
+      const node = requireValue(
+        layout.nodes.find(({ id }) => id === interaction.id),
+        `layout node ${interaction.id}`,
+      );
       expect(Math.abs(node.x - interaction.position.x)).toBeLessThan(0.25);
       expect(Math.abs(node.y - interaction.position.y)).toBeLessThan(0.25);
     }
   }
   // The regression concerns rerouting the same saved geometry, including Trigger markers.
   for (const node of reloaded.nodes) {
-    const original = organized.nodes.find(({ id }) => id === node.id)!;
+    const original = requireValue(
+      organized.nodes.find(({ id }) => id === node.id),
+      `organized layout node ${node.id}`,
+    );
     for (const coordinate of ['x', 'y', 'width', 'height'] as const) {
       expect(
         Math.abs(node[coordinate] - original[coordinate]),

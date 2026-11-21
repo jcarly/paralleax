@@ -1,3 +1,4 @@
+import { requireValue } from '../test/assertions';
 import React from 'react';
 import { act, cleanup, fireEvent, render, screen, waitFor, within } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
@@ -275,7 +276,10 @@ it('loads and displays stories with edit and play links', async () => {
   expect(screen.getByRole('heading', { name: 'Second story' })).toBeInTheDocument();
   expect(api.listStories).toHaveBeenCalledOnce();
   expect(api.listPublicStories).not.toHaveBeenCalled();
-  const firstCard = screen.getByRole('heading', { name: 'First story' }).closest('article')!;
+  const firstCard = requireValue(
+    screen.getByRole('heading', { name: 'First story' }).closest('article'),
+    'first story card',
+  );
   expect(within(firstCard).queryByRole('img')).not.toBeInTheDocument();
   expect(firstCard.querySelector('dl')).toBeNull();
   expect(within(firstCard).queryByText('Interactions')).not.toBeInTheDocument();
@@ -308,6 +312,25 @@ it('loads and displays stories with edit and play links', async () => {
   expect(loadStoryPlayer).toHaveBeenCalledTimes(2);
 });
 
+it('offers native export only for editable stories', async () => {
+  vi.mocked(api.listStories).mockResolvedValue(storyPage(structuredClone(stories)));
+  render(
+    <MemoryRouter>
+      <StoryList user={standardUser} />
+    </MemoryRouter>,
+  );
+  const editable = (await screen.findByRole('heading', { name: 'First story' })).closest('article');
+  const readerOnly = screen.getByRole('heading', { name: 'Second story' }).closest('article');
+  if (!editable || !readerOnly) {
+    throw new Error('Missing Story cards');
+  }
+  expect(within(editable).getByRole('link', { name: 'Export' })).toHaveAttribute(
+    'href',
+    '/api/stories/story-1/export',
+  );
+  expect(within(readerOnly).queryByRole('link', { name: 'Export' })).not.toBeInTheDocument();
+});
+
 it('loads the anonymous catalogue without authoring actions', async () => {
   vi.mocked(api.listPublicStories).mockResolvedValue(
     storyPage([
@@ -325,7 +348,10 @@ it('loads the anonymous catalogue without authoring actions', async () => {
     </MemoryRouter>,
   );
 
-  const card = (await screen.findByRole('heading', { name: 'First story' })).closest('article')!;
+  const card = requireValue(
+    (await screen.findByRole('heading', { name: 'First story' })).closest('article'),
+    'first story card',
+  );
   expect(screen.getByRole('heading', { name: 'Stories' })).toBeInTheDocument();
   expect(api.listPublicStories).toHaveBeenCalledOnce();
   expect(api.listStories).not.toHaveBeenCalled();
@@ -384,7 +410,10 @@ it('deletes a story from the list', async () => {
   );
   await screen.findByRole('heading', { name: 'First story' });
 
-  const firstCard = screen.getByRole('heading', { name: 'First story' }).closest('article')!;
+  const firstCard = requireValue(
+    screen.getByRole('heading', { name: 'First story' }).closest('article'),
+    'first story card',
+  );
   const deleteButton = within(firstCard).getByRole('button', { name: 'Delete' });
   fireEvent.focus(deleteButton);
   expect(deleteButton).toHaveAttribute('aria-describedby');
@@ -481,7 +510,10 @@ it('imports ChoiceScript scene files with a clean compatibility report', async (
     'href',
     '/stories/story-imported/edit',
   );
-  const importedCard = screen.getByRole('heading', { name: 'Imported story' }).closest('article')!;
+  const importedCard = requireValue(
+    screen.getByRole('heading', { name: 'Imported story' }).closest('article'),
+    'imported story card',
+  );
   expect(within(importedCard).queryByText('Interactions')).not.toBeInTheDocument();
 });
 
@@ -709,9 +741,12 @@ it('displays the QSP conversion error report returned by the API', async () => {
 
   const alert = await screen.findByRole('alert');
   expect(within(alert).getByText('The source could not be converted into a story.')).toBeVisible();
-  const errorReport = screen
-    .getByRole('link', { name: 'Download report' })
-    .closest<HTMLElement>('.choicescript-import-result')!;
+  const errorReport = requireValue(
+    screen
+      .getByRole('link', { name: 'Download report' })
+      .closest<HTMLElement>('.choicescript-import-result'),
+    'import error report',
+  );
   expect(within(errorReport).getByText('2')).toBeVisible();
   expect(
     within(errorReport).queryByText('The QSP statement is malformed.'),
@@ -1191,7 +1226,10 @@ it('only shows actions allowed by resolved story capabilities', async () => {
       <StoryList user={standardUser} />
     </MemoryRouter>,
   );
-  const card = (await screen.findByRole('heading', { name: 'First story' })).closest('article')!;
+  const card = requireValue(
+    (await screen.findByRole('heading', { name: 'First story' })).closest('article'),
+    'first story card',
+  );
   expect(within(card).getByText('Public')).toBeInTheDocument();
   expect(within(card).getByRole('link', { name: 'Read' })).toBeInTheDocument();
   expect(within(card).queryByRole('link', { name: 'Edit' })).not.toBeInTheDocument();
@@ -1215,7 +1253,10 @@ it('keeps commenter-only readers on the player surface', async () => {
       <StoryList user={standardUser} />
     </MemoryRouter>,
   );
-  const card = (await screen.findByRole('heading', { name: 'First story' })).closest('article')!;
+  const card = requireValue(
+    (await screen.findByRole('heading', { name: 'First story' })).closest('article'),
+    'first story card',
+  );
   expect(within(card).getByRole('link', { name: 'Read' })).toHaveAttribute(
     'href',
     '/stories/story-1/play',

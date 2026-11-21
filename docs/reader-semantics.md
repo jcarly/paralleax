@@ -120,7 +120,8 @@ is checked separately from the condition groups; it is not another Boolean
 condition expression.
 
 The appearance probability is an integer from 0 through 100 and defaults to 100.
-The roll is derived from the progress seed, narrative step, and Trigger id. It is
+The roll is derived from the progress seed, narrative step, and the Trigger's
+stable probability identity (its id when no separate identity is present). It is
 performed only after the input rule and one condition group match. If several
 Triggers target the same interaction, they roll independently and any successful
 Trigger makes the interaction available. Simulation Mode reports probability

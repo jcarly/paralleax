@@ -32,6 +32,7 @@ export type PersistedTriggerRow = {
   condition_groups: TriggerConditionGroup[];
   appearance_probability: number;
   timer_seconds: number | null;
+  probability_key: string | null;
   sort_order: number;
 };
 
@@ -66,6 +67,7 @@ export function projectTriggers(
 ): StoryTrigger[] {
   return rows.map((row) => ({
     id: row.id,
+    ...(typeof row.probability_key === 'string' ? { probabilityKey: row.probability_key } : {}),
     inputInteractionIds: (inputsByTrigger.get(row.id) ?? []).map(
       ({ input_interaction_id }) => input_interaction_id,
     ),

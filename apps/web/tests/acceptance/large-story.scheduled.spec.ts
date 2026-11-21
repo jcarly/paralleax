@@ -1,4 +1,5 @@
 import { expect, test, type Page, type Response } from '@playwright/test';
+import { requireValue } from '../../src/test/assertions';
 import {
   expectSuccessful,
   interactionTitleValue,
@@ -107,8 +108,10 @@ test('opens, navigates, edits, reloads, and simulates a realistically sized Stor
   await expectSuccessful(titleUpdate);
 
   const selectedNode = page.getByTestId('interaction-node').filter({ hasText: persistedTitle });
-  const selectedBox = await selectedNode.boundingBox();
-  expect(selectedBox).not.toBeNull();
+  const selectedBox = requireValue(
+    await selectedNode.boundingBox(),
+    'selected interaction bounding box',
+  );
   const graphPositionUpdate = waitForApiResponse(
     page,
     'PATCH',
@@ -116,13 +119,13 @@ test('opens, navigates, edits, reloads, and simulates a realistically sized Stor
   );
   const dragStartedAt = performance.now();
   await page.mouse.move(
-    selectedBox!.x + selectedBox!.width / 2,
-    selectedBox!.y + selectedBox!.height / 2,
+    selectedBox.x + selectedBox.width / 2,
+    selectedBox.y + selectedBox.height / 2,
   );
   await page.mouse.down();
   await page.mouse.move(
-    selectedBox!.x + selectedBox!.width / 2 + 80,
-    selectedBox!.y + selectedBox!.height / 2 + 50,
+    selectedBox.x + selectedBox.width / 2 + 80,
+    selectedBox.y + selectedBox.height / 2 + 50,
     { steps: 8 },
   );
   await page.mouse.up();

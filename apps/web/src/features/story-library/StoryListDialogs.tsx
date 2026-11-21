@@ -12,6 +12,21 @@ const StoryImportDialogComponent = lazy(() =>
 
 type PendingAction = 'story' | 'demo' | '';
 
+interface StoryListDialogsProps {
+  creating: boolean;
+  importing: boolean;
+  isAuthenticated: boolean;
+  isAdministrator: boolean;
+  pending: PendingAction;
+  newTitle: string;
+  setNewTitle: (title: string) => void;
+  createStory: (event: FormEvent) => void;
+  closeCreationDialog: () => void;
+  closeImportDialog: () => void;
+  onImported: (story: StorySummary) => void;
+  onImportOutcomeUnknown: () => void;
+}
+
 export function StoryListDialogs({
   creating,
   importing,
@@ -24,19 +39,8 @@ export function StoryListDialogs({
   closeCreationDialog,
   closeImportDialog,
   onImported,
-}: {
-  creating: boolean;
-  importing: boolean;
-  isAuthenticated: boolean;
-  isAdministrator: boolean;
-  pending: PendingAction;
-  newTitle: string;
-  setNewTitle: (title: string) => void;
-  createStory: (event: FormEvent) => void;
-  closeCreationDialog: () => void;
-  closeImportDialog: () => void;
-  onImported: (story: StorySummary) => void;
-}) {
+  onImportOutcomeUnknown,
+}: StoryListDialogsProps) {
   return (
     <>
       {creating && isAuthenticated ? (
@@ -54,6 +58,7 @@ export function StoryListDialogs({
             isAdministrator={isAdministrator}
             onClose={closeImportDialog}
             onImported={onImported}
+            onImportOutcomeUnknown={onImportOutcomeUnknown}
           />
         </Suspense>
       ) : null}

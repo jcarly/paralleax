@@ -1,3 +1,4 @@
+import { requireValue } from '../../../test/assertions';
 import { act, renderHook } from '@testing-library/react';
 import type { ReactFlowInstance } from '@xyflow/react';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
@@ -68,7 +69,12 @@ describe('story context navigation', () => {
     });
 
     expect(harness.result.current.referencedInteractionIds).toEqual(['source', 'target']);
-    expect([...harness.result.current.emphasizedInteractionIds!]).toEqual(['source', 'target']);
+    expect([
+      ...requireValue(
+        harness.result.current.emphasizedInteractionIds,
+        'emphasized interaction IDs',
+      ),
+    ]).toEqual(['source', 'target']);
     expect(harness.result.current.currentNavigationIndex).toBe(0);
 
     act(() => {

@@ -190,12 +190,12 @@ export async function changeStoryCollaboratorRole(
 
 export function interactionNode(page: Page, title: string) {
   const nodes = page.getByTestId('interaction-node');
-  if (title === 'New interaction') {
-    // Untitled Interactions have no authored graph label: either none at all, or only the
-    // greyed fallback shown for roots and unlabelled choices.
-    return nodes.filter({
-      hasNot: page.locator('.interaction-node-label:not(.interaction-label-fallback)'),
-    });
+  if (title === 'New interaction' || title === UNLABELLED_OPTION) {
+    // Untitled non-root Interactions have no authored graph label: either none at all, or only
+    // the greyed fallback shown for unlabelled choices. The root reads `Start`.
+    return nodes
+      .filter({ hasNot: page.locator('.interaction-node-label:not(.interaction-label-fallback)') })
+      .filter({ hasNotText: 'Start' });
   }
   return nodes.filter({ hasText: title });
 }
@@ -240,6 +240,22 @@ export async function openInteractionTitleEditor(inspector: Locator, title: stri
   return interactionTitleField(inspector);
 }
 
+/** Fits the graph, which renders only visible nodes, then selects the last matching Interaction. */
+export async function selectInteraction(page: Page, title: string) {
+  await page.getByRole('button', { name: 'Fit View' }).click();
+  const target = interactionNode(page, title).last();
+  await expect(target).toBeInViewport();
+  await target.click();
+}
+
+/**
+ * Stands for an untitled Interaction offered among several options. The graph and Inspector show
+ * it as an authoring error with an empty title instead of the `New interaction` placeholder.
+ */
+export const UNLABELLED_OPTION = 'Unlabelled option';
+const CHOICE_LABEL_ERROR =
+  'Label required: this is one of several options. Readers see “Option N” until it has a title.';
+
 export async function editInteraction(
   page: Page,
   currentTitle: string,
@@ -247,16 +263,14 @@ export async function editInteraction(
   body: string,
 ) {
   const inspector = page.getByRole('complementary', { name: 'Inspector' });
-  await page.getByRole('button', { name: 'Fit View' }).click();
-  const target = interactionNode(page, currentTitle).last();
-  await expect(target).toBeInViewport();
-  await target.click();
-  const titleValue = interactionTitleValue(inspector, currentTitle);
-  await expect(titleValue).toBeVisible();
-  const titleField = await openInteractionTitleEditor(inspector, currentTitle);
+  const unlabelled = currentTitle === UNLABELLED_OPTION;
+  const shownTitle = unlabelled ? CHOICE_LABEL_ERROR : currentTitle;
+  await selectInteraction(page, currentTitle);
+  await expect(interactionTitleValue(inspector, shownTitle)).toBeVisible();
+  const titleField = await openInteractionTitleEditor(inspector, shownTitle);
   await expect(titleField).toBeVisible();
   await expect(titleField).toHaveValue('');
-  await expect(titleField).toHaveAttribute('placeholder', currentTitle);
+  await expect(titleField).toHaveAttribute('placeholder', unlabelled ? '' : currentTitle);
   const titleUpdate = waitForInteractionPatch(page);
   await titleField.fill(title);
   await titleField.blur();

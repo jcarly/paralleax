@@ -7,6 +7,24 @@ import { createRailwayContext, github } from 'railway/iac';
 
 const readRepositoryFile = (path) => readFile(new URL(`../${path}`, import.meta.url), 'utf8');
 
+function assertNativeImportProxyConfiguration(configuration) {
+  const locations = [
+    ...configuration.matchAll(
+      /^\s*location = (?<path>\/api\/stories\/imports\/native(?:\/preview)?) \{(?<body>[\s\S]*?)^\s{4}\}$/gm,
+    ),
+  ];
+  assert.deepEqual(locations.map(({ groups }) => groups?.path).sort(), [
+    '/api/stories/imports/native',
+    '/api/stories/imports/native/preview',
+  ]);
+  assert.equal((configuration.match(/client_max_body_size 33m;/g) ?? []).length, 2);
+  for (const { groups } of locations) {
+    assert.match(groups?.body ?? '', /^\s*client_max_body_size 33m;$/m);
+    assert.match(groups?.body ?? '', /^\s*proxy_request_buffering off;$/m);
+    assert.match(groups?.body ?? '', /^\s*proxy_read_timeout 1h;$/m);
+  }
+}
+
 const readSupportedNodeMajor = async () => {
   const { engines } = JSON.parse(await readRepositoryFile('package.json'));
   const match = /^(\d+)\.x$/.exec(engines.node);
@@ -196,6 +214,7 @@ test('the public web reverse proxy and healthcheck share the Railway runtime por
   );
 
   assert.match(nginxConfiguration, /^ {4}client_max_body_size 128k;$/m);
+  assertNativeImportProxyConfiguration(nginxConfiguration);
   assert.match(nginxConfiguration, /^\s*set \$api_upstream "\$\{API_HOST\}:\$\{API_PORT\}";$/m);
   assert.match(nginxConfiguration, /^\s*proxy_pass http:\/\/\$api_upstream\$request_uri;$/m);
   assert.match(
