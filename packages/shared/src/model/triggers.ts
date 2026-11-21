@@ -8,6 +8,8 @@ export interface TriggerConditionGroup {
 
 export interface Trigger {
   id: string;
+  /** Stable probability input retained when a Trigger ID is remapped on import. */
+  probabilityKey?: string;
   inputInteractionIds: string[];
   /** @deprecated Legacy single AND group. New writes use conditionGroups. */
   conditions?: TriggerCondition[];

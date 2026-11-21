@@ -1676,4 +1676,10 @@ export const databaseMigrations: DatabaseMigration[] = [
         CHECK (visibility IN ('private', 'authenticated', 'public', 'unlisted', 'invitation'));
     `,
   },
+  {
+    id: '202611200046_trigger_probability_key',
+    sql: `
+      ALTER TABLE triggers ADD COLUMN probability_key text;
+    `,
+  },
 ];

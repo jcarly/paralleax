@@ -4,6 +4,10 @@ Status: Accepted
 
 Date: 2026-08-31
 
+Update (2026-11-20): [ADR-048](ADR-048-portable-trigger-probability.md)
+adds an optional stable probability identity for imported Triggers. When it is
+absent, the Trigger ID remains the probability input described below.
+
 Current authoring policy (2026-10-25): the editor and API allow each directed
 source → target pair on one Trigger. Multiple condition variants for that pair
 use the Trigger's OR condition groups. This application policy does not add a

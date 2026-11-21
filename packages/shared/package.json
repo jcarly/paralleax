@@ -9,6 +9,10 @@
     ".": {
       "types": "./dist/index.d.ts",
       "import": "./dist/index.js"
+    },
+    "./native-story-validation": {
+      "types": "./dist/native-story-validation.d.ts",
+      "default": "./dist/native-story-validation.js"
     }
   },
   "scripts": {
@@ -23,6 +27,7 @@
     "vitest": "^5.0.0"
   },
   "dependencies": {
-    "@qsp/converters": "^2.0.0"
+    "@qsp/converters": "^2.0.0",
+    "zod": "^4.6.7"
   }
 }

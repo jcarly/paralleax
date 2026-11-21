@@ -58,7 +58,8 @@ Paralleax currently includes:
 - Triggers with multiple input interactions, OR condition groups containing AND
   typed conditions, one 0–100 appearance probability, and optional saved positions
   for linked graph markers. Probability uses one deterministic roll per Trigger
-  and narrative step. A nullable non-negative timer limits how long an otherwise
+  and narrative step, using a stable probability identity when present and the
+  Trigger ID otherwise. A nullable non-negative timer limits how long an otherwise
   eligible Trigger exposes its option; active timers render as draining bars,
   while zero-second timers never appear in normal reading.
   Normal editor and API creation or input edits allow each directed source →
@@ -214,6 +215,12 @@ Paralleax currently includes:
   load paginated context plus only their journey and the option interactions and
   Triggers structurally relevant to the current step; unrelated graph branches
   and graph decorations are not loaded into the player.
+- Native Story JSON export is available to editors from the library. An
+  authenticated author can preview a file and import it as a new private Story;
+  validation and quota checks precede transactional creation. The versioned
+  format, supported content, exclusions and limits are in
+  [Story format](story-format.md). Collaborative comments, permissions and
+  reader progress are deliberately excluded.
 - An experimental small-project ChoiceScript importer in the signed-in story
   library. It converts prose, scenes, choices, labels, and jumps in one atomic
   Story creation. Simple declarations, assignments, comparisons, and variable
@@ -437,7 +444,6 @@ The following remain future or incomplete unless a task explicitly implements th
 - presence, remote cursors/selections, and horizontally distributed story events;
 - suggestion workflow, message editing, mentions, notifications, and horizontally
   distributed comment events;
-- stable public import/export format;
 - lossless or runtime-equivalent ChoiceScript import and incremental re-import;
 - lossless or runtime-equivalent QSP import, QSP re-export, and incremental re-import;
 - executable/Unity/video exports;

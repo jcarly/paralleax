@@ -8,6 +8,7 @@ import {
   getStatTargets,
   inferExpressionType,
   isStatValueOfType,
+  statItemTargetIssue,
   expressionReferencesAny,
   removeStatConditionsReferencing,
   cleanStatConditionalTextReferences,
@@ -487,20 +488,25 @@ function ownerStatAssignments<TOwner extends { id: string; stats?: StatAssignmen
 }
 
 function assertItemTarget(story: Story, reference: StatAssignmentReference, itemId?: string) {
-  if (reference.ownerType !== 'itemDefinition') {
-    if (itemId) {
+  const item =
+    reference.ownerType === 'itemDefinition' && itemId !== undefined && itemId.length > 0
+      ? getStoryItemEntries(story).find(({ item: candidate }) => candidate.id === itemId)?.item
+      : undefined;
+  const issue = statItemTargetIssue({
+    ownerType: reference.ownerType,
+    ownerId: reference.ownerId,
+    itemId,
+    itemDefinitionId: item?.itemDefinitionId,
+  });
+  switch (issue) {
+    case undefined:
+      return;
+    case 'non_item_with_instance':
       throw new BadRequestException('Only item stats can target an item instance');
-    }
-    return;
-  }
-  if (!itemId) {
-    throw new BadRequestException('Item stats require an exact item instance');
-  }
-  const item = getStoryItemEntries(story).find(
-    ({ item: candidate }) => candidate.id === itemId,
-  )?.item;
-  if (!item || item.itemDefinitionId !== reference.ownerId) {
-    throw new BadRequestException('Item stat target must belong to the same definition');
+    case 'item_without_instance':
+      throw new BadRequestException('Item stats require an exact item instance');
+    case 'item_definition_mismatch':
+      throw new BadRequestException('Item stat target must belong to the same definition');
   }
 }
 

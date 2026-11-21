@@ -87,7 +87,8 @@ LIMIT $3 OFFSET $4
 const RUNTIME_TRIGGER_SQL = `
 SELECT triggers.id, triggers.output_interaction_id, triggers.position_x,
        triggers.position_y, triggers.condition_groups,
-       triggers.appearance_probability, triggers.timer_seconds, triggers.sort_order
+       triggers.appearance_probability, triggers.timer_seconds, triggers.sort_order,
+       triggers.probability_key
 FROM triggers
 WHERE triggers.output_interaction_id = ANY($1::text[])
   AND (

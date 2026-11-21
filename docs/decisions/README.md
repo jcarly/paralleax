@@ -51,6 +51,7 @@ This folder records accepted architecture and product-shaping decisions.
 - [ADR-045 - Shared Interaction Presentation Across Authoring and Reading Views](ADR-045-shared-interaction-presentation.md)
 - [ADR-046 - Target Project Structure: Pragmatic Ports and Adapters](ADR-046-target-project-structure.md)
 - [ADR-047 - Local MCP Adapter over the HTTP API](ADR-047-local-mcp-adapter-over-http-api.md) (prototype)
+- [ADR-048 - Portable Trigger Probability Identity](ADR-048-portable-trigger-probability.md)
 
 ## Proposals
 

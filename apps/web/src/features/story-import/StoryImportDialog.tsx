@@ -20,9 +20,10 @@ import { api, type StoryImportResponse } from '../../api';
 import { apiErrorMessage, isApiErrorLike } from '../../apiErrorMessages';
 import { handleModalDialogKeyDown } from '../../components/modalDialogKeyboard';
 import { ModalPortal } from '../../components/ModalPortal';
+import { NativeStoryImportForm } from './NativeStoryImportForm';
 import { loadStoryEditor } from '../../pages/storyRouteLoaders';
 
-type StoryImportFormat = 'choicescript' | 'qsp';
+type StoryImportFormat = 'choicescript' | 'qsp' | 'native';
 type StoryImportReport = ChoiceScriptImportReport | QspImportReport;
 type StoryImportOutcome = StoryImportResponse<StoryImportReport>;
 type StoryImportProgress =
@@ -55,6 +56,7 @@ interface StoryImportController {
   requestError?: StoryImportRequestError;
   setRequestError: Dispatch<SetStateAction<StoryImportRequestError | undefined>>;
   pending: boolean;
+  setPending: Dispatch<SetStateAction<boolean>>;
   progress?: StoryImportProgress;
   outcome?: StoryImportOutcome;
   runImport: (event: FormEvent) => Promise<void>;
@@ -124,6 +126,7 @@ function useStoryImportController({
     requestError,
     setRequestError,
     pending,
+    setPending,
     progress,
     outcome,
     runImport,
@@ -233,6 +236,7 @@ function createStoryImportError(
 }
 
 type StoryImportTitleKey =
+  | 'library.import.native.title'
   | 'library.import.reviewTitle'
   | 'library.import.qsp.resultTitle'
   | 'library.import.resultTitle'
@@ -243,6 +247,9 @@ function storyImportTitleKey(
   format: StoryImportFormat,
   outcome: StoryImportOutcome | undefined,
 ): StoryImportTitleKey {
+  if (format === 'native') {
+    return 'library.import.native.title';
+  }
   if (outcome?.status === 'confirmation_required') {
     return 'library.import.reviewTitle';
   }
@@ -270,8 +277,16 @@ function StoryImportDialogView({ controller }: { controller: StoryImportControll
             });
           }}
         >
-          <ImportDialogHeader title={title} />
-          {controller.outcome ? (
+          <ImportDialogHeader title={title} native={controller.format === 'native'} />
+          {controller.format === 'native' ? (
+            <>
+              <ImportFormatSelect controller={controller} />
+              <NativeStoryImportForm
+                onClose={controller.onClose}
+                onPendingChange={controller.setPending}
+              />
+            </>
+          ) : controller.outcome ? (
             <StoryImportReportView
               key={controller.outcome.status}
               mode={controller.outcome.status === 'imported' ? 'imported' : 'review'}
@@ -288,14 +303,16 @@ function StoryImportDialogView({ controller }: { controller: StoryImportControll
   );
 }
 
-function ImportDialogHeader({ title }: { title: StoryImportTitleKey }) {
+function ImportDialogHeader({ title, native }: { title: StoryImportTitleKey; native: boolean }) {
   const { t } = useTranslation();
   return (
     <>
       <div className="dialog-icon" aria-hidden="true">
         â‡§
       </div>
-      <span className="product-eyebrow">{t('library.import.eyebrow')}</span>
+      <span className="product-eyebrow">
+        {t(native ? 'library.import.native.eyebrow' : 'library.import.eyebrow')}
+      </span>
       <h2 id="story-import-title">{t(title)}</h2>
     </>
   );
@@ -346,6 +363,7 @@ function ImportFormatSelect({ controller }: { controller: StoryImportController 
       <select
         className="form-control form-control--standard"
         value={controller.format}
+        disabled={controller.pending}
         onChange={(event) => {
           controller.setFormat(event.currentTarget.value as StoryImportFormat);
           controller.setFiles([]);
@@ -354,6 +372,7 @@ function ImportFormatSelect({ controller }: { controller: StoryImportController 
       >
         <option value="choicescript">{t('library.import.formats.choicescript')}</option>
         <option value="qsp">{t('library.import.formats.qsp')}</option>
+        <option value="native">{t('library.import.formats.native')}</option>
       </select>
     </label>
   );

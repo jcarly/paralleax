@@ -22,7 +22,9 @@ export type MoveItemInstanceError =
 export type MoveItemInstanceResult =
   { ok: true; story: Story } | { ok: false; error: MoveItemInstanceError };
 
-export function getStoryItemEntries(story: Story): StoryItemEntry[] {
+export function getStoryItemEntries(
+  story: Pick<Story, 'characters' | 'locations'>,
+): StoryItemEntry[] {
   return [
     ...(story.characters ?? []).flatMap((character) =>
       (character.items ?? []).map((item, sortOrder) => ({
@@ -78,7 +80,9 @@ export function getItemDescendantIds(items: readonly ItemInstance[], itemId: str
   return descendants;
 }
 
-export function getStructurallyPlacedItemInstances(story: Story): StoryItemEntry[] {
+export function getStructurallyPlacedItemInstances(
+  story: Pick<Story, 'characters' | 'locations'>,
+): StoryItemEntry[] {
   const ownerEntries = [
     ...(story.characters ?? []).map((character) => ({
       ownerType: 'character' as const,
@@ -122,12 +126,9 @@ export function moveItemInstanceInStory(
     return { ok: false, error: 'item-not-found' };
   }
 
-  const targetCount =
-    Number(Boolean(placement.characterId)) +
-    Number(Boolean(placement.locationId)) +
-    Number(Boolean(placement.parentItemId));
-  if (targetCount !== 1) {
-    return { ok: false, error: 'invalid-target-count' };
+  const placementError = validateItemPlacementShape(placement);
+  if (placementError !== undefined) {
+    return { ok: false, error: placementError };
   }
 
   const subtreeIds = new Set([
@@ -140,9 +141,6 @@ export function moveItemInstanceInStory(
 
   let targetOwner: Pick<StoryItemEntry, 'ownerType' | 'ownerId'>;
   if (placement.parentItemId) {
-    if (!placement.relationshipType) {
-      return { ok: false, error: 'relationship-required' };
-    }
     if (subtreeIds.has(placement.parentItemId)) {
       return { ok: false, error: 'cycle' };
     }
@@ -152,9 +150,6 @@ export function moveItemInstanceInStory(
     }
     targetOwner = parent;
   } else {
-    if (placement.relationshipType || placement.slotKey) {
-      return { ok: false, error: 'root-relationship-metadata' };
-    }
     if (placement.characterId) {
       const character = story.characters?.find(({ id }) => id === placement.characterId);
       if (!character) {
@@ -204,6 +199,30 @@ export function moveItemInstanceInStory(
         : {}),
     },
   };
+}
+
+/** Validate the placement fields independently of an item's current location. */
+export function validateItemPlacementShape(
+  placement: MoveItemInstanceInput,
+): MoveItemInstanceError | undefined {
+  const targetCount =
+    Number(Boolean(placement.characterId)) +
+    Number(Boolean(placement.locationId)) +
+    Number(Boolean(placement.parentItemId));
+  if (targetCount !== 1) {
+    return 'invalid-target-count';
+  }
+  const hasParent = placement.parentItemId !== undefined && placement.parentItemId.length > 0;
+  const hasRelationship =
+    placement.relationshipType !== undefined && placement.relationshipType.length > 0;
+  const hasSlot = placement.slotKey !== undefined && placement.slotKey.length > 0;
+  if (hasParent && !hasRelationship) {
+    return 'relationship-required';
+  }
+  if (!hasParent && (hasRelationship || hasSlot)) {
+    return 'root-relationship-metadata';
+  }
+  return undefined;
 }
 
 function applyItemPlacement(item: ItemInstance, placement: MoveItemInstanceInput): ItemInstance {

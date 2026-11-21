@@ -83,7 +83,8 @@ Conditions answer "what must already be true about the path or reader context?"
 
 After input and condition-group evaluation, the reader makes one deterministic
 appearance roll for the Trigger. The roll uses the saved run seed, narrative
-step, and Trigger id. It is therefore stable across rendering, reload, backward
+step, and the Trigger's stable probability identity, which defaults to its id.
+It is therefore stable across rendering, reload, backward
 replay, and Simulation diagnostics. Separate Triggers always roll separately.
 
 After those gates succeed, a configured timer keeps the Trigger active only for

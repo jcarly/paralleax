@@ -127,6 +127,7 @@ function runtimeTriggerRows() {
         },
       ],
       appearance_probability: 75,
+      probability_key: 'original-trigger-id',
       timer_seconds: 10,
       sort_order: 0,
     },
@@ -251,6 +252,7 @@ function expectedRuntimeTriggers() {
   return [
     {
       id: 'trigger-1',
+      probabilityKey: 'original-trigger-id',
       inputInteractionIds: ['current-1', 'previous-1'],
       conditionGroups: [
         {

@@ -2,6 +2,12 @@
 
 ## Unreleased
 
+- Added versioned native Story JSON export and private import from the Story
+  library, with an author-only export permission, validation and preview,
+  collision-safe references and atomic creation. The format and its exclusions
+  are documented in [docs/story-format.md](docs/story-format.md).
+- Added a persisted Trigger probability identity, preserving existing seeded
+  rolls when native Story import needs to remap a Trigger ID (ADR-048).
 - Added a private, local MCP server prototype (`apps/mcp`, ADR-047) built on
   the official MCP TypeScript SDK v2 over stdio. It calls the existing HTTP API
   as the signed-in user (`paralleax-mcp login`) and exposes six tools:

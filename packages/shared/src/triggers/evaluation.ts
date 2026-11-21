@@ -115,7 +115,11 @@ export function getTriggerProbabilityResult(
 ): TriggerProbabilityResult {
   const appearanceProbability = getTriggerAppearanceProbability(trigger);
   const forced = context.forcedTriggerIds?.includes(trigger.id) ?? false;
-  const roll = deterministicTriggerRoll(context.randomSeed, context.step, trigger.id);
+  const roll = deterministicTriggerRoll(
+    context.randomSeed,
+    context.step,
+    trigger.probabilityKey ?? trigger.id,
+  );
   return {
     appearanceProbability,
     roll,

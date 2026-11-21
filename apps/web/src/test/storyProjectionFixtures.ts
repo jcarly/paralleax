@@ -177,6 +177,7 @@ export function storyProjectionTriggerContentPage(
     ...pageMetadata(story, page, pageSize, hasMore(triggers, page, pageSize)),
     triggers: pageItems(triggers, page, pageSize).map((trigger) => ({
       triggerId: trigger.id,
+      ...(trigger.probabilityKey === undefined ? {} : { probabilityKey: trigger.probabilityKey }),
       conditionGroups: getTriggerConditionGroups(trigger),
       appearanceProbability: trigger.appearanceProbability,
       timerSeconds: trigger.timerSeconds,

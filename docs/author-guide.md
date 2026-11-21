@@ -10,7 +10,8 @@ For every control and shortcut, see the detailed [User guide](user-guide.md).
 Words in **bold** are the labels you see in the interface (English interface).
 
 > **Alpha notice.** Paralleax is in a guided private alpha. Use test projects
-> only, not work you cannot afford to lose. Your Story cannot be exported yet.
+> only, not work you cannot afford to lose. You can export an editable Story
+> from its library card and import the JSON as a new private Story elsewhere.
 
 ## The ideas in five minutes
 

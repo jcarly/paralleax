@@ -139,6 +139,7 @@ type TriggerContentRow = {
   condition_groups: TriggerConditionGroup[];
   appearance_probability: number;
   timer_seconds: number | null;
+  probability_key: string | null;
   interaction_sort_order: number;
   sort_order: number;
 };
@@ -649,7 +650,8 @@ export async function readStoryEditorTriggerContentPage(
   const offset = (page - 1) * pageSize;
   const result = await queryable.query<TriggerContentRow>(
     `SELECT triggers.id, triggers.condition_groups, triggers.appearance_probability,
-            triggers.timer_seconds, interactions.sort_order AS interaction_sort_order,
+            triggers.timer_seconds, triggers.probability_key,
+            interactions.sort_order AS interaction_sort_order,
             triggers.sort_order
        FROM triggers
        JOIN interactions ON interactions.id = triggers.output_interaction_id
@@ -666,6 +668,7 @@ export async function readStoryEditorTriggerContentPage(
     hasMore: hasPageLookahead(result.rows, pageSize),
     triggers: triggers.map((row) => ({
       triggerId: row.id,
+      ...(typeof row.probability_key === 'string' ? { probabilityKey: row.probability_key } : {}),
       conditionGroups: row.condition_groups,
       appearanceProbability: row.appearance_probability,
       timerSeconds: row.timer_seconds,
