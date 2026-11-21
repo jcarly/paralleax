@@ -1,4 +1,5 @@
 import type { Story, Trigger } from '@paralleax/shared';
+import { requireValue } from './assertions';
 import { createLargeEditorStoryFixture } from './largeEditorStoryFixture';
 
 const interactionId = (index: number) => `interaction-${index}`;
@@ -89,7 +90,7 @@ export function createComplexLayoutStoryFixture(): Story {
   ];
   for (const [index, interaction] of story.interactions.entries()) {
     interaction.title = `${index + 1}. ${sceneTitles[index % sceneTitles.length]}`;
-    interaction.body = bodies[index % bodies.length]!;
+    interaction.body = requireValue(bodies[index % bodies.length], 'complex story body fixture');
     // Twenty tightly packed slots intentionally overlap and ignore story order.
     interaction.position = scrambledPosition(index);
     interaction.locationId = index % 3 === 0 ? null : `location-${index % 4}`;
@@ -143,7 +144,9 @@ export function createComplexLayoutStoryFixture(): Story {
   addTrigger(72, [72], complexLayoutStoryMotifs.selfLoop.triggerId);
   const alternative = addTrigger(14, [12], 'trigger-14-alternative');
   alternative.appearanceProbability = 65;
-  alternative.conditionGroups![0].conditions.push({
+  const conditionGroups = requireValue(alternative.conditionGroups, 'alternative condition groups');
+  const firstConditionGroup = requireValue(conditionGroups[0], 'first alternative condition group');
+  firstConditionGroup.conditions.push({
     interactionId: interactionId(5),
     hasBeenVisited: true,
   });

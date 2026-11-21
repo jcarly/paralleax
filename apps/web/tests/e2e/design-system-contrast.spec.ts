@@ -76,13 +76,27 @@ test('keeps destructive ghost and secondary actions on their approved semantic t
     );
   });
 
-  const colors = await page.evaluate(() => ({
-    dangerAction: getComputedStyle(document.querySelector('#danger-ghost')!).color,
-    dangerToken: getComputedStyle(document.querySelector('#danger-token-probe')!).color,
-    secondaryBorder: getComputedStyle(document.querySelector('#secondary-action')!).borderTopColor,
-    borderToken: getComputedStyle(document.querySelector('#border-token-probe')!).borderTopColor,
-    dangerBackground: getComputedStyle(document.querySelector('#danger-ghost')!).backgroundColor,
-  }));
+  const colors = await page.evaluate(() => {
+    const requireElement = (selector: string) => {
+      const element = document.querySelector(selector);
+      if (!element) {
+        throw new Error(`Expected the contrast fixture element ${selector} to exist.`);
+      }
+      return element;
+    };
+    const dangerAction = requireElement('#danger-ghost');
+    const dangerToken = requireElement('#danger-token-probe');
+    const secondaryAction = requireElement('#secondary-action');
+    const borderToken = requireElement('#border-token-probe');
+
+    return {
+      dangerAction: getComputedStyle(dangerAction).color,
+      dangerToken: getComputedStyle(dangerToken).color,
+      secondaryBorder: getComputedStyle(secondaryAction).borderTopColor,
+      borderToken: getComputedStyle(borderToken).borderTopColor,
+      dangerBackground: getComputedStyle(dangerAction).backgroundColor,
+    };
+  });
   expect(colors.dangerAction).toBe(colors.dangerToken);
   expect(colors.secondaryBorder).toBe(colors.borderToken);
   expect(colors.dangerBackground).toBe('rgba(0, 0, 0, 0)');

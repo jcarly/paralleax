@@ -19,7 +19,16 @@ export async function readRenderedLayout(
 ): Promise<RenderedLayout> {
   return page.evaluate(
     ({ connections, tolerance }) => {
-      const viewport = document.querySelector<HTMLElement>('.react-flow__viewport')!;
+      const requireValue = <T>(value: T | null | undefined, description: string): T => {
+        if (value === null || value === undefined) {
+          throw new Error(`Expected ${description} to exist while reading the rendered layout.`);
+        }
+        return value;
+      };
+      const viewport = requireValue(
+        document.querySelector<HTMLElement>('.react-flow__viewport'),
+        'graph viewport',
+      );
       const origin = viewport.getBoundingClientRect();
       const scale = new DOMMatrix(getComputedStyle(viewport).transform).a;
       if (!Number.isFinite(scale) || scale <= 0) {
@@ -29,7 +38,7 @@ export async function readRenderedLayout(
         (element) => {
           const box = element.getBoundingClientRect();
           return {
-            id: element.dataset.id!,
+            id: requireValue(element.dataset.id, 'rendered node identifier'),
             x: (box.x - origin.x) / scale,
             y: (box.y - origin.y) / scale,
             width: box.width / scale,
@@ -40,7 +49,7 @@ export async function readRenderedLayout(
       const byId = new Map(connections.map((edge) => [edge.id, edge]));
       const edges = [...document.querySelectorAll<SVGGElement>('.react-flow__edge')].map(
         (element) => {
-          const id = element.dataset.id!;
+          const id = requireValue(element.dataset.id, 'rendered edge identifier');
           const connection = byId.get(id);
           const path = element.querySelector<SVGPathElement>('.react-flow__edge-path');
           if (!connection || !path) {
