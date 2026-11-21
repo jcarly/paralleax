@@ -191,8 +191,11 @@ export async function changeStoryCollaboratorRole(
 export function interactionNode(page: Page, title: string) {
   const nodes = page.getByTestId('interaction-node');
   if (title === 'New interaction') {
-    // Untitled non-root Interactions intentionally have no graph label.
-    return nodes.filter({ hasNot: page.locator('.interaction-node-label') });
+    // Untitled Interactions have no authored graph label: either none at all, or only the
+    // greyed fallback shown for roots and unlabelled choices.
+    return nodes.filter({
+      hasNot: page.locator('.interaction-node-label:not(.interaction-label-fallback)'),
+    });
   }
   return nodes.filter({ hasText: title });
 }
