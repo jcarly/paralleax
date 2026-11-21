@@ -1,3 +1,4 @@
+import { useEffect, useMemo, useRef, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import { Link, useLocation } from 'react-router-dom';
 import { useOnboarding } from './onboardingContext';
@@ -41,8 +42,8 @@ function isGuideVisible(
   );
 }
 
-function canShowStep(step: OnboardingStepId, route: GuideRoute): boolean {
-  return step === 'test-story' ? route.isEditor || route.isSimulation : route.isEditor;
+function canShowStep(route: GuideRoute): boolean {
+  return route.isEditor;
 }
 
 type GuideView =
@@ -54,7 +55,6 @@ type GuideView =
       storyId?: string;
       showStoryLink?: boolean;
     }
-  | { kind: 'complete'; storyId: string; didTest: boolean }
   | { kind: 'step'; focus: OnboardingGuideFocus; storyId: string; step: OnboardingStepId };
 
 function resolveGuideView(
@@ -62,7 +62,8 @@ function resolveGuideView(
   step: OnboardingStepId | null,
   route: GuideRoute,
 ): GuideView {
-  if (!isGuideVisible(progress.status, progress.storyId, route)) {
+  // Simulation stays uncovered: the guide closes when the author starts testing.
+  if (route.isSimulation || !isGuideVisible(progress.status, progress.storyId, route)) {
     return { kind: 'hidden' };
   }
   if (!progress.storyId) {
@@ -77,7 +78,7 @@ function resolveGuideView(
       showStoryLink: true,
     };
   }
-  if (step && !canShowStep(step, route)) {
+  if (step && !canShowStep(route)) {
     return {
       kind: 'prompt',
       focus: null,
@@ -87,18 +88,10 @@ function resolveGuideView(
     };
   }
   if (!step) {
-    return {
-      kind: 'complete',
-      storyId: progress.storyId,
-      didTest: progress.completedSteps.includes('test-story'),
-    };
+    // Finishing the guide closes it: a first path is not a finished Story.
+    return { kind: 'hidden' };
   }
-  const focus: OnboardingGuideFocus =
-    step === 'test-story'
-      ? route.isSimulation
-        ? 'test-story-simulation'
-        : 'test-story-editor'
-      : step;
+  const focus: OnboardingGuideFocus = step === 'test-story' ? 'test-story-editor' : step;
   return { kind: 'step', focus, storyId: progress.storyId, step };
 }
 
@@ -151,70 +144,6 @@ function createRestartHandler(onRestart: (storyId?: string) => void, storyId: st
   };
 }
 
-function renderGuideCompleteDescription(
-  t: ReturnType<typeof useTranslation>['t'],
-  didTest: boolean,
-) {
-  return (
-    <>
-      <p>
-        {t(didTest ? 'onboarding.completeDescription' : 'onboarding.completeSkippedDescription')}
-      </p>
-      {didTest ? <p>{t('onboarding.completeAccessDescription')}</p> : null}
-    </>
-  );
-}
-
-function GuideCompleteCard({
-  storyId,
-  didTest,
-  onPause,
-  onRestart,
-}: {
-  storyId: string;
-  didTest: boolean;
-  onPause: () => void;
-  onRestart: (storyId?: string) => void;
-}) {
-  const { t } = useTranslation();
-
-  return (
-    <aside
-      className="onboarding-card"
-      role="region"
-      aria-labelledby="onboarding-title"
-      aria-live="polite"
-    >
-      <div className="onboarding-card-heading">
-        <h2 id="onboarding-title">{t('onboarding.completeTitle')}</h2>
-        <GuideCloseButton label={t('onboarding.close')} onPause={onPause} />
-      </div>
-      {renderGuideCompleteDescription(t, didTest)}
-      <div className="onboarding-card-actions">
-        <Link className="onboarding-primary" to={`/stories/${storyId}/edit`} onClick={onPause}>
-          {t('onboarding.continueCreating')}
-        </Link>
-        {didTest ? (
-          <Link
-            className="onboarding-primary"
-            to={`/stories/${storyId}/edit?settings=access`}
-            onClick={onPause}
-          >
-            {t('onboarding.shareForTesting')}
-          </Link>
-        ) : null}
-        <button
-          className="onboarding-secondary"
-          type="button"
-          onClick={createRestartHandler(onRestart, storyId)}
-        >
-          {t('onboarding.restart')}
-        </button>
-      </div>
-    </aside>
-  );
-}
-
 function GuideStepCard({
   step,
   storyId,
@@ -262,18 +191,104 @@ function GuideStepCard({
   );
 }
 
+const guideExitDurationMs = 180;
+
+/** Keeps the last visible card mounted briefly so closing the guide can fade it out. */
+function useGuideExitTransition(view: GuideView) {
+  const lastVisibleView = useRef<Exclude<GuideView, { kind: 'hidden' }> | undefined>(undefined);
+  const exitTimer = useRef<number | undefined>(undefined);
+  const [leavingView, setLeavingView] = useState<GuideView>();
+
+  useEffect(() => {
+    if (view.kind !== 'hidden') {
+      lastVisibleView.current = view;
+      return;
+    }
+    const last = lastVisibleView.current;
+    if (!last) {
+      return;
+    }
+    // Later hidden views (for example the route change to Simulation) must not
+    // cancel the exit, so the timer is not tied to this effect's cleanup.
+    lastVisibleView.current = undefined;
+    setLeavingView(last);
+    window.clearTimeout(exitTimer.current);
+    exitTimer.current = window.setTimeout(() => {
+      setLeavingView(undefined);
+    }, guideExitDurationMs);
+  }, [view]);
+
+  useEffect(
+    () => () => {
+      window.clearTimeout(exitTimer.current);
+    },
+    [],
+  );
+
+  return view.kind === 'hidden'
+    ? { view: leavingView ?? view, leaving: true }
+    : { view, leaving: false };
+}
+
+/**
+ * Choosing the highlighted Simulation entry point is the last step of the guide.
+ * The click only records the intent: the step completes once Simulation for that
+ * Story has actually opened, so a navigation blocked by a pending save, or
+ * cancelled, leaves the guide where it was.
+ */
+function useCompleteTestOnSimulationLaunch(view: GuideView, route: GuideRoute) {
+  const { reportStepComplete } = useOnboarding();
+  const requestedLaunch = useRef<string | undefined>(undefined);
+  const storyId = view.kind === 'step' && view.step === 'test-story' ? view.storyId : undefined;
+
+  useEffect(() => {
+    if (storyId === undefined) {
+      return undefined;
+    }
+    const recordLaunch = (event: MouseEvent) => {
+      if (
+        event.target instanceof Element &&
+        event.target.closest('[data-onboarding-target="simulation-launch"]')
+      ) {
+        requestedLaunch.current = storyId;
+      }
+    };
+    document.addEventListener('click', recordLaunch, true);
+    return () => {
+      document.removeEventListener('click', recordLaunch, true);
+    };
+  }, [storyId]);
+
+  const { isSimulation, storyId: routeStoryId } = route;
+  useEffect(() => {
+    const requested = requestedLaunch.current;
+    if (requested === undefined || (!isSimulation && routeStoryId === requested)) {
+      // Still on this Story's editor: the navigation is pending, blocked, or cancelled.
+      return;
+    }
+    requestedLaunch.current = undefined;
+    if (isSimulation && routeStoryId === requested) {
+      reportStepComplete(requested, 'test-story');
+    }
+  }, [isSimulation, reportStepComplete, routeStoryId]);
+}
+
 export function OnboardingGuide() {
-  const location = useLocation();
+  const { pathname, search } = useLocation();
   const { progress, pause, restart, skipCurrentStep } = useOnboarding();
-  const step = currentOnboardingStep(progress);
-  const route = readGuideRoute(location.pathname, location.search);
-  const view = resolveGuideView(progress, step, route);
+  const route = useMemo(() => readGuideRoute(pathname, search), [pathname, search]);
+  const resolvedView = useMemo(
+    () => resolveGuideView(progress, currentOnboardingStep(progress), route),
+    [progress, route],
+  );
+  useCompleteTestOnSimulationLaunch(resolvedView, route);
+  const { view, leaving } = useGuideExitTransition(resolvedView);
   if (view.kind === 'hidden') {
     return null;
   }
   if (view.kind === 'prompt') {
     return (
-      <OnboardingGuideOverlay focus={view.focus}>
+      <OnboardingGuideOverlay focus={view.focus} leaving={leaving}>
         <GuidePromptCard
           message={view.message}
           storyId={view.storyId}
@@ -283,20 +298,8 @@ export function OnboardingGuide() {
       </OnboardingGuideOverlay>
     );
   }
-  if (view.kind === 'complete') {
-    return (
-      <OnboardingGuideOverlay focus={null}>
-        <GuideCompleteCard
-          storyId={view.storyId}
-          didTest={view.didTest}
-          onPause={pause}
-          onRestart={restart}
-        />
-      </OnboardingGuideOverlay>
-    );
-  }
   return (
-    <OnboardingGuideOverlay focus={view.focus}>
+    <OnboardingGuideOverlay focus={leaving ? null : view.focus} leaving={leaving}>
       <GuideStepCard
         step={view.step}
         storyId={view.storyId}

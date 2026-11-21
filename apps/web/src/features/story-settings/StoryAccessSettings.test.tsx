@@ -53,6 +53,95 @@ describe('StoryAccessSettings', () => {
     expect(screen.getByLabelText('Comments')).toHaveValue('editors');
   });
 
+  it('describes the selected value of every access policy', async () => {
+    const user = userEvent.setup();
+    render(<StoryAccessSettings storyId="story-1" />);
+    const reading = await screen.findByLabelText('Reading');
+    const editing = screen.getByLabelText('Editing');
+    const comments = screen.getByLabelText('Comments');
+    const help = (name: string) =>
+      screen.getByRole('button', { name: new RegExp(name) }).getAttribute('aria-describedby') ?? '';
+    const helpText = (name: string) => document.getElementById(help(name))?.textContent;
+
+    const readingHelp = {
+      public: 'Anyone can read the Story without signing in. It appears in the public catalog.',
+      unlisted:
+        "Anyone with the URL can read the Story without signing in. It won't appear in the public catalog.",
+      authenticated: 'Any signed-in user can read the Story and find it in the catalog.',
+      invitation: 'Only the users added below can read the Story.',
+      private: 'Only you can read the Story. Access given to the users below stays inactive.',
+    };
+    expect(helpText('Reading')).toBe(readingHelp.private);
+    for (const [value, text] of Object.entries(readingHelp)) {
+      await user.selectOptions(reading, value);
+      await waitFor(() => {
+        expect(reading).toHaveValue(value);
+      });
+      expect(helpText('Reading')).toBe(text);
+    }
+
+    expect(helpText('Editing')).toBe('Only you can edit the Story.');
+    await user.selectOptions(reading, 'public');
+    await user.selectOptions(editing, 'authenticated');
+    await waitFor(() => {
+      expect(helpText('Editing')).toBe('Any signed-in user can read and edit the Story.');
+    });
+
+    expect(helpText('Comments')).toBe('Only users who can edit the Story comment, while editing.');
+    await user.selectOptions(comments, 'readers');
+    await waitFor(() => {
+      expect(helpText('Comments')).toMatch(/^Signed-in users who can read the Story comment/);
+    });
+  });
+
+  it('only offers editing policies within the reading audience', async () => {
+    render(<StoryAccessSettings storyId="story-1" />);
+    const editing = await screen.findByLabelText('Editing');
+    const option = (name: string) => within(editing).getByRole('option', { name });
+
+    expect(option('Owner only')).toBeEnabled();
+    expect(option('Editors')).toBeDisabled();
+    expect(option('Signed-in users')).toBeDisabled();
+    expect(screen.getByText('Limited by the Reading setting.')).toBeInTheDocument();
+
+    await userEvent.setup().selectOptions(screen.getByLabelText('Reading'), 'invitation');
+
+    await waitFor(() => {
+      expect(option('Editors')).toBeEnabled();
+    });
+    expect(option('Signed-in users')).toBeDisabled();
+  });
+
+  it('narrows editing when reading becomes narrower, and says so', async () => {
+    const user = userEvent.setup();
+    vi.mocked(api.getStoryAccess).mockResolvedValue({
+      ...structuredClone(access),
+      visibility: 'public',
+      editPolicy: 'authenticated',
+    });
+    render(<StoryAccessSettings storyId="story-1" />);
+
+    await user.selectOptions(await screen.findByLabelText('Reading'), 'invitation');
+
+    expect(api.updateStoryAccess).toHaveBeenLastCalledWith('story-1', {
+      ...access,
+      visibility: 'invitation',
+      editPolicy: 'collaborators',
+    });
+    expect(screen.getByLabelText('Editing')).toHaveValue('collaborators');
+    expect(
+      await screen.findByText('Editing set to Editors: it cannot be wider than reading.'),
+    ).toBeInTheDocument();
+
+    await user.selectOptions(screen.getByLabelText('Reading'), 'public');
+    await waitFor(() => {
+      expect(
+        screen.queryByText('Editing set to Editors: it cannot be wider than reading.'),
+      ).not.toBeInTheDocument();
+    });
+    expect(screen.getByLabelText('Editing')).toHaveValue('collaborators');
+  });
+
   it('shows an access-loading failure inside the settings surface', async () => {
     vi.mocked(api.getStoryAccess).mockRejectedValue(new Error('Access unavailable'));
 
@@ -182,6 +271,81 @@ describe('StoryAccessSettings', () => {
     await user.click(within(grant).getByRole('button', { name: 'Remove' }));
     expect(api.removeStoryCollaborator).toHaveBeenCalledWith('story-1', 'user-2');
     expect(screen.queryByText('reader@example.com')).not.toBeInTheDocument();
+  });
+
+  it('opens owner-only editing to editors when an editor is invited, and says so', async () => {
+    const user = userEvent.setup();
+    const invitationAccess: StoryAccessConfiguration = {
+      ...structuredClone(access),
+      visibility: 'invitation',
+    };
+    vi.mocked(api.getStoryAccess).mockResolvedValue(invitationAccess);
+    vi.mocked(api.setStoryCollaborator).mockResolvedValue({
+      ...invitationAccess,
+      editPolicy: 'collaborators',
+      collaborators: [
+        { userId: 'user-2', email: 'writer@example.com', displayName: 'Writer', role: 'editor' },
+      ],
+    });
+    render(<StoryAccessSettings storyId="story-1" />);
+
+    await user.type(await screen.findByLabelText('User email'), 'writer@example.com');
+    await user.selectOptions(screen.getByLabelText('Access'), 'editor');
+    await user.click(screen.getByRole('button', { name: 'Add user' }));
+
+    await waitFor(() => {
+      expect(api.setStoryCollaborator).toHaveBeenCalledWith(
+        'story-1',
+        'writer@example.com',
+        'editor',
+      );
+    });
+    expect(api.updateStoryAccess).not.toHaveBeenCalled();
+    expect(screen.getByLabelText('Editing')).toHaveValue('collaborators');
+    expect(
+      screen.getByText('Editing set to Editors so the invited editor can edit.'),
+    ).toBeInTheDocument();
+  });
+
+  it('keeps the invitation form and policy unchanged when the atomic grant fails', async () => {
+    const user = userEvent.setup();
+    vi.mocked(api.getStoryAccess).mockResolvedValue({
+      ...structuredClone(access),
+      visibility: 'invitation',
+    });
+    vi.mocked(api.setStoryCollaborator).mockRejectedValue(new Error('Access unavailable'));
+    render(<StoryAccessSettings storyId="story-1" />);
+
+    await user.type(await screen.findByLabelText('User email'), 'writer@example.com');
+    await user.selectOptions(screen.getByLabelText('Access'), 'editor');
+    await user.click(screen.getByRole('button', { name: 'Add user' }));
+
+    expect(await screen.findByRole('alert')).toHaveTextContent('Access unavailable');
+    expect(screen.getByLabelText('User email')).toHaveValue('writer@example.com');
+    expect(screen.getByLabelText('Editing')).toHaveValue('owner');
+    expect(api.updateStoryAccess).not.toHaveBeenCalled();
+    expect(screen.queryByText('writer@example.com')).not.toBeInTheDocument();
+  });
+
+  it('leaves editing unchanged when a viewer is invited', async () => {
+    const user = userEvent.setup();
+    vi.mocked(api.getStoryAccess).mockResolvedValue({
+      ...structuredClone(access),
+      visibility: 'invitation',
+    });
+    vi.mocked(api.setStoryCollaborator).mockResolvedValue({
+      ...structuredClone(access),
+      visibility: 'invitation',
+    });
+    render(<StoryAccessSettings storyId="story-1" />);
+
+    await user.type(await screen.findByLabelText('User email'), 'reader@example.com');
+    await user.click(screen.getByRole('button', { name: 'Add user' }));
+
+    await waitFor(() => {
+      expect(api.setStoryCollaborator).toHaveBeenCalled();
+    });
+    expect(api.updateStoryAccess).not.toHaveBeenCalled();
   });
 
   it('restores a policy when its automatic save fails', async () => {

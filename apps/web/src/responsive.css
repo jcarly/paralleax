@@ -12,18 +12,15 @@
   .editor-layout.with-navigation-collapsed.with-inspector.with-comment-rail {
     grid-template-columns: minmax(0, 1fr);
   }
+  /* Overlay the graph beside the tool rail, which keeps the panel toggle reachable. */
   .location-panel {
     position: absolute;
     top: 122px;
     bottom: 0;
-    left: 0;
+    left: 4.25rem;
     z-index: 8;
-    width: min(260px, 85vw);
+    width: min(260px, calc(100vw - 5rem));
     box-shadow: var(--shadow-card);
-  }
-  .location-panel.collapsed {
-    width: 48px;
-    box-shadow: none;
   }
   .canvas {
     grid-column: 1;

@@ -2,7 +2,7 @@
 import { cleanup, render, screen, within } from '@testing-library/react';
 import type userEvent from '@testing-library/user-event';
 import { createMemoryRouter, RouterProvider } from 'react-router-dom';
-import { afterEach, beforeEach, vi } from 'vitest';
+import { afterEach, beforeEach, expect, vi } from 'vitest';
 import type {
   GraphDecorationMutationResult,
   InteractionMutationResult,
@@ -206,4 +206,13 @@ function requiredLoadedStory(story: Story | undefined): Story {
     throw new Error('The editor bootstrap must be loaded first.');
   }
   return story;
+}
+
+/** Tab reaches the formatting toolbar (one stop) below the text, then leaves the body editor. */
+export async function leaveBodyEditor(user: ReturnType<typeof userEvent.setup>) {
+  await user.tab();
+  expect(
+    screen.getByRole('toolbar', { name: 'Content formatting' }).contains(document.activeElement),
+  ).toBe(true);
+  await user.tab();
 }

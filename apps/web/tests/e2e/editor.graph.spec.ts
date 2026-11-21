@@ -317,14 +317,14 @@ test('keeps the guide outside layout and follows the current editor target', asy
   });
   await page.goto('/stories/story-1/edit');
 
-  await expect(page.getByRole('heading', { name: 'Explore the graph' })).toBeVisible();
+  await expect(page.getByRole('heading', { name: 'Write a scene' })).toBeVisible();
+  await expect(page.getByText('Step 1 of 3')).toBeVisible();
   await expect(page.locator('.onboarding-guide-positioner')).toHaveCSS('position', 'fixed');
   const interaction = page.locator('.interaction-node').first();
-  await expect(interaction).toHaveClass(/onboarding-target-highlight/);
   await interaction.click();
 
-  await expect(page.getByRole('heading', { name: 'Write a scene' })).toBeVisible();
-  await expect(page.locator('.inspector')).toHaveClass(/onboarding-target-highlight/);
+  const addContent = page.getByRole('button', { name: 'Add content' });
+  await expect(addContent).toHaveClass(/onboarding-target-highlight/);
   await expect(interaction).not.toHaveClass(/onboarding-target-highlight/);
 });
 

@@ -1,0 +1,71 @@
+import { screen } from '@testing-library/react';
+import { expect, it, vi } from 'vitest';
+import type { Story } from '@paralleax/shared';
+import { renderPlayer, setupStoryPlayerTestSuite, story } from '../test/storyPlayerTestHarness';
+
+vi.mock('../api', async () => {
+  const { createStoryApiMock } = await import('../test/mockStoryApi');
+  return { api: createStoryApiMock() };
+});
+
+setupStoryPlayerTestSuite();
+
+function untitledStory(childCount: number): Story {
+  return {
+    ...structuredClone(story),
+    interactions: [
+      {
+        id: 'start',
+        title: '',
+        body: 'You arrive.',
+        position: { x: 0, y: 0 },
+        triggers: [{ id: 'trigger-start', inputInteractionIds: [], conditions: [] }],
+      },
+      ...Array.from({ length: childCount }, (_, index) => ({
+        id: `child-${String(index)}`,
+        title: '',
+        body: 'Later.',
+        position: { x: index * 100, y: 400 },
+        triggers: [
+          { id: `trigger-child-${String(index)}`, inputInteractionIds: ['start'], conditions: [] },
+        ],
+      })),
+    ],
+  };
+}
+
+it('reads a lone untitled choice as Continue and shows no placeholder title', async () => {
+  await renderPlayer('/stories/story-1/play', untitledStory(1));
+
+  await screen.findByText('You arrive.');
+  expect(await screen.findByRole('button', { name: 'Continue' })).toBeInTheDocument();
+  expect(screen.queryByText('New interaction')).not.toBeInTheDocument();
+  expect(screen.queryByRole('heading', { name: 'Start' })).not.toBeInTheDocument();
+});
+
+it('numbers untitled options for readers without an authoring warning', async () => {
+  await renderPlayer('/stories/story-1/play', untitledStory(2));
+
+  expect(await screen.findByRole('button', { name: 'Option 1' })).toBeInTheDocument();
+  expect(screen.getByRole('button', { name: 'Option 2' })).toBeInTheDocument();
+  expect(screen.queryByText('Several options: add a label.')).not.toBeInTheDocument();
+});
+
+it('asks the author for labels when several untitled options follow in Simulation', async () => {
+  await renderPlayer(
+    '/stories/story-1/play?mode=simulation&startInteractionId=start',
+    untitledStory(2),
+  );
+
+  expect(await screen.findByRole('button', { name: /Option 1/ })).toBeInTheDocument();
+  expect(screen.getAllByText('Several options: add a label.')).toHaveLength(2);
+});
+
+it('keeps authored choice titles unchanged', async () => {
+  const titled = untitledStory(1);
+  titled.interactions[1].title = 'Open the gate';
+  await renderPlayer('/stories/story-1/play', titled);
+
+  expect(await screen.findByRole('button', { name: 'Open the gate' })).toBeInTheDocument();
+  expect(screen.queryByRole('button', { name: 'Continue' })).not.toBeInTheDocument();
+});

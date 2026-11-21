@@ -185,6 +185,11 @@ Paralleax currently includes:
   add-comment action visible and clickable across the pane border. Inspector
   panes can be resized with the pointer or keyboard and maximized over the graph
   area; restoring returns to the previous width while keeping the navigation visible.
+  Their width has no fixed cap on wide screens (the graph keeps 280px), and
+  widening an Inspector past 70% of the editor maximizes it, keeping the earlier
+  width for Restore (not on screens of 800px or less). The selected Interaction,
+  Trigger, or graph decoration is deleted from a trash icon in the Inspector
+  header, beside Maximize and Close.
   Authorized thread managers can move a graph post-it by updating its
   existing canvas anchor; failed moves restore the persisted position and remain
   visible as an operational error. A discussion author or Story manager can

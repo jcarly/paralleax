@@ -38,7 +38,10 @@ describe('import report writer', () => {
 
     const filePath = await storage.getReportPath(importId);
     expect(filePath).toBeDefined();
-    const content = await readFile(filePath!, 'utf8');
+    if (filePath === undefined) {
+      throw new Error(`Expected report path for ${importId}`);
+    }
+    const content = await readFile(filePath, 'utf8');
     const rows = content.trim().split('\n').filter(Boolean);
     expect(rows).toHaveLength(2);
     expect(JSON.parse(rows[0])).toMatchObject({
@@ -72,7 +75,10 @@ describe('import report writer', () => {
     await writer.close();
 
     const filePath = await storage.getReportPath(importId);
-    const rows = (await readFile(filePath!, 'utf8')).trim().split('\n');
+    if (filePath === undefined) {
+      throw new Error(`Expected report path for ${importId}`);
+    }
+    const rows = (await readFile(filePath, 'utf8')).trim().split('\n');
     expect(rows).toHaveLength(10_000);
     expect(JSON.parse(rows[0])).toMatchObject({ code: 'warning_0' });
     expect(JSON.parse(rows[9_999])).toMatchObject({ code: 'warning_9999' });

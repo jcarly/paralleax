@@ -25,7 +25,7 @@ test('keeps the reviewed text pairs readable on editor, product, and simulation 
         <section class="simulation-controls"><label><span><small id="simulation-help">Used for testing.</small></span></label></section>
         <input id="story-title" class="story-title-input" value="Story title">
         <input id="simulation-title" class="simulation-title-input" value="Scene title">
-        <div id="simulation-body" class="rich-text-surface" contenteditable="true">Scene body</div>
+        <div id="simulation-editor" class="rich-text-editor"><div id="simulation-body" class="rich-text-surface" contenteditable="true">Scene body</div></div>
       </div>`,
     );
   });
@@ -42,8 +42,9 @@ test('keeps the reviewed text pairs readable on editor, product, and simulation 
   await expectBorderContrast(page.locator('#story-title'), 3);
   await page.locator('#simulation-title').focus();
   await expectKeyboardFocusRing(page.locator('#simulation-title'));
+  // The rich-text editor shows the focus indicator on its frame, around the text and toolbar.
   await page.locator('#simulation-body').focus();
-  await expectKeyboardFocusRing(page.locator('#simulation-body'));
+  await expectKeyboardFocusRing(page.locator('#simulation-editor'));
 
   for (const id of ['light-focus', 'dark-focus']) {
     const control = page.locator(`#${id}`);
@@ -128,10 +129,11 @@ test('applies the focus and help contrast to the rendered Simulation Editor', as
   await expect(page.getByRole('textbox', { name: 'Current interaction content' })).toBeVisible();
   await expectTextContrast(page.locator('.simulation-controls small'), 4.5);
   const richTextSurface = page.getByRole('textbox', { name: 'Current interaction content' });
-  const editorSurface = page.locator('.simulation-body-editor .rich-text-surface');
+  // The focus indicator is drawn on the editor frame, which also encloses the toolbar.
+  const editorFrame = page.locator('.simulation-body-editor .rich-text-editor');
   await richTextSurface.focus();
   await expect(richTextSurface).toBeFocused();
-  await expectKeyboardFocusRing(editorSurface);
+  await expectKeyboardFocusRing(editorFrame);
 });
 
 async function expectTextContrast(locator: Locator, minimum: number) {

@@ -43,27 +43,15 @@ export const italianTranslation = {
     openStoryPrompt: 'La tua nuova storia è pronta. Aprila per continuare.',
     returnToEditorPrompt: "Torna all'editor per continuare la guida.",
     openStory: 'Apri la storia',
-    completeTitle: 'La storia è pronta da esplorare',
-    completeDescription: 'Hai creato e provato il tuo primo percorso.',
-    completeSkippedDescription: 'Continua a creare o riavvia la guida quando vuoi.',
-    completeAccessDescription:
-      'Scegli chi può leggere, commentare o modificare. La storia resta privata finché non cambi le impostazioni di accesso.',
-    continueCreating: 'Continua a creare',
-    shareForTesting: 'Condividi per i test',
     stepCount: 'Passaggio {{current}} di {{total}}',
     skipStep: 'Salta il passaggio',
     close: 'Chiudi la guida',
     restart: 'Riavvia la guida',
     steps: {
-      'discover-interactions': {
-        title: 'Esplora il grafo',
-        description:
-          'Seleziona un’interazione. I collegamenti mostrano come si susseguono le scene.',
-      },
       'write-scene': {
         title: 'Scrivi una scena',
         description:
-          'L’interazione selezionata appare nell’ispettore. Aggiungi la scena, poi esci dal campo per salvarla.',
+          'L’interazione iniziale è selezionata. Scegli Aggiungi contenuto, scrivi la scena, poi fai clic fuori dal campo per salvarla.',
       },
       'create-branch': {
         title: 'Crea una scelta',
@@ -73,7 +61,7 @@ export const italianTranslation = {
       'test-story': {
         title: 'Prova la storia',
         description:
-          'Nell’editor scegli Prova dall’inizio, poi segui un percorso in modalità simulazione.',
+          "Scegli Test dall'inizio. La guida si chiude e la simulazione si apre sulla tua storia.",
       },
     },
   },
@@ -432,7 +420,15 @@ export const italianTranslation = {
       authenticated: 'Utenti registrati',
       public: 'Tutti',
       unlisted: 'Tramite link (non in elenco)',
-      help: 'Chiunque abbia l’URL può leggere la Storia senza accedere. Non apparirà nel catalogo pubblico.',
+      help: {
+        public: 'Chiunque può leggere la Storia senza accedere. Appare nel catalogo pubblico.',
+        unlisted:
+          'Chiunque abbia l’URL può leggere la Storia senza accedere. Non apparirà nel catalogo pubblico.',
+        authenticated: 'Ogni utente registrato può leggere la Storia e trovarla nel catalogo.',
+        invitation: 'Solo gli utenti aggiunti qui sotto possono leggere la Storia.',
+        private:
+          'Solo tu puoi leggere la Storia. Gli accessi dati agli utenti qui sotto restano inattivi.',
+      },
       invitation: 'Su invito',
     },
     edit: {
@@ -440,12 +436,24 @@ export const italianTranslation = {
       owner: 'Solo proprietario',
       collaborators: 'Editori',
       authenticated: 'Utenti registrati',
+      adjusted: 'Modifica impostata su «{{policy}}»: non può essere più aperta della lettura.',
+      limitedByReading: 'Limitata dall’impostazione Lettura.',
+      openedForEditors: 'Modifica aperta agli Editori perché l’editore invitato possa modificare.',
+      help: {
+        owner: 'Solo tu puoi modificare la Storia.',
+        collaborators: 'Tu e gli utenti aggiunti qui sotto come Editore potete modificarla.',
+        authenticated: 'Ogni utente registrato può leggere e modificare la Storia.',
+      },
     },
     comments: {
       label: 'Commenti',
       readers: 'Lettori',
       editors: 'Editori',
-      help: "Gli editor possono commentare durante la modifica. I lettori che hanno effettuato l'accesso commentano solo dal lettore.",
+      help: {
+        readers:
+          'Gli utenti registrati che possono leggere la Storia commentano dal lettore. Gli editori commentano durante la modifica.',
+        editors: 'Solo chi può modificare la Storia commenta, durante la modifica.',
+      },
     },
     collaborators: 'Utenti',
     collaboratorsHelp: 'Aggiungi un account Paralleax esistente con accesso in lettura o modifica.',
@@ -813,16 +821,9 @@ export const italianTranslation = {
     preview: 'Anteprima parallela',
     reader: 'Lettore Paralleax',
     simulation: 'Simulazione',
-    realtime: {
-      live: 'Simulazione sincronizzata dal vivo',
-      reconnecting: 'Riconnessione della simulazione...',
-      unavailable: 'Aggiornamenti della simulazione dal vivo non disponibili',
-    },
     savingProgress: 'Salvataggio dei progressi…',
     progressSaved: 'Progressi salvati',
     progressSaveFailed: 'Salvataggio dei progressi non riuscito',
-    savingStoryChanges: 'Salvataggio delle modifiche alla storia…',
-    storyChangesSaved: 'Modifiche alla storia salvate',
     storyChangesSaveFailed: 'Impossibile salvare le modifiche alla storia',
     retryStoryChanges: 'Riprova',
     reloadStoryAfterSaveFailure: 'Ricarica la storia',
@@ -871,15 +872,16 @@ export const italianTranslation = {
     liveEditingHelp: 'Le modifiche vengono salvate quando un campo perde lo stato attivo.',
     currentInteractionTitle: "Titolo dell'interazione corrente",
     currentInteractionContent: "Contenuti dell'interazione corrente",
-    ready: 'Pronto quando lo sei tu',
     startStory: 'Inizia la storia',
-    chooseStartingInteraction: "Scegli un'interazione iniziale.",
     newOptionTitle: "Nuovo titolo dell'opzione",
     optionTimer: 'Tempo rimanente per questa opzione',
     unavailable: 'Non disponibile nello stato attuale della simulazione',
     forced: ' Costretto per questo test.',
     addOption: 'Aggiungi opzione',
     addOptionHelp: "Crea un'interazione connessa da questo punto.",
+    continueChoice: 'Continua',
+    untitledChoice: 'Opzione {{number}}',
+    choiceLabelNeeded: "Più opzioni: aggiungi un'etichetta.",
     branchEnd: 'Fine di questo ramo.',
     branchEndHelp: 'Puoi riavviare la storia per esplorare un altro percorso.',
     playedCharacter: 'Personaggio interpretato',

@@ -78,7 +78,8 @@ test('keeps Simulation styling consistent across direct and editor navigation', 
   await page.waitForURL('**/stories/story-1/play?mode=simulation');
   await expect(page.locator('.simulation-controls .product-eyebrow')).toBeVisible();
   await expect(page.locator('.simulation-mode .player-top .mode-pill')).toHaveText('Simulation');
-  await expect(page.getByRole('heading', { name: 'Start the story' })).toBeVisible();
+  await expect(page.getByRole('heading', { name: 'Start the story' })).toBeAttached();
+  await expect(page.getByText('Choose a starting interaction.')).toHaveCount(0);
   await page.getByRole('button', { name: 'Original title' }).click();
   await expect(page.getByRole('textbox', { name: 'Current interaction title' })).toHaveValue(
     'Original title',

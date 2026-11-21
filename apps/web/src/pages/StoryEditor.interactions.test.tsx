@@ -9,6 +9,7 @@ import {
   baseStory,
   cloneStory,
   interactionMutation,
+  leaveBodyEditor,
   renderEditor,
   setupStoryEditorTestSuite,
   storyWithTwoInteractions,
@@ -46,7 +47,7 @@ async function editInteractionTitleAndBody(user: ReturnType<typeof userEvent.set
   const content = await screen.findByRole('textbox', { name: 'Content' });
   await user.clear(content);
   await user.type(content, 'Saved content');
-  await user.tab();
+  await leaveBodyEditor(user);
 }
 
 setupStoryEditorTestSuite();
@@ -454,7 +455,7 @@ it('updates interaction body from the inspector', async () => {
   const bodyInput = await screen.findByRole('textbox', { name: 'Content' }, { timeout: 10_000 });
   await user.clear(bodyInput);
   await user.type(bodyInput, 'Long new content');
-  await user.tab();
+  await leaveBodyEditor(user);
 
   expect(api.updateInteraction).toHaveBeenCalledWith('story-1', 'interaction-1', {
     body: '<p>Long new content</p>',

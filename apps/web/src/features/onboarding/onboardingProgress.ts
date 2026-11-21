@@ -1,9 +1,4 @@
-export const onboardingStepIds = [
-  'discover-interactions',
-  'write-scene',
-  'create-branch',
-  'test-story',
-] as const;
+export const onboardingStepIds = ['write-scene', 'create-branch', 'test-story'] as const;
 
 export type OnboardingStepId = (typeof onboardingStepIds)[number];
 export type OnboardingStatus = 'idle' | 'active' | 'paused' | 'complete';

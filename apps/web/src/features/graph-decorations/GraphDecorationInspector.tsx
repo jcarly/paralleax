@@ -4,14 +4,9 @@ import type { GraphDecoration, UpdateGraphDecorationInput } from '@paralleax/sha
 interface GraphDecorationInspectorProps {
   decoration: GraphDecoration;
   onPatch: (patch: UpdateGraphDecorationInput) => void;
-  onDelete: () => void;
 }
 
-export function GraphDecorationInspector({
-  decoration,
-  onPatch,
-  onDelete,
-}: GraphDecorationInspectorProps) {
+export function GraphDecorationInspector({ decoration, onPatch }: GraphDecorationInspectorProps) {
   const { t } = useTranslation();
 
   return (
@@ -124,9 +119,6 @@ export function GraphDecorationInspector({
           </div>
         </>
       )}
-      <button className="danger" type="button" onClick={onDelete}>
-        {t('decoration.delete')}
-      </button>
     </div>
   );
 }

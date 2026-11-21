@@ -78,5 +78,8 @@ function orderScenes(scenes: ParsedScene[], report: ChoiceScriptImportReport): P
       });
     }
   }
-  return orderedNames.flatMap((name) => (byName.has(name) ? [byName.get(name)!] : []));
+  return orderedNames.flatMap((name) => {
+    const scene = byName.get(name);
+    return scene ? [scene] : [];
+  });
 }

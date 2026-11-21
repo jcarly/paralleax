@@ -37,8 +37,11 @@ easy to target.
 
 Open tuning points:
 
-- default vertical distance between interactions, currently tuned to `132px`
-  for automatic creation;
+- default vertical distance between interactions: when no layout engine runs
+  (a new Story's starting child, API and MCP creation, the editor fallback),
+  a first child or parent is placed one ELK layered step away (`376px`), the
+  same position ELK gives it, so the Trigger marker fits between the parent
+  output and the child input. Stacked siblings still use `132px`;
 - default horizontal offset for parallel branches;
 - minimum spacing around trigger markers;
 - behavior when several branches converge on the same interaction.
