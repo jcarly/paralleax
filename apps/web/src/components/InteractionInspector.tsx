@@ -27,6 +27,8 @@ import { RichTextEditor } from './RichTextEditor';
 import { RichTextContent } from './RichTextContent';
 import { hasAuthoredRichTextContent } from './richTextProjection';
 import { VariablePicker } from './VariablePicker';
+import { InspectorEffectCounters } from '../features/story-editor/inspectors/InspectorEffectCounters';
+import { InteractionInputs } from '../features/story-editor/inspectors/InteractionInputs';
 import { ChoiceLabelErrorIcon } from '../features/story/ChoiceLabelError';
 import {
   getOptionDestinations,
@@ -131,7 +133,7 @@ function AddEffectControl({
           setIsChoosing(true);
         }}
       >
-        <span aria-hidden="true">+</span>
+        <span aria-hidden="true">Δ+</span>
       </button>
     );
   }
@@ -380,7 +382,6 @@ function InteractionInspectorView({
             itemDefinitionId === definition.id && characterId === character.id,
         ),
     );
-  const totalEffectCount = statEffects.length + (interaction.itemEffects?.length ?? 0);
   const effectSummaries = getInteractionEffectSummaries(story, interaction, t);
   const location = (story.locations ?? []).find(({ id }) => id === interaction.locationId);
   const presentCharacters = characters.filter((character) =>
@@ -528,6 +529,11 @@ function InteractionInspectorView({
     <div className="interaction-inspector">
       <div className="interaction-inspector-presentation">
         <section className="interaction-inspector-content">
+          <InteractionInputs
+            story={story}
+            interaction={interaction}
+            onSelectInteraction={onSelectInteraction}
+          />
           <InspectorCommentField
             field="title"
             label={t('interactionInspector.title')}
@@ -856,16 +862,16 @@ function InteractionInspectorView({
       >
         <section className="interaction-inspector-effects">
           <div className="interaction-inspector-section-heading">
-            <h3>{t('interactionInspector.effects')}</h3>
-            <small>{totalEffectCount}</small>
+            <h3 className="sr-only">{t('interactionInspector.effects')}</h3>
+            <InspectorEffectCounters
+              statCount={statEffects.length}
+              itemCount={interaction.itemEffects?.length ?? 0}
+            />
             <AddEffectControl unavailableReasons={effectUnavailableReasons} onAdd={addEffect} />
           </div>
           {statEffects.length > 0 ? (
             <section className="interaction-effect-group">
-              <div className="interaction-effect-group-header editor-heading-row">
-                <h4>{t('interactionInspector.statEffects')}</h4>
-                <small>{statEffects.length}</small>
-              </div>
+              <h4 className="sr-only">{t('interactionInspector.statEffects')}</h4>
               {statEffects.map((effect, index) => {
                 const selectedTarget = statTargets.find((target) =>
                   isSameStatTarget(effect, target),
@@ -1048,10 +1054,7 @@ function InteractionInspectorView({
           ) : null}
           {(interaction.itemEffects?.length ?? 0) > 0 ? (
             <section className="interaction-effect-group">
-              <div className="interaction-effect-group-header editor-heading-row">
-                <h4>{t('interactionInspector.itemEffects')}</h4>
-                <small>{interaction.itemEffects?.length ?? 0}</small>
-              </div>
+              <h4 className="sr-only">{t('interactionInspector.itemEffects')}</h4>
               {(interaction.itemEffects ?? []).map((effect, index) => (
                 <details
                   className="interaction-effect-editor"
@@ -1156,20 +1159,7 @@ function InteractionInspectorView({
         </section>
       </InspectorCommentSlot>
       <section className="interaction-inspector-options">
-        <div className="interaction-inspector-section-heading">
-          <h3>{t('interactionInspector.options')}</h3>
-          {onAddOption ? (
-            <button
-              aria-label={t('interactionInspector.addOption')}
-              className="ghost interaction-inspector-add-option"
-              title={t('interactionInspector.addOption')}
-              type="button"
-              onClick={() => void onAddOption()}
-            >
-              <span aria-hidden="true">+</span>
-            </button>
-          ) : null}
-        </div>
+        <h3 className="sr-only">{t('interactionInspector.options')}</h3>
         {optionDestinations.length > 0 ? (
           <ul className="interaction-inspector-option-list">
             {optionDestinations.map((destination, index) => {
@@ -1204,6 +1194,17 @@ function InteractionInspectorView({
         ) : (
           <p className="hint">{t('interactionInspector.noOptions')}</p>
         )}
+        {onAddOption ? (
+          <button
+            aria-label={t('interactionInspector.addOption')}
+            className="ghost interaction-inspector-add-option"
+            title={t('interactionInspector.addOption')}
+            type="button"
+            onClick={() => void onAddOption()}
+          >
+            <span aria-hidden="true">+</span>
+          </button>
+        ) : null}
       </section>
     </div>
   );

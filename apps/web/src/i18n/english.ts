@@ -881,6 +881,8 @@ export const englishTranslation = {
     forced: ' Forced for this test.',
     addOption: 'Add option',
     addOptionHelp: 'Create a connected interaction from this point.',
+    untitledInteraction: 'Untitled',
+    startChoice: 'Start',
     continueChoice: 'Continue',
     untitledChoice: 'Option {{number}}',
     choiceLabelNeeded:
@@ -1052,6 +1054,8 @@ export const englishTranslation = {
     target: 'Target',
     content: 'Content',
     title: 'Title',
+    inputs: 'Incoming interactions',
+    startInput: 'Start',
     startTitlePlaceholder: 'Start',
     newTitlePlaceholder: 'New interaction',
     contextAndTiming: 'Context and timing',

@@ -2,6 +2,16 @@
 
 ## Unreleased
 
+- The Inspector shows where an Interaction comes from and drops repeated
+  headings (PAR-7, B5 and B3). A `←` row above the title lists the incoming
+  Interactions as clickable chips, or `Start` for a starting point. The
+  `Effects` and `Options` headings become screen-reader headings: effects show
+  as `Δ` and `◇` counters with a `Δ+` add button, and the add-option `+` follows
+  the option list.
+- Grouped the graph tool rail (PAR-7, B9). Thin separators split the panel
+  toggle, history (undo and redo now side by side, then Story history),
+  creation (start, frame, text, post-it) and Organize. The zoom controls run
+  horizontally at the bottom left.
 - Added versioned native Story JSON export and private import from the Story
   library, with an author-only export permission, validation and preview,
   collision-safe references and atomic creation. The format and its exclusions
@@ -17,6 +27,10 @@
   in red and add a `!` icon whose tooltip explains the problem, instead of
   showing `New interaction` or `Option N` with a separate warning text.
   `Option N` remains the Reader fallback, and nothing blocks drafting.
+  Simulation no longer shows `New interaction`: an untitled starting point reads
+  `Start`, its title hint is `Start` or `Continue` depending on how it was
+  reached, and an Interaction reached among several untitled options is flagged
+  the same way, in its title and in the Simulation history.
 - On a phone, the Inspector no longer covers the tool rail (PAR-7). At 390 px its
   border comment button sat over the story context toggle, so the left panel
   could not be collapsed while an Interaction was selected; the Inspector now

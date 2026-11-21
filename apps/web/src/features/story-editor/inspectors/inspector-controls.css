@@ -505,6 +505,40 @@
   outline: 2px solid var(--color-primary);
   outline-offset: 1px;
 }
+.interaction-inspector-inputs {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 0.3rem;
+  margin: 0 0 0.5rem;
+  padding: 0;
+  list-style: none;
+  font-size: var(--type-size-compact);
+}
+.interaction-inspector-inputs-arrow {
+  color: var(--color-muted);
+}
+.interaction-inspector-input {
+  min-height: 0;
+  max-width: 14rem;
+  padding: 0.1rem 0.5rem;
+  overflow: hidden;
+  border: 1px solid var(--color-border);
+  border-radius: 999px;
+  background: var(--color-surface);
+  color: var(--color-text);
+  font-size: var(--type-size-compact);
+  font-weight: 600;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+button.interaction-inspector-input:hover {
+  border-color: var(--color-primary);
+}
+.interaction-inspector-input-start {
+  border-style: dashed;
+  color: var(--color-muted);
+}
 .interaction-inspector-title-bubble {
   display: inline-flex;
   max-width: 100%;
@@ -699,7 +733,36 @@ span.context-picto.interaction-metadata-avatar {
   line-height: 1;
 }
 .interaction-inspector-add-option {
+  margin-top: 0.4rem;
+}
+.interaction-add-effect {
+  width: auto;
+  min-width: 30px;
   margin-left: auto;
+  padding: 0 0.45rem;
+  border-radius: 999px;
+  font-size: var(--type-size-compact);
+  font-weight: 700;
+}
+.interaction-effect-counters {
+  display: inline-flex;
+  flex-wrap: wrap;
+  gap: 0.3rem;
+}
+.interaction-effect-counter {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.25rem;
+  padding: 0.1rem 0.45rem;
+  border-radius: 999px;
+  background: var(--color-surface-secondary);
+  color: var(--color-text);
+  font-size: var(--type-size-compact);
+  font-weight: 650;
+}
+.interaction-effect-counter > i {
+  color: var(--color-primary);
+  font-style: normal;
 }
 .interaction-add-effect:hover:not(:disabled),
 .interaction-inspector-add-option:hover:not(:disabled) {

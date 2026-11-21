@@ -52,7 +52,8 @@ import {
 } from '../features/story-player/storyPlayerPresentation';
 import { type StoryRealtimeInvalidation } from '../features/realtime/storyRealtime';
 import { useStoryRouteAccessRecovery } from '../features/story/useStoryRouteAccessRecovery';
-import { interactionTitlePlaceholder } from '../features/story/interactionTitlePresentation';
+import { SimulationInteractionTitle } from '../features/story-player/components/SimulationInteractionTitle';
+import { useSimulationArrivals } from '../features/story-player/simulation/useSimulationArrivals';
 import { StoryUnavailablePage } from '../features/story/StoryUnavailablePage';
 import { useStoryRealtime } from '../hooks/useStoryRealtime';
 import { usePendingSaveGuard } from '../hooks/usePendingSaveGuard';
@@ -645,6 +646,7 @@ export function StoryPlayer({
     editingChoiceInputRef.current?.select();
   }, [editingChoiceId]);
 
+  const simulationArrivals = useSimulationArrivals();
   const choose = useReaderChoiceNavigation({
     story,
     current,
@@ -956,20 +958,13 @@ export function StoryPlayer({
       >
         {current && (playableCharacters.length === 0 || playedCharacter) ? (
           isSimulationMode ? (
-            <InteractionLabel
-              label={current.title}
-              className="player-interaction-label simulation-title-input"
-              editable={{
-                'aria-label': t('player.currentInteractionTitle'),
-                placeholder: interactionTitlePlaceholder(current, t),
-                value: current.title,
-                onChange: (event) => {
-                  patchCurrentInteraction({ title: event.target.value });
-                },
-                onBlur: (event) => {
-                  void saveCurrentInteraction({ title: event.currentTarget.value });
-                },
+            <SimulationInteractionTitle
+              interaction={current}
+              arrival={simulationArrivals.get(current.id, visited.length - 1)}
+              onChange={(title) => {
+                patchCurrentInteraction({ title });
               }}
+              onSave={(title) => void saveCurrentInteraction({ title })}
             />
           ) : current.title.trim() ? (
             <InteractionLabel
@@ -1156,7 +1151,13 @@ export function StoryPlayer({
               showEnding={
                 runtimeSliceReady && choices.length === 0 && Boolean(current) && !isSimulationMode
               }
-              onChoose={choose}
+              onChoose={(interaction) => {
+                simulationArrivals.record(
+                  interaction.id,
+                  current ? { optionCount: visibleChoices.length } : 'start',
+                );
+                choose(interaction);
+              }}
               onPatchInteraction={patchInteraction}
               onSaveChoiceTitle={saveChoiceTitle}
               onAddOption={addOption}
@@ -1173,6 +1174,7 @@ export function StoryPlayer({
         ownedItemIds={ownedItemIds}
         itemStatValues={itemStatValues}
         visitedIds={visited}
+        simulationArrivals={simulationArrivals}
         isSimulationMode={isSimulationMode}
         forceUnavailableOptions={forceUnavailableOptions}
         onForceUnavailableOptionsChange={setForceUnavailableOptions}

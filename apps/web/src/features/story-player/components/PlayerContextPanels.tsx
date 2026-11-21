@@ -1,7 +1,9 @@
 import { useTranslation } from 'react-i18next';
 import type { Character, Interaction, StatValue, Story } from '@paralleax/shared';
 import { getItemDefinitionIdForInstance, getItemOwnerIdForInstance } from '@paralleax/shared';
-import { interactionTitleForDisplay } from '../../story/interactionTitlePresentation';
+import { ChoiceLabelErrorIcon } from '../../story/ChoiceLabelError';
+import { simulationTitleHint } from '../../story/interactionTitlePresentation';
+import type { SimulationArrival, SimulationArrivals } from '../simulation/useSimulationArrivals';
 
 function shouldShowPlayerContextPanel(
   playedCharacter: Character | undefined,
@@ -24,6 +26,7 @@ export function PlayerContextPanels({
   ownedItemIds,
   itemStatValues,
   visitedIds,
+  simulationArrivals,
   isSimulationMode,
   forceUnavailableOptions,
   onForceUnavailableOptionsChange,
@@ -36,6 +39,7 @@ export function PlayerContextPanels({
   ownedItemIds: string[];
   itemStatValues: Record<string, Record<string, StatValue>>;
   visitedIds: string[];
+  simulationArrivals?: SimulationArrivals;
   isSimulationMode: boolean;
   forceUnavailableOptions: boolean;
   onForceUnavailableOptionsChange: (checked: boolean) => void;
@@ -168,13 +172,12 @@ export function PlayerContextPanels({
             <details className="debug player-history">
               <summary>{t('player.simulationHistory')}</summary>
               <ol>
-                {visitedIds.map((id) => (
-                  <li key={id}>
-                    {(() => {
-                      const interaction = story.interactions.find((item) => item.id === id);
-                      return interaction ? interactionTitleForDisplay(interaction, t) : id;
-                    })()}
-                  </li>
+                {visitedIds.map((id, index) => (
+                  <SimulationHistoryEntry
+                    key={id}
+                    title={story.interactions.find((item) => item.id === id)?.title ?? ''}
+                    arrival={simulationArrivals?.get(id, index)}
+                  />
                 ))}
               </ol>
             </details>
@@ -208,5 +211,24 @@ export function PlayerContextPanels({
         </aside>
       ) : null}
     </>
+  );
+}
+
+function SimulationHistoryEntry({
+  title,
+  arrival,
+}: {
+  title: string;
+  arrival: SimulationArrival | undefined;
+}) {
+  const { t } = useTranslation();
+  if (title.trim()) {
+    return <li>{title}</li>;
+  }
+  const { hint, needsLabel } = simulationTitleHint(arrival, t);
+  return (
+    <li className="interaction-label-fallback">
+      {needsLabel ? <ChoiceLabelErrorIcon /> : hint || t('player.untitledInteraction')}
+    </li>
   );
 }
