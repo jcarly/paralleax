@@ -119,7 +119,12 @@ jobs:
 
       - name: Select exhaustive validation
         id: full
-        if: github.event_name == 'schedule' || github.event_name == 'workflow_dispatch' || github.ref_type == 'tag'
+        if: >-
+          github.event_name == 'schedule' ||
+          github.event_name == 'workflow_dispatch' ||
+          github.ref_type == 'tag' ||
+          (github.event_name == 'pull_request' && github.base_ref == 'main') ||
+          (github.event_name == 'push' && github.ref == 'refs/heads/main')
         run: echo 'full=true' >> "$GITHUB_OUTPUT"
 
   quality:
@@ -462,6 +467,44 @@ jobs:
 
       - name: Verify native Story upload limits through production Nginx
         run: npm run test:production-proxy -- paralleax-web:ci
+
+  # Stable required check for release-ready PRs and commits on main.
+  # All jobs above must actually run, not merely report skipped.
+  main-readiness:
+    name: Main readiness
+    needs: [changes, quality, workflow-validation, postgres, mcp, browser, production-images]
+    if: >-
+      always() &&
+      ((github.event_name == 'pull_request' && github.base_ref == 'main') ||
+       (github.event_name == 'push' && github.ref == 'refs/heads/main'))
+    runs-on: ubuntu-latest
+    steps:
+      - name: Require exhaustive release validation
+        env:
+          FULL: ${{ needs.changes.outputs.full }}
+          CHANGES_RESULT: ${{ needs.changes.result }}
+          QUALITY_RESULT: ${{ needs.quality.result }}
+          WORKFLOW_RESULT: ${{ needs.workflow-validation.result }}
+          POSTGRES_RESULT: ${{ needs.postgres.result }}
+          MCP_RESULT: ${{ needs.mcp.result }}
+          BROWSER_RESULT: ${{ needs.browser.result }}
+          IMAGES_RESULT: ${{ needs.production-images.result }}
+        run: |
+          set -euo pipefail
+          if [[ "$FULL" != 'true' ]]; then
+            echo "::error::Exhaustive validation was not enabled for main."
+            exit 1
+          fi
+          status=0
+          for check in CHANGES QUALITY WORKFLOW POSTGRES MCP BROWSER IMAGES; do
+            variable="${check}_RESULT"
+            result="${!variable}"
+            if [[ "$result" != 'success' ]]; then
+              echo "::error::${check} must succeed for main (got ${result})."
+              status=1
+            fi
+          done
+          exit "$status"
 
   release:
     name: Alpha release
