@@ -154,7 +154,12 @@ function useGroupTreeCore(props: StoryGroupsPanelProps): GroupTreeCore {
     [props.editingGroupId, tree],
   );
   const forcedVisibleIds = useMemo(
-    () => new Set(props.editingGroupId ? [props.editingGroupId] : []),
+    () =>
+      new Set(
+        props.editingGroupId !== undefined && props.editingGroupId !== ''
+          ? [props.editingGroupId]
+          : [],
+      ),
     [props.editingGroupId],
   );
   const ungroupedInteractions = useUngroupedInteractions(props.story.interactions, groups);
@@ -277,7 +282,11 @@ function useGroupTreeFocus(props: StoryGroupsPanelProps, panel: RefObject<HTMLEl
     scrollToEditingGroup(panel, props.editingGroupId);
   }, [panel, props.editingGroupId]);
   useLayoutEffect(() => {
-    if (!restoreFocusGroupId.current || props.editingGroupId) {
+    if (
+      restoreFocusGroupId.current === undefined ||
+      restoreFocusGroupId.current === '' ||
+      (props.editingGroupId !== undefined && props.editingGroupId !== '')
+    ) {
       return;
     }
     const groupId = restoreFocusGroupId.current;
@@ -288,13 +297,13 @@ function useGroupTreeFocus(props: StoryGroupsPanelProps, panel: RefObject<HTMLEl
 }
 
 function focusPanelRow(panel: RefObject<HTMLElement | null>, id?: string) {
-  if (!id) {
+  if (id === undefined || id === '') {
     return;
   }
   const row =
     document.getElementById(`story-group-${id}`) ??
     document.getElementById(`story-interaction-${id}`);
-  if (row && panel.current?.contains(row)) {
+  if (row && panel.current?.contains(row) === true) {
     row.focus();
   }
 }
@@ -307,7 +316,7 @@ function getEntryId(entry?: GroupExplorerEntry) {
 }
 
 function scrollToEditingGroup(panel: RefObject<HTMLElement | null>, editingGroupId?: string) {
-  if (!editingGroupId) {
+  if (editingGroupId === undefined || editingGroupId === '') {
     return;
   }
   const rows = panel.current?.querySelectorAll<HTMLElement>('[data-group-id]') ?? [];
@@ -386,7 +395,11 @@ function useUngroupedInteractions(
 function getGroupAncestorIds(groupId: string | undefined, tree: GroupTreeProjection) {
   const result = new Set<string>();
   let group = tree.byId.get(groupId ?? '');
-  while (group?.parentGroupId && !result.has(group.parentGroupId)) {
+  while (
+    group?.parentGroupId !== undefined &&
+    group.parentGroupId !== '' &&
+    !result.has(group.parentGroupId)
+  ) {
     result.add(group.parentGroupId);
     group = tree.byId.get(group.parentGroupId);
   }

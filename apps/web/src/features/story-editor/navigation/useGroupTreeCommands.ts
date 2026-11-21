@@ -35,7 +35,7 @@ export function useGroupTreeCommands(
       if (!input) {
         return;
       }
-      if (expandGroupId) {
+      if (expandGroupId !== undefined && expandGroupId !== '') {
         setExpandedIds((current) => new Set([...current, expandGroupId]));
       }
       void mutate(() => props.onUpdate(group.id, input)).then(() => {
