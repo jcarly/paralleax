@@ -197,11 +197,8 @@ test('an author creates, persists, resumes, and simulates a conditional story', 
   await expect(page.getByLabel('Current interaction title')).toHaveValue('Opening');
   await page.getByRole('button', { name: 'Gain courage' }).click();
   await expect(page.getByLabel('Current interaction title')).toHaveValue('Gain courage');
-  await expect(page.getByRole('region', { name: 'Story ready to explore' })).toBeVisible();
-  await expect(page.getByRole('link', { name: 'Share for testing' })).toHaveAttribute(
-    'href',
-    /settings=access/,
-  );
+  // Finishing the first-story guide closes it; no completion card covers Simulation.
+  await expect(page.locator('.onboarding-card')).toHaveCount(0);
   await expect(page.getByRole('button', { name: 'Resolve' })).toBeEnabled();
   await page.getByRole('button', { name: 'Resolve' }).click();
   await expect(page.getByLabel('Current interaction title')).toHaveValue('Resolve');

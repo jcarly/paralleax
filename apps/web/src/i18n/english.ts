@@ -42,27 +42,15 @@ export const englishTranslation = {
     openStoryPrompt: 'Your new story is ready. Open it to continue.',
     returnToEditorPrompt: 'Return to the editor to continue the guide.',
     openStory: 'Open story',
-    completeTitle: 'Story ready to explore',
-    completeDescription: 'You created and tested your first path.',
-    completeSkippedDescription: 'You can keep creating or restart the guide at any time.',
-    completeAccessDescription:
-      'Choose who can read, comment, or edit. Your story stays private until you change its access settings.',
-    continueCreating: 'Continue creating',
-    shareForTesting: 'Share for testing',
     stepCount: 'Step {{current}} of {{total}}',
     skipStep: 'Skip step',
     close: 'Close guide',
     restart: 'Restart guide',
     steps: {
-      'discover-interactions': {
-        title: 'Explore the graph',
-        description:
-          'Select an interaction. Connections show how story moments lead to each other.',
-      },
       'write-scene': {
         title: 'Write a scene',
         description:
-          'The selected interaction appears in Inspector. Add its scene, then leave the field to save it.',
+          'The starting interaction is selected. Choose Add content, write its scene, then click outside the field to save it.',
       },
       'create-branch': {
         title: 'Create a choice',
@@ -71,7 +59,7 @@ export const englishTranslation = {
       },
       'test-story': {
         title: 'Test your story',
-        description: 'Choose Test from start in the editor, then follow a path in Simulation Mode.',
+        description: 'Choose Test from start. The guide closes and Simulation opens on your story.',
       },
     },
   },

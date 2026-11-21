@@ -43,27 +43,15 @@ export const italianTranslation = {
     openStoryPrompt: 'La tua nuova storia è pronta. Aprila per continuare.',
     returnToEditorPrompt: "Torna all'editor per continuare la guida.",
     openStory: 'Apri la storia',
-    completeTitle: 'La storia è pronta da esplorare',
-    completeDescription: 'Hai creato e provato il tuo primo percorso.',
-    completeSkippedDescription: 'Continua a creare o riavvia la guida quando vuoi.',
-    completeAccessDescription:
-      'Scegli chi può leggere, commentare o modificare. La storia resta privata finché non cambi le impostazioni di accesso.',
-    continueCreating: 'Continua a creare',
-    shareForTesting: 'Condividi per i test',
     stepCount: 'Passaggio {{current}} di {{total}}',
     skipStep: 'Salta il passaggio',
     close: 'Chiudi la guida',
     restart: 'Riavvia la guida',
     steps: {
-      'discover-interactions': {
-        title: 'Esplora il grafo',
-        description:
-          'Seleziona un’interazione. I collegamenti mostrano come si susseguono le scene.',
-      },
       'write-scene': {
         title: 'Scrivi una scena',
         description:
-          'L’interazione selezionata appare nell’ispettore. Aggiungi la scena, poi esci dal campo per salvarla.',
+          'L’interazione iniziale è selezionata. Scegli Aggiungi contenuto, scrivi la scena, poi fai clic fuori dal campo per salvarla.',
       },
       'create-branch': {
         title: 'Crea una scelta',
@@ -73,7 +61,7 @@ export const italianTranslation = {
       'test-story': {
         title: 'Prova la storia',
         description:
-          'Nell’editor scegli Prova dall’inizio, poi segui un percorso in modalità simulazione.',
+          "Scegli Test dall'inizio. La guida si chiude e la simulazione si apre sulla tua storia.",
       },
     },
   },

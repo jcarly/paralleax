@@ -7,7 +7,6 @@ import { useOnboarding } from '../../onboarding/onboardingContext';
 type StoryEditorOnboardingInput = {
   storyId: string;
   story?: Story;
-  selectedId?: string;
   loadPhase: ReturnType<typeof useStoryEditorPersistence>['loadPhase'];
   storyRouteInaccessible: boolean;
 };
@@ -15,7 +14,6 @@ type StoryEditorOnboardingInput = {
 export function useStoryEditorOnboardingEffects({
   storyId,
   story,
-  selectedId,
   loadPhase,
   storyRouteInaccessible,
 }: StoryEditorOnboardingInput) {
@@ -37,18 +35,5 @@ export function useStoryEditorOnboardingEffects({
     lastOnboardingSnapshot.current = snapshot;
     reportStoryState(storyId, storyHasAuthoredScene(story), storyHasBranchingChoice(story));
   }, [loadPhase, reportStoryState, story, storyId]);
-  useEffect(() => {
-    if (
-      loadPhase !== 'ready' ||
-      story?.id !== storyId ||
-      selectedId === undefined ||
-      selectedId.length === 0
-    ) {
-      return;
-    }
-    if (story.interactions.some(({ id }) => id === selectedId)) {
-      reportStepComplete(storyId, 'discover-interactions');
-    }
-  }, [loadPhase, progress, reportStepComplete, selectedId, story, storyId]);
   return { progress, reportStepComplete };
 }

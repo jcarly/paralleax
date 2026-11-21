@@ -2,6 +2,13 @@
 
 ## Unreleased
 
+- Reworked the first-story guide (PAR-7). A new Story opens with its starting
+  Interaction selected, so the guide's first step, Explore the graph, completed
+  itself and the guide opened at Step 2 of 4; the guide now has three steps and
+  starts at Write a scene, which highlights `Add content`. Choosing Test from
+  start finishes and closes the guide instead of leaving its card over
+  Simulation, and there is no longer a Story ready card. The card fades in and
+  out, and the Guide control restarts a finished guide.
 - Story access settings no longer allow editing to be open to more people than
   reading (PAR-7). An owner-only Story is edited by its owner only, and an
   invitation-only Story by its owner or invited editors. The settings screen

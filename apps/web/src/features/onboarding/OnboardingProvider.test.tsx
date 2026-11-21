@@ -13,8 +13,8 @@ function OnboardingProbe() {
   const actions = [
     { label: 'Begin', onClick: bindAction(onboarding.beginForStory, 'story-1') },
     {
-      label: 'Select interaction',
-      onClick: bindAction(onboarding.reportStepComplete, 'story-1', 'discover-interactions'),
+      label: 'Save scene',
+      onClick: bindAction(onboarding.reportStepComplete, 'story-1', 'write-scene'),
     },
     {
       label: 'Report existing content',
@@ -67,10 +67,10 @@ describe('OnboardingProvider', () => {
     renderOnboarding();
 
     await user.click(screen.getByRole('button', { name: 'Begin' }));
-    expect(screen.getByRole('status')).toHaveTextContent('active:discover-interactions');
-
-    await user.click(screen.getByRole('button', { name: 'Select interaction' }));
     expect(screen.getByRole('status')).toHaveTextContent('active:write-scene');
+
+    await user.click(screen.getByRole('button', { name: 'Save scene' }));
+    expect(screen.getByRole('status')).toHaveTextContent('active:create-branch');
 
     await user.click(screen.getByRole('button', { name: 'Report existing content' }));
     expect(screen.getByRole('status')).toHaveTextContent('active:test-story');
@@ -80,15 +80,15 @@ describe('OnboardingProvider', () => {
     const user = userEvent.setup();
     const first = renderOnboarding();
     await user.click(screen.getByRole('button', { name: 'Begin' }));
-    await user.click(screen.getByRole('button', { name: 'Select interaction' }));
+    await user.click(screen.getByRole('button', { name: 'Save scene' }));
     first.unmount();
 
     renderOnboarding();
-    expect(screen.getByRole('status')).toHaveTextContent('active:write-scene');
+    expect(screen.getByRole('status')).toHaveTextContent('active:create-branch');
     await user.click(screen.getByRole('button', { name: 'Close' }));
-    expect(screen.getByRole('status')).toHaveTextContent('paused:write-scene');
+    expect(screen.getByRole('status')).toHaveTextContent('paused:create-branch');
     await user.click(screen.getByRole('button', { name: 'Help' }));
-    expect(screen.getByRole('status')).toHaveTextContent('active:write-scene');
+    expect(screen.getByRole('status')).toHaveTextContent('active:create-branch');
   });
 
   it('clears an unavailable story target while retaining a paused guide', async () => {
@@ -97,15 +97,14 @@ describe('OnboardingProvider', () => {
     await user.click(screen.getByRole('button', { name: 'Begin' }));
     await user.click(screen.getByRole('button', { name: 'Delete story' }));
 
-    expect(screen.getByRole('status')).toHaveTextContent('paused:discover-interactions');
+    expect(screen.getByRole('status')).toHaveTextContent('paused:write-scene');
   });
 
-  it('pauses a completed guide and resumes at its completion screen', async () => {
+  it('restarts a finished guide from its first step when it is opened again', async () => {
     const user = userEvent.setup();
     renderOnboarding();
 
     await user.click(screen.getByRole('button', { name: 'Begin' }));
-    await user.click(screen.getByRole('button', { name: 'Select interaction' }));
     await user.click(screen.getByRole('button', { name: 'Report existing content' }));
     await user.click(screen.getByRole('button', { name: 'Complete test' }));
     expect(screen.getByRole('status')).toHaveTextContent('complete:done');
@@ -113,6 +112,6 @@ describe('OnboardingProvider', () => {
     await user.click(screen.getByRole('button', { name: 'Close' }));
     expect(screen.getByRole('status')).toHaveTextContent('paused:done');
     await user.click(screen.getByRole('button', { name: 'Help' }));
-    expect(screen.getByRole('status')).toHaveTextContent('active:done');
+    expect(screen.getByRole('status')).toHaveTextContent('active:write-scene');
   });
 });
