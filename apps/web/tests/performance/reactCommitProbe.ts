@@ -33,7 +33,10 @@ function installReactCommitProbeInBrowser() {
       }
       const pending = [root.current];
       while (pending.length > 0) {
-        const fiber = pending.pop()!;
+        const fiber = pending.pop();
+        if (!fiber) {
+          throw new Error('Expected a pending React Fiber during traversal.');
+        }
         const previous = fiber.alternate;
         if (
           previous === null ||

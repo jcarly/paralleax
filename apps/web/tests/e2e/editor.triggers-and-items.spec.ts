@@ -1,4 +1,5 @@
 import { expect, test } from '@playwright/test';
+import { requireValue } from '../../src/test/assertions';
 import {
   mockStory,
   prepareEditorPage,
@@ -137,9 +138,15 @@ test.describe('Story editor triggers and items', () => {
     ];
     await mockStory(page, initialStory);
     const afterDelete = structuredClone(initialStory);
-    afterDelete.interactions[1].triggers[0].conditionGroups = [
-      afterDelete.interactions[1].triggers[0].conditionGroups![1],
-    ];
+    const conditionGroups = requireValue(
+      afterDelete.interactions[1].triggers[0].conditionGroups,
+      'deleted trigger condition groups',
+    );
+    const remainingConditionGroup = requireValue(
+      conditionGroups[1],
+      'remaining trigger condition group',
+    );
+    afterDelete.interactions[1].triggers[0].conditionGroups = [remainingConditionGroup];
     await page.route(
       '**/api/stories/story-1/interactions/interaction-2/triggers/trigger-a',
       async (route) => {

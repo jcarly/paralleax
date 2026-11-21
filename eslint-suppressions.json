@@ -107,9 +107,6 @@
     }
   },
   "apps/api/src/database/database.migrations.postgres.spec.ts": {
-    "@typescript-eslint/no-non-null-assertion": {
-      "count": 2
-    },
     "@typescript-eslint/no-unsafe-type-assertion": {
       "count": 4
     },
@@ -2229,17 +2226,11 @@
     }
   },
   "apps/web/src/test/complexLayoutStoryFixture.ts": {
-    "@typescript-eslint/no-non-null-assertion": {
-      "count": 2
-    },
     "max-lines-per-function": {
       "count": 1
     }
   },
   "apps/web/src/test/largeEditorStoryFixture.ts": {
-    "@typescript-eslint/no-non-null-assertion": {
-      "count": 1
-    },
     "max-lines-per-function": {
       "count": 1
     }
@@ -2370,17 +2361,11 @@
     }
   },
   "apps/web/tests/acceptance/large-story.scheduled.spec.ts": {
-    "@typescript-eslint/no-non-null-assertion": {
-      "count": 8
-    },
     "max-lines-per-function": {
       "count": 1
     }
   },
   "apps/web/tests/acceptance/reader-runtime-state.spec.ts": {
-    "@typescript-eslint/no-non-null-assertion": {
-      "count": 4
-    },
     "@typescript-eslint/no-unsafe-type-assertion": {
       "count": 1
     },
@@ -2426,9 +2411,6 @@
     }
   },
   "apps/web/tests/e2e/design-system-contrast.spec.ts": {
-    "@typescript-eslint/no-non-null-assertion": {
-      "count": 5
-    },
     "@typescript-eslint/no-unsafe-assignment": {
       "count": 1
     },
@@ -2483,9 +2465,6 @@
     }
   },
   "apps/web/tests/e2e/editor.layout-quality.spec.ts": {
-    "@typescript-eslint/no-non-null-assertion": {
-      "count": 8
-    },
     "@typescript-eslint/no-shadow": {
       "count": 1
     },
@@ -2508,9 +2487,6 @@
     "@typescript-eslint/consistent-type-imports": {
       "count": 1
     },
-    "@typescript-eslint/no-non-null-assertion": {
-      "count": 1
-    },
     "max-lines-per-function": {
       "count": 3
     }
@@ -2524,17 +2500,11 @@
     }
   },
   "apps/web/tests/e2e/layout.scrolling.spec.ts": {
-    "@typescript-eslint/no-non-null-assertion": {
-      "count": 8
-    },
     "max-lines-per-function": {
       "count": 2
     }
   },
   "apps/web/tests/e2e/layoutQualityArtifacts.ts": {
-    "@typescript-eslint/no-non-null-assertion": {
-      "count": 3
-    },
     "@typescript-eslint/no-shadow": {
       "count": 1
     },
@@ -2579,11 +2549,6 @@
       "count": 8
     },
     "max-lines-per-function": {
-      "count": 1
-    }
-  },
-  "apps/web/tests/performance/reactCommitProbe.ts": {
-    "@typescript-eslint/no-non-null-assertion": {
       "count": 1
     }
   },
