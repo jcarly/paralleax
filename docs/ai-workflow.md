@@ -73,7 +73,13 @@ refactor/shared-reader-calendar
 docs/scope-sync
 ```
 
-An agent should not combine unrelated cleanup into a feature branch.
+An agent should not combine unrelated cleanup into a feature branch. Branch
+from the intended `dev` or `release/*` integration target and open the pull
+request against it. Use `dev` unless the task specifies a release branch.
+Only a promotion pull request from `dev` or `release/*` may target `main`.
+Do not publish tags or merge promotion PRs without explicit authorization.
+Follow the [contribution policy](../CONTRIBUTING.md#branches-commits-and-pull-requests)
+and required CI gates.
 
 ## Issue/task template
 
