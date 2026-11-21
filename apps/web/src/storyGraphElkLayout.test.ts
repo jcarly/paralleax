@@ -1,3 +1,4 @@
+import { requireValue } from './test/assertions';
 import type { Story } from '@paralleax/shared';
 import type { ElkNode } from 'elkjs/lib/elk-api';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
@@ -112,7 +113,7 @@ describe('ELK story graph adapter', () => {
         },
       ],
     });
-    for (const node of graph.children!.slice(1, 3)) {
+    for (const node of requireValue(graph.children, 'ELK graph children').slice(1, 3)) {
       expect(node).toMatchObject({ width: interactionNodeWidth, height: interactionNodeHeight });
     }
     expect(graph.children?.slice(3)).toEqual([

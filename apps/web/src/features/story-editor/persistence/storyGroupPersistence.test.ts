@@ -1,3 +1,4 @@
+import { requireValue } from '../../../test/assertions';
 import { renderHook, act } from '@testing-library/react';
 import { useState } from 'react';
 import { describe, expect, it, vi } from 'vitest';
@@ -42,7 +43,7 @@ describe('story group persistence', () => {
     await act(async () => {
       await result.current.actions.updateGroup('parent', { title: 'Renamed' });
     });
-    expect(result.current.story?.groups![0].title).toBe('Renamed');
+    expect(requireValue(result.current.story?.groups, 'story groups')[0].title).toBe('Renamed');
     await act(async () => {
       await result.current.actions.deleteGroup('parent');
     });
@@ -90,13 +91,19 @@ describe('story group persistence', () => {
     await act(async () => {
       await result.current.actions.updateGroup('target', { interactionIds: ['interaction-1'] });
     });
-    expect(result.current.story?.groups![0].interactionIds).toEqual(['interaction-2']);
-    expect(result.current.story?.groups![1]).toEqual(group);
+    expect(requireValue(result.current.story?.groups, 'story groups')[0].interactionIds).toEqual([
+      'interaction-2',
+    ]);
+    expect(requireValue(result.current.story?.groups, 'story groups')[1]).toEqual(group);
     await act(async () => {
       await result.current.actions.createGroup('New', ['interaction-1']);
     });
-    expect(result.current.story?.groups![1].interactionIds).toEqual([]);
-    expect(result.current.story?.groups![2].interactionIds).toEqual(['interaction-1']);
+    expect(requireValue(result.current.story?.groups, 'story groups')[1].interactionIds).toEqual(
+      [],
+    );
+    expect(requireValue(result.current.story?.groups, 'story groups')[2].interactionIds).toEqual([
+      'interaction-1',
+    ]);
   });
 
   it('keeps the Story intact when a save fails', async () => {

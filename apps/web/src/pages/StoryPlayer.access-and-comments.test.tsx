@@ -1,3 +1,4 @@
+import { requireValue } from '../test/assertions';
 import { screen } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import { describe, expect, it, vi } from 'vitest';
@@ -217,7 +218,10 @@ describe('StoryPlayer access and comments', () => {
     expect(screen.queryByText('Future scene note.')).not.toBeInTheDocument();
     await user.click(screen.getByRole('button', { name: 'Comment on this scene' }));
     await user.type(
-      screen.getByRole('complementary', { name: 'Story comments' }).querySelector('textarea')!,
+      requireValue(
+        screen.getByRole('complementary', { name: 'Story comments' }).querySelector('textarea'),
+        'story comments textarea',
+      ),
       'Could this moment be clearer?',
     );
     await user.click(screen.getByRole('button', { name: 'Send' }));

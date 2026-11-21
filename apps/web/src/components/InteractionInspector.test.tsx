@@ -1,3 +1,4 @@
+import { requireValue } from '../test/assertions';
 import { cleanup, fireEvent, render, screen, waitFor, within } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
@@ -582,7 +583,9 @@ describe('InteractionInspector time', () => {
       target: { value: 'variable:character:luc-trust' },
     });
     expect(onPatch).toHaveBeenLastCalledWith('interaction-1', {
-      statEffects: [{ ...interaction.statEffects![0], statId: 'luc-trust' }],
+      statEffects: [
+        { ...requireValue(interaction.statEffects?.[0], 'first stat effect'), statId: 'luc-trust' },
+      ],
     });
 
     fireEvent.change(within(target).getAllByRole('combobox')[0], {
@@ -592,7 +595,12 @@ describe('InteractionInspector time', () => {
       target: { value: 'variable:character:mira-health' },
     });
     expect(onPatch).toHaveBeenLastCalledWith('interaction-1', {
-      statEffects: [{ ...interaction.statEffects![0], statId: 'mira-health' }],
+      statEffects: [
+        {
+          ...requireValue(interaction.statEffects?.[0], 'first stat effect'),
+          statId: 'mira-health',
+        },
+      ],
     });
   });
 
@@ -633,7 +641,12 @@ describe('InteractionInspector time', () => {
     fireEvent.blur(expressionField);
 
     expect(onPatch).toHaveBeenLastCalledWith('interaction-1', {
-      statEffects: [{ ...interaction.statEffects![0], expression: '@{score} * 3' }],
+      statEffects: [
+        {
+          ...requireValue(interaction.statEffects?.[0], 'first stat effect'),
+          expression: '@{score} * 3',
+        },
+      ],
     });
   });
 

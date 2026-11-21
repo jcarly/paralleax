@@ -1,3 +1,4 @@
+import { requireValue } from '../test/assertions';
 import { cleanup, fireEvent, render, screen, waitFor, within } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
@@ -434,8 +435,8 @@ describe('RichTextEditor', () => {
     ).toBeInTheDocument();
 
     const renamedStory = variableStoryFixture();
-    renamedStory.characters![0].name = 'Alice';
-    renamedStory.statDefinitions![1].name = 'Force';
+    requireValue(renamedStory.characters?.[0], 'first character').name = 'Alice';
+    requireValue(renamedStory.statDefinitions?.[1], 'second stat definition').name = 'Force';
     rerender(
       <RichTextEditor value={value} onChange={vi.fn()} onBlur={vi.fn()} story={renamedStory} />,
     );
@@ -463,7 +464,10 @@ describe('RichTextEditor', () => {
     const token = await within(container).findByRole('button', {
       name: 'Edit variable Story → Score',
     });
-    const marker = token.closest<HTMLElement>('[data-stat-value]')!;
+    const marker = requireValue(
+      token.closest<HTMLElement>('[data-stat-value]'),
+      'stat token marker',
+    );
     expect(token).toHaveAttribute('draggable', 'true');
     expect(marker.closest('[draggable="true"]')).not.toBeNull();
     expect(editor.innerHTML).toContain('rich-text-token-edit');
@@ -509,7 +513,7 @@ describe('RichTextEditor', () => {
 
     rerender(
       <RichTextEditor
-        value={onChange.mock.lastCall![0]}
+        value={requireValue(onChange.mock.lastCall, 'last onChange call')[0]}
         onChange={onChange}
         onBlur={vi.fn()}
         interactionLinkTargets={[

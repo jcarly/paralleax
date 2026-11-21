@@ -1,3 +1,4 @@
+import { requireValue } from '../test/assertions';
 import { act, fireEvent, screen, waitFor, within } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import { describe, expect, it, vi } from 'vitest';
@@ -223,7 +224,10 @@ describe('StoryEditor triggers', () => {
     ];
     const withoutFirstGroup = structuredClone(story);
     withoutFirstGroup.interactions[1].triggers[0].conditionGroups = [
-      withoutFirstGroup.interactions[1].triggers[0].conditionGroups![1],
+      requireValue(
+        withoutFirstGroup.interactions[1].triggers[0].conditionGroups,
+        'trigger condition groups',
+      )[1],
     ];
     vi.mocked(api.updateTrigger).mockResolvedValue(withoutFirstGroup);
 

@@ -1,3 +1,4 @@
+import { requireValue } from '../test/assertions';
 import type { KeyboardEvent } from 'react';
 import { afterEach, describe, expect, it, vi } from 'vitest';
 import { handleModalDialogKeyDown } from './modalDialogKeyboard';
@@ -90,9 +91,18 @@ function focusableDialog() {
   document.body.append(dialog);
   return {
     dialog,
-    first: dialog.querySelector<HTMLElement>('[data-id="first"]')!,
-    middle: dialog.querySelector<HTMLElement>('[data-id="middle"]')!,
-    last: dialog.querySelector<HTMLElement>('[data-id="last"]')!,
+    first: requireValue(
+      dialog.querySelector<HTMLElement>('[data-id="first"]'),
+      'first dialog control',
+    ),
+    middle: requireValue(
+      dialog.querySelector<HTMLElement>('[data-id="middle"]'),
+      'middle dialog control',
+    ),
+    last: requireValue(
+      dialog.querySelector<HTMLElement>('[data-id="last"]'),
+      'last dialog control',
+    ),
   };
 }
 

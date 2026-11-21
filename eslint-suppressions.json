@@ -661,9 +661,6 @@
     }
   },
   "apps/web/src/components/InteractionInspector.test.tsx": {
-    "@typescript-eslint/no-non-null-assertion": {
-      "count": 3
-    },
     "@typescript-eslint/no-unnecessary-condition": {
       "count": 1
     },
@@ -779,9 +776,6 @@
     }
   },
   "apps/web/src/components/RichTextEditor.test.tsx": {
-    "@typescript-eslint/no-non-null-assertion": {
-      "count": 4
-    },
     "@typescript-eslint/no-unsafe-assignment": {
       "count": 2
     },
@@ -906,9 +900,6 @@
     "@typescript-eslint/consistent-type-imports": {
       "count": 1
     },
-    "@typescript-eslint/no-non-null-assertion": {
-      "count": 2
-    },
     "@typescript-eslint/no-unsafe-assignment": {
       "count": 1
     },
@@ -928,9 +919,6 @@
     }
   },
   "apps/web/src/components/TriggerInspector.test.tsx": {
-    "@typescript-eslint/no-non-null-assertion": {
-      "count": 1
-    },
     "@typescript-eslint/no-unnecessary-condition": {
       "count": 1
     },
@@ -957,9 +945,6 @@
   },
   "apps/web/src/components/TriggerNode.test.tsx": {
     "@typescript-eslint/consistent-type-imports": {
-      "count": 1
-    },
-    "@typescript-eslint/no-non-null-assertion": {
       "count": 1
     },
     "@typescript-eslint/no-unsafe-type-assertion": {
@@ -991,9 +976,6 @@
     }
   },
   "apps/web/src/components/modalDialogKeyboard.test.ts": {
-    "@typescript-eslint/no-non-null-assertion": {
-      "count": 3
-    },
     "@typescript-eslint/no-unsafe-type-assertion": {
       "count": 1
     },
@@ -1359,9 +1341,6 @@
     "@eslint-react/use-state": {
       "count": 1
     },
-    "@typescript-eslint/no-non-null-assertion": {
-      "count": 3
-    },
     "@typescript-eslint/no-unsafe-argument": {
       "count": 2
     },
@@ -1421,9 +1400,6 @@
     }
   },
   "apps/web/src/features/story-editor/navigation/useStoryContextNavigation.test.ts": {
-    "@typescript-eslint/no-non-null-assertion": {
-      "count": 1
-    },
     "@typescript-eslint/no-unsafe-type-assertion": {
       "count": 1
     },
@@ -1470,9 +1446,6 @@
     }
   },
   "apps/web/src/features/story-editor/persistence/storyGraphPersistence.test.ts": {
-    "@typescript-eslint/no-non-null-assertion": {
-      "count": 2
-    },
     "max-lines-per-function": {
       "count": 3
     }
@@ -1483,9 +1456,6 @@
     }
   },
   "apps/web/src/features/story-editor/persistence/storyGroupPersistence.test.ts": {
-    "@typescript-eslint/no-non-null-assertion": {
-      "count": 5
-    },
     "max-lines-per-function": {
       "count": 1
     }
@@ -1509,9 +1479,6 @@
     }
   },
   "apps/web/src/features/story-editor/selection/useStoryEditorSelection.test.ts": {
-    "@typescript-eslint/no-non-null-assertion": {
-      "count": 1
-    },
     "max-lines-per-function": {
       "count": 1
     }
@@ -1733,9 +1700,6 @@
     }
   },
   "apps/web/src/features/story-player/storyRuntimeLoader.test.ts": {
-    "@typescript-eslint/no-non-null-assertion": {
-      "count": 3
-    },
     "max-lines-per-function": {
       "count": 1
     }
@@ -1790,9 +1754,6 @@
     }
   },
   "apps/web/src/features/story/storyMutationResults.test.ts": {
-    "@typescript-eslint/no-non-null-assertion": {
-      "count": 3
-    },
     "max-lines-per-function": {
       "count": 2
     }
@@ -1968,9 +1929,6 @@
     }
   },
   "apps/web/src/pages/StoryEditor.triggers.test.tsx": {
-    "@typescript-eslint/no-non-null-assertion": {
-      "count": 1
-    },
     "@typescript-eslint/no-unsafe-assignment": {
       "count": 2
     },
@@ -1979,9 +1937,6 @@
     }
   },
   "apps/web/src/pages/StoryList.test.tsx": {
-    "@typescript-eslint/no-non-null-assertion": {
-      "count": 7
-    },
     "max-lines": {
       "count": 1
     },
@@ -1990,9 +1945,6 @@
     }
   },
   "apps/web/src/pages/StoryPlayer.access-and-comments.test.tsx": {
-    "@typescript-eslint/no-non-null-assertion": {
-      "count": 1
-    },
     "@typescript-eslint/no-unsafe-assignment": {
       "count": 2
     },
@@ -2009,9 +1961,6 @@
     }
   },
   "apps/web/src/pages/StoryPlayer.simulation-authoring.test.tsx": {
-    "@typescript-eslint/no-non-null-assertion": {
-      "count": 3
-    },
     "@typescript-eslint/no-unsafe-assignment": {
       "count": 3
     },
@@ -2083,9 +2032,6 @@
     }
   },
   "apps/web/src/storyGraph.test.ts": {
-    "@typescript-eslint/no-non-null-assertion": {
-      "count": 4
-    },
     "max-lines-per-function": {
       "count": 4
     }
@@ -2136,9 +2082,6 @@
     }
   },
   "apps/web/src/storyGraphElkLayout.test.ts": {
-    "@typescript-eslint/no-non-null-assertion": {
-      "count": 1
-    },
     "max-lines-per-function": {
       "count": 4
     }
