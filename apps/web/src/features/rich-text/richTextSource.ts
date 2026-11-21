@@ -170,7 +170,7 @@ function validateElementAttributes(source: string, tag: string, element: Element
 function validateElementUrls(source: string, tag: string, element: Element) {
   return ['href', 'src', 'poster'].flatMap((name) => {
     const value = element.getAttribute(name);
-    return !value || isAllowedUrl(tag, name, value)
+    return value === null || value === '' || isAllowedUrl(tag, name, value)
       ? []
       : [diagnosticAt(source, elementOffset(source, element), `The ${name} URL is not allowed.`)];
   });
