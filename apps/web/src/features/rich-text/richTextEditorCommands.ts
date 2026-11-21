@@ -92,7 +92,7 @@ function openConditionalFrame(
   interactionId: string | undefined,
   drafts: RichTextEditorDrafts,
 ) {
-  if (!editor || !story || !interactionId) {
+  if (!editor || !story || interactionId === undefined || interactionId === '') {
     return;
   }
   const selection = editor.state.selection;
@@ -281,7 +281,7 @@ function insertImage(editor: Editor | null, t: TFunction) {
     return;
   }
   const url = window.prompt(t('richText.imagePrompt'))?.trim();
-  if (url && isHttpUrl(url)) {
+  if (url !== undefined && url !== '' && isHttpUrl(url)) {
     editor.chain().focus().setImage({ src: url }).run();
   }
 }
@@ -291,7 +291,7 @@ function insertVideo(editor: Editor | null, t: TFunction) {
     return;
   }
   const url = window.prompt(t('richText.videoPrompt'))?.trim();
-  if (!url) {
+  if (url === undefined || url === '') {
     return;
   }
   const embed = videoEmbed(url, t('richText.youtubeVideo'), t('richText.vimeoVideo'));
@@ -307,7 +307,7 @@ function collectConditionalNodes(doc: ProseMirrorNode): ConditionalNode[] {
       return;
     }
     const id = stringAttribute(node, 'blockId');
-    if (id) {
+    if (id !== undefined && id !== '') {
       nodes.push({ id, conditions: readTriggerConditions(node) });
     }
   });

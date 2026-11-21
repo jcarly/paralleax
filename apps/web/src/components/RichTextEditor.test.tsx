@@ -66,6 +66,36 @@ describe('RichTextEditor', () => {
     expect(onBlur).toHaveBeenLastCalledWith(onChange.mock.lastCall?.[0]);
   });
 
+  it.each([null, '', '   '])('ignores an empty or cancelled media URL: %s', async (url) => {
+    const user = userEvent.setup();
+    const onChange = vi.fn();
+    vi.spyOn(window, 'prompt').mockReturnValue(url);
+    render(<RichTextEditor value="<p>Body</p>" onChange={onChange} onBlur={vi.fn()} />);
+
+    await user.click(screen.getByRole('button', { name: /Add image or GIF/ }));
+    await user.click(screen.getByRole('button', { name: 'Add video' }));
+
+    expect(screen.getByRole('textbox', { name: 'Content' }).innerHTML).toBe('<p>Body</p>');
+    expect(onChange).not.toHaveBeenCalled();
+  });
+
+  it('omits empty optional video attributes when publishing HTML', () => {
+    const onBlur = vi.fn();
+    render(
+      <RichTextEditor
+        value={'<video src="" poster=""></video>'}
+        onChange={vi.fn()}
+        onBlur={onBlur}
+      />,
+    );
+
+    fireEvent.blur(screen.getByRole('textbox', { name: 'Content' }));
+    const published = onBlur.mock.lastCall?.[0];
+    expect(published).toContain('<video');
+    expect(published).not.toContain('src=');
+    expect(published).not.toContain('poster=');
+  });
+
   it('places the toolbar after the text so revealing it does not move the text', () => {
     render(<RichTextEditor value="<p>Body</p>" onChange={vi.fn()} onBlur={vi.fn()} />);
 

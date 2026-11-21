@@ -280,7 +280,7 @@ function useRichTextEngine({
 
 function useFocusRichTextEditor(editor: Editor | null, focusOnMount: boolean | undefined) {
   useEffect(() => {
-    if (focusOnMount && editor) {
+    if (focusOnMount === true && editor) {
       editor.commands.focus('end');
     }
   }, [editor, focusOnMount]);
@@ -323,7 +323,7 @@ function useRefreshNodeViews(editor: Editor | null, blocks: ConditionalTextBlock
       }
       const attrs: Record<string, unknown> = { ...node.attrs, contextRevision: version };
       const blockId = stringAttribute(node, 'blockId');
-      if (blockId) {
+      if (blockId !== undefined && blockId !== '') {
         const conditions = blocks.find((block) => block.id === blockId)?.conditions;
         if (conditions) {
           attrs.conditions = conditions;

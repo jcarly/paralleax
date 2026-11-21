@@ -10,7 +10,7 @@ export function RichTextEditor(props: RichTextEditorProps) {
   const editor = useRichTextEditor(props);
   return (
     <div
-      className={`rich-text-editor${props.revealToolbarOnFocus ? ' rich-text-editor--focus-revealed' : ''}`}
+      className={`rich-text-editor${props.revealToolbarOnFocus === true ? ' rich-text-editor--focus-revealed' : ''}`}
       onClickCapture={editor.clickCapture}
     >
       <EditorContent className="rich-text-surface" editor={editor.editor} />
@@ -65,7 +65,7 @@ function EditorStatus({
   const { t } = useTranslation();
   return (
     <>
-      {compatibilityError ? (
+      {compatibilityError !== undefined && compatibilityError !== '' ? (
         <div className="rich-text-diagnostic" role="alert">
           <strong>{t('richText.incompatibleContent')}</strong>
           <span>{compatibilityError}</span>

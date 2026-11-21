@@ -17,7 +17,7 @@ function conditionalTextAttributes(contextStore?: RichTextExtensionContextStore)
       default: null,
       parseHTML: (element: HTMLElement) => element.getAttribute('data-conditional-text-block'),
       renderHTML: ({ blockId }: { blockId: string | null }) =>
-        blockId ? { 'data-conditional-text-block': blockId } : {},
+        blockId !== null && blockId !== '' ? { 'data-conditional-text-block': blockId } : {},
     },
     conditions: {
       default: [],
@@ -132,7 +132,7 @@ const LegacyConditionalFrame = Node.create({
         default: null,
         parseHTML: (element: HTMLElement) => element.getAttribute('data-conditional-text-target'),
         renderHTML: ({ targetId }: { targetId: string | null }) =>
-          targetId ? { 'data-conditional-text-target': targetId } : {},
+          targetId !== null && targetId !== '' ? { 'data-conditional-text-target': targetId } : {},
       },
     };
   },
@@ -160,7 +160,7 @@ const LegacyConditionalLink = Node.create({
         default: null,
         parseHTML: (element: HTMLElement) => element.getAttribute('data-conditional-text-link'),
         renderHTML: ({ targetId }: { targetId: string | null }) =>
-          targetId ? { 'data-conditional-text-link': targetId } : {},
+          targetId !== null && targetId !== '' ? { 'data-conditional-text-link': targetId } : {},
       },
     };
   },
@@ -195,7 +195,7 @@ const InteractionLink = Node.create<RichTextExtensionOptions>({
         default: null,
         parseHTML: (element: HTMLElement) => element.getAttribute('data-interaction-link-target'),
         renderHTML: ({ targetId }: { targetId: string | null }) =>
-          targetId ? { 'data-interaction-link-target': targetId } : {},
+          targetId !== null && targetId !== '' ? { 'data-interaction-link-target': targetId } : {},
       },
       text: {
         default: '',
@@ -244,13 +244,13 @@ const StatValue = Node.create<RichTextExtensionOptions>({
         default: null,
         parseHTML: (element: HTMLElement) => element.getAttribute('data-stat-value'),
         renderHTML: ({ assignmentId }: { assignmentId: string | null }) =>
-          assignmentId ? { 'data-stat-value': assignmentId } : {},
+          assignmentId !== null && assignmentId !== '' ? { 'data-stat-value': assignmentId } : {},
       },
       itemId: {
         default: null,
         parseHTML: (element: HTMLElement) => element.getAttribute('data-stat-item'),
         renderHTML: ({ itemId }: { itemId: string | null }) =>
-          itemId ? { 'data-stat-item': itemId } : {},
+          itemId !== null && itemId !== '' ? { 'data-stat-item': itemId } : {},
       },
       sourceText: {
         default: '',
@@ -294,12 +294,14 @@ const RichTextVideo = Node.create({
       src: {
         default: null,
         parseHTML: (element: HTMLElement) => element.getAttribute('src'),
-        renderHTML: ({ src }: { src: string | null }) => (src ? { src } : {}),
+        renderHTML: ({ src }: { src: string | null }) =>
+          src !== null && src !== '' ? { src } : {},
       },
       poster: {
         default: null,
         parseHTML: (element: HTMLElement) => element.getAttribute('poster'),
-        renderHTML: ({ poster }: { poster: string | null }) => (poster ? { poster } : {}),
+        renderHTML: ({ poster }: { poster: string | null }) =>
+          poster !== null && poster !== '' ? { poster } : {},
       },
       sources: {
         default: [],
@@ -362,23 +364,26 @@ const RichTextIframe = Node.create({
       src: {
         default: null,
         parseHTML: (element: HTMLElement) => element.getAttribute('src'),
-        renderHTML: ({ src }: { src: string | null }) => (src ? { src } : {}),
+        renderHTML: ({ src }: { src: string | null }) =>
+          src !== null && src !== '' ? { src } : {},
       },
       title: {
         default: null,
         parseHTML: (element: HTMLElement) => element.getAttribute('title'),
-        renderHTML: ({ title }: { title: string | null }) => (title ? { title } : {}),
+        renderHTML: ({ title }: { title: string | null }) =>
+          title !== null && title !== '' ? { title } : {},
       },
       allow: {
         default: null,
         parseHTML: (element: HTMLElement) => element.getAttribute('allow'),
-        renderHTML: ({ allow }: { allow: string | null }) => (allow ? { allow } : {}),
+        renderHTML: ({ allow }: { allow: string | null }) =>
+          allow !== null && allow !== '' ? { allow } : {},
       },
       allowfullscreen: {
         default: null,
         parseHTML: (element: HTMLElement) => element.hasAttribute('allowfullscreen'),
         renderHTML: ({ allowfullscreen }: { allowfullscreen: boolean | null }) =>
-          allowfullscreen ? { allowfullscreen: '' } : {},
+          allowfullscreen === true ? { allowfullscreen: '' } : {},
       },
     };
   },
