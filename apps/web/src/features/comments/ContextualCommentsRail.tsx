@@ -71,7 +71,9 @@ export function ContextualCommentsRail({
           onReply={(body) => onReply(thread.id, body)}
           onStatus={(status) => onStatus(thread.id, status)}
           onDelete={onDelete ? () => onDelete(thread.id) : undefined}
-          onReattach={thread.detached && onReattach ? () => onReattach(thread.id) : undefined}
+          onReattach={
+            thread.detached === true && onReattach ? () => onReattach(thread.id) : undefined
+          }
         />
       ))}
     </aside>

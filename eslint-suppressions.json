@@ -93,12 +93,7 @@
       "count": 1
     },
     "@typescript-eslint/strict-boolean-expressions": {
-      "count": 8
-    }
-  },
-  "apps/api/src/comments/comments.service.ts": {
-    "@typescript-eslint/strict-boolean-expressions": {
-      "count": 6
+      "count": 7
     }
   },
   "apps/api/src/config/app-config.service.ts": {
@@ -997,7 +992,7 @@
   },
   "apps/web/src/features/comments/CommentDiscussionCard.tsx": {
     "@typescript-eslint/strict-boolean-expressions": {
-      "count": 5
+      "count": 2
     },
     "complexity": {
       "count": 1
@@ -1037,9 +1032,6 @@
     }
   },
   "apps/web/src/features/comments/ContextualCommentsRail.tsx": {
-    "@typescript-eslint/strict-boolean-expressions": {
-      "count": 1
-    },
     "max-lines-per-function": {
       "count": 1
     }
@@ -1064,7 +1056,7 @@
   },
   "apps/web/src/features/comments/StoryCommentsPanel.tsx": {
     "@typescript-eslint/strict-boolean-expressions": {
-      "count": 9
+      "count": 1
     },
     "complexity": {
       "count": 1
@@ -1096,9 +1088,6 @@
     }
   },
   "apps/web/src/features/comments/useStoryComments.ts": {
-    "@typescript-eslint/strict-boolean-expressions": {
-      "count": 1
-    },
     "max-lines-per-function": {
       "count": 1
     }

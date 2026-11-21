@@ -36,7 +36,9 @@ export class CommentsService {
     return (await this.comments.list(storyId, includeDeleted))
       .filter(
         (thread) =>
-          !thread.deletedAt || canDeleteCommentThread(story.capabilities, actor.id, thread),
+          thread.deletedAt === undefined ||
+          thread.deletedAt === '' ||
+          canDeleteCommentThread(story.capabilities, actor.id, thread),
       )
       .map((thread) => ({
         ...thread,
@@ -145,7 +147,7 @@ export class CommentsService {
   async restore(storyId: string, threadId: string, actor: RequestUser) {
     const story = await this.storyFor(storyId, actor);
     const thread = await this.threadFor(storyId, threadId, true);
-    if (!thread.deletedAt) {
+    if (thread.deletedAt === undefined || thread.deletedAt === '') {
       throw new BadRequestException(
         apiErrorResponse('COMMENT_THREAD_NOT_DELETED', 'Comment thread is not deleted'),
       );
@@ -195,9 +197,9 @@ export class CommentsService {
 
   private assertCanView(story: Story) {
     if (
-      !story.capabilities?.canManage &&
-      !story.capabilities?.canEdit &&
-      !story.capabilities?.canComment
+      story.capabilities?.canManage !== true &&
+      story.capabilities?.canEdit !== true &&
+      story.capabilities?.canComment !== true
     ) {
       throw new ForbiddenException(
         apiErrorResponse('COMMENT_VIEW_FORBIDDEN', 'Viewing comments is not permitted'),
@@ -206,7 +208,7 @@ export class CommentsService {
   }
 
   private assertCanComment(story: Story) {
-    if (!story.capabilities?.canComment) {
+    if (story.capabilities?.canComment !== true) {
       throw new ForbiddenException(
         apiErrorResponse('COMMENT_CREATE_FORBIDDEN', 'Commenting is not permitted'),
       );

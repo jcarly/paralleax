@@ -98,7 +98,7 @@ export class CommentsRepository {
       [storyId, threadId],
     );
     const row = result.rows[0];
-    if (!row) {
+    if (row === undefined) {
       return undefined;
     }
     const messages = await this.database.pool.query<MessageRow>(
