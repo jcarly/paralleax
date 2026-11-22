@@ -40,6 +40,9 @@ describe('story selection helpers', () => {
     expect(findInteraction(story, 'missing')).toBeUndefined();
     expect(findInteraction(undefined, 'interaction-root')).toBeUndefined();
     expect(findInteraction(story, undefined)).toBeUndefined();
+    expect(
+      findInteraction({ ...story, interactions: [{ ...story.interactions[0], id: '' }] }, ''),
+    ).toBeUndefined();
   });
 
   it('finds the selected trigger and its owning interaction', () => {

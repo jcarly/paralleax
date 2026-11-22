@@ -159,7 +159,12 @@ function getExistingTriggerConnection(
     return undefined;
   }
   const target = getTriggerDropTarget(event);
-  if (!target?.interactionId || !target.triggerId) {
+  if (
+    target?.interactionId === undefined ||
+    target.interactionId === '' ||
+    target.triggerId === undefined ||
+    target.triggerId === ''
+  ) {
     return undefined;
   }
   return {

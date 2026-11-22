@@ -24,7 +24,11 @@ export function getPendingConnection(
   if (connection.source === connection.target) {
     return undefined;
   }
-  if (connection.targetHandle && connection.targetHandle !== 'create-source-input') {
+  if (
+    typeof connection.targetHandle === 'string' &&
+    connection.targetHandle !== '' &&
+    connection.targetHandle !== 'create-source-input'
+  ) {
     return undefined;
   }
 
@@ -50,7 +54,11 @@ export function getPendingConnectionConflict(story: Story | undefined, connectio
   if (connection.source === connection.target) {
     return undefined;
   }
-  if (connection.targetHandle && connection.targetHandle !== 'create-source-input') {
+  if (
+    typeof connection.targetHandle === 'string' &&
+    connection.targetHandle !== '' &&
+    connection.targetHandle !== 'create-source-input'
+  ) {
     return undefined;
   }
   const target = story.interactions.find((item) => item.id === connection.target);
