@@ -153,7 +153,7 @@ const diagnostic = z.looseObject({
 });
 
 const createdEntity = z.looseObject({
-  kind: z.enum(['interaction', 'trigger']),
+  kind: z.enum(['interaction', 'trigger', 'character', 'location']),
   operationIndex: z.number(),
   id: z.string(),
   ref: z.string().optional(),
@@ -164,6 +164,8 @@ const changeSummary = z.looseObject({
   counts: z.record(z.string(), z.number()),
   interactions: z.array(z.looseObject({ change: z.string(), id: z.string() })),
   triggers: z.array(z.looseObject({ change: z.string(), id: z.string() })),
+  characters: z.array(z.looseObject({ change: z.string(), id: z.string() })).default([]),
+  locations: z.array(z.looseObject({ change: z.string(), id: z.string() })).default([]),
   connections: z.array(z.looseObject({ change: z.string() })),
 });
 

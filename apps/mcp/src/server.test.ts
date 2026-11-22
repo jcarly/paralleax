@@ -107,6 +107,19 @@ it('exposes read tools and the preview/commit pair only, with strict input schem
   }
 });
 
+it('explains how to create characters and locations and reference them', async () => {
+  const { client } = await connect(stubFetch({}).fetchImpl);
+  const instructions = client.getInstructions() ?? '';
+  expect(instructions).toContain('create_character');
+  expect(instructions).toContain('create_location');
+  expect(instructions).toContain('{characterId, isPresent}');
+  expect(instructions).toContain('provisional');
+  const { tools } = await client.listTools();
+  const preview = tools.find(({ name }) => name === 'preview_story_changes');
+  expect(preview?.description).toContain('create_character');
+  expect(preview?.description).toContain('update_location');
+});
+
 it('lists stories with the session cookie and summary fields only', async () => {
   const api = stubFetch({ 'GET /stories': { body: storyList } });
   const { call } = await connect(api.fetchImpl);

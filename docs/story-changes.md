@@ -45,6 +45,10 @@ the MCP adapter or any assistant.
 | `update_interaction` | `interaction`, `fields` | -                                                                          |
 | `create_trigger`     | `interaction` (output)  | `ref`, `inputInteractions`, `fields`                                       |
 | `update_trigger`     | `trigger`               | `interaction` (required for an existing ID), `inputInteractions`, `fields` |
+| `create_character`   | `fields.name`           | `ref`, other `fields`                                                      |
+| `update_character`   | `character`, `fields`   | -                                                                          |
+| `create_location`    | `fields.name`           | `ref`, other `fields`                                                      |
+| `update_location`    | `location`, `fields`    | -                                                                          |
 
 - Interaction `fields`: `title`, `body` (HTML, sanitized), `position`,
   `locationId`, `characterIds`, `statEffects`, `itemEffects`,
@@ -60,8 +64,19 @@ the MCP adapter or any assistant.
   editor placement rule places it below its first input, or in the root column.
 - Condition group and conditional text block IDs may be omitted; they are
   generated.
-- Deletion and context entities (characters, locations, groups, stats, items)
-  are not supported yet. New operation types extend the same union.
+- Character `fields`: `name`, `description`, `category`, `imageUrl`,
+  `isPlayable`. Location `fields`: `name`, `description`, `category`,
+  `imageUrl`. They follow the same rules and limits as
+  `POST/PATCH /stories/:id/characters` and `/locations` (the same DTOs and the
+  same functions): `name` is required and at most 200 characters, `category` at
+  most 100, `imageUrl` at most 2,048, strings are trimmed, an empty `category`
+  removes it, a new character defaults to `isPlayable: false`, and making a
+  character playable clears the flag of every other character (that change shows
+  as an update of those characters in the summary). Omitted fields keep their
+  value. Stats and items of a character or location are not set by these
+  operations.
+- Deletion and the other context entities (groups, stats, items) are not
+  supported yet. New operation types extend the same union.
 
 ## References and IDs
 
@@ -72,8 +87,24 @@ the MCP adapter or any assistant.
   contain up to 64 letters, digits, `_` or `-`. They are unique in the batch,
   across entity kinds.
 - `{ "ref": "name" }` refers to an entity declared by an **earlier** operation,
-  never a later one or its own. A Trigger reference cannot stand for an
-  Interaction, or the reverse (`REFERENCE_KIND_MISMATCH`).
+  never a later one or its own. The kind is checked: a Trigger reference cannot
+  stand for an Interaction, a Character for a Location, and so on
+  (`REFERENCE_KIND_MISMATCH`).
+- A reference is accepted where the field names an entity of a known kind:
+
+  | Where                                                                             | Kind        |
+  | --------------------------------------------------------------------------------- | ----------- |
+  | `inputInteractions`, `interaction`, condition `interactionId`                     | Interaction |
+  | `trigger`                                                                         | Trigger     |
+  | `update_character.character`, interaction `characterIds`, condition `characterId` | Character   |
+  | `update_location.location`, interaction `locationId`, condition `locationId`      | Location    |
+
+  Conditions are those of Trigger condition groups and of conditional text
+  blocks. Other IDs inside a batch (stats, items, effect targets) are existing
+  IDs only. The condition fields are listed in one table
+  (`STORY_CHANGE_CONDITION_REFERENCE_KINDS`) so that stats and items extend it
+  when their operations exist.
+
 - `update_trigger` may omit `interaction` when `trigger` is a reference: the
   owner is known. Given with another owner, it fails (`TRIGGER_OWNER_MISMATCH`).
 - Resolution is deterministic: operations are resolved in order and IDs are
@@ -94,15 +125,15 @@ from the current revision, the preview fails with `409 STORY_REVISION_CONFLICT`.
 
 The response (`200`):
 
-| Field             | Meaning                                                                                                                                                                                |
-| ----------------- | -------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| `valid`           | Whether the batch can be committed as is.                                                                                                                                              |
-| `proposalId`      | Present when valid: the server-issued ID of the stored proposal. Commit with it.                                                                                                       |
-| `expiresAt`       | When the proposal can no longer be committed (one hour after the preview).                                                                                                             |
-| `baseRevision`    | The revision the batch was applied to; the commit requires it unchanged.                                                                                                               |
-| `createdEntities` | Entities the batch creates, with provisional IDs and their `ref`.                                                                                                                      |
-| `summary`         | Counts; every field of added interactions and Triggers and the changed fields of updated ones, with old and new values; added and removed connections (`source → target` per Trigger). |
-| `diagnostics`     | `{ severity, operationIndex, code, message, path?, details? }`; `operationIndex` is `null` for the batch as a whole.                                                                   |
+| Field             | Meaning                                                                                                                                                                                                                                 |
+| ----------------- | --------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `valid`           | Whether the batch can be committed as is.                                                                                                                                                                                               |
+| `proposalId`      | Present when valid: the server-issued ID of the stored proposal. Commit with it.                                                                                                                                                        |
+| `expiresAt`       | When the proposal can no longer be committed (one hour after the preview).                                                                                                                                                              |
+| `baseRevision`    | The revision the batch was applied to; the commit requires it unchanged.                                                                                                                                                                |
+| `createdEntities` | Entities the batch creates (`kind`: `interaction`, `trigger`, `character` or `location`), with provisional IDs and their `ref`.                                                                                                         |
+| `summary`         | Counts; every field of added interactions, Triggers, characters and locations and the changed fields of updated ones, with old and new values; added and removed connections (`source → target` per Trigger). `provisionalIds` is true. |
+| `diagnostics`     | `{ severity, operationIndex, code, message, path?, details? }`; `operationIndex` is `null` for the batch as a whole.                                                                                                                    |
 
 Shape, reference and field errors are reported for every operation. Applying
 stops at the first operation that breaks an editor rule, since later operations
@@ -115,6 +146,14 @@ created Trigger its condition groups, probability and timer, with its inputs and
 condition count. Strings beyond 2,000 characters are cut and structured values
 beyond 4,000 serialized characters are replaced by a size marker, both flagged
 `truncated: true`; the commit applies the full values.
+
+In a preview every created entity has a provisional ID. The summary marks it
+twice: `provisionalIds: true`, and, for each field value that names an entity
+created by the batch (for example an interaction's `characterIds` or
+`locationId`), `references: [{ id, ref }]`, so a reviewer reads `alya` rather
+than a UUID. After the commit, `provisionalIds` is false and the IDs are final.
+Characters and locations list `name`, `ref` and every authored field of a new
+one, or the changed fields of an updated one, with the same truncation rules.
 
 A valid preview stores the proposal: the exact operations, the user, the Story,
 the base revision and an expiry, outside the authored Story. It writes no
@@ -191,7 +230,8 @@ Errors use the API error body `{ status, code, message, requestId, details? }`.
 
 Diagnostic codes include `INVALID_OPERATION`, `UNSUPPORTED_OPERATION`,
 `UNKNOWN_FIELD`, `REQUIRED_FIELD`, `INVALID_FIELD`, `INVALID_REFERENCE`,
-`UNKNOWN_REFERENCE`, `DUPLICATE_REFERENCE`, `REFERENCE_KIND_MISMATCH`,
+`UNKNOWN_REFERENCE`, `DUPLICATE_REFERENCE`, `REFERENCE_KIND_MISMATCH` (also for
+a Character or Location reference of the wrong kind),
 `TRIGGER_OWNER_REQUIRED`, `TRIGGER_OWNER_MISMATCH`, `REFERENCE_NOT_FOUND`,
 `TRIGGER_CONNECTION_EXISTS`, `NO_CHANGES` and `STORY_QUOTA_EXCEEDED`.
 

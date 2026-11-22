@@ -31,7 +31,16 @@ Consequences:
   valuable-project safety gate (P0). It reuses the existing transaction,
   history and editor rules, and the MCP server stays local and development-only.
 - OAuth and remote MCP remain unplanned until a later decision. Deletion and
-  context-entity operations wait until preview and review are proven in use.
+  the remaining context-entity operations wait until preview and review are
+  proven in use.
+
+**Update, 2026-11-22.** The project owner commissioned characters and locations
+as operations of the same batch contract (`create_character`, `update_character`,
+`create_location`, `update_location`), with temporary references in interaction
+`locationId` and `characterIds` and in `characterId` and `locationId` conditions.
+This narrows the "context-entity operations wait" consequence above to groups,
+stats and items; deletion stays out of scope. No new MCP tool and no new
+preview/commit mechanism.
 
 ## Priority decision, 2026-11-20
 

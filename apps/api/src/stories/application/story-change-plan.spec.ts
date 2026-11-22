@@ -121,3 +121,122 @@ it('warns about created interactions without a title or an input', () => {
     ['warning', 'NO_INPUT_INTERACTION'],
   ]);
 });
+
+const contextOperations = [
+  {
+    type: 'create_character',
+    ref: 'alya',
+    fields: { name: '  Alya  ', category: ' Crew ', isPlayable: true },
+  },
+  { type: 'create_location', ref: 'station', fields: { name: 'Station' } },
+  {
+    type: 'create_interaction',
+    inputInteractions: ['start'],
+    fields: {
+      title: 'Lab',
+      locationId: { ref: 'station' },
+      characterIds: [{ ref: 'alya' }, { ref: 'alya' }],
+    },
+    defaultTrigger: {
+      conditionGroups: [{ conditions: [{ characterId: { ref: 'alya' }, isPresent: true }] }],
+    },
+  },
+  { type: 'update_location', location: { ref: 'station' }, fields: { category: 'Hub' } },
+  { type: 'update_character', character: 'hero', fields: { description: 'Brave' } },
+];
+
+function appliedContext() {
+  const base = story();
+  base.characters = [{ id: 'hero', name: 'Hero', description: '', isPlayable: true, stats: [] }];
+  const plan = planStoryChanges(contextOperations, ids());
+  return { plan, applied: applyStoryChangePlan(base, plan) };
+}
+
+it('plans characters and locations with provisional IDs in operation order', () => {
+  const { plan } = appliedContext();
+
+  expect(plan.diagnostics).toEqual([]);
+  expect(plan.created.slice(0, 2)).toEqual([
+    { kind: 'character', operationIndex: 0, id: 'new-1', ref: 'alya' },
+    { kind: 'location', operationIndex: 1, id: 'new-2', ref: 'station' },
+  ]);
+});
+
+it('applies characters and locations with the editor defaults and the playable rule', () => {
+  const { applied } = appliedContext();
+
+  expect(applied.diagnostics.map(({ code }) => code)).toEqual([]);
+  expect(applied.story.characters).toEqual([
+    { id: 'hero', name: 'Hero', description: 'Brave', isPlayable: false, stats: [] },
+    {
+      id: 'new-1',
+      name: 'Alya',
+      description: '',
+      category: 'Crew',
+      imageUrl: '',
+      isPlayable: true,
+      stats: [],
+    },
+  ]);
+  expect(applied.story.locations).toEqual([
+    { id: 'harbor', name: 'Harbor', description: '' },
+    { id: 'new-2', name: 'Station', description: '', imageUrl: '', category: 'Hub' },
+  ]);
+});
+
+it('uses created characters and locations in interactions and conditions', () => {
+  const { applied } = appliedContext();
+
+  const lab = applied.story.interactions.find(({ title }) => title === 'Lab');
+  expect(lab).toMatchObject({ locationId: 'new-2', characterIds: ['new-1'] });
+  expect(lab?.triggers[0]).toMatchObject({
+    conditionGroups: [{ conditions: [{ characterId: 'new-1', isPresent: true }] }],
+  });
+});
+
+it('refuses entities outside the Story and invalid context fields', () => {
+  const unknown = applyStoryChangePlan(
+    story(),
+    planStoryChanges(
+      [{ type: 'create_interaction', fields: { title: 'x', characterIds: ['nobody'] } }],
+      ids(),
+    ),
+  );
+  expect(unknown.diagnostics).toEqual([
+    expect.objectContaining({ operationIndex: 0, code: 'INVALID_OPERATION' }),
+  ]);
+  const missing = applyStoryChangePlan(
+    story(),
+    planStoryChanges(
+      [{ type: 'update_character', character: 'nobody', fields: { name: 'x' } }],
+      ids(),
+    ),
+  );
+  expect(missing.diagnostics).toEqual([
+    expect.objectContaining({ operationIndex: 0, code: 'REFERENCE_NOT_FOUND' }),
+  ]);
+  const invalid = planStoryChanges(
+    [
+      { type: 'create_location', fields: { name: '' } },
+      { type: 'create_character', fields: { name: 'A', imageUrl: 'x'.repeat(2049) } },
+    ],
+    ids(),
+  );
+  expect(invalid.steps).toEqual([]);
+  expect(new Set(invalid.diagnostics.map(({ operationIndex }) => operationIndex))).toEqual(
+    new Set([0, 1]),
+  );
+  const shape = planStoryChanges(
+    [
+      { type: 'create_character' },
+      { type: 'update_location', fields: {} },
+      { type: 'create_location', fields: { name: 'A' }, location: 'x' },
+    ],
+    ids(),
+  );
+  expect(shape.diagnostics.map(({ operationIndex, code }) => [operationIndex, code])).toEqual([
+    [0, 'INVALID_FIELD'],
+    [1, 'REQUIRED_FIELD'],
+    [2, 'UNKNOWN_FIELD'],
+  ]);
+});

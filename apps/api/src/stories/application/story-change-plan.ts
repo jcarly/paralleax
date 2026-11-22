@@ -12,12 +12,27 @@ import {
   type StoryChangeDiagnostic,
   type StoryChangeOperation,
 } from '@paralleax/shared';
-import { CreateTriggerDto, UpdateTriggerDto, type UpdateInteractionDto } from '../dto/stories.dto';
 import {
+  CreateCharacterDto,
+  CreateLocationDto,
+  CreateTriggerDto,
+  UpdateCharacterDto,
+  UpdateLocationDto,
+  UpdateTriggerDto,
+  type UpdateInteractionDto,
+} from '../dto/stories.dto';
+import {
+  toContextEntityInput,
   toInteractionInput,
   toTriggerInput,
   validateStoryChangeOperationShape,
 } from '../validation/story-change-operations';
+import {
+  addCharacter,
+  addLocation,
+  applyCharacterUpdate,
+  applyLocationUpdate,
+} from './story-context-edits';
 import {
   addInteraction,
   addTrigger,
@@ -62,7 +77,11 @@ type PlannedStep =
       interactionId: string;
       triggerId: string;
       trigger: UpdateTriggerDto;
-    };
+    }
+  | { type: 'create_character'; index: number; characterId: string; character: CreateCharacterDto }
+  | { type: 'update_character'; index: number; characterId: string; character: UpdateCharacterDto }
+  | { type: 'create_location'; index: number; locationId: string; location: CreateLocationDto }
+  | { type: 'update_location'; index: number; locationId: string; location: UpdateLocationDto };
 
 export interface StoryChangePlan {
   steps: PlannedStep[];
@@ -113,7 +132,41 @@ function planStep(operation: ResolvedStoryChangeOperation): PlannedResult {
       return planCreateTrigger(operation);
     case 'update_trigger':
       return planUpdateTrigger(operation);
+    case 'create_character':
+      return planCreateCharacter(operation);
+    case 'update_character':
+      return planUpdateCharacter(operation);
+    case 'create_location':
+      return planCreateLocation(operation);
+    case 'update_location':
+      return planUpdateLocation(operation);
   }
+}
+
+/* Characters and Locations: fields are validated by the same DTOs as the editor. */
+
+function planCreateCharacter(operation: Resolved<'create_character'>): PlannedResult {
+  const { type, index, characterId } = operation;
+  const input = toContextEntityInput(CreateCharacterDto, operation.fields, index, 'fields');
+  return combine([input], () => ({ type, index, characterId, character: required(input.input) }));
+}
+
+function planUpdateCharacter(operation: Resolved<'update_character'>): PlannedResult {
+  const { type, index, characterId } = operation;
+  const input = toContextEntityInput(UpdateCharacterDto, operation.fields, index, 'fields');
+  return combine([input], () => ({ type, index, characterId, character: required(input.input) }));
+}
+
+function planCreateLocation(operation: Resolved<'create_location'>): PlannedResult {
+  const { type, index, locationId } = operation;
+  const input = toContextEntityInput(CreateLocationDto, operation.fields, index, 'fields');
+  return combine([input], () => ({ type, index, locationId, location: required(input.input) }));
+}
+
+function planUpdateLocation(operation: Resolved<'update_location'>): PlannedResult {
+  const { type, index, locationId } = operation;
+  const input = toContextEntityInput(UpdateLocationDto, operation.fields, index, 'fields');
+  return combine([input], () => ({ type, index, locationId, location: required(input.input) }));
 }
 
 function planCreateInteraction(operation: Resolved<'create_interaction'>): PlannedResult {
@@ -231,7 +284,35 @@ export function applyStoryChangePlan(story: Story, plan: StoryChangePlan): Story
   return { story: current, diagnostics: createdEntityWarnings(current, plan) };
 }
 
+type ContextStep = Extract<
+  PlannedStep,
+  { type: 'create_character' | 'update_character' | 'create_location' | 'update_location' }
+>;
+
+function isContextStep(step: PlannedStep): step is ContextStep {
+  return step.type.endsWith('_character') || step.type.endsWith('_location');
+}
+
 function applyStep(story: Story, step: PlannedStep): Story {
+  return isContextStep(step) ? applyContextStep(story, step) : applyGraphStep(story, step);
+}
+
+function applyContextStep(story: Story, step: ContextStep): Story {
+  switch (step.type) {
+    case 'create_character':
+      return addCharacter(story, step.characterId, step.character);
+    case 'update_character':
+      return applyCharacterUpdate(story, step.characterId, step.character);
+    case 'create_location':
+      return addLocation(story, step.locationId, step.location);
+    case 'update_location':
+      return applyLocationUpdate(story, step.locationId, step.location);
+  }
+}
+
+type GraphStep = Exclude<PlannedStep, ContextStep>;
+
+function applyGraphStep(story: Story, step: GraphStep): Story {
   switch (step.type) {
     case 'create_interaction': {
       let next = addInteraction(story, {

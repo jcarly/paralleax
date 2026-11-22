@@ -167,3 +167,81 @@ it('reports a commit timeout as an unknown outcome that is safe to retry', async
     },
   });
 });
+
+const contextOperations = [
+  { type: 'create_character', ref: 'alya', fields: { name: 'Alya', isPlayable: true } },
+  { type: 'create_location', ref: 'station', fields: { name: 'Station', category: 'Hub' } },
+  {
+    type: 'create_interaction',
+    inputInteractions: ['start'],
+    fields: {
+      title: 'Lab',
+      locationId: { ref: 'station' },
+      characterIds: ['old', { ref: 'alya' }],
+    },
+    defaultTrigger: {
+      conditionGroups: [
+        {
+          conditions: [
+            { characterId: { ref: 'alya' }, isPresent: true },
+            { locationId: { ref: 'station' }, isCurrentLocation: true },
+          ],
+        },
+      ],
+    },
+  },
+  { type: 'update_character', character: { ref: 'alya' }, fields: { description: 'Engineer' } },
+  { type: 'update_location', location: 'existing', fields: { imageUrl: '' } },
+];
+
+it('forwards character and location operations and references unchanged', async () => {
+  const contextPreview: RouteResponse = {
+    body: {
+      ...validPreviewBody,
+      createdEntities: [{ kind: 'character', operationIndex: 0, id: 'provisional', ref: 'alya' }],
+      summary: {
+        counts: { charactersAdded: 1 },
+        provisionalIds: true,
+        interactions: [],
+        triggers: [],
+        characters: [{ change: 'added', id: 'provisional', ref: 'alya', name: 'Alya', fields: [] }],
+        locations: [],
+        connections: [],
+      },
+    },
+  };
+  const api = stubFetch({ [`POST ${base}/preview`]: contextPreview });
+  const { call } = await connect(api.fetchImpl);
+
+  const result = await call('preview_story_changes', { storyId, operations: contextOperations });
+
+  expect(result.isError).toBe(false);
+  expect(result.data).toMatchObject({
+    idsAreProvisional: true,
+    createdEntities: [{ kind: 'character', ref: 'alya' }],
+    summary: { characters: [{ change: 'added', ref: 'alya', name: 'Alya' }] },
+  });
+  expect(api.requests[0]).toMatchObject({
+    body: { version: 1, operations: contextOperations },
+  });
+});
+
+it('rejects malformed context operations before calling the API', async () => {
+  const api = stubFetch({ [`POST ${base}/preview`]: validPreview });
+  const { call } = await connect(api.fetchImpl);
+  const invalid = [
+    [{ type: 'create_character' }],
+    [{ type: 'create_character', fields: { name: 'A', unknown: 1 } }],
+    [{ type: 'create_location', fields: { name: 'A', isPlayable: true } }],
+    [{ type: 'update_character', fields: { name: 'A' } }],
+    [{ type: 'update_location', location: { ref: '1bad' }, fields: { name: 'A' } }],
+    [{ type: 'create_interaction', fields: { characterIds: [{ ref: 'a', extra: 1 }] } }],
+  ];
+
+  for (const batch of invalid) {
+    expect((await call('preview_story_changes', { storyId, operations: batch })).isError).toBe(
+      true,
+    );
+  }
+  expect(api.requests).toEqual([]);
+});

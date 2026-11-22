@@ -2,12 +2,14 @@ import { Injectable } from '@nestjs/common';
 import { randomBytes, randomUUID } from 'node:crypto';
 import {
   DomainValidationError,
+  STORY_CHANGE_ENTITY_KINDS,
   createStoryChangeDelta,
   summarizeStoryChanges,
   type Story,
   type StoryChangeCommitResult,
   type StoryChangeCreatedEntity,
   type StoryChangeDiagnostic,
+  type StoryChangeEntityKind,
   type StoryChangePreview,
 } from '@paralleax/shared';
 import {
@@ -55,10 +57,14 @@ function isCreatedEntity(value: unknown): value is StoryChangeCreatedEntity {
   }
   const kind: unknown = Reflect.get(value, 'kind');
   return (
-    (kind === 'interaction' || kind === 'trigger') &&
+    isStoryChangeEntityKind(kind) &&
     typeof Reflect.get(value, 'id') === 'string' &&
     typeof Reflect.get(value, 'operationIndex') === 'number'
   );
+}
+
+function isStoryChangeEntityKind(value: unknown): value is StoryChangeEntityKind {
+  return (STORY_CHANGE_ENTITY_KINDS as readonly unknown[]).includes(value);
 }
 
 /**
@@ -112,7 +118,10 @@ export class StoryChangesService {
       ...result,
       valid: true,
       ...proposal,
-      summary: summarizeStoryChanges(snapshot, applied.story, delta, refsById(plan)),
+      summary: summarizeStoryChanges(snapshot, applied.story, delta, {
+        refsById: refsById(plan),
+        provisionalIds: true,
+      }),
       diagnostics,
     };
   }
@@ -217,12 +226,9 @@ function commitResult(
     baseRevision: storyRevision(original),
     revision: storyRevision(after),
     createdEntities: plan?.created ?? [],
-    summary: summarizeStoryChanges(
-      original,
-      after,
-      createStoryChangeDelta(original, after),
-      plan === undefined ? new Map() : refsById(plan),
-    ),
+    summary: summarizeStoryChanges(original, after, createStoryChangeDelta(original, after), {
+      refsById: plan === undefined ? new Map() : refsById(plan),
+    }),
   };
 }
 
