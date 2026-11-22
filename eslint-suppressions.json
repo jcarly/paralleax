@@ -96,11 +96,6 @@
       "count": 7
     }
   },
-  "apps/api/src/config/app-config.service.ts": {
-    "@typescript-eslint/strict-boolean-expressions": {
-      "count": 8
-    }
-  },
   "apps/api/src/database/database.migrations.postgres.spec.ts": {
     "@typescript-eslint/no-unsafe-type-assertion": {
       "count": 4
@@ -144,7 +139,7 @@
   },
   "apps/api/src/email/email.service.ts": {
     "@typescript-eslint/strict-boolean-expressions": {
-      "count": 9
+      "count": 1
     }
   },
   "apps/api/src/imports/import-job.service.spec.ts": {
