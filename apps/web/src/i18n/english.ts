@@ -696,6 +696,7 @@ export const englishTranslation = {
         itemInstanceCreated: 'Item added',
         itemInstanceMoved: 'Item moved',
         itemInstanceDeleted: 'Item removed',
+        storyChangesCommitted: 'Grouped changes applied',
       },
     },
     organizeGraph: 'Organize graph',

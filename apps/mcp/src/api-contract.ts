@@ -145,15 +145,49 @@ export const storySchema = z.looseObject({
   characters: z.array(named).default([]),
 });
 
-export const interactionMutationSchema = z.looseObject({
-  revision: z.number(),
-  interaction: interactionSchema,
+const diagnostic = z.looseObject({
+  severity: z.enum(['error', 'warning']),
+  operationIndex: z.number().nullable(),
+  code: z.string(),
+  message: z.string(),
 });
 
-export const triggerMutationSchema = z.looseObject({
+const createdEntity = z.looseObject({
+  kind: z.enum(['interaction', 'trigger']),
+  operationIndex: z.number(),
+  id: z.string(),
+  ref: z.string().optional(),
+  interactionId: z.string().optional(),
+});
+
+const changeSummary = z.looseObject({
+  counts: z.record(z.string(), z.number()),
+  interactions: z.array(z.looseObject({ change: z.string(), id: z.string() })),
+  triggers: z.array(z.looseObject({ change: z.string(), id: z.string() })),
+  connections: z.array(z.looseObject({ change: z.string() })),
+});
+
+export const storyChangePreviewSchema = z.looseObject({
+  storyId: z.string(),
+  baseRevision: z.number(),
+  valid: z.boolean(),
+  proposalId: z.string().optional(),
+  expiresAt: z.string().optional(),
+  operationCount: z.number(),
+  createdEntities: z.array(createdEntity),
+  summary: changeSummary.optional(),
+  diagnostics: z.array(diagnostic),
+});
+
+export const storyChangeCommitSchema = z.looseObject({
+  status: z.enum(['committed', 'already_applied']),
+  storyId: z.string(),
+  proposalId: z.string(),
+  baseRevision: z.number(),
   revision: z.number(),
-  interactionId: z.string(),
-  trigger: triggerSchema,
+  createdEntities: z.array(createdEntity),
+  summary: changeSummary.optional(),
+  reverted: z.boolean().optional(),
 });
 
 export type ApiStory = z.infer<typeof storySchema>;
@@ -161,4 +195,4 @@ export type ApiInteraction = z.infer<typeof interactionSchema>;
 export type ApiTrigger = z.infer<typeof triggerSchema>;
 export type ApiContextPage = z.infer<typeof contextPageSchema>;
 export type ApiStoryList = z.infer<typeof storyListSchema>;
-export type ApiInteractionMutation = z.infer<typeof interactionMutationSchema>;
+export type ApiStoryChangePreview = z.infer<typeof storyChangePreviewSchema>;

@@ -1,6 +1,6 @@
 # Roadmap
 
-Status reviewed: 2026-11-20.
+Status reviewed: 2026-11-21.
 
 This page answers one question: **what comes next, and in which order?** It is
 deliberately short. What exists today is in [Current scope](current-scope.md).
@@ -13,6 +13,26 @@ Product positioning, the audience hypothesis, and the competitive context are in
 [Production readiness](production-readiness.md); implementation debt is in the
 [Code quality backlog](code-quality-backlog.md).
 
+## Priority decision, 2026-11-21
+
+**The local MCP prototype passed its functional test; the safe-writes stage is
+engaged.** The project owner validated the prototype functionally. The
+commissioned next step is the editorial change batch foundation
+([ADR-050](decisions/ADR-050-editorial-change-batches.md),
+[Story change batches](story-changes.md)): preview, diff and atomic commit
+against a known revision, exposed in the local MCP server, which no longer
+writes directly.
+
+Consequences:
+
+- The batch contract is provider-neutral: the editor, imports and tests can use
+  it; it is not an assistant-specific path.
+- It does not displace the open-alpha sequence below, starting with the
+  valuable-project safety gate (P0). It reuses the existing transaction,
+  history and editor rules, and the MCP server stays local and development-only.
+- OAuth and remote MCP remain unplanned until a later decision. Deletion and
+  context-entity operations wait until preview and review are proven in use.
+
 ## Priority decision, 2026-11-20
 
 **A private, local MCP prototype exists; external agent integration stays a
@@ -20,11 +40,11 @@ Post-V1 direction and is not delivered to users.** The task that commissioned
 the prototype required write tools, which deviates from the planned read-only
 first stage ([ADR-047](decisions/ADR-047-local-mcp-adapter-over-http-api.md)).
 
-| Stage                                                       | Status                                      |
-| ----------------------------------------------------------- | ------------------------------------------- |
-| Local MCP prototype, read and write ([guide](mcp.md))       | Implemented, being finalized                |
-| Safe writes: preview, diff, commit against a known revision | Required before any wider release           |
-| Remote MCP with delegated authentication (OAuth)            | To plan if the functional test justifies it |
+| Stage                                                       | Status                                                          |
+| ----------------------------------------------------------- | --------------------------------------------------------------- |
+| Local MCP prototype, read and write ([guide](mcp.md))       | Implemented, validated functionally on 2026-11-21               |
+| Safe writes: preview, diff, commit against a known revision | Implemented for Interactions and Triggers (2026-11-21, ADR-050) |
+| Remote MCP with delegated authentication (OAuth)            | Not planned yet                                                 |
 
 Consequences:
 

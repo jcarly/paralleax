@@ -84,6 +84,7 @@ Pick the path that matches what you want to do.
 - [Trigger semantics](triggers.md)
 - [Simulation](simulation.md)
 - [Annotations](annotations.md)
+- [Story change batches](story-changes.md): preview, diff and commit of grouped edits
 - [Interaction inclusion proposal](interaction-inclusion-proposal.md) (not accepted)
 
 ### Architecture and engineering
@@ -91,6 +92,7 @@ Pick the path that matches what you want to do.
 - [Architecture](architecture.md)
 - [AI architecture map](architecture-map-ai.md)
 - [ADR index](decisions/README.md)
+- [MCP prototype](mcp.md)
 - [UML diagrams](uml/README.md)
 - [AI development workflow](ai-workflow.md)
 - [Agent roles](agent-roles.md)

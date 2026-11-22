@@ -8,6 +8,7 @@ import {
 import { DomainValidationError } from '@paralleax/shared';
 import type { Response } from 'express';
 import { ApiExceptionFilter } from './api-exception.filter';
+import { ApplicationConflictError, ApplicationNotFoundError } from './application-errors';
 import type { RequestWithId } from './request-context';
 import * as sentry from '../observability/sentry';
 
@@ -93,6 +94,50 @@ describe('ApiExceptionFilter', () => {
     });
     expect(capture).not.toHaveBeenCalled();
     expect(logError).not.toHaveBeenCalled();
+  });
+
+  it('maps an application conflict to 409 with its code and details', () => {
+    const capture = jest.spyOn(sentry, 'captureApiException').mockImplementation();
+    const logError = jest.spyOn(Logger.prototype, 'error').mockImplementation();
+    const response = host();
+
+    new ApiExceptionFilter().catch(
+      new ApplicationConflictError('STORY_REVISION_CONFLICT', 'The Story has changed.', {
+        expectedRevision: 3,
+        currentRevision: 4,
+      }),
+      response.host,
+    );
+
+    expect(response.status).toHaveBeenCalledWith(HttpStatus.CONFLICT);
+    expect(response.json).toHaveBeenCalledWith({
+      status: HttpStatus.CONFLICT,
+      code: 'STORY_REVISION_CONFLICT',
+      message: 'The Story has changed.',
+      requestId: 'request-1',
+      details: { expectedRevision: 3, currentRevision: 4 },
+    });
+    expect(capture).not.toHaveBeenCalled();
+    expect(logError).not.toHaveBeenCalled();
+  });
+
+  it('maps an application not-found error to 404 with its code', () => {
+    const capture = jest.spyOn(sentry, 'captureApiException').mockImplementation();
+    const response = host();
+
+    new ApiExceptionFilter().catch(
+      new ApplicationNotFoundError('STORY_CHANGE_PROPOSAL_NOT_FOUND', 'Preview again.'),
+      response.host,
+    );
+
+    expect(response.status).toHaveBeenCalledWith(HttpStatus.NOT_FOUND);
+    expect(response.json).toHaveBeenCalledWith({
+      status: HttpStatus.NOT_FOUND,
+      code: 'STORY_CHANGE_PROPOSAL_NOT_FOUND',
+      message: 'Preview again.',
+      requestId: 'request-1',
+    });
+    expect(capture).not.toHaveBeenCalled();
   });
 
   it('preserves explicit structured error details', () => {

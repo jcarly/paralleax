@@ -729,6 +729,7 @@ export const italianTranslation = {
         itemInstanceCreated: 'Articolo aggiunto',
         itemInstanceMoved: 'Articolo spostato',
         itemInstanceDeleted: 'Articolo rimosso',
+        storyChangesCommitted: 'Modifiche raggruppate applicate',
       },
     },
     organizeGraph: 'Organizza il grafico',

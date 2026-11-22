@@ -43,7 +43,29 @@ it('inserts a reversible event and returns its database id', async () => {
     JSON.stringify(changes),
     null,
     '2026-08-28T08:00:00.000Z',
+    null,
+    null,
   ]);
+});
+
+it('records the digest and result of a committed change batch', async () => {
+  query.mockResolvedValue({ rows: [{ id: 43 }] });
+
+  await insertStoryHistoryEvent(client, {
+    storyId: 'story-1',
+    actorUserId: 'user-1',
+    revision: 3,
+    kind: 'change',
+    operation: 'story.changes.committed',
+    changes,
+    createdAt: '2026-08-28T08:00:00.000Z',
+    proposal: { id: 'a'.repeat(64), result: { createdEntities: [] } },
+  });
+
+  expect(query).toHaveBeenCalledWith(
+    expect.stringContaining('proposal_id, proposal_result'),
+    expect.arrayContaining(['a'.repeat(64), JSON.stringify({ createdEntities: [] })]),
+  );
 });
 
 it.each([

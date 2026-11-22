@@ -713,6 +713,7 @@ export const frenchTranslation = {
         itemInstanceCreated: 'Objet ajouté',
         itemInstanceMoved: 'Objet déplacé',
         itemInstanceDeleted: 'Objet supprimé',
+        storyChangesCommitted: 'Modifications groupées appliquées',
       },
     },
     organizeGraph: 'Réorganiser le graphe',

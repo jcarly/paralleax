@@ -1,7 +1,14 @@
 # ADR-047 - Local MCP Adapter over the HTTP API
 
-**Status:** Accepted (prototype)
+**Status:** Accepted (prototype). Write tools superseded by
+[ADR-050](ADR-050-editorial-change-batches.md) on 2026-11-21.
 **Date:** 2026-11-20
+
+> Update 2026-11-21: the project owner validated the prototype functionally.
+> `create_interaction`, `update_interaction`, `create_trigger` and the
+> in-memory `idempotencyKey` cache were removed; MCP writes now go through
+> `preview_story_changes` and `commit_story_changes` (ADR-050). The decision
+> below is kept as recorded.
 
 ## Context
 
