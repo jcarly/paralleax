@@ -2,6 +2,11 @@
 
 ## Unreleased
 
+- Story library cards show Read, Edit, Export and Access as icon-only links
+  (PAR-7, H). Each keeps its accessible name and shows it in a tooltip on hover
+  and keyboard focus; permissions, route preloading and the native export
+  download are unchanged. `FieldHelpTooltip` can now render its trigger as a
+  router link or a download link.
 - Added editorial change batches (ADR-050, [docs/story-changes.md](docs/story-changes.md)).
   `POST /api/stories/:id/changes/preview` applies an ordered list of
   Interaction and Trigger creations and updates, with temporary references

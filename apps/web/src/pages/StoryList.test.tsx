@@ -303,13 +303,34 @@ it('loads and displays stories with edit and play links', async () => {
   const editLink = within(firstCard).getByRole('link', { name: 'Edit' });
   const readLink = within(firstCard).getByRole('link', { name: 'Read' });
   await user.hover(editLink);
-  expect(loadStoryEditor).toHaveBeenCalledOnce();
+  expect(loadStoryEditor).toHaveBeenCalled();
+  const editorPreloads = vi.mocked(loadStoryEditor).mock.calls.length;
   fireEvent.focus(editLink);
-  expect(loadStoryEditor).toHaveBeenCalledTimes(2);
+  expect(loadStoryEditor).toHaveBeenCalledTimes(editorPreloads + 1);
   await user.hover(readLink);
-  expect(loadStoryPlayer).toHaveBeenCalledOnce();
+  expect(loadStoryPlayer).toHaveBeenCalled();
+  const playerPreloads = vi.mocked(loadStoryPlayer).mock.calls.length;
   fireEvent.focus(readLink);
-  expect(loadStoryPlayer).toHaveBeenCalledTimes(2);
+  expect(loadStoryPlayer).toHaveBeenCalledTimes(playerPreloads + 1);
+});
+
+it('shows library actions as icons with focus tooltips', async () => {
+  vi.mocked(api.listStories).mockResolvedValue(storyPage(structuredClone(stories)));
+  render(
+    <MemoryRouter>
+      <StoryList user={standardUser} />
+    </MemoryRouter>,
+  );
+  const firstCard = requireValue(
+    (await screen.findByRole('heading', { name: 'First story' })).closest('article'),
+    'first story card',
+  );
+  const accessLink = within(firstCard).getByRole('link', { name: 'Access' });
+  expect(accessLink).toHaveTextContent('');
+  fireEvent.focus(accessLink);
+  expect(document.getElementById(accessLink.getAttribute('aria-describedby') ?? '')).toHaveClass(
+    'is-visible',
+  );
 });
 
 it('offers native export only for editable stories', async () => {
@@ -417,7 +438,9 @@ it('deletes a story from the list', async () => {
   const deleteButton = within(firstCard).getByRole('button', { name: 'Delete' });
   fireEvent.focus(deleteButton);
   expect(deleteButton).toHaveAttribute('aria-describedby');
-  expect(screen.getByRole('tooltip')).toHaveTextContent('Delete this story');
+  expect(document.getElementById(deleteButton.getAttribute('aria-describedby') ?? '')).toHaveClass(
+    'is-visible',
+  );
   await user.click(deleteButton);
   expect(confirm).toHaveBeenCalledWith('Delete “First story”? This cannot be undone.');
   expect(api.deleteStory).not.toHaveBeenCalled();

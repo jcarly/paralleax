@@ -1,5 +1,6 @@
 import { createPortal } from 'react-dom';
 import type { KeyboardEvent as ReactKeyboardEvent, ReactNode } from 'react';
+import { Link } from 'react-router-dom';
 import { useContext, useEffect, useId, useLayoutEffect, useRef, useState } from 'react';
 import { ModalPortalContext } from './modalPortalContext';
 
@@ -10,6 +11,9 @@ export function FieldHelpTooltip({
   className,
   disabled,
   onClick,
+  to,
+  href,
+  onPreload,
 }: {
   label: string;
   help: string;
@@ -17,10 +21,15 @@ export function FieldHelpTooltip({
   className?: string;
   disabled?: boolean;
   onClick?: () => void;
+  /** Renders the trigger as a router link (`to`) or a download link (`href`) instead of a button. */
+  to?: string;
+  href?: string;
+  /** Called when a link trigger is hovered or focused, to preload its route. */
+  onPreload?: () => void;
 }) {
   const modalPortal = useContext(ModalPortalContext);
   const tooltipId = useId();
-  const triggerRef = useRef<HTMLButtonElement>(null);
+  const triggerRef = useRef<HTMLElement | null>(null);
   const tooltipRef = useRef<HTMLSpanElement>(null);
   const closeTimerRef = useRef<number | undefined>(undefined);
   const triggerHoveredRef = useRef(false);
@@ -70,7 +79,7 @@ export function FieldHelpTooltip({
     }, 160);
   }
 
-  function dismissTooltip(event: ReactKeyboardEvent<HTMLButtonElement>) {
+  function dismissTooltip(event: ReactKeyboardEvent<HTMLElement>) {
     if (event.key !== 'Escape' || !open) {
       return;
     }
@@ -114,36 +123,46 @@ export function FieldHelpTooltip({
     }
   }, [open]);
 
+  const triggerProps = {
+    ref: (element: HTMLElement | null) => {
+      triggerRef.current = element;
+    },
+    'aria-describedby': tooltipId,
+    'aria-label':
+      children === undefined && to === undefined && href === undefined ? `? — ${label}` : label,
+    className: `field-help-tooltip-trigger${className ? ` ${className}` : ''}`,
+    onBlur: () => {
+      triggerFocusedRef.current = false;
+      scheduleTooltipClose();
+    },
+    onFocus: () => {
+      triggerFocusedRef.current = true;
+      onPreload?.();
+      showTooltip();
+    },
+    onKeyDown: dismissTooltip,
+    onPointerEnter: () => {
+      triggerHoveredRef.current = true;
+      onPreload?.();
+      showTooltip();
+    },
+    onPointerLeave: () => {
+      triggerHoveredRef.current = false;
+      scheduleTooltipClose();
+    },
+  };
+
   return (
     <>
-      <button
-        aria-describedby={tooltipId}
-        aria-label={children === undefined ? `? — ${label}` : label}
-        className={`field-help-tooltip-trigger${className ? ` ${className}` : ''}`}
+      <FieldHelpTrigger
+        triggerProps={triggerProps}
+        to={to}
+        href={href}
         disabled={disabled}
-        ref={triggerRef}
-        type="button"
         onClick={onClick}
-        onBlur={() => {
-          triggerFocusedRef.current = false;
-          scheduleTooltipClose();
-        }}
-        onFocus={() => {
-          triggerFocusedRef.current = true;
-          showTooltip();
-        }}
-        onKeyDown={dismissTooltip}
-        onPointerEnter={() => {
-          triggerHoveredRef.current = true;
-          showTooltip();
-        }}
-        onPointerLeave={() => {
-          triggerHoveredRef.current = false;
-          scheduleTooltipClose();
-        }}
       >
-        {children ?? '?'}
-      </button>
+        {children}
+      </FieldHelpTrigger>
       {createPortal(
         <span
           className={`field-help-tooltip-content${open ? ' is-visible' : ''}`}
@@ -165,5 +184,41 @@ export function FieldHelpTooltip({
         modalPortal?.current ?? document.body,
       )}
     </>
+  );
+}
+
+function FieldHelpTrigger({
+  triggerProps,
+  to,
+  href,
+  disabled,
+  onClick,
+  children,
+}: {
+  triggerProps: Record<string, unknown>;
+  to?: string;
+  href?: string;
+  disabled?: boolean;
+  onClick?: () => void;
+  children?: ReactNode;
+}) {
+  if (to !== undefined) {
+    return (
+      <Link {...triggerProps} to={to}>
+        {children}
+      </Link>
+    );
+  }
+  if (href !== undefined) {
+    return (
+      <a {...triggerProps} href={href} download>
+        {children}
+      </a>
+    );
+  }
+  return (
+    <button {...triggerProps} disabled={disabled} type="button" onClick={onClick}>
+      {children ?? '?'}
+    </button>
   );
 }
