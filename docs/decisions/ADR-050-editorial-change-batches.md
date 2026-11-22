@@ -1,7 +1,8 @@
 # ADR-050 - Editorial Change Batches: Preview, Diff and Commit
 
 **Status:** Accepted
-**Date:** 2026-11-21
+**Date:** 2026-11-21 (revised 2026-11-22 after review: stored proposals,
+complete created-entity diff, destructive commit hint)
 
 ## Context
 
@@ -55,40 +56,58 @@ assistants: the editor, imports or tests can produce the same batches.
   per-operation diagnostics and a summary derived from the ADR-023 history
   delta. It writes nothing, increments nothing, records no history and
   publishes no invalidation.
-- **Proposal identity.** `proposalId` is the SHA-256 of a canonical JSON form of
-  the batch version, Story ID, user ID, base revision and exact operations.
-  Committing sends the operations and base revision again; the server
-  recomputes the digest and replans everything. There is no stored proposal,
-  server secret or client-supplied diff to trust. The digest is not a
-  credential: permissions and the revision are checked again at commit.
+- **Stored proposals.** A valid preview stores the exact operations it
+  validated in `story_change_proposals`, with the user, Story, base revision and
+  an expiry (one hour; at most 20 unexpired proposals per user, the oldest are
+  removed). It returns a random, server-issued `proposalId` (256 bits). A commit
+  sends only `{ version, proposalId }`: it can only apply a batch the server
+  previewed, for the same user and Story, and never operations supplied at
+  commit time. The proposal table is not authored Story content: storing a
+  proposal is not an editorial change, revision or history entry.
 - **Commit.** One `mutate` transaction: edit access check and row lock, then the
-  revision check under the lock (`STORY_REVISION_CONFLICT`), then the same
+  stored proposal lookup (`404 STORY_CHANGE_PROPOSAL_NOT_FOUND` when unknown,
+  expired, another user's or another Story's), then the revision check under
+  the lock (`STORY_REVISION_CONFLICT`), then the same
   application, final checks and persistence. A valid batch creates exactly one
   revision and one history event, operation `story.changes.committed`; any
   failure rolls back everything. Final IDs are random UUIDs generated at commit;
   preview IDs are provisional.
-- **Idempotency.** The history event stores the proposal digest and the created
-  entities (`proposal_digest`, `proposal_result`, unique per Story; migration
-  `202611210048`). Under the lock, a commit whose digest is already recorded
-  returns `already_applied` with the original revision and IDs, and whether the
-  batch was undone since, without writing. A commit on a new revision is a
-  different proposal and conflicts instead.
-- **Errors.** A new application error, `ApplicationConflictError`, is mapped by
-  the exception filter to 409 with its code and details. Invalid batches at
+- **Idempotency.** The commit deletes the stored proposal and records its ID
+  and created entities on the history event (`proposal_id`, `proposal_result`,
+  unique per Story; migrations `202611210048` and `202611220049`). Under the
+  lock, a commit whose proposal is already recorded returns `already_applied`
+  with the original revision and IDs, and whether the batch was undone since,
+  without writing. The answer survives restarts and the proposal's expiry.
+- **Errors.** New application errors, `ApplicationConflictError` and
+  `ApplicationNotFoundError`, are mapped by the exception filter to 409 and 404
+  with their code and details. Invalid batches at
   commit raise `DomainValidationError` (`STORY_CHANGES_INVALID`, 400) with the
   diagnostics.
 - **MCP.** `preview_story_changes` and `commit_story_changes` replace the direct
   write tools, which are removed so the review flow cannot be bypassed through
-  the MCP server. The MCP server keeps the exact previewed operations in memory
-  (one hour, 50 entries) so a commit only names its `proposalId`; this is a
-  transport convenience, not a guarantee. Its instructions require the read,
-  build, preview, present, confirm, commit and verify sequence.
+  the MCP server. The commit tool only forwards the `proposalId`; the MCP server
+  keeps no proposal state. `commit_story_changes` is annotated
+  `destructiveHint: true`: a batch can replace bodies, effects and conditions,
+  even if history can undo it. The instructions require the read, build,
+  preview, present, confirm, commit and verify sequence.
+- **Reviewable diff.** The summary lists every authored field of an added or
+  removed Interaction or Trigger (body, effects, conditional text, condition
+  groups, probability, timer, position), and the changed fields of updated
+  ones, with old and new values. Strings beyond 2,000 characters are cut and
+  structured values beyond 4,000 serialized characters are replaced by a size
+  marker, both flagged `truncated: true`.
 
-The canonical JSON form is a small local function rather than a dependency:
-`fast-json-stable-stringify` (already installed transitively) only offers a
-CommonJS `export =`, which the API's TypeScript settings (no `esModuleInterop`)
-and lint rules (no `require` imports) cannot import without a configuration
-change.
+### Alternatives considered for the preview proof
+
+- A digest of the batch recomputed at commit (the first version of this ADR):
+  it binds a commit to an exact batch, but any client can compute it, so it
+  does not prove that the server issued a preview.
+- A signed, expiring token (HMAC): no storage, but a new mandatory production
+  secret and its rotation, and the client must still send the operations again.
+- Redis with key expiry: not part of the stack, which adds Redis only for
+  measured workloads ([hosting and scale](../hosting-and-scale.md)); it would
+  also split the proposal check from the PostgreSQL commit transaction.
+  Proposals can move there later without changing the contract.
 
 ## Consequences
 
@@ -97,10 +116,12 @@ change.
 - Undo and redo treat a batch as one change (ADR-023); a later conflicting edit
   makes the undo report a conflict, as for any other change.
 - A lost commit response is safe to retry with the same proposal.
-- The server cannot know whether a human saw the preview. Confirmation before
-  commit is the MCP client's and assistant's responsibility; the server
-  guarantees only that what is committed is exactly what was previewed, on the
-  previewed revision, for the same user, once.
+- The API itself guarantees that every commit applies a batch it previewed and
+  stored, exactly, on the previewed revision, for the same user, at most once.
+  It cannot know whether a human read the preview: confirmation before commit
+  remains the MCP client's and assistant's responsibility.
+- Previews write a row outside the authored Story; expired rows are removed by
+  later previews of the same user and when the Story or user is deleted.
 - The single-entity HTTP endpoints stay for the editor; they keep their
   last-write-wins semantics.
 - Batches are limited to 100 operations and the global 128 KiB request body.

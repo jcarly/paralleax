@@ -159,6 +159,11 @@ it('previews a scene with three branches without changing the story', async () =
     summary: { counts: { interactionsAdded: 4, triggersAdded: 4, connectionsAdded: 4 } },
     diagnostics: [],
   });
+  // The author can review the sanitized body and the conditions before confirming.
+  const summary = JSON.stringify(preview.summary);
+  expect(summary).toContain('Un message <strong>chiffré</strong>.');
+  expect(summary).not.toContain('<script>');
+  expect(summary).toContain('"field":"conditionGroups"');
   expect(await readStory(accounts.owner.token, storyId)).toEqual(before);
 });
 

@@ -69,7 +69,7 @@ it('previews a batch and asks for confirmation before committing', async () => {
   ]);
 });
 
-it('commits exactly the previewed operations and revision', async () => {
+it('commits by naming the stored proposal only', async () => {
   const api = stubFetch({
     [`POST ${base}/preview`]: validPreview,
     [`POST ${base}/commit`]: committed,
@@ -82,11 +82,11 @@ it('commits exactly the previewed operations and revision', async () => {
   expect(result.data).toMatchObject({ status: 'committed', revision: 8 });
   expect(api.requests[1]).toMatchObject({
     path: `${base}/commit`,
-    body: { version: 1, proposalId, baseRevision: 7, operations },
+    body: { version: 1, proposalId },
   });
 });
 
-it('refuses to commit a proposal it did not preview, or an invalid one', async () => {
+it('reports an invalid preview and relays an unknown proposal from the API', async () => {
   const invalid: RouteResponse = {
     body: {
       ...validPreviewBody,
@@ -97,7 +97,10 @@ it('refuses to commit a proposal it did not preview, or an invalid one', async (
       ],
     },
   };
-  const api = stubFetch({ [`POST ${base}/preview`]: invalid });
+  const api = stubFetch({
+    [`POST ${base}/preview`]: invalid,
+    [`POST ${base}/commit`]: apiError(404, 'STORY_CHANGE_PROPOSAL_NOT_FOUND'),
+  });
   const { call } = await connect(api.fetchImpl);
 
   const preview = await call('preview_story_changes', { storyId, operations });
@@ -107,8 +110,13 @@ it('refuses to commit a proposal it did not preview, or an invalid one', async (
     valid: false,
     nextStep: expect.stringContaining('Fix') as unknown,
   });
-  expect(commit.data).toMatchObject({ error: { code: 'PROPOSAL_NOT_FOUND' } });
-  expect(api.requests.map(({ path }) => path)).toEqual([`${base}/preview`]);
+  expect(commit.data).toMatchObject({
+    error: {
+      code: 'STORY_CHANGE_PROPOSAL_NOT_FOUND',
+      status: 404,
+      hint: expect.stringContaining('Preview the batch again') as unknown,
+    },
+  });
 });
 
 it('maps stale revisions and unknown commit outcomes to actionable errors', async () => {

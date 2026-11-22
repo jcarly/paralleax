@@ -38,12 +38,10 @@ const hints: Partial<Record<string, string>> = {
     'Call commit_story_changes again with the same proposalId: a proposal already applied is reported as already_applied, never applied twice.',
   STORY_REVISION_CONFLICT:
     'The story changed since the preview. Read it again, rebuild the batch and preview it; do not reuse this proposal.',
-  STORY_CHANGE_PROPOSAL_MISMATCH:
-    'The commit does not match the preview. Preview the batch again and commit the new proposalId.',
+  STORY_CHANGE_PROPOSAL_NOT_FOUND:
+    'Proposals expire one hour after their preview and belong to the user and story that previewed them. Preview the batch again, then commit.',
   STORY_CHANGES_INVALID:
     'The batch is invalid; read details.diagnostics and preview a corrected batch.',
-  PROPOSAL_NOT_FOUND:
-    'Previews are kept for one hour by this server process. Preview the batch again, then commit.',
 };
 
 export function toolSuccess(payload: Record<string, unknown>): CallToolResult {

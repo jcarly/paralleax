@@ -64,6 +64,12 @@ import {
   readStoryHistory,
   type CommittedStoryChangeProposal,
 } from './persistence/story-history.persistence';
+import {
+  deleteStoryChangeProposal,
+  findStoryChangeProposal,
+  insertStoryChangeProposal,
+  type StoredStoryChangeProposal,
+} from './persistence/story-change-proposals.persistence';
 
 import {
   projectInteractionLocationId,
@@ -86,7 +92,8 @@ import { readStoryRuntimeSlice } from './persistence/story-runtime.persistence';
 
 export type StoryChangeProposalCommit =
   | { kind: 'committed'; story: Story }
-  | { kind: 'replayed'; proposal: CommittedStoryChangeProposal };
+  | { kind: 'replayed'; proposal: CommittedStoryChangeProposal }
+  | { kind: 'missing' };
 
 type StoryRow = {
   id: string;
@@ -602,31 +609,59 @@ export class StoriesRepository implements NativeStoryImportPort {
     });
   }
 
+  /** Stores a previewed change batch proposal (ADR-050). */
+  async saveChangeProposal(
+    proposal: StoredStoryChangeProposal & { createdAt: string },
+    maxPerUser: number,
+  ): Promise<void> {
+    await this.transaction((client) => insertStoryChangeProposal(client, proposal, maxPerUser));
+  }
+
   /**
-   * Commits a change batch (ADR-050) as one mutation. Under the Story lock, a
-   * batch already committed with this digest is reported instead of applied
-   * again, so a retried commit never writes twice.
+   * Commits a stored change batch proposal (ADR-050) as one mutation. Under
+   * the Story lock, a proposal already committed is reported instead of
+   * applied again; an unknown, expired or foreign proposal is `missing`.
    */
   async commitChangeProposal(input: {
     id: string;
-    mutation: (story: Story) => Story;
     ownerId: string;
+    proposalId: string;
     operation: string;
-    proposal: { digest: string; result: unknown };
+    now: string;
+    build: (proposal: StoredStoryChangeProposal) => {
+      mutation: (story: Story) => Story;
+      result: unknown;
+    };
   }): Promise<StoryChangeProposalCommit | undefined> {
+    const { id, ownerId, proposalId } = input;
     return this.transaction(async (client) => {
-      if (!(await this.hasEditAccess(client, input.id, input.ownerId, true))) {
+      if (!(await this.hasEditAccess(client, id, ownerId, true))) {
         return undefined;
       }
-      const committed = await findCommittedStoryChangeProposal(
-        client,
-        input.id,
-        input.proposal.digest,
-      );
+      const committed = await findCommittedStoryChangeProposal(client, id, proposalId);
       if (committed) {
-        return { kind: 'replayed' as const, proposal: committed };
+        return committed.actorUserId === ownerId
+          ? { kind: 'replayed' as const, proposal: committed }
+          : { kind: 'missing' as const };
       }
-      const story = await this.mutateLocked(client, input);
+      const proposal = await findStoryChangeProposal(client, {
+        id: proposalId,
+        storyId: id,
+        userId: ownerId,
+        now: input.now,
+      });
+      if (!proposal) {
+        return { kind: 'missing' as const };
+      }
+      const { mutation, result } = input.build(proposal);
+      const story = await this.mutateLocked(client, {
+        id,
+        mutation,
+        ownerId,
+        operation: input.operation,
+        proposal: { id: proposalId, result },
+      });
+      await deleteStoryChangeProposal(client, proposalId);
       return story ? { kind: 'committed' as const, story } : undefined;
     });
   }
@@ -651,7 +686,7 @@ export class StoriesRepository implements NativeStoryImportPort {
       mutation: (story: Story) => Story | Promise<Story>;
       ownerId: string;
       operation: string;
-      proposal?: { digest: string; result: unknown };
+      proposal?: { id: string; result: unknown };
     },
   ): Promise<Story | undefined> {
     const { id, mutation, ownerId, operation, proposal } = input;

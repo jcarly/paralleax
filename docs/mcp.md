@@ -109,9 +109,9 @@ The server instructions tell the assistant to:
 6. commit the `proposalId` of that preview;
 7. verify the result by reading the story again.
 
-What the server guarantees, through the API: a commit applies exactly the
-previewed operations, on the previewed revision, for the same user, at most
-once, all or nothing, after checking edit access again. A changed story is
+What the server guarantees, through the API: a commit only applies a batch the
+API previewed and stored, exactly, on the previewed revision, for the same
+user, at most once, all or nothing, after checking edit access again. A changed story is
 refused with `STORY_REVISION_CONFLICT`.
 
 What it cannot guarantee: that a human saw and approved the preview. Steps 4
@@ -119,18 +119,21 @@ and 5 depend on the assistant and the MCP client; a client that auto-approves
 tool calls can commit without asking. Configure the client to ask before
 `commit_story_changes` if you need that guarantee.
 
-The MCP server keeps the previewed operations in memory for one hour (50
-proposals) so the commit only names `proposalId`. After a restart,
-`commit_story_changes` fails with `PROPOSAL_NOT_FOUND`: preview again. A commit
-whose response is lost (`WRITE_OUTCOME_UNKNOWN`) can be retried with the same
-`proposalId`: the API answers `already_applied` instead of applying it twice.
+The API stores each valid preview for one hour; `commit_story_changes` only
+sends its `proposalId`, so the commit applies exactly what was previewed, even
+after the MCP server restarts. An expired or unknown proposal fails with
+`STORY_CHANGE_PROPOSAL_NOT_FOUND`: preview again. A commit whose response is
+lost (`WRITE_OUTCOME_UNKNOWN`) can be retried with the same `proposalId`: the API
+answers `already_applied` instead of applying it twice. `commit_story_changes`
+is annotated as destructive, so clients that honor annotations can ask before
+running it.
 
 Errors are returned as `{ error: { code, message, status?, requestId?, details?, hint? } }`.
 Codes come from the API (`AUTHENTICATION_REQUIRED`, `FORBIDDEN`,
-`STORY_NOT_FOUND`, `STORY_REVISION_CONFLICT`, `STORY_CHANGE_PROPOSAL_MISMATCH`,
+`STORY_NOT_FOUND`, `STORY_REVISION_CONFLICT`, `STORY_CHANGE_PROPOSAL_NOT_FOUND`,
 `STORY_CHANGES_INVALID`, `RATE_LIMITED`, ...) or from the adapter
 (`API_UNREACHABLE`, `API_CONTRACT_MISMATCH`, `INTERACTION_NOT_FOUND`,
-`PROPOSAL_NOT_FOUND`, `WRITE_OUTCOME_UNKNOWN`).
+`WRITE_OUTCOME_UNKNOWN`).
 
 The direct write tools of the first prototype (`create_interaction`,
 `update_interaction`, `create_trigger`) were removed so that every MCP write
@@ -196,7 +199,7 @@ The API allows five registrations per minute, so wait a minute between runs.
 - Batches support creating and updating interactions and Triggers only, up to
   100 operations and the API's 128 KiB request body. A preview loads the
   complete Story.
-- Previews are remembered by the MCP server process for one hour.
+- Previews can be committed for one hour; each user keeps at most 20.
 - Session file protection is verified on Linux and macOS only, not on Windows.
 - `get_interaction` loads the complete Story; `get_story_structure` makes six
   requests per page. Both count against the API rate limits.

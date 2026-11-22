@@ -4,6 +4,7 @@ import {
   storyHistoryOperations,
   type Story,
 } from '@paralleax/shared';
+import type { StoredStoryChangeProposal } from '../persistence/story-change-proposals.persistence';
 import { StoriesRepository, type StoryChangeProposalCommit } from '../stories.repository';
 import { StoryEventsService } from '../story.events';
 
@@ -34,21 +35,28 @@ export class StoryMutationService {
   }
 
   /**
-   * Applies a change batch as one mutation with one revision and one history
-   * event (ADR-050), or reports the earlier commit of the same proposal.
+   * Applies a stored change batch proposal as one mutation with one revision
+   * and one history event (ADR-050), or reports its earlier commit.
    */
   async commitProposal(input: {
     storyId: string;
-    mutation: (story: Story) => Story;
     userId: string;
-    proposal: { digest: string; result: unknown };
+    proposalId: string;
+    build: (proposal: StoredStoryChangeProposal) => {
+      mutation: (story: Story) => Story;
+      result: unknown;
+    };
   }): Promise<StoryChangeProposalCommit> {
     const committed = await this.repository.commitChangeProposal({
       id: input.storyId,
-      mutation: (story) => nextRevision(input.storyId, story, input.mutation),
       ownerId: input.userId,
+      proposalId: input.proposalId,
       operation: storyHistoryOperations.storyChangesCommitted,
-      proposal: input.proposal,
+      now: new Date().toISOString(),
+      build: (proposal) => {
+        const { mutation, result } = input.build(proposal);
+        return { mutation: (story) => nextRevision(input.storyId, story, mutation), result };
+      },
     });
     if (!committed) {
       return this.accessError(input.storyId, input.userId);

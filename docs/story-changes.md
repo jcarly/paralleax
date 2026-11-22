@@ -94,42 +94,50 @@ from the current revision, the preview fails with `409 STORY_REVISION_CONFLICT`.
 
 The response (`200`):
 
-| Field             | Meaning                                                                                                                                           |
-| ----------------- | ------------------------------------------------------------------------------------------------------------------------------------------------- |
-| `valid`           | Whether the batch can be committed as is.                                                                                                         |
-| `proposalId`      | Present when valid. Commit with it.                                                                                                               |
-| `baseRevision`    | The revision the batch was applied to. Commit with it.                                                                                            |
-| `createdEntities` | Entities the batch creates, with provisional IDs and their `ref`.                                                                                 |
-| `summary`         | Counts; added and updated interactions and Triggers with old and new field values; added and removed connections (`source → target` per Trigger). |
-| `diagnostics`     | `{ severity, operationIndex, code, message, path?, details? }`; `operationIndex` is `null` for the batch as a whole.                              |
+| Field             | Meaning                                                                                                                                                                                |
+| ----------------- | -------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `valid`           | Whether the batch can be committed as is.                                                                                                                                              |
+| `proposalId`      | Present when valid: the server-issued ID of the stored proposal. Commit with it.                                                                                                       |
+| `expiresAt`       | When the proposal can no longer be committed (one hour after the preview).                                                                                                             |
+| `baseRevision`    | The revision the batch was applied to; the commit requires it unchanged.                                                                                                               |
+| `createdEntities` | Entities the batch creates, with provisional IDs and their `ref`.                                                                                                                      |
+| `summary`         | Counts; every field of added interactions and Triggers and the changed fields of updated ones, with old and new values; added and removed connections (`source → target` per Trigger). |
+| `diagnostics`     | `{ severity, operationIndex, code, message, path?, details? }`; `operationIndex` is `null` for the batch as a whole.                                                                   |
 
 Shape, reference and field errors are reported for every operation. Applying
 stops at the first operation that breaks an editor rule, since later operations
 may depend on it. Warnings (`EMPTY_TITLE`, `NO_INPUT_INTERACTION`) do not
-prevent a commit. Long strings are cut to 500 characters and large values to a
-size marker in the summary (`truncated: true`); the commit applies the full
-values.
+prevent a commit.
 
-A preview writes nothing: no authored data, no revision, no history entry and
-no live notification to open editors.
+The summary shows what an author must review: for a created interaction its
+body, effects, conditional text, location, characters and position; for a
+created Trigger its condition groups, probability and timer, with its inputs and
+condition count. Strings beyond 2,000 characters are cut and structured values
+beyond 4,000 serialized characters are replaced by a size marker, both flagged
+`truncated: true`; the commit applies the full values.
+
+A valid preview stores the proposal: the exact operations, the user, the Story,
+the base revision and an expiry, outside the authored Story. It writes no
+authored data, no revision and no history entry, and sends no live notification
+to open editors. Each user keeps at most 20 unexpired proposals; older ones are
+removed.
 
 ## Commit
 
-`POST /api/stories/:storyId/changes/commit` with
-`{ version, proposalId, baseRevision, operations }`: the exact operations and
-base revision of the preview.
+`POST /api/stories/:storyId/changes/commit` with `{ "version": 1, "proposalId": "…" }`.
+The commit carries no operations: the server applies the stored ones.
 
-1. The API recomputes the proposal digest from the version, Story, current
-   user, base revision and operations (canonical JSON, SHA-256). A different
-   user, Story, revision or any changed operation gives another digest:
-   `409 STORY_CHANGE_PROPOSAL_MISMATCH`.
-2. It plans the batch again (`400 STORY_CHANGES_INVALID` with `details.diagnostics`).
-3. In one transaction: checks edit access and locks the Story row (403 or 404
-   otherwise, so revoked access is respected), then compares the current
-   revision with `baseRevision` under the lock
-   (`409 STORY_REVISION_CONFLICT`, `details: { expectedRevision, currentRevision }`).
-4. Applies the operations with the same rules, checks the result, persists it,
-   and records one history event. Any failure rolls back the whole batch.
+1. In one transaction, the API checks edit access and locks the Story row (403
+   or 404 otherwise, so revoked access is respected).
+2. It finds the proposal: issued by a preview of this user, for this Story, and
+   not expired (`404 STORY_CHANGE_PROPOSAL_NOT_FOUND` otherwise). A client
+   cannot forge one or commit operations it did not preview.
+3. It compares the current revision with the proposal's base revision under the
+   lock (`409 STORY_REVISION_CONFLICT`, `details: { expectedRevision, currentRevision }`).
+4. It plans and applies the stored operations again with the same rules, checks
+   the result, persists it, records one history event and deletes the proposal.
+   Any failure (`400 STORY_CHANGES_INVALID` with `details.diagnostics`, quotas)
+   rolls back the whole batch.
 5. After the transaction, open editors receive the usual `story-changed`
    notification.
 
@@ -139,16 +147,17 @@ revision.
 
 ### Retries and concurrency
 
-| Situation                                                        | Result                                                                                                                                                 |
-| ---------------------------------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------ |
-| The same commit again (for example after a lost response)        | `200`, `status: "already_applied"`, the original `revision` and `createdEntities`; nothing is written. `reverted: true` if the batch was undone since. |
-| The Story changed between preview and commit                     | `409 STORY_REVISION_CONFLICT`; nothing is written. Read the Story again and preview a new batch.                                                       |
-| Two commits on the same revision at the same time                | They are serialized by the row lock: the first applies, the second gets `STORY_REVISION_CONFLICT`.                                                     |
-| Operations changed after the preview, or another user's proposal | `409 STORY_CHANGE_PROPOSAL_MISMATCH`.                                                                                                                  |
+| Situation                                                       | Result                                                                                                                                                 |
+| --------------------------------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------ |
+| The same commit again (for example after a lost response)       | `200`, `status: "already_applied"`, the original `revision` and `createdEntities`; nothing is written. `reverted: true` if the batch was undone since. |
+| The Story changed between preview and commit                    | `409 STORY_REVISION_CONFLICT`; nothing is written. Read the Story again and preview a new batch.                                                       |
+| Two commits on the same revision at the same time               | They are serialized by the row lock: the first applies, the second gets `STORY_REVISION_CONFLICT`.                                                     |
+| An unknown, expired, another user's or another Story's proposal | `404 STORY_CHANGE_PROPOSAL_NOT_FOUND`; preview again.                                                                                                  |
 
-The digest of a committed batch is stored with its history event in
-PostgreSQL, so the replay survives restarts. A proposal is bound to its base
-revision: once committed, it can never be applied again, even after an undo.
+The ID of a committed proposal is stored with its history event in PostgreSQL,
+so the replay survives restarts and the proposal's expiry. A proposal is bound
+to its base revision: once committed, it can never be applied again, even after
+an undo.
 
 ## History
 
@@ -170,15 +179,15 @@ edits survive, an overlapping one makes the undo report a conflict.
 
 Errors use the API error body `{ status, code, message, requestId, details? }`.
 
-| Code                             | Status | When                                              |
-| -------------------------------- | ------ | ------------------------------------------------- |
-| `BAD_REQUEST`                    | 400    | The envelope is malformed (version, list size).   |
-| `STORY_CHANGES_INVALID`          | 400    | The batch is invalid at commit.                   |
-| `FORBIDDEN`                      | 403    | The user can read but not edit the Story.         |
-| `NOT_FOUND`                      | 404    | The Story does not exist or is not visible.       |
-| `STORY_REVISION_CONFLICT`        | 409    | The Story changed since `baseRevision`.           |
-| `STORY_CHANGE_PROPOSAL_MISMATCH` | 409    | The commit does not match a preview of this user. |
-| `STORY_QUOTA_EXCEEDED`           | 422    | Reported as a diagnostic at preview.              |
+| Code                              | Status | When                                                     |
+| --------------------------------- | ------ | -------------------------------------------------------- |
+| `BAD_REQUEST`                     | 400    | The envelope is malformed (version, list size).          |
+| `STORY_CHANGES_INVALID`           | 400    | The batch is invalid at commit.                          |
+| `FORBIDDEN`                       | 403    | The user can read but not edit the Story.                |
+| `NOT_FOUND`                       | 404    | The Story does not exist or is not visible.              |
+| `STORY_REVISION_CONFLICT`         | 409    | The Story changed since `baseRevision`.                  |
+| `STORY_CHANGE_PROPOSAL_NOT_FOUND` | 404    | No unexpired preview of this user and Story has this ID. |
+| `STORY_QUOTA_EXCEEDED`            | 422    | Reported as a diagnostic at preview.                     |
 
 Diagnostic codes include `INVALID_OPERATION`, `UNSUPPORTED_OPERATION`,
 `UNKNOWN_FIELD`, `REQUIRED_FIELD`, `INVALID_FIELD`, `INVALID_REFERENCE`,

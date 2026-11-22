@@ -147,9 +147,12 @@ function summarizeInteraction(
   const changedFields: Record<string, StoryChangeDelta> =
     entry.delta?.kind === 'object' ? entry.delta.fields : {};
   summarizeOwnedTriggers(context, change, { id: current.id, previous, next }, changedFields);
-  const fields = Object.keys(changedFields)
-    .filter((field) => field !== 'triggers')
-    .map((field) => fieldSummary(field, previous, next));
+  const fields =
+    change === 'updated'
+      ? Object.keys(changedFields)
+          .filter((field) => field !== 'triggers')
+          .map((field) => fieldSummary(field, previous, next))
+      : wholeEntityFields(change, current, interactionSummaryExclusions);
   if (change === 'updated' && fields.length === 0) {
     return;
   }
@@ -177,9 +180,12 @@ function summarizeOwnedTriggers(
 ): void {
   if (change !== 'updated') {
     for (const trigger of (owner.next ?? owner.previous)?.triggers ?? []) {
-      context.summary.triggers.push(
-        triggerSummary(context, { change, owner, trigger, fields: [] }),
+      const fields = wholeEntityFields(
+        change,
+        toCanonicalTrigger(trigger),
+        triggerSummaryExclusions,
       );
+      context.summary.triggers.push(triggerSummary(context, { change, owner, trigger, fields }));
     }
     return;
   }
@@ -202,16 +208,28 @@ function summarizeTriggers(
     if (!change || !trigger) {
       continue;
     }
-    const changedFields = entry.delta?.kind === 'object' ? Object.keys(entry.delta.fields) : [];
-    const fields = changedFields.map((field) =>
-      fieldSummary(
-        field,
-        before === undefined ? undefined : toCanonicalTrigger(before),
-        after === undefined ? undefined : toCanonicalTrigger(after),
-      ),
-    );
+    const fields = changedTriggerFields(change, entry, { before, after, trigger });
     context.summary.triggers.push(triggerSummary(context, { change, owner, trigger, fields }));
   }
+}
+
+/** Changed fields of an updated Trigger, or every field of an added or removed one. */
+function changedTriggerFields(
+  change: StoryChangeKind,
+  entry: EntityEntry,
+  triggers: { before: Trigger | undefined; after: Trigger | undefined; trigger: Trigger },
+): StoryChangeFieldSummary[] {
+  if (change !== 'updated') {
+    return wholeEntityFields(
+      change,
+      toCanonicalTrigger(triggers.trigger),
+      triggerSummaryExclusions,
+    );
+  }
+  const previous = triggers.before === undefined ? undefined : toCanonicalTrigger(triggers.before);
+  const next = triggers.after === undefined ? undefined : toCanonicalTrigger(triggers.after);
+  const changed = entry.delta?.kind === 'object' ? Object.keys(entry.delta.fields) : [];
+  return changed.map((field) => fieldSummary(field, previous, next));
 }
 
 function triggerSummary(
@@ -237,6 +255,43 @@ function triggerSummary(
     ),
     fields,
   };
+}
+
+/** Shown on their own in each summary item, or internal identities. */
+const interactionSummaryExclusions = new Set(['id', 'title', 'triggers']);
+const triggerSummaryExclusions = new Set([
+  'id',
+  'probabilityKey',
+  'inputInteractionIds',
+  'conditions',
+]);
+
+/**
+ * Every authored field of an added or removed entity, so that a new body,
+ * effect, condition, probability or timer can be reviewed before it is
+ * committed. Empty values are omitted.
+ */
+function wholeEntityFields(
+  change: 'added' | 'removed',
+  entity: object,
+  exclusions: ReadonlySet<string>,
+): StoryChangeFieldSummary[] {
+  return Object.entries(entity)
+    .filter(([field, value]) => !exclusions.has(field) && !isEmptyValue(value))
+    .map(([field]) =>
+      change === 'added'
+        ? fieldSummary(field, undefined, entity)
+        : fieldSummary(field, entity, undefined),
+    );
+}
+
+function isEmptyValue(value: unknown): boolean {
+  return (
+    value === undefined ||
+    value === null ||
+    value === '' ||
+    (Array.isArray(value) && value.length === 0)
+  );
 }
 
 function entityChange(entry: EntityEntry): StoryChangeKind | undefined {

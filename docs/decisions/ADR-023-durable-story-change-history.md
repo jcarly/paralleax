@@ -77,4 +77,4 @@ comments, and reader/simulation saves are outside this history.
   content mutation starts the durable history.
 - A committed change batch ([ADR-050](ADR-050-editorial-change-batches.md)) is
   one event: undo and redo revert and restore the whole batch. The event also
-  records the batch's proposal digest, so a retried commit is recognized.
+  records the ID of its stored proposal, so a retried commit is recognized.

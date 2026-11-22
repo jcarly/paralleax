@@ -4,11 +4,7 @@ import { createToolLogger, type ToolLogger } from './logger.js';
 import { toolErrorPayload, toolFailure, toolSuccess } from './tool-result.js';
 import { commitStoryChangesInput, previewStoryChangesInput } from './tools/change-schemas.js';
 import { getInteractionInput, listStoriesInput, storyStructureInput } from './tools/schemas.js';
-import {
-  commitStoryChanges,
-  previewStoryChanges,
-  ProposalStore,
-} from './tools/story-change-tools.js';
+import { commitStoryChanges, previewStoryChanges } from './tools/story-change-tools.js';
 import { getInteraction, getStoryStructure, listStories } from './tools/story-read-tools.js';
 
 export const SERVER_INSTRUCTIONS = `Paralleax stories are graphs of Interactions (story passages with a title and an HTML body).
@@ -31,7 +27,6 @@ The server guarantees that a commit applies exactly the previewed batch, on the 
 export interface ParalleaxMcpServerOptions {
   api: ParalleaxApiClient;
   logger?: ToolLogger;
-  proposals?: ProposalStore;
 }
 
 type Handler<I> = (api: ParalleaxApiClient, input: I) => Promise<Record<string, unknown>>;
@@ -40,7 +35,9 @@ type Runner = <I>(tool: string, input: I, handler: Handler<I>) => Promise<CallTo
 const readOnly = { readOnlyHint: true, destructiveHint: false, openWorldHint: false };
 const commitAnnotations = {
   readOnlyHint: false,
-  destructiveHint: false,
+  // A batch can replace bodies, effects and conditions. History can undo it,
+  // but clients should treat the commit with the care of a destructive call.
+  destructiveHint: true,
   // Committing the same proposal again is answered without writing again.
   idempotentHint: true,
   openWorldHint: false,
@@ -106,7 +103,7 @@ function registerReadTools(server: McpServer, run: Runner): void {
   );
 }
 
-function registerChangeTools(server: McpServer, run: Runner, proposals: ProposalStore): void {
+function registerChangeTools(server: McpServer, run: Runner): void {
   server.registerTool(
     'preview_story_changes',
     {
@@ -116,8 +113,7 @@ function registerChangeTools(server: McpServer, run: Runner, proposals: Proposal
       inputSchema: previewStoryChangesInput,
       annotations: readOnly,
     },
-    (input) =>
-      run('preview_story_changes', input, (api) => previewStoryChanges(api, proposals, input)),
+    (input) => run('preview_story_changes', input, (api) => previewStoryChanges(api, input)),
   );
   server.registerTool(
     'commit_story_changes',
@@ -128,8 +124,7 @@ function registerChangeTools(server: McpServer, run: Runner, proposals: Proposal
       inputSchema: commitStoryChangesInput,
       annotations: commitAnnotations,
     },
-    (input) =>
-      run('commit_story_changes', input, (api) => commitStoryChanges(api, proposals, input)),
+    (input) => run('commit_story_changes', input, (api) => commitStoryChanges(api, input)),
   );
 }
 
@@ -141,6 +136,6 @@ export function createParalleaxMcpServer(options: ParalleaxMcpServerOptions): Mc
   );
   const run = createRunner(options.api, options.logger ?? createToolLogger());
   registerReadTools(server, run);
-  registerChangeTools(server, run, options.proposals ?? new ProposalStore());
+  registerChangeTools(server, run);
   return server;
 }

@@ -15,9 +15,9 @@ export const STORY_CHANGE_BATCH_LIMITS = {
   /** Temporary references declared in one batch. */
   references: 100,
   /** Characters kept for one string value shown in a change summary. */
-  summaryTextLength: 500,
+  summaryTextLength: 2_000,
   /** Serialized characters kept for one structured value in a change summary. */
-  summaryValueLength: 2_000,
+  summaryValueLength: 4_000,
   /** Diagnostics returned for one batch. */
   diagnostics: 200,
 } as const;

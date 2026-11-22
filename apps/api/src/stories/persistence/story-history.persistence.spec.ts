@@ -59,11 +59,11 @@ it('records the digest and result of a committed change batch', async () => {
     operation: 'story.changes.committed',
     changes,
     createdAt: '2026-08-28T08:00:00.000Z',
-    proposal: { digest: 'a'.repeat(64), result: { createdEntities: [] } },
+    proposal: { id: 'a'.repeat(64), result: { createdEntities: [] } },
   });
 
   expect(query).toHaveBeenCalledWith(
-    expect.stringContaining('proposal_digest, proposal_result'),
+    expect.stringContaining('proposal_id, proposal_result'),
     expect.arrayContaining(['a'.repeat(64), JSON.stringify({ createdEntities: [] })]),
   );
 });

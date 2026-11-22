@@ -4,14 +4,17 @@ import type { StoryChangeSummary } from './summary.js';
 /** Result of previewing a batch. Nothing is written. */
 export interface StoryChangePreview {
   storyId: string;
-  /** The Story revision the batch was applied to. Send it back to commit. */
+  /** The Story revision the batch was applied to; the commit requires it unchanged. */
   baseRevision: number;
   valid: boolean;
   /**
-   * Digest of the user, Story, base revision and exact operations. Present only
-   * when the batch is valid; a commit must send it with the same operations.
+   * Server-issued identifier of the stored proposal: the exact operations, for
+   * this user, Story and revision. Present only when the batch is valid. A
+   * commit names it; it is not derived from the batch and cannot be forged.
    */
   proposalId?: string;
+  /** When the stored proposal stops being committable. */
+  expiresAt?: string;
   operationCount: number;
   /**
    * Entities the batch would create. Their IDs are provisional: the commit

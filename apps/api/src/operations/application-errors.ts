@@ -1,16 +1,25 @@
 /**
- * An expected conflict between a request and the current state, for example a
- * stale Story revision (ADR-046). The API exception filter maps it to HTTP 409
- * with its stable `code` and `details`, and never captures it as unexpected.
+ * An expected application error with a stable `code` and optional `details`
+ * (ADR-046). The API exception filter maps each subclass to its HTTP status and
+ * never captures it as an unexpected error.
  */
-export class ApplicationConflictError extends Error {
+export abstract class ApplicationError extends Error {
   readonly code: string;
   readonly details?: Record<string, unknown>;
 
   constructor(code: string, message: string, details?: Record<string, unknown>) {
     super(message);
-    this.name = 'ApplicationConflictError';
     this.code = code;
     this.details = details;
   }
+}
+
+/** A request conflicting with the current state, for example a stale revision: 409. */
+export class ApplicationConflictError extends ApplicationError {
+  override readonly name = 'ApplicationConflictError';
+}
+
+/** A missing resource that is not a Story, for example an expired proposal: 404. */
+export class ApplicationNotFoundError extends ApplicationError {
+  override readonly name = 'ApplicationNotFoundError';
 }

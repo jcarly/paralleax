@@ -3,7 +3,6 @@ import { expect, it } from 'vitest';
 import { apiUrlFromEnvironment, sessionFilePath } from './config.js';
 import { createToolLogger } from './logger.js';
 import { apiError, connectPerTest, stubFetch } from './test/fake-api.js';
-import { ProposalStore } from './tools/story-change-tools.js';
 
 const connect = connectPerTest();
 const storyId = '44444444-4444-4444-8444-444444444444';
@@ -25,20 +24,6 @@ it('writes one JSON line per tool call', () => {
   const lines: string[] = [];
   createToolLogger((line) => lines.push(line)).log({ tool: 't', outcome: 'ok', durationMs: 3 });
   expect(lines[0]).toMatch(/^\{"at":".+","tool":"t","outcome":"ok","durationMs":3\}\n$/);
-});
-
-it('keeps previewed proposals per story, for a limited time and number', () => {
-  let now = 0;
-  const store = new ProposalStore({ ttlMs: 10, maxEntries: 1, now: () => now });
-  const proposal = { storyId, baseRevision: 3, operations: [] };
-  store.remember('p1', proposal);
-  expect(store.find(storyId, 'p1')).toMatchObject({ baseRevision: 3 });
-  expect(store.find('another-story', 'p1')).toBeUndefined();
-  // maxEntries 1: a second proposal evicts the first one.
-  store.remember('p2', proposal);
-  expect(store.find(storyId, 'p1')).toBeUndefined();
-  now = 20;
-  expect(store.find(storyId, 'p2')).toBeUndefined();
 });
 
 it('reads structure without context and tolerates missing content entries', async () => {

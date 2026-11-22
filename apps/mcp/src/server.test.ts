@@ -102,7 +102,8 @@ it('exposes read tools and the preview/commit pair only, with strict input schem
   ]);
   for (const tool of tools) {
     expect(tool.inputSchema.additionalProperties).toBe(false);
-    expect(tool.annotations?.destructiveHint).toBe(false);
+    // Only the commit changes a story; it can replace authored content.
+    expect(tool.annotations?.destructiveHint).toBe(tool.name === 'commit_story_changes');
   }
 });
 

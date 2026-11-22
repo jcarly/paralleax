@@ -31,21 +31,11 @@ export class PreviewStoryChangesDto {
   operations!: Record<string, unknown>[];
 }
 
+/** A commit names a stored preview; the operations come from the server. */
 export class CommitStoryChangesDto {
   @IsIn([STORY_CHANGE_BATCH_VERSION])
   version!: typeof STORY_CHANGE_BATCH_VERSION;
 
-  /** The revision returned by the preview, always required to commit. */
-  @IsInt()
-  @Min(1)
-  baseRevision!: number;
-
   @Matches(/^[0-9a-f]{64}$/)
   proposalId!: string;
-
-  @IsArray()
-  @ArrayMinSize(1)
-  @ArrayMaxSize(STORY_CHANGE_BATCH_LIMITS.operations)
-  @IsObject({ each: true })
-  operations!: Record<string, unknown>[];
 }

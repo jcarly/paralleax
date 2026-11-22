@@ -1,8 +1,7 @@
 import { Injectable } from '@nestjs/common';
-import { createHash, randomUUID } from 'node:crypto';
+import { randomBytes, randomUUID } from 'node:crypto';
 import {
   DomainValidationError,
-  STORY_CHANGE_BATCH_VERSION,
   createStoryChangeDelta,
   summarizeStoryChanges,
   type Story,
@@ -11,8 +10,12 @@ import {
   type StoryChangeDiagnostic,
   type StoryChangePreview,
 } from '@paralleax/shared';
-import { ApplicationConflictError } from '../../operations/application-errors';
+import {
+  ApplicationConflictError,
+  ApplicationNotFoundError,
+} from '../../operations/application-errors';
 import type { CommitStoryChangesDto, PreviewStoryChangesDto } from '../dto/story-changes.dto';
+import type { StoredStoryChangeProposal } from '../persistence/story-change-proposals.persistence';
 import { StoriesRepository, type StoryChangeProposalCommit } from '../stories.repository';
 import { assertStoryWithinQuotas } from '../story-quotas';
 import {
@@ -21,20 +24,29 @@ import {
   ruleDiagnostic,
   type StoryChangePlan,
 } from './story-change-plan';
-import { canonicalJson } from './canonical-json';
 import { StoryMutationService } from './story-mutations';
 
+/** How long a previewed proposal can be committed, and how many a user keeps. */
+export const STORY_CHANGE_PROPOSAL_TTL_MS = 60 * 60 * 1000;
+export const STORY_CHANGE_PROPOSALS_PER_USER = 20;
+
 interface ProposalResult {
+  baseRevision: number;
   createdEntities: StoryChangeCreatedEntity[];
 }
 
 function readProposalResult(value: unknown): ProposalResult {
-  const createdEntities: unknown =
-    typeof value === 'object' && value !== null ? Reflect.get(value, 'createdEntities') : undefined;
-  if (!Array.isArray(createdEntities) || !createdEntities.every(isCreatedEntity)) {
-    throw new Error('A committed change proposal has no valid created entity list');
+  const record = typeof value === 'object' && value !== null ? value : {};
+  const createdEntities: unknown = Reflect.get(record, 'createdEntities');
+  const baseRevision: unknown = Reflect.get(record, 'baseRevision');
+  if (
+    typeof baseRevision !== 'number' ||
+    !Array.isArray(createdEntities) ||
+    !createdEntities.every(isCreatedEntity)
+  ) {
+    throw new Error('A committed change proposal has no valid result');
   }
-  return { createdEntities };
+  return { baseRevision, createdEntities };
 }
 
 function isCreatedEntity(value: unknown): value is StoryChangeCreatedEntity {
@@ -51,9 +63,11 @@ function isCreatedEntity(value: unknown): value is StoryChangeCreatedEntity {
 
 /**
  * Preview and commit of editorial change batches (ADR-050). A preview applies
- * the batch to a consistent, unpersisted copy. A commit recomputes everything
- * from the exact operations under the Story lock and persists one revision and
- * one history event; it never trusts a client-supplied diff.
+ * the batch to a consistent, unpersisted copy and, when it is valid, stores the
+ * exact operations as a proposal for this user, Story and revision. A commit
+ * names that proposal only: it replans the stored operations under the Story
+ * lock and persists one revision and one history event. It never trusts
+ * client-supplied operations or diffs at commit time.
  */
 @Injectable()
 export class StoryChangesService {
@@ -93,13 +107,39 @@ export class StoryChangesService {
     if (hasErrors(diagnostics)) {
       return { ...result, diagnostics };
     }
+    const proposal = await this.storeProposal(storyId, userId, baseRevision, input.operations);
     return {
       ...result,
       valid: true,
-      proposalId: proposalDigest({ storyId, userId, baseRevision, operations: input.operations }),
+      ...proposal,
       summary: summarizeStoryChanges(snapshot, applied.story, delta, refsById(plan)),
       diagnostics,
     };
+  }
+
+  /** Stores the exact previewed operations; only a commit of this ID can apply them. */
+  private async storeProposal(
+    storyId: string,
+    userId: string,
+    baseRevision: number,
+    operations: unknown[],
+  ): Promise<{ proposalId: string; expiresAt: string }> {
+    const proposalId = randomBytes(32).toString('hex');
+    const createdAt = new Date();
+    const expiresAt = new Date(createdAt.getTime() + STORY_CHANGE_PROPOSAL_TTL_MS).toISOString();
+    await this.repository.saveChangeProposal(
+      {
+        id: proposalId,
+        storyId,
+        userId,
+        baseRevision,
+        operations,
+        createdAt: createdAt.toISOString(),
+        expiresAt,
+      },
+      STORY_CHANGE_PROPOSALS_PER_USER,
+    );
+    return { proposalId, expiresAt };
   }
 
   async commit(
@@ -107,50 +147,65 @@ export class StoryChangesService {
     input: CommitStoryChangesDto,
     userId: string,
   ): Promise<StoryChangeCommitResult> {
-    const { baseRevision, operations, proposalId } = input;
-    if (proposalDigest({ storyId, userId, baseRevision, operations }) !== proposalId) {
-      throw new ApplicationConflictError(
-        'STORY_CHANGE_PROPOSAL_MISMATCH',
-        'The operations, base revision, Story or user differ from the previewed proposal.',
-      );
-    }
-    const plan = planStoryChanges(operations, randomUUID);
-    if (hasErrors(plan.diagnostics)) {
-      throw invalidBatch(plan.diagnostics);
-    }
+    const { proposalId } = input;
     let before: Story | undefined;
+    let plan: StoryChangePlan | undefined;
     const committed = await this.mutations.commitProposal({
       storyId,
       userId,
-      proposal: {
-        digest: proposalId,
-        result: { createdEntities: plan.created } satisfies ProposalResult,
-      },
-      mutation: (story) => {
-        if (storyRevision(story) !== baseRevision) {
-          throw revisionConflict(baseRevision, storyRevision(story));
-        }
-        const original = structuredClone(story);
-        before = original;
-        return applyCommittedPlan(original, story, plan);
+      proposalId,
+      build: (proposal) => {
+        const planned = planCommittedProposal(proposal);
+        plan = planned;
+        return {
+          result: {
+            baseRevision: proposal.baseRevision,
+            createdEntities: planned.created,
+          } satisfies ProposalResult,
+          mutation: (story) => {
+            if (storyRevision(story) !== proposal.baseRevision) {
+              throw revisionConflict(proposal.baseRevision, storyRevision(story));
+            }
+            const original = structuredClone(story);
+            before = original;
+            return applyCommittedPlan(original, story, planned);
+          },
+        };
       },
     });
-    return commitResult(committed, { storyId, proposalId, baseRevision }, plan, before);
+    return commitResult(committed, { storyId, proposalId }, plan, before);
   }
+}
+
+/** Replans the stored operations; they were valid at preview on this revision. */
+function planCommittedProposal(proposal: StoredStoryChangeProposal): StoryChangePlan {
+  const plan = planStoryChanges(proposal.operations, randomUUID);
+  if (hasErrors(plan.diagnostics)) {
+    throw invalidBatch(plan.diagnostics);
+  }
+  return plan;
 }
 
 function commitResult(
   committed: StoryChangeProposalCommit,
-  identity: Pick<StoryChangeCommitResult, 'storyId' | 'proposalId' | 'baseRevision'>,
-  plan: StoryChangePlan,
+  identity: Pick<StoryChangeCommitResult, 'storyId' | 'proposalId'>,
+  plan: StoryChangePlan | undefined,
   before: Story | undefined,
 ): StoryChangeCommitResult {
+  if (committed.kind === 'missing') {
+    throw new ApplicationNotFoundError(
+      'STORY_CHANGE_PROPOSAL_NOT_FOUND',
+      'No unexpired preview of this user matches this proposal. Preview the batch again.',
+    );
+  }
   if (committed.kind === 'replayed') {
+    const result = readProposalResult(committed.proposal.result);
     return {
       status: 'already_applied',
       ...identity,
+      baseRevision: result.baseRevision,
       revision: committed.proposal.revision,
-      createdEntities: readProposalResult(committed.proposal.result).createdEntities,
+      createdEntities: result.createdEntities,
       reverted: committed.proposal.reverted,
     };
   }
@@ -159,13 +214,14 @@ function commitResult(
   return {
     status: 'committed',
     ...identity,
+    baseRevision: storyRevision(original),
     revision: storyRevision(after),
-    createdEntities: plan.created,
+    createdEntities: plan?.created ?? [],
     summary: summarizeStoryChanges(
       original,
       after,
       createStoryChangeDelta(original, after),
-      refsById(plan),
+      plan === undefined ? new Map() : refsById(plan),
     ),
   };
 }
@@ -208,31 +264,6 @@ function finalStoryDiagnostics(before: Story, after: Story): StoryChangeDiagnost
   } catch (error) {
     return [ruleDiagnostic(error, null)];
   }
-}
-
-/**
- * The proposal identity: user, Story, base revision and exact operations, in a
- * canonical key order. A different user, Story, revision or any changed
- * operation produces another digest. It is not a secret: it binds a commit to
- * what was previewed, while permissions and the revision are checked again.
- */
-export function proposalDigest(input: {
-  storyId: string;
-  userId: string;
-  baseRevision: number;
-  operations: readonly unknown[];
-}): string {
-  return createHash('sha256')
-    .update(
-      canonicalJson({
-        version: STORY_CHANGE_BATCH_VERSION,
-        storyId: input.storyId,
-        userId: input.userId,
-        baseRevision: input.baseRevision,
-        operations: input.operations,
-      }),
-    )
-    .digest('hex');
 }
 
 function refsById(plan: StoryChangePlan): Map<string, string> {

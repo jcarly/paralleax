@@ -134,12 +134,14 @@ const before: Story = {
 function storyWithScene(): Story {
   const after = structuredClone(before);
   after.interactions[0].title = 'Opening';
-  after.interactions[0].body = 'x'.repeat(600);
+  after.interactions[0].body = 'x'.repeat(2_100);
   after.interactions.push({
     id: 'scene',
     title: 'Scene',
-    body: '',
+    body: '<p>A signal arrives.</p>',
     position: { x: 10, y: 10 },
+    statEffects: [{ statId: 'courage', operation: 'add', value: 1 }],
+    characterIds: [],
     triggers: [
       {
         id: 'scene-trigger',
@@ -147,6 +149,8 @@ function storyWithScene(): Story {
         conditionGroups: [
           { id: 'group', conditions: [{ interactionId: 'start', hasBeenVisited: true }] },
         ],
+        appearanceProbability: 60,
+        timerSeconds: 30,
       },
     ],
   });
@@ -180,12 +184,22 @@ it('counts added and updated entities and lists their values', () => {
         {
           field: 'body',
           before: '<p>Hello</p>',
-          after: `${'x'.repeat(500)}…`,
+          after: `${'x'.repeat(2_000)}…`,
           truncated: true,
         },
       ],
     },
-    { change: 'added', id: 'scene', ref: 'sceneRef', title: 'Scene', fields: [] },
+    {
+      change: 'added',
+      id: 'scene',
+      ref: 'sceneRef',
+      title: 'Scene',
+      fields: [
+        { field: 'body', after: '<p>A signal arrives.</p>' },
+        { field: 'position', after: { x: 10, y: 10 } },
+        { field: 'statEffects', after: [{ statId: 'courage', operation: 'add', value: 1 }] },
+      ],
+    },
   ]);
 });
 
@@ -199,7 +213,14 @@ it('lists the Triggers and connections of an added interaction', () => {
       interactionId: 'scene',
       inputInteractionIds: ['start'],
       conditionCount: 1,
-      fields: [],
+      fields: expect.arrayContaining([
+        {
+          field: 'conditionGroups',
+          after: [{ id: 'group', conditions: [{ interactionId: 'start', hasBeenVisited: true }] }],
+        },
+        { field: 'appearanceProbability', after: 60 },
+        { field: 'timerSeconds', after: 30 },
+      ]) as unknown,
     },
   ]);
   expect(summary.connections).toEqual([
@@ -211,6 +232,32 @@ it('lists the Triggers and connections of an added interaction', () => {
     },
   ]);
   expect(summary.otherChangedFields).toEqual([]);
+});
+
+it('lists every field of a Trigger added to an existing interaction, with truncation', () => {
+  const after = structuredClone(before);
+  const conditions = Array.from({ length: 200 }, (_, index) => ({
+    interactionId: `interaction-${index}`,
+    hasBeenVisited: true,
+  }));
+  after.interactions[0].triggers.push({
+    id: 'new-trigger',
+    inputInteractionIds: ['start'],
+    conditionGroups: [{ id: 'many', conditions }],
+    appearanceProbability: 25,
+  });
+
+  const summary = summarizeStoryChanges(before, after, createStoryChangeDelta(before, after));
+
+  expect(summary.triggers.map(({ change, id }) => [change, id])).toEqual([
+    ['added', 'new-trigger'],
+  ]);
+  expect(summary.triggers[0].fields).toContainEqual({ field: 'appearanceProbability', after: 25 });
+  expect(summary.triggers[0].fields).toContainEqual({
+    field: 'conditionGroups',
+    after: { omitted: true, serializedLength: expect.any(Number) as unknown },
+    truncated: true,
+  });
 });
 
 it('reports updated Trigger fields and removed connections', () => {

@@ -172,6 +172,7 @@ export const storyChangePreviewSchema = z.looseObject({
   baseRevision: z.number(),
   valid: z.boolean(),
   proposalId: z.string().optional(),
+  expiresAt: z.string().optional(),
   operationCount: z.number(),
   createdEntities: z.array(createdEntity),
   summary: changeSummary.optional(),

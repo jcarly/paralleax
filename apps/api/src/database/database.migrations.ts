@@ -1712,4 +1712,34 @@ export const databaseMigrations: DatabaseMigration[] = [
         WHERE proposal_digest IS NOT NULL;
     `,
   },
+  {
+    id: '202611220049_stored_story_change_proposals',
+    sql: `
+      -- ADR-050, revised before release: a preview stores the exact batch it
+      -- validated, for its user, Story and revision, until it is committed or
+      -- expires, so a commit can only apply a proposal the server issued.
+      -- Proposals are not authored Story content.
+      CREATE TABLE story_change_proposals (
+        id text PRIMARY KEY,
+        story_id text NOT NULL REFERENCES stories(id) ON DELETE CASCADE,
+        user_id text NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+        base_revision integer NOT NULL,
+        operations jsonb NOT NULL,
+        created_at timestamptz NOT NULL,
+        expires_at timestamptz NOT NULL,
+        CONSTRAINT story_change_proposals_expiry CHECK (expires_at > created_at)
+      );
+      CREATE INDEX story_change_proposals_user_idx
+        ON story_change_proposals(user_id, created_at);
+      CREATE INDEX story_change_proposals_expiry_idx ON story_change_proposals(expires_at);
+
+      -- History events now name the server-issued proposal, not a digest.
+      ALTER TABLE story_change_events RENAME COLUMN proposal_digest TO proposal_id;
+      ALTER TABLE story_change_events
+        RENAME CONSTRAINT story_change_events_proposal_kind TO story_change_events_proposal_id_kind;
+      ALTER TABLE story_change_events
+        RENAME CONSTRAINT story_change_events_proposal_result TO story_change_events_proposal_id_result;
+      ALTER INDEX story_change_events_proposal_idx RENAME TO story_change_events_proposal_id_idx;
+    `,
+  },
 ];

@@ -10,7 +10,8 @@ import {
   sharedPostgresTestConnection,
   truncatePostgresTestTables,
 } from '../database/postgres-test-database';
-import { proposalDigest } from './application/story-changes';
+import { randomBytes } from 'node:crypto';
+import { STORY_CHANGE_PROPOSALS_PER_USER } from './application/story-changes';
 import { StoryEventsService } from './story.events';
 import {
   parseResponse,
@@ -118,28 +119,17 @@ async function preview(storyId: string, operations: object[], cookie = owner, st
   );
 }
 
-function commitBody(previewed: ApiJsonObject, operations: object[]) {
-  return {
-    version: 1,
-    proposalId: responseStringAt(previewed, 'proposalId'),
-    baseRevision: responseNumberAt(previewed, 'baseRevision'),
-    operations,
-  };
+/** A commit names the stored preview; it carries no operations. */
+function commitBody(previewed: ApiJsonObject) {
+  return { version: 1, proposalId: responseStringAt(previewed, 'proposalId') };
 }
 
-/** A proposal computed by the user themselves, without a preview they could not obtain. */
-function ownCommitBody(
-  storyId: string,
-  userId: string,
-  baseRevision: number,
-  operations: object[],
-) {
-  return {
-    version: 1,
-    proposalId: proposalDigest({ storyId, userId, baseRevision, operations }),
-    baseRevision,
-    operations,
-  };
+async function storedProposalCount(userId = 'user-1'): Promise<number> {
+  const result = await pool.query<{ count: string }>(
+    'SELECT count(*) FROM story_change_proposals WHERE user_id = $1',
+    [userId],
+  );
+  return Number(result.rows[0].count);
 }
 
 async function storyState(storyId: string) {
@@ -201,6 +191,8 @@ it('previews a scene with three branches without writing anything', async () => 
   );
   expect(await storyState(storyId)).toEqual(before);
   expect(publish).not.toHaveBeenCalled();
+  // Only the proposal itself is stored, outside the authored Story.
+  expect(await storedProposalCount()).toBe(1);
 });
 
 it('reports diagnostics for invalid operations and offers no proposal', async () => {
@@ -250,9 +242,7 @@ it('commits a batch as one revision and one history event', async () => {
   const publish = jest.spyOn(api.app.get(StoryEventsService), 'publish');
 
   const committed = parseResponse(
-    await post(`/api/stories/${storyId}/changes/commit`, commitBody(previewed, operations)).expect(
-      200,
-    ),
+    await post(`/api/stories/${storyId}/changes/commit`, commitBody(previewed)).expect(200),
   );
 
   expect(committed).toMatchObject({
@@ -298,9 +288,7 @@ it('undoes and redoes a committed batch as one change', async () => {
   const operations = sceneBatch(startId);
   const before = await storyState(storyId);
   const previewed = await preview(storyId, operations);
-  await post(`/api/stories/${storyId}/changes/commit`, commitBody(previewed, operations)).expect(
-    200,
-  );
+  await post(`/api/stories/${storyId}/changes/commit`, commitBody(previewed)).expect(200);
   const after = await storyState(storyId);
   const decode = interactionByTitle(after.interactions, 'Decode it');
 
@@ -318,9 +306,7 @@ it('keeps a modified Story editable, playable and exportable', async () => {
   const { storyId, startId } = await createStory();
   const operations = sceneBatch(startId);
   const previewed = await preview(storyId, operations);
-  await post(`/api/stories/${storyId}/changes/commit`, commitBody(previewed, operations)).expect(
-    200,
-  );
+  await post(`/api/stories/${storyId}/changes/commit`, commitBody(previewed)).expect(200);
   const { interactions } = await storyState(storyId);
   const scene = interactionByTitle(interactions, 'The encrypted message');
 
@@ -344,27 +330,29 @@ it('keeps a modified Story editable, playable and exportable', async () => {
   expect(exported.text).toContain('Report it');
 });
 
-it('rejects a whole batch whose operation breaks a rule at commit', async () => {
+it('rejects a whole stored batch whose operation breaks a rule at commit', async () => {
   const { storyId, startId } = await createStory();
-  const operations = [
-    { type: 'create_interaction', ref: 'scene', inputInteractions: [startId] },
-    { type: 'update_interaction', interaction: 'not-in-story', fields: { title: 'x' } },
-  ];
   const before = await storyState(storyId);
-  const proposalId = proposalDigest({
-    storyId,
-    userId: 'user-1',
-    baseRevision: before.revision,
-    operations,
-  });
+  // Not reachable through a preview: a stored batch whose second operation fails,
+  // to show that the commit transaction leaves no partial change.
+  const proposalId = randomBytes(32).toString('hex');
+  await pool.query(
+    `INSERT INTO story_change_proposals
+       (id, story_id, user_id, base_revision, operations, created_at, expires_at)
+     VALUES ($1, $2, 'user-1', $3, $4::jsonb, now(), now() + interval '1 hour')`,
+    [
+      proposalId,
+      storyId,
+      before.revision,
+      JSON.stringify([
+        { type: 'create_interaction', ref: 'scene', inputInteractions: [startId] },
+        { type: 'update_interaction', interaction: 'not-in-story', fields: { title: 'x' } },
+      ]),
+    ],
+  );
 
   const rejected = parseResponse(
-    await post(`/api/stories/${storyId}/changes/commit`, {
-      version: 1,
-      proposalId,
-      baseRevision: before.revision,
-      operations,
-    }).expect(400),
+    await post(`/api/stories/${storyId}/changes/commit`, { version: 1, proposalId }).expect(400),
   );
 
   expect(rejected.code).toBe('STORY_CHANGES_INVALID');
@@ -383,9 +371,7 @@ it('refuses a commit when the Story changed after the preview', async () => {
   const before = await storyState(storyId);
 
   const conflict = parseResponse(
-    await post(`/api/stories/${storyId}/changes/commit`, commitBody(previewed, operations)).expect(
-      409,
-    ),
+    await post(`/api/stories/${storyId}/changes/commit`, commitBody(previewed)).expect(409),
   );
 
   expect(conflict).toMatchObject({
@@ -417,8 +403,8 @@ it('lets only one of two concurrent commits on the same revision succeed', async
 
   const statuses = (
     await Promise.all([
-      post(`/api/stories/${storyId}/changes/commit`, commitBody(firstPreview, first)),
-      post(`/api/stories/${storyId}/changes/commit`, commitBody(secondPreview, second)),
+      post(`/api/stories/${storyId}/changes/commit`, commitBody(firstPreview)),
+      post(`/api/stories/${storyId}/changes/commit`, commitBody(secondPreview)),
     ])
   ).map(({ status }) => status);
 
@@ -427,28 +413,54 @@ it('lets only one of two concurrent commits on the same revision succeed', async
   expect(interactions.filter(({ title }) => title === 'A' || title === 'B')).toHaveLength(1);
 });
 
-it('refuses operations changed after the preview', async () => {
+it('commits only server-stored previews, never client-supplied operations', async () => {
   const { storyId, startId } = await createStory();
   const operations = sceneBatch(startId);
   const previewed = await preview(storyId, operations);
-  const tampered = [
-    { ...operations[0], fields: { title: 'Something else' } },
-    ...operations.slice(1),
-  ];
+  const before = await storyState(storyId);
 
-  const mismatch = await post(
+  // The operations come from the stored preview: a commit cannot carry others.
+  await post(`/api/stories/${storyId}/changes/commit`, {
+    ...commitBody(previewed),
+    operations: [{ type: 'create_interaction', fields: { title: 'Injected' } }],
+  }).expect(400);
+  // A proposal the server never issued, as a client computing an ID would send.
+  const forged = await post(`/api/stories/${storyId}/changes/commit`, {
+    version: 1,
+    proposalId: randomBytes(32).toString('hex'),
+  }).expect(404);
+  expect(parseResponse(forged).code).toBe('STORY_CHANGE_PROPOSAL_NOT_FOUND');
+  // A proposal of this Story cannot be committed on another Story.
+  const elsewhere = await createStory();
+  await post(`/api/stories/${elsewhere.storyId}/changes/commit`, commitBody(previewed)).expect(404);
+
+  await pool.query(`UPDATE story_change_proposals SET expires_at = created_at + interval '1 ms'`);
+  const expired = await post(
     `/api/stories/${storyId}/changes/commit`,
-    commitBody(previewed, tampered),
-  ).expect(409);
+    commitBody(previewed),
+  ).expect(404);
+  expect(parseResponse(expired).code).toBe('STORY_CHANGE_PROPOSAL_NOT_FOUND');
+  expect(await storyState(storyId)).toEqual(before);
+});
 
-  expect(parseResponse(mismatch).code).toBe('STORY_CHANGE_PROPOSAL_MISMATCH');
+it('keeps a bounded number of previews per user and removes a committed one', async () => {
+  const { storyId, startId } = await createStory();
+  const operations = [{ type: 'update_interaction', interaction: startId, fields: { title: 'x' } }];
+  let last: ApiJsonObject = {};
+  for (let index = 0; index <= STORY_CHANGE_PROPOSALS_PER_USER; index += 1) {
+    last = await preview(storyId, operations);
+  }
+  expect(await storedProposalCount()).toBe(STORY_CHANGE_PROPOSALS_PER_USER);
+
+  await post(`/api/stories/${storyId}/changes/commit`, commitBody(last)).expect(200);
+  expect(await storedProposalCount()).toBe(STORY_CHANGE_PROPOSALS_PER_USER - 1);
 });
 
 it('answers a retried commit without applying the batch twice', async () => {
   const { storyId, startId } = await createStory();
   const operations = sceneBatch(startId);
   const previewed = await preview(storyId, operations);
-  const body = commitBody(previewed, operations);
+  const body = commitBody(previewed);
   const first = parseResponse(
     await post(`/api/stories/${storyId}/changes/commit`, body).expect(200),
   );
@@ -462,7 +474,7 @@ it('answers a retried commit without applying the batch twice', async () => {
     status: 'already_applied',
     storyId,
     proposalId: body.proposalId,
-    baseRevision: body.baseRevision,
+    baseRevision: previewed.baseRevision,
     revision: first.revision,
     createdEntities: first.createdEntities,
     reverted: false,
@@ -487,12 +499,7 @@ it('refuses readers, users without access and other users’ proposals', async (
     other,
   ).expect(404);
   expect(hidden.text).not.toContain('Start');
-  const otherBody = ownCommitBody(
-    storyId,
-    'user-2',
-    responseNumberAt(previewed, 'baseRevision'),
-    operations,
-  );
+  const otherBody = commitBody(previewed);
   const hiddenCommit = await post(
     `/api/stories/${storyId}/changes/commit`,
     otherBody,
@@ -517,10 +524,10 @@ it('refuses readers, users without access and other users’ proposals', async (
     .expect(200);
   const stolen = await post(
     `/api/stories/${storyId}/changes/commit`,
-    commitBody(previewed, operations),
+    commitBody(previewed),
     other,
-  ).expect(409);
-  expect(parseResponse(stolen).code).toBe('STORY_CHANGE_PROPOSAL_MISMATCH');
+  ).expect(404);
+  expect(parseResponse(stolen).code).toBe('STORY_CHANGE_PROPOSAL_NOT_FOUND');
 });
 
 it('respects edit access revoked between preview and commit', async () => {
@@ -542,11 +549,7 @@ it('respects edit access revoked between preview and commit', async () => {
     .expect(204);
   const before = await storyState(storyId);
 
-  await post(
-    `/api/stories/${storyId}/changes/commit`,
-    commitBody(previewed, operations),
-    other,
-  ).expect(404);
+  await post(`/api/stories/${storyId}/changes/commit`, commitBody(previewed), other).expect(404);
   expect(await storyState(storyId)).toEqual(before);
 });
 
@@ -592,9 +595,7 @@ it('sanitizes rich text bodies', async () => {
   ];
   const previewed = await preview(storyId, operations);
   expect(JSON.stringify(previewed)).not.toMatch(/script|onclick|javascript:/);
-  await post(`/api/stories/${storyId}/changes/commit`, commitBody(previewed, operations)).expect(
-    200,
-  );
+  await post(`/api/stories/${storyId}/changes/commit`, commitBody(previewed)).expect(200);
 
   const body = String(interactionByTitle((await storyState(storyId)).interactions, 'Unsafe').body);
   expect(body).not.toMatch(/script|onclick|javascript:/);
