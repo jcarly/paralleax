@@ -857,9 +857,6 @@
     "@typescript-eslint/no-unsafe-type-assertion": {
       "count": 1
     },
-    "@typescript-eslint/strict-boolean-expressions": {
-      "count": 13
-    },
     "complexity": {
       "count": 3
     },
@@ -888,9 +885,6 @@
     }
   },
   "apps/web/src/components/TriggerEdge.tsx": {
-    "@typescript-eslint/strict-boolean-expressions": {
-      "count": 2
-    },
     "complexity": {
       "count": 1
     },
@@ -913,9 +907,6 @@
     "@typescript-eslint/no-unnecessary-condition": {
       "count": 3
     },
-    "@typescript-eslint/strict-boolean-expressions": {
-      "count": 1
-    },
     "jsx-a11y-x/no-static-element-interactions": {
       "count": 1
     },
@@ -934,9 +925,6 @@
   "apps/web/src/components/TriggerNode.tsx": {
     "@typescript-eslint/no-unsafe-type-assertion": {
       "count": 1
-    },
-    "@typescript-eslint/strict-boolean-expressions": {
-      "count": 2
     },
     "max-lines-per-function": {
       "count": 1
@@ -2168,12 +2156,6 @@
     }
   },
   "apps/web/src/triggerConditionAuthoring.ts": {
-    "@typescript-eslint/no-unnecessary-condition": {
-      "count": 1
-    },
-    "@typescript-eslint/strict-boolean-expressions": {
-      "count": 2
-    },
     "complexity": {
       "count": 2
     },

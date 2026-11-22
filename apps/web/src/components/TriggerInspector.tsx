@@ -43,7 +43,7 @@ export function TriggerInspector({
   const pendingConditionFocusRef = useRef(false);
 
   useLayoutEffect(() => {
-    if (!editingConditionKey || !pendingConditionFocusRef.current) {
+    if (editingConditionKey === null || !pendingConditionFocusRef.current) {
       return;
     }
     const editor = activeConditionRef.current;
