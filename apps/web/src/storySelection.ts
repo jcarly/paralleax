@@ -5,7 +5,7 @@ export function findInteraction(
   story: Story | undefined,
   interactionId: string | undefined,
 ): Interaction | undefined {
-  if (!story || !interactionId) {
+  if (!story || interactionId === undefined || interactionId === '') {
     return undefined;
   }
   return story.interactions.find((item) => item.id === interactionId);

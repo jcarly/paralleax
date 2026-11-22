@@ -172,6 +172,28 @@ describe('story connection controller', () => {
   });
 });
 
+it.each([
+  ['interactionId', ''],
+  ['interactionId', undefined],
+  ['triggerId', ''],
+  ['triggerId', undefined],
+] as const)('does not connect to a trigger marker with %s set to %s', (missingKey, value) => {
+  const { actions, result } = renderController();
+  const marker = document.createElement('button');
+  marker.dataset.triggerDropTarget = 'true';
+  marker.dataset.interactionId = 'target';
+  marker.dataset.triggerId = 'target-trigger';
+  if (value === undefined) {
+    delete marker.dataset[missingKey];
+  } else {
+    marker.dataset[missingKey] = value;
+  }
+
+  endDrag(result.current, { nodeId: 'source', handleType: 'source' }, marker);
+
+  expect(actions.connectToExistingTrigger).not.toHaveBeenCalled();
+});
+
 function renderController() {
   const actions = {
     connectInteractions: vi.fn<(connection: Connection) => Promise<void>>().mockResolvedValue(),

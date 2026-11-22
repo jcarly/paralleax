@@ -1227,7 +1227,7 @@
   },
   "apps/web/src/features/story-editor/graph/useStoryConnectionController.ts": {
     "@typescript-eslint/strict-boolean-expressions": {
-      "count": 3
+      "count": 1
     },
     "max-lines-per-function": {
       "count": 1
@@ -1968,7 +1968,7 @@
   },
   "apps/web/src/storyConnection.ts": {
     "@typescript-eslint/strict-boolean-expressions": {
-      "count": 5
+      "count": 3
     },
     "no-duplicate-imports": {
       "count": 1
@@ -2086,11 +2086,6 @@
       "count": 2
     },
     "sonarjs/cognitive-complexity": {
-      "count": 1
-    }
-  },
-  "apps/web/src/storySelection.ts": {
-    "@typescript-eslint/strict-boolean-expressions": {
       "count": 1
     }
   },

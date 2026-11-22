@@ -186,3 +186,17 @@ describe('story connection helpers', () => {
     expect(findCreatedTrigger(story, 'missing', new Set())).toBeUndefined();
   });
 });
+
+it.each([null, '', 'create-source-input'])(
+  'accepts the existing target handle value %s',
+  (targetHandle) => {
+    const connection = {
+      source: 'interaction-1',
+      target: 'interaction-2',
+      sourceHandle: null,
+      targetHandle,
+    };
+    expect(getPendingConnection(story, connection)).toBeDefined();
+    expect(getPendingConnectionConflict(story, connection)).toBeUndefined();
+  },
+);
