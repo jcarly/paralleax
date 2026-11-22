@@ -56,7 +56,11 @@ export function TriggerNode({ data }: NodeProps) {
           input: inputLabel,
           condition: conditionLabel,
           variant: orLabel,
-        })}${d.conditionSummary ? `, ${d.conditionSummary}` : ''}`}
+        })}${
+          typeof d.conditionSummary === 'string' && d.conditionSummary !== ''
+            ? `, ${d.conditionSummary}`
+            : ''
+        }`}
         title={`${inputLabel}, ${d.conditionSummary ?? conditionLabel}, ${orLabel}`}
         onClick={(event) => {
           event.preventDefault();
@@ -64,7 +68,9 @@ export function TriggerNode({ data }: NodeProps) {
           d.onSelectTrigger?.(d.interactionId, d.triggerId);
         }}
       />
-      {d.commentCount ? (
+      {typeof d.commentCount === 'number' &&
+      d.commentCount !== 0 &&
+      !Number.isNaN(d.commentCount) ? (
         <button
           className="trigger-comment-badge nodrag nopan"
           type="button"

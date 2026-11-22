@@ -15,7 +15,7 @@ import {
   statTargetValueType,
   type StatTarget,
 } from '../storyStats';
-import type { ConditionType } from '../triggerConditionAuthoring';
+import { hasNonEmptyItemId, type ConditionType } from '../triggerConditionAuthoring';
 import { ExpressionEditor } from './ExpressionEditor';
 import { VariablePicker } from './VariablePicker';
 
@@ -235,19 +235,20 @@ export function AddConditionControl({
       <div className="trigger-condition-type-options">
         {conditionTypes.map((type) => {
           const unavailableReason = unavailableReasons[type];
+          const isUnavailable = hasUnavailableReason(unavailableReason);
           const tooltipId = `${tooltipIdPrefix}-${type}`;
           return (
             <div
-              aria-describedby={unavailableReason ? tooltipId : undefined}
+              aria-describedby={isUnavailable ? tooltipId : undefined}
               className="trigger-condition-type-option"
               key={type}
-              tabIndex={unavailableReason ? 0 : undefined}
+              tabIndex={isUnavailable ? 0 : undefined}
               title={unavailableReason}
             >
               <button
-                aria-describedby={unavailableReason ? tooltipId : undefined}
+                aria-describedby={isUnavailable ? tooltipId : undefined}
                 className="secondary"
-                disabled={Boolean(unavailableReason)}
+                disabled={isUnavailable}
                 title={unavailableReason}
                 type="button"
                 onClick={() => {
@@ -257,7 +258,7 @@ export function AddConditionControl({
               >
                 {t(`triggerInspector.conditionTypes.${type}`)}
               </button>
-              {unavailableReason ? (
+              {isUnavailable ? (
                 <span className="trigger-condition-type-tooltip" id={tooltipId} role="tooltip">
                   {unavailableReason}
                 </span>
@@ -311,7 +312,7 @@ function StatConditionFields({
             const nextValueType = statTargetValueType(target);
             onChange({
               statId: target.assignment.id,
-              ...(target.itemId ? { itemId: target.itemId } : {}),
+              ...(hasNonEmptyItemId(target.itemId) ? { itemId: target.itemId } : {}),
               operator: nextValueType === 'number' ? 'gte' : 'eq',
               value: target.assignment.initialValue,
             });
@@ -350,22 +351,22 @@ function StatConditionFields({
         onChange={(event) => {
           if (event.target.value === 'stat') {
             const target = initialComparisonTarget;
-            if (!target) {
+            if (target === undefined) {
               return;
             }
             onChange({
               statId: condition.statId,
-              ...(condition.itemId ? { itemId: condition.itemId } : {}),
+              ...(hasNonEmptyItemId(condition.itemId) ? { itemId: condition.itemId } : {}),
               operator: condition.operator,
               comparisonStatId: target.assignment.id,
-              ...(target.itemId ? { comparisonItemId: target.itemId } : {}),
+              ...(hasNonEmptyItemId(target.itemId) ? { comparisonItemId: target.itemId } : {}),
             });
             return;
           }
           if (event.target.value === 'expression') {
             onChange({
               statId: condition.statId,
-              ...(condition.itemId ? { itemId: condition.itemId } : {}),
+              ...(hasNonEmptyItemId(condition.itemId) ? { itemId: condition.itemId } : {}),
               operator: condition.operator,
               expression: selectedTarget
                 ? variableReference(selectedTarget.assignment.id, selectedTarget.itemId)
@@ -375,7 +376,7 @@ function StatConditionFields({
           }
           onChange({
             statId: condition.statId,
-            ...(condition.itemId ? { itemId: condition.itemId } : {}),
+            ...(hasNonEmptyItemId(condition.itemId) ? { itemId: condition.itemId } : {}),
             operator: condition.operator,
             value: selectedTarget?.assignment.initialValue ?? 0,
           });
@@ -394,15 +395,15 @@ function StatConditionFields({
             const target = comparisonTargets.find(
               (candidate) => statTargetId(candidate) === event.target.value,
             );
-            if (!target) {
+            if (target === undefined) {
               return;
             }
             onChange({
               statId: condition.statId,
-              ...(condition.itemId ? { itemId: condition.itemId } : {}),
+              ...(hasNonEmptyItemId(condition.itemId) ? { itemId: condition.itemId } : {}),
               operator: condition.operator,
               comparisonStatId: target.assignment.id,
-              ...(target.itemId ? { comparisonItemId: target.itemId } : {}),
+              ...(hasNonEmptyItemId(target.itemId) ? { comparisonItemId: target.itemId } : {}),
             });
           }}
         >
@@ -422,7 +423,7 @@ function StatConditionFields({
           onBlur={(expression) => {
             onChange({
               statId: condition.statId,
-              ...(condition.itemId ? { itemId: condition.itemId } : {}),
+              ...(hasNonEmptyItemId(condition.itemId) ? { itemId: condition.itemId } : {}),
               operator: condition.operator,
               expression,
             });
@@ -456,6 +457,10 @@ function StatConditionFields({
       )}
     </>
   );
+}
+
+function hasUnavailableReason(reason: string | undefined): boolean {
+  return typeof reason === 'string' && reason !== '';
 }
 
 const weekdayOptions: Weekday[] = [

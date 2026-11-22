@@ -1,10 +1,16 @@
 import { useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import { BaseEdge, EdgeLabelRenderer, getSmoothStepPath, type EdgeProps } from '@xyflow/react';
-import type { TriggerFlowEdge } from '../storyGraph';
+import type { TriggerEdgeData, TriggerFlowEdge } from '../storyGraph';
 import { getTriggerEdgeStepPosition } from '../triggerEdgeRouting';
 
 type TriggerEdgeProps = EdgeProps<TriggerFlowEdge>;
+
+function hasInputInteraction(
+  data: TriggerEdgeData | undefined,
+): data is TriggerEdgeData & { inputInteractionId: string } {
+  return typeof data?.inputInteractionId === 'string' && data.inputInteractionId !== '';
+}
 
 export function TriggerEdge({
   id,
@@ -20,6 +26,7 @@ export function TriggerEdge({
   const { t } = useTranslation();
   const [isHovered, setIsHovered] = useState(false);
   const inputInteractionId = data?.inputInteractionId;
+  const edgeWithInput = hasInputInteraction(data) ? data : undefined;
   const stepPosition = getTriggerEdgeStepPosition(
     data?.routingLaneIndex,
     data?.routingLaneCount,
@@ -106,7 +113,7 @@ export function TriggerEdge({
   return (
     <>
       <BaseEdge id={id} path={edgePath} markerEnd={markerEnd} />
-      {data && inputInteractionId ? (
+      {edgeWithInput !== undefined ? (
         <path
           className="trigger-edge-hitbox"
           d={edgePath}
@@ -122,7 +129,7 @@ export function TriggerEdge({
           }}
         />
       ) : null}
-      {data && inputInteractionId ? (
+      {edgeWithInput !== undefined ? (
         <EdgeLabelRenderer>
           <button
             type="button"
@@ -139,8 +146,12 @@ export function TriggerEdge({
             onClick={(event) => {
               event.preventDefault();
               event.stopPropagation();
-              (data.triggerIds ?? [data.triggerId]).forEach((triggerId) =>
-                data.onDeleteTriggerInput?.(data.interactionId, triggerId, inputInteractionId),
+              (edgeWithInput.triggerIds ?? [edgeWithInput.triggerId]).forEach((triggerId) =>
+                edgeWithInput.onDeleteTriggerInput?.(
+                  edgeWithInput.interactionId,
+                  triggerId,
+                  edgeWithInput.inputInteractionId,
+                ),
               );
             }}
           >

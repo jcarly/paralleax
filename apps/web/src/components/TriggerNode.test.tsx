@@ -33,7 +33,7 @@ describe('TriggerNode', () => {
     };
     const props = { data } as unknown as Parameters<typeof TriggerNode>[0];
 
-    const { container } = render(<TriggerNode {...props} />);
+    const { container, rerender } = render(<TriggerNode {...props} />);
     expect(screen.getByTestId('flow-trigger-interaction-1-trigger-1')).toHaveAttribute(
       'title',
       '1 input, "Start" has been visited AND Owns "Key", 1 trigger variant',
@@ -45,5 +45,13 @@ describe('TriggerNode', () => {
 
     expect(onSelectTrigger).toHaveBeenCalledWith('interaction-1', 'trigger-1');
     expect(onOpenComments).toHaveBeenCalledWith('trigger', 'comment-target-1');
+
+    rerender(<TriggerNode {...props} data={{ ...data, conditionSummary: '', commentCount: 0 }} />);
+    const triggerButton = screen.getByTestId('flow-trigger-interaction-1-trigger-1');
+    expect(triggerButton.getAttribute('aria-label')?.endsWith(', ')).toBe(false);
+    expect(container.querySelector('.trigger-comment-badge')).not.toBeInTheDocument();
+
+    rerender(<TriggerNode {...props} data={{ ...data, commentCount: Number.NaN }} />);
+    expect(container.querySelector('.trigger-comment-badge')).not.toBeInTheDocument();
   });
 });
