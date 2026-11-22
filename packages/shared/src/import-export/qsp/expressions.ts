@@ -78,7 +78,7 @@ function buildAssignmentEffect(
 ): QspAssignmentParseResult {
   const { variableName, operation, valueExpression } = assignment;
   const unsupportedMessage = getUnsupportedAssignmentMessage(variableName, operation);
-  if (unsupportedMessage) {
+  if (unsupportedMessage !== undefined) {
     return { kind: 'unsupported', message: unsupportedMessage };
   }
 
@@ -260,7 +260,7 @@ type QspVariableReferenceResult =
 
 function readQspVariableReference(value: string): QspVariableReferenceResult {
   const name = /^[$%]?[a-z_][a-z0-9_.]*/i.exec(value)?.[0];
-  if (!name) {
+  if (name === undefined) {
     return { kind: 'not_variable' };
   }
   const tupleVariable = name.startsWith('%');
@@ -719,11 +719,11 @@ class ConditionParser {
 
   private parseCondition(): ExpressionNode | undefined {
     const variableName = this.readConditionVariable();
-    if (!variableName) {
+    if (variableName === undefined) {
       return undefined;
     }
     const sourceOperator = this.readComparisonOperator();
-    if (!sourceOperator) {
+    if (sourceOperator === undefined) {
       return {
         kind: 'condition',
         condition: {
@@ -825,7 +825,7 @@ function toDisjunctiveNormalForm(
 ): Array<Array<Omit<QspSourceCondition, 'source'>>> | undefined {
   if (node.kind === 'condition') {
     const condition = negated ? negateCondition(node.condition) : node.condition;
-    return condition ? [[condition]] : undefined;
+    return [[condition]];
   }
   if (node.kind === 'not') {
     return toDisjunctiveNormalForm(node.operand, !negated);

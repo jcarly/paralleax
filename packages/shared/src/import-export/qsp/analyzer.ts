@@ -116,7 +116,10 @@ export function analyzeQspCode(
         const locationName = parseQspStringLiteral(expression);
         const length = consumedLiteralLength(expression);
         const argument = parseNavigationArgument(expression.slice(length).trim());
-        const dynamic = !locationName || containsQspInterpolation(expression.slice(0, length));
+        const dynamic =
+          locationName === undefined ||
+          locationName === '' ||
+          containsQspInterpolation(expression.slice(0, length));
         if (dynamic || argument.ignored) {
           addQspSourceIssue(
             report,
@@ -142,7 +145,11 @@ export function analyzeQspCode(
         const targetExpression = navigation[1];
         const target = parseQspStringLiteral(targetExpression);
         const targetLength = consumedLiteralLength(targetExpression);
-        if (!target || containsQspInterpolation(targetExpression.slice(0, targetLength))) {
+        if (
+          target === undefined ||
+          target === '' ||
+          containsQspInterpolation(targetExpression.slice(0, targetLength))
+        ) {
           analysis.statements.push({ kind: 'navigation' });
           unsupported(
             report,

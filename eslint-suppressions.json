@@ -2605,9 +2605,6 @@
     }
   },
   "packages/shared/src/import-export/qsp/analyzer.ts": {
-    "@typescript-eslint/strict-boolean-expressions": {
-      "count": 2
-    },
     "complexity": {
       "count": 2
     },
@@ -2636,10 +2633,7 @@
   },
   "packages/shared/src/import-export/qsp/expressions.ts": {
     "@typescript-eslint/no-unnecessary-condition": {
-      "count": 10
-    },
-    "@typescript-eslint/strict-boolean-expressions": {
-      "count": 5
+      "count": 9
     },
     "max-lines": {
       "count": 1
@@ -2690,9 +2684,6 @@
     }
   },
   "packages/shared/src/import-export/qsp/parser.ts": {
-    "@typescript-eslint/strict-boolean-expressions": {
-      "count": 8
-    },
     "complexity": {
       "count": 6
     },
