@@ -58,10 +58,13 @@ import type {
   NativeStoryImportRequest,
 } from './application/native-story-import.port';
 import {
+  findCommittedStoryChangeProposal,
   findStoryHistoryCandidate,
   insertStoryHistoryEvent,
   readStoryHistory,
+  type CommittedStoryChangeProposal,
 } from './persistence/story-history.persistence';
+
 import {
   projectInteractionLocationId,
   projectItemEffects,
@@ -80,6 +83,10 @@ import {
   readStoryEditorTriggerPage,
 } from './persistence/story-editor.persistence';
 import { readStoryRuntimeSlice } from './persistence/story-runtime.persistence';
+
+export type StoryChangeProposalCommit =
+  | { kind: 'committed'; story: Story }
+  | { kind: 'replayed'; proposal: CommittedStoryChangeProposal };
 
 type StoryRow = {
   id: string;
@@ -591,39 +598,96 @@ export class StoriesRepository implements NativeStoryImportPort {
       if (!(await this.hasEditAccess(client, id, ownerId, true))) {
         return undefined;
       }
-      const current = await this.findWith(client, id, ownerId);
-      if (!current) {
+      return this.mutateLocked(client, { id, mutation, ownerId, operation });
+    });
+  }
+
+  /**
+   * Commits a change batch (ADR-050) as one mutation. Under the Story lock, a
+   * batch already committed with this digest is reported instead of applied
+   * again, so a retried commit never writes twice.
+   */
+  async commitChangeProposal(input: {
+    id: string;
+    mutation: (story: Story) => Story;
+    ownerId: string;
+    operation: string;
+    proposal: { digest: string; result: unknown };
+  }): Promise<StoryChangeProposalCommit | undefined> {
+    return this.transaction(async (client) => {
+      if (!(await this.hasEditAccess(client, input.id, input.ownerId, true))) {
         return undefined;
       }
-      const updated = await mutation(structuredClone(current));
-      assertStoryWithinQuotas(updated, current);
-      const changes = createStoryChangeDelta(current, updated);
-      await persistStoryDifference(client, current, updated, changes);
-      const stored = await this.findWith(client, id, ownerId);
-      if (
-        stored &&
-        changes &&
-        updated.revision !== current.revision &&
-        updated.revision !== undefined
-      ) {
-        // Undo and redo compare deltas with the Story as it is read back, which
-        // omits empty optional values the mutation may have set. Recording the
-        // difference between the two stored forms keeps every event replayable.
-        const storedChanges = createStoryChangeDelta(current, stored);
-        if (storedChanges) {
-          await insertStoryHistoryEvent(client, {
-            storyId: id,
-            actorUserId: ownerId,
-            revision: updated.revision,
-            kind: 'change',
-            operation,
-            changes: storedChanges,
-            createdAt: updated.updatedAt,
-          });
-        }
+      const committed = await findCommittedStoryChangeProposal(
+        client,
+        input.id,
+        input.proposal.digest,
+      );
+      if (committed) {
+        return { kind: 'replayed' as const, proposal: committed };
       }
-      return stored;
+      const story = await this.mutateLocked(client, input);
+      return story ? { kind: 'committed' as const, story } : undefined;
     });
+  }
+
+  /**
+   * Reads one consistent revision of a Story the user may edit, without
+   * locking it: every query of the read sees the same snapshot.
+   */
+  async findEditableSnapshot(id: string, userId: string): Promise<Story | 'forbidden' | undefined> {
+    return this.transaction(async (client) => {
+      if (!(await this.hasEditAccess(client, id, userId))) {
+        return (await this.findWith(client, id, userId)) ? 'forbidden' : undefined;
+      }
+      return this.findWith(client, id, userId);
+    }, 'ISOLATION LEVEL REPEATABLE READ, READ ONLY');
+  }
+
+  private async mutateLocked(
+    client: PoolClient,
+    input: {
+      id: string;
+      mutation: (story: Story) => Story | Promise<Story>;
+      ownerId: string;
+      operation: string;
+      proposal?: { digest: string; result: unknown };
+    },
+  ): Promise<Story | undefined> {
+    const { id, mutation, ownerId, operation, proposal } = input;
+    const current = await this.findWith(client, id, ownerId);
+    if (!current) {
+      return undefined;
+    }
+    const updated = await mutation(structuredClone(current));
+    assertStoryWithinQuotas(updated, current);
+    const changes = createStoryChangeDelta(current, updated);
+    await persistStoryDifference(client, current, updated, changes);
+    const stored = await this.findWith(client, id, ownerId);
+    if (
+      stored &&
+      changes &&
+      updated.revision !== current.revision &&
+      updated.revision !== undefined
+    ) {
+      // Undo and redo compare deltas with the Story as it is read back, which
+      // omits empty optional values the mutation may have set. Recording the
+      // difference between the two stored forms keeps every event replayable.
+      const storedChanges = createStoryChangeDelta(current, stored);
+      if (storedChanges) {
+        await insertStoryHistoryEvent(client, {
+          storyId: id,
+          actorUserId: ownerId,
+          revision: updated.revision,
+          kind: 'change',
+          operation,
+          changes: storedChanges,
+          createdAt: updated.updatedAt,
+          ...(proposal === undefined ? {} : { proposal }),
+        });
+      }
+    }
+    return stored;
   }
 
   async getHistory(id: string, userId: string, limit = 50): Promise<StoryHistory | undefined> {
@@ -930,10 +994,13 @@ export class StoriesRepository implements NativeStoryImportPort {
     return projectStoryAssembly(storyRows, rows);
   }
 
-  private async transaction<T>(work: (client: PoolClient) => Promise<T>): Promise<T> {
+  private async transaction<T>(
+    work: (client: PoolClient) => Promise<T>,
+    mode?: 'ISOLATION LEVEL REPEATABLE READ, READ ONLY',
+  ): Promise<T> {
     const client = await this.database.pool.connect();
     try {
-      await client.query('BEGIN');
+      await client.query(mode === undefined ? 'BEGIN' : `BEGIN ${mode}`);
       const result = await work(client);
       await client.query('COMMIT');
       return result;

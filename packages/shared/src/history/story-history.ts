@@ -37,6 +37,7 @@ export const storyHistoryOperations = {
   itemInstanceCreated: 'item-instance.created',
   itemInstanceMoved: 'item-instance.moved',
   itemInstanceDeleted: 'item-instance.deleted',
+  storyChangesCommitted: 'story.changes.committed',
 } as const;
 
 export type StoryHistoryOperation =

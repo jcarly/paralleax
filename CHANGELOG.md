@@ -2,6 +2,19 @@
 
 ## Unreleased
 
+- Added editorial change batches (ADR-050, [docs/story-changes.md](docs/story-changes.md)).
+  `POST /api/stories/:id/changes/preview` applies an ordered list of
+  Interaction and Trigger creations and updates, with temporary references
+  between them, to an unsaved copy and returns a diff and per-operation
+  diagnostics. `POST /api/stories/:id/changes/commit` applies the exact
+  previewed batch against its revision in one transaction, one revision and one
+  "Grouped changes applied" history entry, refuses stale or modified proposals,
+  and answers a repeated commit without writing again. A migration records the
+  proposal digest on the history event.
+- The local MCP server replaces `create_interaction`, `update_interaction` and
+  `create_trigger` with `preview_story_changes` and `commit_story_changes`, and
+  its instructions require a preview and the author's explicit confirmation
+  before every commit.
 - `paralleax-mcp login` reports `API_UNREACHABLE` with the API address when the
   API cannot be reached, instead of a generic `INTERNAL_ERROR`.
 - The Inspector shows where an Interaction comes from and drops repeated

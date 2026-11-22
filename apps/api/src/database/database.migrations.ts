@@ -1694,4 +1694,22 @@ export const databaseMigrations: DatabaseMigration[] = [
       ALTER TABLE triggers ADD COLUMN probability_key text;
     `,
   },
+  {
+    id: '202611210048_story_change_proposals',
+    sql: `
+      -- A committed change batch (ADR-050) records its proposal digest and the
+      -- IDs it created on its single history event, so a retried commit is
+      -- recognized and answered without writing again.
+      ALTER TABLE story_change_events
+        ADD COLUMN proposal_digest text,
+        ADD COLUMN proposal_result jsonb,
+        ADD CONSTRAINT story_change_events_proposal_kind
+          CHECK (proposal_digest IS NULL OR kind = 'change'),
+        ADD CONSTRAINT story_change_events_proposal_result
+          CHECK ((proposal_digest IS NULL) = (proposal_result IS NULL));
+      CREATE UNIQUE INDEX story_change_events_proposal_idx
+        ON story_change_events(story_id, proposal_digest)
+        WHERE proposal_digest IS NOT NULL;
+    `,
+  },
 ];

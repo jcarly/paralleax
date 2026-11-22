@@ -226,6 +226,13 @@ Paralleax currently includes:
   format, supported content, exclusions and limits are in
   [Story format](story-format.md). Collaborative comments, permissions and
   reader progress are deliberately excluded.
+- Editorial change batches through the API: an ordered list of Interaction and
+  Trigger creations and updates, with temporary references between them, is
+  previewed without writing (diff and diagnostics), then committed against its
+  revision in one transaction, one revision and one history entry. Stale and
+  modified proposals are refused; a repeated commit is answered without writing
+  again ([Story change batches](story-changes.md), ADR-050). The local MCP
+  prototype writes only through these batches.
 - An experimental small-project ChoiceScript importer in the signed-in story
   library. It converts prose, scenes, choices, labels, and jumps in one atomic
   Story creation. Simple declarations, assignments, comparisons, and variable
@@ -454,9 +461,10 @@ The following remain future or incomplete unless a task explicitly implements th
 - lossless or runtime-equivalent QSP import, QSP re-export, and incremental re-import;
 - executable/Unity/video exports;
 - AI-driven narrative/runtime behavior.
-- Remote or multi-user MCP access, scoped API credentials, and batch
-  preview/commit for assistant edits. Only the private local stdio MCP
-  prototype exists ([MCP prototype](mcp.md), [ADR-047](decisions/ADR-047-local-mcp-adapter-over-http-api.md)).
+- Remote or multi-user MCP access and scoped API credentials. Only the private
+  local stdio MCP prototype exists ([MCP prototype](mcp.md), [ADR-047](decisions/ADR-047-local-mcp-adapter-over-http-api.md)).
+- Deleting entities and editing context entities (characters, locations,
+  groups, stats, items) through change batches.
 - An author-facing content-source mode, an accepted narrative content grammar,
   and source round-trip conversion. The current Tiptap editor remains the only
   content authoring mode; the proposed syntax is tracked in

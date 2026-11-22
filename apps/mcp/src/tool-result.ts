@@ -1,7 +1,6 @@
 import type { CallToolResult } from '@modelcontextprotocol/server';
-import { mayHaveWritten, ParalleaxApiError } from './api-client.js';
+import { ParalleaxApiError } from './api-client.js';
 import { ConfigurationError } from './config.js';
-import { IdempotencyKeyReusedError } from './idempotency.js';
 
 /** A structured, client-safe tool failure. Never carries tokens or stack traces. */
 export interface ToolErrorPayload {
@@ -36,9 +35,15 @@ const hints: Partial<Record<string, string>> = {
   RATE_LIMITED: 'The Paralleax API rate limit was reached. Wait a minute before retrying.',
   API_UNREACHABLE: 'Check that the Paralleax API is running and PARALLEAX_API_URL is correct.',
   WRITE_OUTCOME_UNKNOWN:
-    'Read the story with get_story_structure before retrying, to avoid a duplicate.',
-  PARTIALLY_APPLIED:
-    'Complete the created interaction with update_interaction; do not create it again.',
+    'Call commit_story_changes again with the same proposalId: a proposal already applied is reported as already_applied, never applied twice.',
+  STORY_REVISION_CONFLICT:
+    'The story changed since the preview. Read it again, rebuild the batch and preview it; do not reuse this proposal.',
+  STORY_CHANGE_PROPOSAL_MISMATCH:
+    'The commit does not match the preview. Preview the batch again and commit the new proposalId.',
+  STORY_CHANGES_INVALID:
+    'The batch is invalid; read details.diagnostics and preview a corrected batch.',
+  PROPOSAL_NOT_FOUND:
+    'Previews are kept for one hour by this server process. Preview the batch again, then commit.',
 };
 
 export function toolSuccess(payload: Record<string, unknown>): CallToolResult {
@@ -70,9 +75,6 @@ function localErrorPayload(error: unknown): ToolErrorPayload {
       ...(hint === undefined ? {} : { hint }),
     };
   }
-  if (error instanceof IdempotencyKeyReusedError) {
-    return { code: 'IDEMPOTENCY_KEY_REUSED', message: error.message };
-  }
   if (error instanceof ConfigurationError) {
     return { code: 'CONFIGURATION_ERROR', message: error.message };
   }
@@ -90,11 +92,4 @@ export function toolFailure(error: unknown): CallToolResult {
     content: [{ type: 'text', text: JSON.stringify({ error: payload }, null, 2) }],
     structuredContent: { error: payload },
   };
-}
-
-/** Tool failures after which a change exists or may exist. */
-export function isPossiblyApplied(error: unknown): boolean {
-  return (
-    (error instanceof ToolError && error.code === 'PARTIALLY_APPLIED') || mayHaveWritten(error)
-  );
 }

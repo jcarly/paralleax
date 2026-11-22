@@ -9,6 +9,7 @@ import {
 import { DomainValidationError } from '@paralleax/shared';
 import type { Response } from 'express';
 import { captureApiException } from '../observability/sentry';
+import { ApplicationConflictError } from './application-errors';
 import { getRequestId, type RequestWithId } from './request-context';
 
 type HttpExceptionBody = {
@@ -70,6 +71,16 @@ function resolveApiException(exception: unknown): ResolvedApiException {
       isHttpException: true,
       statusError: HttpStatus.BAD_REQUEST,
       status: HttpStatus.BAD_REQUEST,
+      code: exception.code,
+      message: exception.message,
+      details: exception.details,
+    };
+  }
+  if (exception instanceof ApplicationConflictError) {
+    return {
+      isHttpException: true,
+      statusError: HttpStatus.CONFLICT,
+      status: HttpStatus.CONFLICT,
       code: exception.code,
       message: exception.message,
       details: exception.details,

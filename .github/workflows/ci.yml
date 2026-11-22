@@ -364,11 +364,12 @@ jobs:
       - name: Install dependencies
         run: npm ci --prefer-offline --audit=false
 
-      - name: Build shared and API workspaces
-        run: npm run build -w @paralleax/shared && npm run build -w @paralleax/api
+      - name: Build shared, API and MCP workspaces
+        run: npm run build -w @paralleax/shared && npm run build -w @paralleax/api && npm run build -w @paralleax/mcp
 
       # Starts the built API against PostgreSQL, then runs the MCP tools
-      # through a real MCP client with real accounts and permissions.
+      # through a real MCP client with real accounts and permissions, including
+      # the preview and commit of change batches over the built stdio server.
       - name: Run MCP end-to-end tests against the API
         run: npm run test:e2e:api -w @paralleax/mcp
 

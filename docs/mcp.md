@@ -2,8 +2,9 @@
 
 `apps/mcp` is a private, local [Model Context Protocol](https://modelcontextprotocol.io)
 server that lets an assistant (Claude Code, Claude Desktop, Codex or any MCP
-client that can launch a local command) read Paralleax stories and add
-interactions and branches. Design and limits: [ADR-047](decisions/ADR-047-local-mcp-adapter-over-http-api.md).
+client that can launch a local command) read Paralleax stories and propose
+reviewed batches of changes. Design and limits: [ADR-047](decisions/ADR-047-local-mcp-adapter-over-http-api.md)
+and, for writes, [ADR-050](decisions/ADR-050-editorial-change-batches.md).
 
 It is a thin client of the Paralleax HTTP API: it acts as one signed-in user,
 and every permission, validation, quota, rate limit, history entry and live
@@ -85,32 +86,58 @@ machine. ChatGPT on the web cannot use it; see [Remote access](#remote-access).
 
 ## Tools
 
-| Tool                  | Access | Purpose                                                                                                                                                                           |
-| --------------------- | ------ | --------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| `list_stories`        | read   | Stories the user can access: id, title, interaction count, revision, `canEdit`. Search, filter, paging.                                                                           |
-| `get_story_structure` | read   | One page (default 50, max 200) of interactions with text excerpts and effects, Triggers (inputs → output, condition groups), and the story context. Reports `consistentRevision`. |
-| `get_interaction`     | read   | One interaction in full: HTML body, conditional text blocks, effects, incoming Triggers, outgoing connections.                                                                    |
-| `create_interaction`  | edit   | Title and optional HTML body. With `parentInteractionId`, the default Trigger connects the parent to it (a branch). Placement follows the editor rule unless `position` is given. |
-| `update_interaction`  | edit   | Changes only the listed fields: title, body, duration, location, characters, stat and item effects, position.                                                                     |
-| `create_trigger`      | edit   | Adds a Trigger to a target interaction with one or more input interactions and optional condition groups.                                                                         |
+| Tool                    | Access | Purpose                                                                                                                                                                           |
+| ----------------------- | ------ | --------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `list_stories`          | read   | Stories the user can access: id, title, interaction count, revision, `canEdit`. Search, filter, paging.                                                                           |
+| `get_story_structure`   | read   | One page (default 50, max 200) of interactions with text excerpts and effects, Triggers (inputs → output, condition groups), and the story context. Reports `consistentRevision`. |
+| `get_interaction`       | read   | One interaction in full: HTML body, conditional text blocks, effects, incoming Triggers, outgoing connections.                                                                    |
+| `preview_story_changes` | edit   | Validates an ordered batch of operations on an unsaved copy and returns `proposalId`, `baseRevision`, a diff summary and diagnostics. Writes nothing.                             |
+| `commit_story_changes`  | edit   | Applies a previewed proposal in one revision and one history entry, or not at all. Returns the final IDs of the created entities.                                                 |
 
-Write tools accept an optional `idempotencyKey`: retrying with the same key and
-arguments returns the first result (`replayed: true`) instead of writing again.
-A failure that certainly wrote nothing is forgotten, so the retry runs. A
-failure that wrote or may have written something is replayed, never retried:
-`PARTIALLY_APPLIED` (the interaction exists without its content) and
-`WRITE_OUTCOME_UNKNOWN` (the API did not answer in time). Without a key, the
-assistant must read the story before retrying such a call.
+The batch operations, references (`{ "ref": "name" }`), diff, errors and retry
+rules are described in [Story change batches](story-changes.md).
+
+### Required sequence
+
+The server instructions tell the assistant to:
+
+1. read the story (`list_stories`, `get_story_structure`, `get_interaction`);
+2. build one batch;
+3. preview it, with `expectedRevision` set to the revision it read;
+4. present the summary, diagnostics and warnings to the author;
+5. ask for explicit confirmation;
+6. commit the `proposalId` of that preview;
+7. verify the result by reading the story again.
+
+What the server guarantees, through the API: a commit applies exactly the
+previewed operations, on the previewed revision, for the same user, at most
+once, all or nothing, after checking edit access again. A changed story is
+refused with `STORY_REVISION_CONFLICT`.
+
+What it cannot guarantee: that a human saw and approved the preview. Steps 4
+and 5 depend on the assistant and the MCP client; a client that auto-approves
+tool calls can commit without asking. Configure the client to ask before
+`commit_story_changes` if you need that guarantee.
+
+The MCP server keeps the previewed operations in memory for one hour (50
+proposals) so the commit only names `proposalId`. After a restart,
+`commit_story_changes` fails with `PROPOSAL_NOT_FOUND`: preview again. A commit
+whose response is lost (`WRITE_OUTCOME_UNKNOWN`) can be retried with the same
+`proposalId`: the API answers `already_applied` instead of applying it twice.
 
 Errors are returned as `{ error: { code, message, status?, requestId?, details?, hint? } }`.
 Codes come from the API (`AUTHENTICATION_REQUIRED`, `FORBIDDEN`,
-`STORY_NOT_FOUND`, `TRIGGER_CONNECTION_EXISTS`, `STORY_QUOTA_EXCEEDED`,
-`RATE_LIMITED`, ...) or from the adapter (`API_UNREACHABLE`,
-`API_CONTRACT_MISMATCH`, `INTERACTION_NOT_FOUND`, `PARTIALLY_APPLIED`,
-`WRITE_OUTCOME_UNKNOWN`, `IDEMPOTENCY_KEY_REUSED`).
+`STORY_NOT_FOUND`, `STORY_REVISION_CONFLICT`, `STORY_CHANGE_PROPOSAL_MISMATCH`,
+`STORY_CHANGES_INVALID`, `RATE_LIMITED`, ...) or from the adapter
+(`API_UNREACHABLE`, `API_CONTRACT_MISMATCH`, `INTERACTION_NOT_FOUND`,
+`PROPOSAL_NOT_FOUND`, `WRITE_OUTCOME_UNKNOWN`).
 
-Not exposed: deletion, access and collaborator changes, administration,
-imports, bulk changes and whole-graph replacement.
+The direct write tools of the first prototype (`create_interaction`,
+`update_interaction`, `create_trigger`) were removed so that every MCP write
+goes through preview and commit.
+
+Not exposed: deletion, context entities, access and collaborator changes,
+administration, imports and whole-graph replacement.
 
 ## Demo
 
@@ -122,28 +149,31 @@ node apps/mcp/scripts/demo.mjs "La dernière transmission"
 ```
 
 The script launches the server over stdio like an MCP client, lists the story,
-reads its structure, creates "Le message crypté" after the first interaction,
-adds the branches "Déchiffrer le message" and "Ignorer le message", connects
-the first branch to an existing interaction with `create_trigger`, and reads
-the result back. Reload the story in the editor to see the new interactions;
-open editors also reload through the usual live update.
+reads its structure and previews one batch: "Le message crypté" after the first
+interaction and three branches, two of them conditional. It prints the summary,
+asks `Apply these changes to the story? (yes/no)`, commits on `yes` and reads
+the result back. Open editors reload through the usual live update; the batch is
+one "Grouped changes applied" entry in the Story history, which undo and redo
+revert and restore.
 
 Equivalent assistant prompt: _Open the story "La dernière transmission". Analyse
-its structure. Add an interaction in which the protagonist discovers an
-encrypted message, then create two possible branches._
+its structure. Propose a scene in which the protagonist discovers an encrypted
+message, with three branches and conditions. Show me the changes before
+applying them._
 
 ## Tests
 
 - `npm run test -w @paralleax/mcp`: tools through a real MCP client and server
   against a stubbed HTTP edge (contracts, errors, input validation, token
-  handling, idempotency).
+  handling, preview and commit flow).
 - End-to-end: the real MCP tools against the built API and PostgreSQL, with
-  real accounts, sessions and permissions. CI runs it in the `mcp` job. Locally,
-  build the API, then give a dedicated database whose name ends with `_test`
+  real accounts, sessions and permissions, including one preview and commit
+  through the built stdio server. CI runs it in the `mcp` job. Locally,
+  build the API and the MCP server, then give a dedicated database whose name ends with `_test`
   (the script migrates it and fills it with test accounts and stories):
 
 ```bash
-npm run build -w @paralleax/shared && npm run build -w @paralleax/api
+npm run build -w @paralleax/shared && npm run build -w @paralleax/api && npm run build -w @paralleax/mcp
 ```
 
 ```bash
@@ -161,17 +191,16 @@ The API allows five registrations per minute, so wait a minute between runs.
   writes from a non-browser client; the adapter does not forge `Origin`.
 - The stored session is a full account session (30 days), not a scoped,
   read-only or per-story credential.
-- Creating an interaction is two requests and two history entries. If the
-  second fails the tool returns `PARTIALLY_APPLIED` with the created ID.
-- No preview, diff or expected-revision check: writes apply immediately and,
-  like editor edits, the last write to the same field wins. Every change can be
-  undone from the editor history.
-- Idempotency keys live in memory for one server process.
+- Human confirmation before a commit depends on the assistant and the MCP
+  client (see [Required sequence](#required-sequence)).
+- Batches support creating and updating interactions and Triggers only, up to
+  100 operations and the API's 128 KiB request body. A preview loads the
+  complete Story.
+- Previews are remembered by the MCP server process for one hour.
 - Session file protection is verified on Linux and macOS only, not on Windows.
 - `get_interaction` loads the complete Story; `get_story_structure` makes six
   requests per page. Both count against the API rate limits.
-- Conditional text blocks and rich text links to other interactions are read
-  but not authored by the tools.
+- Rich text links to other interactions are read but not authored by the tools.
 
 ## Remote access
 
@@ -187,9 +216,8 @@ shared session token. It needs:
    Story history.
 3. The MCP Streamable HTTP transport with protected-resource metadata, origin
    and host validation, per-client rate limits, request size limits and TLS.
-4. The roadmap's preview/diff/commit batches with stale-revision rejection
-   before writes are offered broadly.
+   Preview/diff/commit batches with stale-revision rejection, previously listed
+   as a fourth prerequisite, now exist ([ADR-050](decisions/ADR-050-editorial-change-batches.md)).
 
 Rough estimate for one developer: 2 to 3 weeks for steps 1 to 3 (OAuth and
-token lifecycle are most of it), plus 2 to 4 weeks for step 4, plus security
-review and deployment work.
+token lifecycle are most of it), plus security review and deployment work.

@@ -1,7 +1,6 @@
 import type {
   ApiContextPage,
   ApiInteraction,
-  ApiInteractionMutation,
   ApiStory,
   ApiStoryList,
   ApiTrigger,
@@ -85,20 +84,6 @@ function interactionFields(interaction: ApiInteraction) {
     durationMinutes: interaction.durationMinutes,
     statEffects: interaction.statEffects,
     itemEffects: interaction.itemEffects,
-  };
-}
-
-/** Result of create_interaction and update_interaction. */
-export function interactionMutationView(result: ApiInteractionMutation) {
-  const { interaction } = result;
-  return {
-    revision: result.revision,
-    interaction: {
-      ...interactionFields(interaction),
-      excerpt: textExcerpt(interaction.body),
-      bodyLength: interaction.body.length,
-    },
-    incomingTriggers: interaction.triggers.map((trigger) => triggerView(trigger, interaction.id)),
   };
 }
 

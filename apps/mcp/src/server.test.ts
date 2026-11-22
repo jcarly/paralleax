@@ -90,16 +90,15 @@ const storyList = {
   hasMore: false,
 };
 
-it('exposes only the six prototype tools with strict input schemas', async () => {
+it('exposes read tools and the preview/commit pair only, with strict input schemas', async () => {
   const { client } = await connect(stubFetch({}).fetchImpl);
   const { tools } = await client.listTools();
   expect(tools.map(({ name }) => name).sort()).toEqual([
-    'create_interaction',
-    'create_trigger',
+    'commit_story_changes',
     'get_interaction',
     'get_story_structure',
     'list_stories',
-    'update_interaction',
+    'preview_story_changes',
   ]);
   for (const tool of tools) {
     expect(tool.inputSchema.additionalProperties).toBe(false);

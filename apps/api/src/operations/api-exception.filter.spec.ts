@@ -8,6 +8,7 @@ import {
 import { DomainValidationError } from '@paralleax/shared';
 import type { Response } from 'express';
 import { ApiExceptionFilter } from './api-exception.filter';
+import { ApplicationConflictError } from './application-errors';
 import type { RequestWithId } from './request-context';
 import * as sentry from '../observability/sentry';
 
@@ -90,6 +91,31 @@ describe('ApiExceptionFilter', () => {
       message: 'Editing must stay within reading.',
       requestId: 'request-1',
       details: { allowedEditPolicies: ['owner'] },
+    });
+    expect(capture).not.toHaveBeenCalled();
+    expect(logError).not.toHaveBeenCalled();
+  });
+
+  it('maps an application conflict to 409 with its code and details', () => {
+    const capture = jest.spyOn(sentry, 'captureApiException').mockImplementation();
+    const logError = jest.spyOn(Logger.prototype, 'error').mockImplementation();
+    const response = host();
+
+    new ApiExceptionFilter().catch(
+      new ApplicationConflictError('STORY_REVISION_CONFLICT', 'The Story has changed.', {
+        expectedRevision: 3,
+        currentRevision: 4,
+      }),
+      response.host,
+    );
+
+    expect(response.status).toHaveBeenCalledWith(HttpStatus.CONFLICT);
+    expect(response.json).toHaveBeenCalledWith({
+      status: HttpStatus.CONFLICT,
+      code: 'STORY_REVISION_CONFLICT',
+      message: 'The Story has changed.',
+      requestId: 'request-1',
+      details: { expectedRevision: 3, currentRevision: 4 },
     });
     expect(capture).not.toHaveBeenCalled();
     expect(logError).not.toHaveBeenCalled();

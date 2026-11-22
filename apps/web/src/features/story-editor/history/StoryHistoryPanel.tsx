@@ -46,6 +46,7 @@ const operationTranslationKeys = {
   [storyHistoryOperations.itemInstanceCreated]: 'itemInstanceCreated',
   [storyHistoryOperations.itemInstanceMoved]: 'itemInstanceMoved',
   [storyHistoryOperations.itemInstanceDeleted]: 'itemInstanceDeleted',
+  [storyHistoryOperations.storyChangesCommitted]: 'storyChangesCommitted',
 } as const;
 
 export function StoryHistoryPanel({

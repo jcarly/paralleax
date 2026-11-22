@@ -1,8 +1,9 @@
 #!/usr/bin/env node
 // Reproducible demo: starts the built stdio server exactly as an MCP client
-// would, then reads a story, adds an encrypted-message interaction with two
-// branches and connects one branch to an existing interaction.
+// would, reads a story, previews one batch (an encrypted message with three
+// branches, two of them conditional), asks for confirmation, then commits it.
 // Usage: node scripts/demo.mjs ["Story title"]   (after `npm run build` and `login`)
+import { createInterface } from 'node:readline/promises';
 import { fileURLToPath } from 'node:url';
 import { Client } from '@modelcontextprotocol/client';
 import { StdioClientTransport } from '@modelcontextprotocol/client/stdio';
@@ -44,60 +45,97 @@ try {
       `  ${trigger.inputInteractionIds.join(' | ') || '(start)'} → ${trigger.outputInteractionId}`,
     );
   }
-  const [start, existing] = structure.interactions;
+  const [start] = structure.interactions;
 
-  const message = await call('create_interaction', {
+  const operations = [
+    {
+      type: 'create_interaction',
+      ref: 'message',
+      inputInteractions: [start.id],
+      fields: {
+        title: 'Le message crypté',
+        body: '<p>Sur l’écran de la station, une suite de symboles clignote : un message <strong>chiffré</strong>, envoyé il y a quarante ans.</p>',
+      },
+    },
+    {
+      type: 'create_interaction',
+      ref: 'decode',
+      inputInteractions: [{ ref: 'message' }],
+      fields: {
+        title: 'Déchiffrer le message',
+        body: '<p>Vous sortez le vieux carnet de codes et commencez le déchiffrement.</p>',
+      },
+      defaultTrigger: {
+        conditionGroups: [
+          { conditions: [{ interactionId: { ref: 'message' }, hasBeenVisited: true }] },
+        ],
+      },
+    },
+    {
+      type: 'create_interaction',
+      ref: 'ignore',
+      inputInteractions: [{ ref: 'message' }],
+      fields: {
+        title: 'Ignorer le message',
+        body: '<p>Vous coupez l’écran. Certaines transmissions doivent rester perdues.</p>',
+      },
+    },
+    {
+      type: 'create_interaction',
+      ref: 'relay',
+      inputInteractions: [{ ref: 'message' }],
+      fields: {
+        title: 'Relayer le message',
+        body: '<p>Vous renvoyez le signal vers la Terre, sans le lire.</p>',
+      },
+      defaultTrigger: {
+        conditionGroups: [{ conditions: [{ interactionId: start.id, hasBeenVisited: true }] }],
+        appearanceProbability: 50,
+      },
+    },
+  ];
+
+  const preview = await call('preview_story_changes', {
     storyId: story.id,
-    title: 'Le message crypté',
-    body: '<p>Sur l’écran de la station, une suite de symboles clignote : un message <strong>chiffré</strong>, envoyé il y a quarante ans.</p>',
-    parentInteractionId: start.id,
+    operations,
+    expectedRevision: structure.story.revision,
   });
-  console.log(
-    `  created ${message.interaction.id} at (${message.interaction.position.x}, ${message.interaction.position.y})`,
-  );
-
-  const branches = [];
-  for (const [branchTitle, body] of [
-    [
-      'Déchiffrer le message',
-      '<p>Vous sortez le vieux carnet de codes et commencez le déchiffrement.</p>',
-    ],
-    [
-      'Ignorer le message',
-      '<p>Vous coupez l’écran. Certaines transmissions doivent rester perdues.</p>',
-    ],
-  ]) {
-    const branch = await call('create_interaction', {
-      storyId: story.id,
-      title: branchTitle,
-      body,
-      parentInteractionId: message.interaction.id,
-    });
-    branches.push(branch.interaction);
-    console.log(`  branch ${branch.interaction.title} [${branch.interaction.id}]`);
+  console.log(`  revision ${preview.baseRevision}, valid: ${preview.valid}`);
+  for (const interaction of preview.summary?.interactions ?? []) {
+    console.log(`  + ${interaction.title} (${interaction.ref ?? interaction.id})`);
+  }
+  for (const connection of preview.summary?.connections ?? []) {
+    console.log(`  + ${connection.sourceInteractionId} → ${connection.targetInteractionId}`);
+  }
+  for (const diagnostic of preview.diagnostics) {
+    console.log(`  ${diagnostic.severity}: ${diagnostic.message}`);
+  }
+  if (!preview.valid) {
+    throw new Error('The preview is invalid; nothing was changed.');
   }
 
-  if (existing !== undefined) {
-    const connection = await call('create_trigger', {
+  const prompt = createInterface({ input: process.stdin, output: process.stdout });
+  const answer = await prompt.question('\nApply these changes to the story? (yes/no) ');
+  prompt.close();
+  if (answer.trim().toLowerCase() !== 'yes') {
+    console.log('Nothing was changed.');
+  } else {
+    const commit = await call('commit_story_changes', {
       storyId: story.id,
-      targetInteractionId: existing.id,
-      inputInteractionIds: [branches[0].id],
+      proposalId: preview.proposalId,
+    });
+    const message = commit.createdEntities.find(({ ref }) => ref === 'message');
+    const detail = await call('get_interaction', {
+      storyId: story.id,
+      interactionId: message.id,
     });
     console.log(
-      `  ${branches[0].title} → ${existing.title || existing.id} (trigger ${connection.trigger.id})`,
+      `  leads to: ${detail.outgoingConnections.map(({ targetTitle }) => targetTitle).join(', ')}`,
+    );
+    console.log(
+      `\nDone. Revision ${commit.revision}, one history entry: undo it from the editor history.`,
     );
   }
-
-  const detail = await call('get_interaction', {
-    storyId: story.id,
-    interactionId: message.interaction.id,
-  });
-  console.log(
-    `  leads to: ${detail.outgoingConnections.map(({ targetTitle }) => targetTitle).join(', ')}`,
-  );
-  console.log(
-    `\nDone. Revision ${detail.revision}. Open the story in the editor to see the new branch.`,
-  );
 } finally {
   await client.close();
 }
