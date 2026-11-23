@@ -701,14 +701,19 @@ word in the CSS cascade. Vite emits a production manifest, and every web build
 checks its complete static import graph using compressed asset sizes. Production
 JavaScript uses Terser minification to stay within the entry and route budgets. The
 initial JavaScript and stylesheet budgets are 150 KiB and 24 KiB; incremental
-Story Editor and Story Player assets are limited to 146 KiB and 95 KiB. The
-editor budget includes 1 KiB of release-build headroom for metadata-dependent
+Story Editor and Story Player assets are limited to 147.5 KiB and 95 KiB. The
+editor budget includes about 1 KiB of release-build headroom for metadata-dependent
 bundle changes; the cap remains enforced. Build variables change chunk hashes
 and so shift compressed sizes by tens of bytes across chunks, so the CI Quality
 build uses the same empty build variables as the production image and both
 measure the same bundle. On 2026-11-18 the editor measured 143.5 KiB in that
-configuration. A budget increase must state in this section what grew and why
-the growth cannot load on demand. The editor preloads its click-creation
+configuration. On 2026-11-23, the local Node 24 build measured 146.1 KiB after
+library-only link handling and icon paths were moved out of the shared editor
+bundle; the supplied Node 26 CI run before that extraction measured 146.4 KiB.
+The remaining synchronous `FieldHelpTooltip` code supports accessible editor
+field descriptions on first keyboard focus. Deferring it would delay the help
+text when an author focuses a field. A budget increase must state in this
+section what grew and why the growth cannot load on demand. The editor preloads its click-creation
 helper and ELK adapter during the existing idle preparation; create and organize
 actions also load them on demand. The Story settings dialog loads when it
 opens; the styles of its always-visible toolbar button load with the icon.

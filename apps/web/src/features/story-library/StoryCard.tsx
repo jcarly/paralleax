@@ -1,8 +1,16 @@
+import type { ReactNode } from 'react';
 import { useTranslation } from 'react-i18next';
 import type { StorySummary } from '@paralleax/shared';
-import { FieldHelpTooltip } from '../../components/FieldHelpTooltip';
+import { Link } from 'react-router-dom';
+import {
+  FieldHelpTooltip,
+  type FieldHelpTooltipTriggerProps,
+} from '../../components/FieldHelpTooltip';
 import { CanvasActionIcon, type CanvasActionIconName } from '../../components/StoryCanvasToolbar';
 import { loadStoryEditor, loadStoryPlayer } from '../../pages/storyRouteLoaders';
+
+type StoryCardOnlyIconName = 'edit' | 'export' | 'access';
+type StoryCardIconName = CanvasActionIconName | StoryCardOnlyIconName;
 
 export function StoryCard({
   story,
@@ -117,7 +125,7 @@ function StoryCardIconLink({
   preload,
 }: {
   className: string;
-  icon: CanvasActionIconName;
+  icon: StoryCardIconName;
   label: string;
   to?: string;
   href?: string;
@@ -128,18 +136,72 @@ function StoryCardIconLink({
       label={label}
       help={label}
       className={`${className} compact library-card-icon-link`}
-      to={to}
-      href={href}
-      onPreload={
-        preload
-          ? () => {
-              void preload();
-            }
-          : undefined
+      renderTrigger={(triggerProps, iconContent) =>
+        renderStoryCardLinkTrigger(triggerProps, iconContent, to, href, preload)
       }
     >
-      <CanvasActionIcon name={icon} />
+      <StoryCardActionIcon name={icon} />
     </FieldHelpTooltip>
+  );
+}
+
+function StoryCardActionIcon({ name }: { name: StoryCardIconName }) {
+  if (name === 'edit') {
+    return (
+      <svg aria-hidden="true" viewBox="0 0 24 24">
+        <path d="m4 20 1-4L16 5l3 3L8 19l-4 1Z" />
+        <path d="m14 7 3 3" />
+      </svg>
+    );
+  }
+  if (name === 'export') {
+    return (
+      <svg aria-hidden="true" viewBox="0 0 24 24">
+        <path d="M12 4v11M7 11l5 5 5-5" />
+        <path d="M5 20h14" />
+      </svg>
+    );
+  }
+  if (name === 'access') {
+    return (
+      <svg aria-hidden="true" viewBox="0 0 24 24">
+        <rect x="5" y="11" width="14" height="9" rx="2" />
+        <path d="M8 11V8a4 4 0 0 1 8 0v3" />
+      </svg>
+    );
+  }
+  return <CanvasActionIcon name={name} />;
+}
+
+function renderStoryCardLinkTrigger(
+  triggerProps: FieldHelpTooltipTriggerProps,
+  children: ReactNode,
+  to: string | undefined,
+  href: string | undefined,
+  preload: (() => Promise<unknown>) | undefined,
+) {
+  const linkProps = {
+    ...triggerProps,
+    onFocus: () => {
+      triggerProps.onFocus();
+      void preload?.();
+    },
+    onPointerEnter: () => {
+      triggerProps.onPointerEnter();
+      void preload?.();
+    },
+  };
+  if (to !== undefined) {
+    return (
+      <Link {...linkProps} to={to}>
+        {children}
+      </Link>
+    );
+  }
+  return (
+    <a {...linkProps} href={href} download>
+      {children}
+    </a>
   );
 }
 
