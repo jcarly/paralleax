@@ -1,6 +1,7 @@
 import type { Pool } from 'pg';
 import {
   assertForeignKeysIntact,
+  hasColumn,
   readRoutes,
   type VisitCondition,
 } from './migration-history.support';
@@ -175,14 +176,47 @@ async function verifyRetainedRows(pool: Pool, context: HistoryContext) {
     expect({ table, ids: found.map(({ id }) => id) }).toEqual({ table, ids: [...ids].sort() });
   }
   if (context.readerProgress) {
-    const state = await rows<{ ok: boolean }>(
-      pool,
-      `SELECT count(*)::int = 2 AS ok FROM story_reader_progress
-        WHERE state->'visitedInteractionIds' @> '["owned-start"]'::jsonb
-           OR state->'visitedInteractionIds' @> '["legacy-root"]'::jsonb`,
-    );
-    expect(state[0].ok).toBe(true);
+    // Exact rows: a swapped or duplicated progress between users must fail.
+    expect(
+      await rows(
+        pool,
+        `SELECT user_id, story_id, state->'visitedInteractionIds' AS visited
+           FROM story_reader_progress ORDER BY user_id, story_id`,
+      ),
+    ).toEqual([
+      { user_id: 'owner-real', story_id: 'owned-story', visited: ['owned-start'] },
+      { user_id: 'reader-two', story_id: 'legacy-story', visited: ['legacy-root'] },
+    ]);
   }
+}
+
+/** Condition group boundaries per Trigger, once triggers store groups. */
+export const expectedConditionGroups: Record<
+  string,
+  { id: string; conditions: VisitCondition[] }[]
+> = {
+  'legacy-root-trigger': [{ id: 'legacy-root-trigger', conditions: [] }],
+  'legacy-child-trigger': [
+    { id: 'legacy-child-trigger', conditions: [visited('legacy-root', true)] },
+    { id: 'legacy-child-trigger-alt', conditions: [visited('legacy-root', false)] },
+  ],
+  'legacy-branch-trigger': [
+    { id: 'legacy-branch-trigger', conditions: [visited('legacy-child', true)] },
+  ],
+  'owned-start-trigger': [{ id: 'owned-start-trigger', conditions: [] }],
+};
+
+async function verifyConditionGroups(pool: Pool) {
+  if (!(await hasColumn(pool, 'triggers', 'condition_groups'))) {
+    return;
+  }
+  const triggers = await rows<{ id: string; condition_groups: unknown }>(
+    pool,
+    'SELECT id, condition_groups FROM triggers ORDER BY id',
+  );
+  expect(Object.fromEntries(triggers.map((row) => [row.id, row.condition_groups]))).toEqual(
+    expectedConditionGroups,
+  );
 }
 
 /** Generic integrity checks, run after every migration at the schema of that step. */
@@ -198,5 +232,6 @@ export async function verifyHistoricalState(pool: Pool, context: HistoryContext)
   } else {
     await verifyRelationalState(pool);
   }
+  await verifyConditionGroups(pool);
   await verifyRetainedRows(pool, context);
 }

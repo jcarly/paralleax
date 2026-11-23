@@ -374,9 +374,11 @@ After every migration:
 - Stories (owner, title, creation time), Interactions (text, position, order)
   and reachability routes (inputs and ordered conditions, whatever the storage
   layout of the step) equal the expected graph; routes are keyed by source set,
-  so the intentional Trigger merge must not lose or reorder a condition;
+  so the intentional Trigger merge must not lose or reorder a condition, and
+  once Triggers store condition groups their exact group boundaries are
+  compared as well;
 - the seeded users, sessions, locations, characters, stats, comment threads and
-  Groups still exist, and reader progress keeps its visited Interactions.
+  Groups still exist, and reader progress rows (user, Story, visited Interactions) match exactly.
 
 Intentional transformations are asserted instead of preserved: JSON
 normalisation defaults, placeholder owner, input de-duplication, invalid
@@ -386,7 +388,8 @@ verified accounts, exclusive Group membership, coherent access policies and
 proposal columns.
 
 Also covered: the upgraded schema (columns, constraints, indexes, triggers)
-equals a fresh install; re-running the migrator changes nothing; a failing
+equals a fresh install (columns, constraints, indexes and trigger names only,
+not every PostgreSQL object, such as sequences, functions or privileges); re-running the migrator changes nothing; a failing
 migration rolls back completely (data, schema, history) and the upgrade resumes
 afterwards; earlier committed migrations survive a later failure.
 
