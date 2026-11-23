@@ -463,8 +463,9 @@ The following remain future or incomplete unless a task explicitly implements th
 - AI-driven narrative/runtime behavior.
 - Remote or multi-user MCP access and scoped API credentials. Only the private
   local stdio MCP prototype exists ([MCP prototype](mcp.md), [ADR-047](decisions/ADR-047-local-mcp-adapter-over-http-api.md)).
-- Deleting entities and editing context entities (characters, locations,
-  groups, stats, items) through change batches.
+- Deleting entities, and editing groups and items through change batches.
+  Characters, locations, stat definitions and stat assignments are supported
+  ([Story change batches](story-changes.md)).
 - An author-facing content-source mode, an accepted narrative content grammar,
   and source round-trip conversion. The current Tiptap editor remains the only
   content authoring mode; the proposed syntax is tracked in
