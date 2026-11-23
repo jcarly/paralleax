@@ -114,7 +114,7 @@ function registerChangeTools(server: McpServer, run: Runner): void {
     {
       title: 'Preview story changes',
       description:
-        'Validates an ordered batch of operations (create_interaction, update_interaction, create_trigger, update_trigger, create_character, update_character, create_location, update_location) against the current story without saving anything. Created characters and locations can be named by { "ref" } in later operations: interaction locationId and characterIds, and condition characterId and locationId. Returns the proposalId, the base revision, a structured diff (added and updated interactions, triggers, characters and locations with old and new values, connections) and diagnostics per operation. IDs in a preview are provisional. Requires edit access.',
+        'Validates an ordered batch of operations on interactions, triggers, characters, locations, and stat definitions and assignments (see the input schema for the operation types) against the current story without saving anything. A created entity can be named by { "ref" } in later operations wherever the schema accepts a reference; a stat definition and a stat assignment are different kinds, and effects and conditions name the assignment. Returns the proposalId, the base revision, a structured diff (interactions, triggers, characters, locations, stat definitions, stat assignments with owner and initial value, connections; old and new values) and diagnostics per operation. IDs in a preview are provisional. Requires edit access.',
       inputSchema: previewStoryChangesInput,
       annotations: readOnly,
     },

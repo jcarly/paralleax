@@ -118,17 +118,16 @@ export const contextPageSchema = z.looseObject({
       changePerHour: z.number().optional(),
     }),
   ),
-  statAssignments: z
-    .array(
-      z.looseObject({
-        id: z.string(),
-        statDefinitionId: z.string(),
-        ownerType: z.string(),
-        ownerId: z.string().optional(),
-        initialValue: z.union([z.number(), z.boolean(), z.string()]),
-      }),
-    )
-    .default([]),
+  // Required: a response without it must fail, not read as "no assignments".
+  statAssignments: z.array(
+    z.looseObject({
+      id: z.string(),
+      statDefinitionId: z.string(),
+      ownerType: z.string(),
+      ownerId: z.string().optional(),
+      initialValue: z.union([z.number(), z.boolean(), z.string()]),
+    }),
+  ),
   itemDefinitions: z.array(named),
 });
 
@@ -184,8 +183,8 @@ const changeSummary = z.looseObject({
   triggers: z.array(z.looseObject({ change: z.string(), id: z.string() })),
   characters: z.array(z.looseObject({ change: z.string(), id: z.string() })).default([]),
   locations: z.array(z.looseObject({ change: z.string(), id: z.string() })).default([]),
-  statDefinitions: z.array(z.looseObject({ change: z.string(), id: z.string() })).default([]),
-  statAssignments: z.array(z.looseObject({ change: z.string(), id: z.string() })).default([]),
+  statDefinitions: z.array(z.looseObject({ change: z.string(), id: z.string() })),
+  statAssignments: z.array(z.looseObject({ change: z.string(), id: z.string() })),
   connections: z.array(z.looseObject({ change: z.string() })),
 });
 

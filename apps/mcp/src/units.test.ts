@@ -144,3 +144,22 @@ it('reads every stat assignment of the context, page by page, and flags a next p
     page: '3',
   });
 });
+
+it('fails with a contract error when the context response omits the stat assignments', async () => {
+  const api = stubFetch(
+    contextRoutes({
+      ...emptyPages,
+      locations: [],
+      characters: [],
+      itemDefinitions: [],
+      statDefinitions: [],
+    }),
+  );
+  const { call } = await connect(api.fetchImpl);
+
+  const result = await call('get_story_structure', { storyId });
+
+  expect(result.isError).toBe(true);
+  expect(result.data).toMatchObject({ error: { code: 'API_CONTRACT_MISMATCH' } });
+  expect(result.data).not.toHaveProperty('context');
+});

@@ -31,7 +31,14 @@ const validPreviewBody = {
   proposalId,
   operationCount: 2,
   createdEntities: [{ kind: 'interaction', operationIndex: 0, id: 'provisional', ref: 'scene' }],
-  summary: { counts: { interactionsAdded: 1 }, interactions: [], triggers: [], connections: [] },
+  summary: {
+    counts: { interactionsAdded: 1 },
+    interactions: [],
+    triggers: [],
+    statDefinitions: [],
+    statAssignments: [],
+    connections: [],
+  },
   diagnostics: [],
 };
 const validPreview: RouteResponse = { body: validPreviewBody };
@@ -206,6 +213,8 @@ it('forwards character and location operations and references unchanged', async 
         triggers: [],
         characters: [{ change: 'added', id: 'provisional', ref: 'alya', name: 'Alya', fields: [] }],
         locations: [],
+        statDefinitions: [],
+        statAssignments: [],
         connections: [],
       },
     },

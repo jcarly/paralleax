@@ -66,6 +66,7 @@ const structureRoutes = {
       locations: [{ id: 'loc', name: 'Relay station', description: '' }],
       characters: [],
       statDefinitions: [{ id: 's', name: 'Trust' }],
+      statAssignments: [],
       itemDefinitions: [],
     },
   },
@@ -116,8 +117,25 @@ it('explains how to create characters and locations and reference them', async (
   expect(instructions).toContain('provisional');
   const { tools } = await client.listTools();
   const preview = tools.find(({ name }) => name === 'preview_story_changes');
-  expect(preview?.description).toContain('create_character');
-  expect(preview?.description).toContain('update_location');
+  expect(preview?.description).toContain('characters, locations');
+});
+
+it('describes the stat operations in the preview tool and its input schema', async () => {
+  const { client } = await connect(stubFetch({}).fetchImpl);
+  const { tools } = await client.listTools();
+  const preview = tools.find(({ name }) => name === 'preview_story_changes');
+
+  expect(preview?.description).toContain('stat definitions and assignments');
+  expect(preview?.description).toContain('effects and conditions name the assignment');
+  const operations = JSON.stringify(preview?.inputSchema);
+  for (const type of [
+    'create_stat_definition',
+    'update_stat_definition',
+    'create_stat_assignment',
+    'update_stat_assignment',
+  ]) {
+    expect(operations).toContain(type);
+  }
 });
 
 it('lists stories with the session cookie and summary fields only', async () => {
