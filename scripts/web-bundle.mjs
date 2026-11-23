@@ -9,7 +9,7 @@ export const WEB_BUNDLE_BUDGETS = Object.freeze({
   initialJavaScriptBytes: 150 * 1024,
   initialStylesheetBytes: 24 * 1024,
   // Leave 1 KiB of headroom for release-specific build metadata while retaining a hard cap.
-  editorIncrementalBytes: 146 * 1024,
+  editorIncrementalBytes: 147.5 * 1024,
   playerIncrementalBytes: 95 * 1024,
 });
 

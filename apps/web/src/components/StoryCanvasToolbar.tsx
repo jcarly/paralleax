@@ -16,9 +16,6 @@ export type CanvasActionIconName =
   | 'comments'
   | 'play'
   | 'playFromInteraction'
-  | 'edit'
-  | 'export'
-  | 'access'
   | 'syncSaved'
   | 'syncSaving'
   | 'syncOffline'
@@ -257,24 +254,6 @@ export function CanvasActionIcon({ name }: { name: CanvasActionIconName }) {
       </>
     ),
     play: <path d="m8 5 11 7-11 7V5Z" />,
-    edit: (
-      <>
-        <path d="m4 20 1-4L16 5l3 3L8 19l-4 1Z" />
-        <path d="m14 7 3 3" />
-      </>
-    ),
-    export: (
-      <>
-        <path d="M12 4v11M7 11l5 5 5-5" />
-        <path d="M5 20h14" />
-      </>
-    ),
-    access: (
-      <>
-        <rect x="5" y="11" width="14" height="9" rx="2" />
-        <path d="M8 11V8a4 4 0 0 1 8 0v3" />
-      </>
-    ),
     playFromInteraction: (
       <>
         <circle cx="6.5" cy="12" r="3.5" />
