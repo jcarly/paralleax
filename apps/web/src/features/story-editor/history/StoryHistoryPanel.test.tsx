@@ -83,3 +83,35 @@ describe('StoryHistoryPanel', () => {
     expect(onRedo).toHaveBeenCalledOnce();
   });
 });
+
+describe('StoryHistoryPanel grouped changes', () => {
+  afterEach(cleanup);
+
+  it('labels a committed change batch as one grouped entry', () => {
+    render(
+      <StoryHistoryPanel
+        history={{
+          entries: [
+            {
+              id: 'event-4',
+              revision: 5,
+              kind: 'change',
+              operation: 'story.changes.committed',
+              actor: { id: 'user-1', displayName: 'Alice' },
+              createdAt: '2026-08-30T11:00:00.000Z',
+              reverted: false,
+            },
+          ],
+          canUndo: true,
+          canRedo: false,
+        }}
+        busy={false}
+        onUndo={vi.fn()}
+        onRedo={vi.fn()}
+        onClose={vi.fn()}
+      />,
+    );
+
+    expect(screen.getByText('Grouped changes applied')).toBeInTheDocument();
+  });
+});

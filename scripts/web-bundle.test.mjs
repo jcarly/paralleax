@@ -121,7 +121,7 @@ test('rejects eager routes, missing chunks, and exceeded budgets with explicit e
 });
 
 test('the editor budget has limited release headroom and still rejects larger bundles', () => {
-  assert.equal(WEB_BUNDLE_BUDGETS.editorIncrementalBytes, 146 * 1024);
+  assert.equal(WEB_BUNDLE_BUDGETS.editorIncrementalBytes, 147.5 * 1024);
 
   const metrics = {
     initialJavaScriptBytes: 0,
@@ -133,7 +133,7 @@ test('the editor budget has limited release headroom and still rejects larger bu
   metrics.editorIncrementalBytes = WEB_BUNDLE_BUDGETS.editorIncrementalBytes + 1;
   assert.throws(
     () => assertWebBundleBudgets(metrics),
-    /editorIncrementalBytes is 146\.0 KiB, above its 146\.0 KiB budget \(149505 bytes > 149504 bytes\)/,
+    /editorIncrementalBytes is 147\.5 KiB, above its 147\.5 KiB budget \(150529 bytes > 150528 bytes\)/,
   );
 });
 

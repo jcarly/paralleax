@@ -75,3 +75,6 @@ comments, and reader/simulation saves are outside this history.
   canonical undo/redo actions.
 - Existing stories have no synthetic pre-migration events. Their first new
   content mutation starts the durable history.
+- A committed change batch ([ADR-050](ADR-050-editorial-change-batches.md)) is
+  one event: undo and redo revert and restore the whole batch. The event also
+  records the ID of its stored proposal, so a retried commit is recognized.

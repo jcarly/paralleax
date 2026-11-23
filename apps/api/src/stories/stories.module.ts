@@ -2,6 +2,7 @@ import { Module } from '@nestjs/common';
 import { DatabaseModule } from '../database/database.module';
 import { ImportsModule } from '../imports/imports.module';
 import { StoriesController } from './stories.controller';
+import { StoryChangesController } from './story-changes.controller';
 import { StoriesRepository } from './stories.repository';
 import { StoriesService } from './stories.service';
 import { StoryEventsService } from './story.events';
@@ -9,6 +10,7 @@ import { StoryImportService } from './application/story-import';
 import { NativeStoryImportService } from './application/native-story-import';
 import { NATIVE_STORY_IMPORT_PORT } from './application/native-story-import.port';
 import { StoryAccessService } from './application/story-access';
+import { StoryChangesService } from './application/story-changes';
 import { StoryContextService } from './application/story-context';
 import { StoryGraphService } from './application/story-graph';
 import { StoryGroupService } from './application/story-groups';
@@ -23,7 +25,7 @@ import { QspImportProgressService } from './application/qsp-import-progress.serv
 
 @Module({
   imports: [DatabaseModule, ImportsModule],
-  controllers: [StoriesController],
+  controllers: [StoriesController, StoryChangesController],
   providers: [
     StoriesRepository,
     StoriesService,
@@ -35,6 +37,7 @@ import { QspImportProgressService } from './application/qsp-import-progress.serv
     ChoiceScriptImportWorkerService,
     QspImportProgressService,
     StoryAccessService,
+    StoryChangesService,
     StoryContextService,
     StoryGraphService,
     StoryGroupService,

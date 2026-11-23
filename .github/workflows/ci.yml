@@ -2,10 +2,10 @@ name: CI
 
 on:
   push:
-    branches: [dev, main]
+    branches: [dev, main, 'release/**']
     tags: ['*.*.*']
   pull_request:
-    branches: [dev, main]
+    branches: [dev, main, 'release/**']
     types: [opened, synchronize, reopened, edited, ready_for_review]
   schedule:
     - cron: '0 4 * * 1'
@@ -37,7 +37,7 @@ jobs:
       postgres: ${{ steps.full.outputs.full == 'true' || steps.filter.outputs.api == 'true' || steps.filter.outputs.shared == 'true' || steps.filter.outputs.dependencies == 'true' || steps.filter.outputs.restore == 'true' }}
       postgres_integration: ${{ steps.full.outputs.full == 'true' || steps.filter.outputs.api == 'true' || steps.filter.outputs.shared == 'true' || steps.filter.outputs.dependencies == 'true' || steps.filter.outputs.restore == 'true' }}
       postgres_restore: ${{ steps.full.outputs.full == 'true' || steps.filter.outputs.restore == 'true' }}
-      browser_e2e: ${{ steps.full.outputs.full == 'true' || steps.filter.outputs.web == 'true' || steps.filter.outputs.shared == 'true' || steps.filter.outputs.dependencies == 'true' }}
+      browser_e2e: ${{ steps.full.outputs.full == 'true' || steps.filter.outputs.api == 'true' || steps.filter.outputs.web == 'true' || steps.filter.outputs.shared == 'true' || steps.filter.outputs.dependencies == 'true' }}
       acceptance: ${{ steps.full.outputs.full == 'true' || steps.filter.outputs.acceptance == 'true' }}
       docker: ${{ steps.full.outputs.full == 'true' || steps.filter.outputs.docker == 'true' }}
       security_audit: ${{ steps.full.outputs.full == 'true' || steps.filter.outputs.dependencies == 'true' }}
@@ -45,6 +45,19 @@ jobs:
       lint: ${{ steps.full.outputs.full == 'true' || steps.filter.outputs.application == 'true' || steps.filter.outputs.tooling == 'true' }}
       workflow: ${{ steps.full.outputs.full == 'true' || steps.filter.outputs.workflow == 'true' }}
     steps:
+      - name: Require promotion branches for main
+        if: github.event_name == 'pull_request' && github.base_ref == 'main'
+        env:
+          HEAD_REF: ${{ github.head_ref }}
+          HEAD_REPOSITORY: ${{ github.event.pull_request.head.repo.full_name }}
+        run: |
+          set -euo pipefail
+          if [[ "$HEAD_REPOSITORY" != "$GITHUB_REPOSITORY" ]] ||
+             [[ "$HEAD_REF" != 'dev' && "$HEAD_REF" != release/* ]]; then
+            echo "::error::Only dev or release/* branches in this repository may be promoted to main."
+            exit 1
+          fi
+
       - name: Check out pushed branch for change detection
         if: github.event_name == 'push'
         uses: actions/checkout@v7
@@ -182,9 +195,9 @@ jobs:
         if: needs.changes.result == 'success' && needs.changes.outputs.operations == 'true'
         run: npm run test:operations
 
-      - name: Build shared workspace
-        if: needs.changes.result == 'success' && needs.changes.outputs.build_shared == 'true'
-        run: npm run build -w @paralleax/shared
+      - name: Typecheck all workspaces and build shared
+        if: needs.changes.result == 'success' && (needs.changes.outputs.build_shared == 'true' || needs.changes.outputs.lint == 'true')
+        run: npm run typecheck
 
       - name: Build API workspace
         if: needs.changes.result == 'success' && needs.changes.outputs.build_api == 'true'
@@ -203,6 +216,10 @@ jobs:
           VITE_SENTRY_RELEASE: ''
           VITE_SENTRY_TRACES_SAMPLE_RATE: ''
         run: npm run build -w @paralleax/web
+
+      - name: Build MCP workspace
+        if: needs.changes.result == 'success' && needs.changes.outputs.application == 'true'
+        run: npm run build -w @paralleax/mcp
 
       - name: Run shared coverage suite
         if: needs.changes.result == 'success' && needs.changes.outputs.shared_coverage == 'true'
@@ -364,11 +381,12 @@ jobs:
       - name: Install dependencies
         run: npm ci --prefer-offline --audit=false
 
-      - name: Build shared and API workspaces
-        run: npm run build -w @paralleax/shared && npm run build -w @paralleax/api
+      - name: Build shared, API and MCP workspaces
+        run: npm run build -w @paralleax/shared && npm run build -w @paralleax/api && npm run build -w @paralleax/mcp
 
       # Starts the built API against PostgreSQL, then runs the MCP tools
-      # through a real MCP client with real accounts and permissions.
+      # through a real MCP client with real accounts and permissions, including
+      # the preview and commit of change batches over the built stdio server.
       - name: Run MCP end-to-end tests against the API
         run: npm run test:e2e:api -w @paralleax/mcp
 
@@ -468,6 +486,47 @@ jobs:
 
       - name: Verify native Story upload limits through production Nginx
         run: npm run test:production-proxy -- paralleax-web:ci
+
+  # Stable required check for integration branches. Path-based skips are allowed
+  # only when the affected-area decision says the corresponding job is unnecessary.
+  integration-readiness:
+    name: Integration readiness
+    needs: [changes, quality, workflow-validation, postgres, mcp, browser, production-images]
+    if: >-
+      always() &&
+      github.event_name == 'pull_request' &&
+      (github.base_ref == 'dev' || startsWith(github.base_ref, 'release/'))
+    runs-on: ubuntu-latest
+    steps:
+      - name: Require applicable integration validation
+        env:
+          CHANGES_RESULT: ${{ needs.changes.result }}
+          QUALITY_RESULT: ${{ needs.quality.result }}
+          WORKFLOW_RESULT: ${{ needs.workflow-validation.result }}
+          POSTGRES_RESULT: ${{ needs.postgres.result }}
+          MCP_RESULT: ${{ needs.mcp.result }}
+          BROWSER_RESULT: ${{ needs.browser.result }}
+          IMAGES_RESULT: ${{ needs.production-images.result }}
+          WORKFLOW_REQUIRED: ${{ needs.changes.outputs.workflow }}
+          POSTGRES_REQUIRED: ${{ needs.changes.outputs.postgres }}
+          MCP_REQUIRED: ${{ needs.changes.outputs.application }}
+          BROWSER_REQUIRED: ${{ needs.changes.outputs.browser_e2e == 'true' || needs.changes.outputs.acceptance == 'true' }}
+          IMAGES_REQUIRED: ${{ needs.changes.outputs.docker }}
+        run: |
+          set -euo pipefail
+          status=0
+          for check in CHANGES QUALITY WORKFLOW POSTGRES MCP BROWSER IMAGES; do
+            variable="${check}_RESULT"
+            result="${!variable}"
+            required_variable="${check}_REQUIRED"
+            required="${!required_variable-true}"
+            if [[ "$result" != 'success' ]] &&
+               [[ "$required" != 'false' || "$result" != 'skipped' ]]; then
+              echo "::error::${check} validation did not succeed (required=${required}, result=${result})."
+              status=1
+            fi
+          done
+          exit "$status"
 
   # Stable required check for release-ready PRs and commits on main.
   # All jobs above must actually run, not merely report skipped.

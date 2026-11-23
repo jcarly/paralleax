@@ -185,8 +185,3 @@ export class ParalleaxApiClient {
 export function pathSegment(value: string): string {
   return encodeURIComponent(value);
 }
-
-/** Write failures after which the change may exist: never retried blindly. */
-export function mayHaveWritten(error: unknown): boolean {
-  return error instanceof ParalleaxApiError && error.code === 'WRITE_OUTCOME_UNKNOWN';
-}

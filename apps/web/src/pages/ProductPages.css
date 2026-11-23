@@ -394,7 +394,11 @@
   font-size: 0.68rem;
 }
 
+.field-help-tooltip-trigger.library-card-icon-link,
 .field-help-tooltip-trigger.library-card-delete {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
   width: 34px;
   height: 34px;
   min-height: 34px;
@@ -402,6 +406,7 @@
   border-radius: 8px;
 }
 
+.field-help-tooltip-trigger.library-card-icon-link svg,
 .field-help-tooltip-trigger.library-card-delete svg {
   width: 17px;
   height: 17px;
@@ -1936,6 +1941,7 @@
 
   .library-card > footer a {
     flex: 1;
+    width: auto;
   }
 
   .design-hero dl,

@@ -41,7 +41,19 @@ test commands are in the [README](README.md#requirements).
 
 ## Branches, commits, and pull requests
 
-- One feature or fix per branch.
+- One feature or fix per branch, created from the intended integration branch.
+- Open normal pull requests against `dev` or `release/*`, never directly
+  against `main`. Use `dev` by default; use a release branch for a specific
+  version being stabilized. Retarget automated dependency PRs when necessary.
+- Promote an integrated batch through a pull request from `dev` or
+  `release/*` in this repository to `main`. Use a merge commit for promotion
+  (not squash or rebase) to preserve shared history. Do not delete `dev`.
+- After promoting a release branch, merge `main` back into `dev` and any
+  ongoing release branch that needs the fixes. Create release branches from
+  `dev` for a planned batch or `main` for an isolated hotfix.
+- Integration PRs require `Integration readiness`; promotion PRs require
+  `Main readiness`. Keep both protected by required status checks.
+  See the [release runbook](docs/operations/alpha-deployment.md#build-and-release).
 - Use [Conventional Commits](https://www.conventionalcommits.org/)
   (`feat:`, `fix:`, `docs:`, `refactor:`, `test:`, `chore:`).
 - Keep the change focused; do not reformat or refactor unrelated code.

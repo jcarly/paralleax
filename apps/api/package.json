@@ -10,7 +10,7 @@
     "migrate:prod": "node dist/main.js --migrate",
     "typecheck": "tsc --noEmit",
     "test": "node --experimental-vm-modules --disable-warning=ExperimentalWarning ../../node_modules/jest/bin/jest.js --runInBand",
-    "test:postgres": "node --experimental-vm-modules --disable-warning=ExperimentalWarning ../../node_modules/jest/bin/jest.js --runInBand stories.postgres.spec.ts native-story-import.postgres.spec.ts native-story-cross-database.postgres.spec.ts story-access.postgres.spec.ts comments.postgres.spec.ts database.migrations.postgres.spec.ts stories.e2e.spec.ts story-context-history.e2e.spec.ts comments.e2e.spec.ts",
+    "test:postgres": "node --experimental-vm-modules --disable-warning=ExperimentalWarning ../../node_modules/jest/bin/jest.js --runInBand stories.postgres.spec.ts native-story-import.postgres.spec.ts native-story-cross-database.postgres.spec.ts story-access.postgres.spec.ts comments.postgres.spec.ts database.migrations.postgres.spec.ts stories.e2e.spec.ts story-context-history.e2e.spec.ts story-changes.e2e.spec.ts comments.e2e.spec.ts",
     "test:stress:postgres": "node --experimental-vm-modules --disable-warning=ExperimentalWarning ../../node_modules/jest/bin/jest.js --runInBand stories.stress.postgres.spec.ts",
     "coverage": "node --experimental-vm-modules --disable-warning=ExperimentalWarning ../../node_modules/jest/bin/jest.js --runInBand --coverage"
   },
@@ -22,17 +22,17 @@
     "@nestjs/swagger": "12.1.2",
     "@nestjs/throttler": "^6.7.1",
     "@paralleax/shared": "^0.1.0",
-    "@sentry/nestjs": "^11.11.0",
+    "@sentry/nestjs": "^11.12.0",
     "class-transformer": "^0.5.1",
     "class-validator": "^0.15.1",
     "helmet": "^8.3.0",
     "pg": "^8.23.1",
     "reflect-metadata": "^0.2.2",
     "rxjs": "^7.8.2",
-    "sanitize-html": "2.18.1"
+    "sanitize-html": "2.18.2"
   },
   "devDependencies": {
-    "@nestjs/cli": "^12.0.12",
+    "@nestjs/cli": "^12.0.13",
     "@nestjs/testing": "12.5.1",
     "@types/express": "^5.0.6",
     "@types/jest": "^30.0.0",

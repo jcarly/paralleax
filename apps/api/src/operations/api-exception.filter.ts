@@ -9,6 +9,11 @@ import {
 import { DomainValidationError } from '@paralleax/shared';
 import type { Response } from 'express';
 import { captureApiException } from '../observability/sentry';
+import {
+  ApplicationConflictError,
+  ApplicationError,
+  ApplicationNotFoundError,
+} from './application-errors';
 import { getRequestId, type RequestWithId } from './request-context';
 
 type HttpExceptionBody = {
@@ -75,6 +80,17 @@ function resolveApiException(exception: unknown): ResolvedApiException {
       details: exception.details,
     };
   }
+  if (exception instanceof ApplicationError) {
+    const status = applicationErrorStatus(exception);
+    return {
+      isHttpException: true,
+      statusError: status,
+      status,
+      code: exception.code,
+      message: exception.message,
+      details: exception.details,
+    };
+  }
   const { isHttpException, statusError, status } = resolveExceptionStatus(exception);
   const source = exception instanceof HttpException ? exception.getResponse() : undefined;
   const body = typeof source === 'object' && source !== null ? (source as HttpExceptionBody) : {};
@@ -86,6 +102,16 @@ function resolveApiException(exception: unknown): ResolvedApiException {
     message: resolveExceptionMessage(exception, source, body, status),
     details: body.details,
   };
+}
+
+function applicationErrorStatus(exception: ApplicationError): number {
+  if (exception instanceof ApplicationNotFoundError) {
+    return HttpStatus.NOT_FOUND;
+  }
+  if (exception instanceof ApplicationConflictError) {
+    return HttpStatus.CONFLICT;
+  }
+  return HttpStatus.BAD_REQUEST;
 }
 
 function resolveExceptionStatus(exception: unknown) {

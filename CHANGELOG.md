@@ -2,6 +2,24 @@
 
 ## Unreleased
 
+- Story library cards show Read, Edit, Export and Access as icon-only links
+  (PAR-7, H). Each keeps its accessible name and shows it in a tooltip on hover
+  and keyboard focus; permissions, route preloading and the native export
+  download are unchanged. `FieldHelpTooltip` can now render its trigger as a
+  router link or a download link.
+- Added editorial change batches (ADR-050, [docs/story-changes.md](docs/story-changes.md)).
+  `POST /api/stories/:id/changes/preview` applies an ordered list of
+  Interaction and Trigger creations and updates, with temporary references
+  between them, to an unsaved copy, returns a reviewable diff (every field of
+  created entities) and per-operation diagnostics, and stores the valid batch
+  as a one-hour proposal. `POST /api/stories/:id/changes/commit` applies only a
+  stored proposal, by ID, against its revision in one transaction, one revision
+  and one "Grouped changes applied" history entry, refuses stale, expired or
+  foreign proposals, and answers a repeated commit without writing again.
+- The local MCP server replaces `create_interaction`, `update_interaction` and
+  `create_trigger` with `preview_story_changes` and `commit_story_changes`
+  (annotated as destructive), and its instructions require a preview and the
+  author's explicit confirmation before every commit.
 - `paralleax-mcp login` reports `API_UNREACHABLE` with the API address when the
   API cannot be reached, instead of a generic `INTERNAL_ERROR`.
 - The Inspector shows where an Interaction comes from and drops repeated
