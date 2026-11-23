@@ -2,6 +2,22 @@
 
 ## Unreleased
 
+- Change batches (ADR-050 amendment) now create and update stat definitions and
+  assignments: `create_stat_definition`, `update_stat_definition`,
+  `create_stat_assignment` and `update_stat_assignment`, with the editor's
+  stat rules (the same functions and DTOs) and an explicit, required
+  `valueType`. The owner of an assignment is the Story, a character, a location
+  or an existing item definition. Temporary references work for definitions,
+  assignments and owners, in interaction `statEffects[].statId` and in stat
+  conditions (`statId`, `comparisonStatId`; Trigger groups and conditional text),
+  with kind checks that never confuse a definition with an assignment. The
+  preview summary lists every added or updated definition and assignment, whoever
+  owns it, with definition, owner and initial value. `get_story_structure` now
+  returns every stat assignment, page by page (`contextPage`). References inside
+  expressions, item instances and deletion are not supported yet. No migration;
+  `story-changes-context.e2e.spec.ts` and the new stats spec join the PostgreSQL
+  CI list.
+
 - Change batches (ADR-050) now create and update characters and locations:
   `create_character`, `update_character`, `create_location` and
   `update_location`, with the editor's fields and rules, which moved from

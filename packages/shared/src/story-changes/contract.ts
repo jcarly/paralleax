@@ -1,4 +1,4 @@
-import type { ItemEffect, Position, StatEffect } from '../model/index.js';
+import type { ItemEffect, Position, StatEffect, StatValue, StatValueType } from '../model/index.js';
 import type { TriggerCondition } from '../triggers/conditions.js';
 
 /**
@@ -40,15 +40,19 @@ export const STORY_CHANGE_CONDITION_REFERENCE_KINDS = {
   interactionId: 'interaction',
   characterId: 'character',
   locationId: 'location',
+  // Stat conditions name an assignment, never a definition (ADR-021).
+  statId: 'statAssignment',
+  comparisonStatId: 'statAssignment',
 } as const satisfies Record<string, StoryChangeEntityKind>;
 
-type WithReferences<Condition> = Omit<
-  Condition,
-  keyof typeof STORY_CHANGE_CONDITION_REFERENCE_KINDS
-> & {
-  [
-    Field in keyof typeof STORY_CHANGE_CONDITION_REFERENCE_KINDS & keyof Condition
-  ]: StoryChangeReference;
+/** A string ID field that also accepts a temporary reference; optionality is kept. */
+type Referenceable<Value> =
+  Extract<Value, string> extends never ? Value : Exclude<Value, string> | StoryChangeReference;
+
+type WithReferences<Condition> = {
+  [Field in keyof Condition]: Field extends keyof typeof STORY_CHANGE_CONDITION_REFERENCE_KINDS
+    ? Referenceable<Condition[Field]>
+    : Condition[Field];
 };
 
 /** A Trigger condition whose entity targets may be temporary references. */
@@ -70,6 +74,12 @@ export interface StoryChangeConditionalTextBlock {
   conditions: StoryChangeCondition[];
 }
 
+/** A stat effect whose assignment may be a temporary reference. */
+export type StoryChangeStatEffect = Omit<StatEffect, 'statId'> & {
+  /** An existing stat assignment ID or a reference to one created earlier. */
+  statId: StoryChangeReference;
+};
+
 /** Interaction fields an operation may set. Omitted fields are left unchanged. */
 export interface StoryChangeInteractionFields {
   title?: string;
@@ -80,7 +90,7 @@ export interface StoryChangeInteractionFields {
   locationId?: StoryChangeReference | null;
   /** Existing IDs or temporary references; replaces the characters. */
   characterIds?: StoryChangeReference[];
-  statEffects?: StatEffect[];
+  statEffects?: StoryChangeStatEffect[];
   itemEffects?: ItemEffect[];
   conditionalTextBlocks?: StoryChangeConditionalTextBlock[];
   durationMinutes?: number;
@@ -180,6 +190,52 @@ export interface UpdateLocationChange {
   fields: StoryChangeLocationFields;
 }
 
+/** Fields of a stat definition. The value type cannot change after creation. */
+export interface StoryChangeStatDefinitionFields {
+  name?: string;
+  category?: string;
+  imageUrl?: string;
+  /** Numeric definitions only; 0 removes the hourly change. */
+  changePerHour?: number;
+}
+
+export interface CreateStatDefinitionChange {
+  type: 'create_stat_definition';
+  /** Temporary reference to the created definition (never to its assignments). */
+  ref?: string;
+  /** `name` and `valueType` are required: a batch never assumes a type. */
+  fields: StoryChangeStatDefinitionFields & { name: string; valueType: StatValueType };
+}
+
+export interface UpdateStatDefinitionChange {
+  type: 'update_stat_definition';
+  statDefinition: StoryChangeReference;
+  fields: StoryChangeStatDefinitionFields;
+}
+
+/** The owner of a stat assignment. */
+export type StoryChangeStatOwner =
+  | { type: 'story' }
+  | { type: 'character' | 'location'; id: StoryChangeReference }
+  /** Item definitions are never created by a batch: an existing ID. */
+  | { type: 'itemDefinition'; id: string };
+
+export interface CreateStatAssignmentChange {
+  type: 'create_stat_assignment';
+  /** Temporary reference to the created assignment (never to its definition). */
+  ref?: string;
+  statDefinition: StoryChangeReference;
+  owner: StoryChangeStatOwner;
+  /** The initial value, of the definition's type. */
+  fields: { initialValue: StatValue };
+}
+
+export interface UpdateStatAssignmentChange {
+  type: 'update_stat_assignment';
+  assignment: StoryChangeReference;
+  fields: { initialValue: StatValue };
+}
+
 export type StoryChangeOperation =
   | CreateInteractionChange
   | UpdateInteractionChange
@@ -188,7 +244,11 @@ export type StoryChangeOperation =
   | CreateCharacterChange
   | UpdateCharacterChange
   | CreateLocationChange
-  | UpdateLocationChange;
+  | UpdateLocationChange
+  | CreateStatDefinitionChange
+  | UpdateStatDefinitionChange
+  | CreateStatAssignmentChange
+  | UpdateStatAssignmentChange;
 
 export type StoryChangeOperationType = StoryChangeOperation['type'];
 
@@ -201,6 +261,10 @@ export const STORY_CHANGE_OPERATION_TYPES = [
   'update_character',
   'create_location',
   'update_location',
+  'create_stat_definition',
+  'update_stat_definition',
+  'create_stat_assignment',
+  'update_stat_assignment',
 ] as const satisfies readonly StoryChangeOperationType[];
 
 export interface StoryChangeBatch {
@@ -228,6 +292,8 @@ export const STORY_CHANGE_ENTITY_KINDS = [
   'trigger',
   'character',
   'location',
+  'statDefinition',
+  'statAssignment',
 ] as const;
 
 export type StoryChangeEntityKind = (typeof STORY_CHANGE_ENTITY_KINDS)[number];

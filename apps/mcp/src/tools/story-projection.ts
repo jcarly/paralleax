@@ -49,16 +49,32 @@ function namedList(items: readonly Named[]) {
   return items.map(({ id, name }) => ({ id, name }));
 }
 
-export function storyContextView(context: ApiContextPage) {
+export function storyContextView(context: ApiContextPage, page: number) {
   return {
     locations: namedList(context.locations),
     characters: namedList(context.characters),
-    statDefinitions: context.statDefinitions.map(({ id, name, valueType }) => ({
-      id,
-      name,
-      valueType,
-    })),
+    statDefinitions: context.statDefinitions.map(
+      ({ id, name, valueType, category, changePerHour }) => ({
+        id,
+        name,
+        valueType,
+        ...(category === undefined ? {} : { category }),
+        ...(changePerHour === undefined ? {} : { changePerHour }),
+      }),
+    ),
+    // The value an effect or condition targets is the assignment, not its definition.
+    statAssignments: context.statAssignments.map(
+      ({ id, statDefinitionId, ownerType, ownerId, initialValue }) => ({
+        id,
+        statDefinitionId,
+        ownerType,
+        ...(ownerId === undefined ? {} : { ownerId }),
+        initialValue,
+      }),
+    ),
     itemDefinitions: namedList(context.itemDefinitions),
+    page,
+    hasMore: context.hasMore,
     truncated: context.hasMore,
   };
 }

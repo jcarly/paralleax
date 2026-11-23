@@ -1,17 +1,21 @@
-import type { Position } from '../model/index.js';
+import type { Position, StatValue } from '../model/index.js';
 import type {
+  CreateStatDefinitionChange,
   StoryChangeCharacterFields,
   StoryChangeInteractionFields,
   StoryChangeLocationFields,
+  StoryChangeStatDefinitionFields,
 } from './contract.js';
 
 /** Interaction fields with every temporary reference and omitted ID resolved. */
 export type ResolvedStoryChangeInteractionFields = Omit<
   StoryChangeInteractionFields,
-  'conditionalTextBlocks' | 'locationId' | 'characterIds'
+  'conditionalTextBlocks' | 'locationId' | 'characterIds' | 'statEffects'
 > & {
   locationId?: string | null;
   characterIds?: string[];
+  /** Checked by the caller's entity validation, like any other field value. */
+  statEffects?: unknown[];
   /** Checked by the caller's entity validation, like any other field value. */
   conditionalTextBlocks?: unknown[];
 };
@@ -80,4 +84,31 @@ export type ResolvedStoryChangeOperation =
       index: number;
       locationId: string;
       fields: StoryChangeLocationFields;
+    }
+  | {
+      type: 'create_stat_definition';
+      index: number;
+      statDefinitionId: string;
+      fields: CreateStatDefinitionChange['fields'];
+    }
+  | {
+      type: 'update_stat_definition';
+      index: number;
+      statDefinitionId: string;
+      fields: StoryChangeStatDefinitionFields;
+    }
+  | {
+      type: 'create_stat_assignment';
+      index: number;
+      assignmentId: string;
+      statDefinitionId: string;
+      ownerType: 'story' | 'character' | 'location' | 'itemDefinition';
+      ownerId?: string;
+      fields: { initialValue: StatValue };
+    }
+  | {
+      type: 'update_stat_assignment';
+      index: number;
+      assignmentId: string;
+      fields: { initialValue: StatValue };
     };

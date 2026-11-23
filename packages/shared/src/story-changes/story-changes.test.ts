@@ -164,6 +164,10 @@ it('counts added and updated entities and lists their values', () => {
   });
 
   expect(summary.counts).toEqual({
+    statDefinitionsAdded: 0,
+    statDefinitionsUpdated: 0,
+    statAssignmentsAdded: 0,
+    statAssignmentsUpdated: 0,
     charactersAdded: 0,
     charactersUpdated: 0,
     locationsAdded: 0,

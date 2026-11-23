@@ -36,7 +36,12 @@ export const storyStructureInput = z.strictObject({
   includeContext: z
     .boolean()
     .default(true)
-    .describe('Include locations, characters, stat and item definitions (first 200 of each).'),
+    .describe(
+      'Include locations, characters, stat definitions, stat assignments and item definitions (200 of each per page).',
+    ),
+  contextPage: page.describe(
+    'Page of the context lists. While context.hasMore is true, call again with the next contextPage: nothing is dropped silently.',
+  ),
 });
 
 export const getInteractionInput = z.strictObject({
@@ -52,7 +57,7 @@ export const body = z
     'Rich text as simple HTML: <p>, <br>, <strong>, <em>, <u>, <s>, <h2>, <h3>, <blockquote>, <ul>, <ol>, <li>, <a href>. Disallowed markup is removed by the API.',
   );
 
-const statValue = z.union([z.string().max(4000), z.number().finite(), z.boolean()]);
+export const statValue = z.union([z.string().max(4000), z.number().finite(), z.boolean()]);
 
 export const statEffect = z.strictObject({
   statId: entityId,
