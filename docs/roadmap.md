@@ -1,6 +1,6 @@
 # Roadmap
 
-Status reviewed: 2026-11-21.
+Status reviewed: 2026-11-23.
 
 This page answers one question: **what comes next, and in which order?** It is
 deliberately short. What exists today is in [Current scope](current-scope.md).
@@ -12,6 +12,39 @@ Product positioning, the audience hypothesis, and the competitive context are in
 [Positioning](positioning.md). Operational gates are in
 [Production readiness](production-readiness.md); implementation debt is in the
 [Code quality backlog](code-quality-backlog.md).
+
+## Priority decision, 2026-11-23
+
+**Full co-editing and character-centred views become the first two product
+priorities after the open-alpha prerequisites.** The project owner decided this
+while preparing the La Prépa pitch. They no longer wait on collected feedback.
+
+1. **Full co-editing**
+   ([PAR-27](https://linear.app/paralleax/issue/PAR-27)): field-scoped text
+   merging per [ADR-034](decisions/ADR-034-collaborative-offline-authoring.md),
+   collaborator presence, and Story events distributed across several API
+   instances. Today's live synchronisation reloads the Story only for clients of
+   the same API process ([Current scope](current-scope.md)).
+2. **Character-centred views and NPC routes**
+   ([PAR-28](https://linear.app/paralleax/issue/PAR-28)): the character
+   projection of the [Workbench](workbench.md), showing where a character
+   appears, which routes are open to them, which conditions block them, and
+   their state along a simulated journey. Autonomous NPC behaviour stays out of
+   scope.
+
+Consequences:
+
+- The open-alpha sequence in [Now](#now) (tasks 2, 5, 8, 11, then 9) keeps its
+  order and stays first.
+- Collaboration is not the main differentiator: Arcweave is ahead on real-time
+  collaboration ([Positioning](positioning.md#competitive-landscape)). Full
+  co-editing is a baseline that teams expect; character views carry the
+  differentiation, together with explainable availability.
+- Until PAR-27 ships, public material says "live synchronisation", not
+  "real-time co-editing". Until PAR-28 ships, character views are presented as
+  in development.
+- Engine-oriented export and the other items under
+  [Proposed, not yet decided](#proposed-not-yet-decided) stay behind these two.
 
 ## Priority decision, 2026-11-21
 
@@ -161,12 +194,30 @@ not depend on those adapters.
 - Representative round-trip, invalid-input and cross-database checks exercise the
   supported content and references. Compatibility is explicit and versioned.
 
-### 2. Durable Story-level collaboration groundwork
+### 2. Full co-editing
 
-Unchanged from the milestone detail (V0.3 / V0.8): field-scoped concurrency and
-text merging per [ADR-034](decisions/ADR-034-collaborative-offline-authoring.md),
-when collected feedback shows that the current invalidate-and-
-reload model blocks real teams.
+Promoted by the 2026-11-23 decision
+([PAR-27](https://linear.app/paralleax/issue/PAR-27)): field-scoped concurrency
+and text merging per
+[ADR-034](decisions/ADR-034-collaborative-offline-authoring.md), collaborator
+presence, and Story events distributed across API instances. It no longer waits
+on collected feedback. A durable offline authoring queue stays out of scope.
+
+- Acceptance: two authors edit the same Story, including the same text field,
+  through two different API instances, without lost changes or a blocking
+  reload.
+
+### 3. Character-centred views and NPC routes
+
+Promoted by the 2026-11-23 decision
+([PAR-28](https://linear.app/paralleax/issue/PAR-28)): the character projection
+of the [Workbench](workbench.md), built on the existing characters, stats,
+inventories and nested items.
+
+- Acceptance: on a Story of at least 300 Interactions, an author who did not
+  write it can follow one NPC's possible route and explain why a scene is
+  unavailable to that character (the
+  [product test](positioning.md#product-test) task).
 
 ## Proposed, not yet decided
 
