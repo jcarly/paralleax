@@ -133,7 +133,7 @@ test('the editor budget has limited release headroom and still rejects larger bu
   metrics.editorIncrementalBytes = WEB_BUNDLE_BUDGETS.editorIncrementalBytes + 1;
   assert.throws(
     () => assertWebBundleBudgets(metrics),
-    /editorIncrementalBytes is 147\.5 KiB, above its 147\.5 KiB budget \(150529 bytes > 150528 bytes\)/,
+    /editorIncrementalBytes is 147\.5 KiB, above its 147\.5 KiB budget \(151041 bytes > 151040 bytes\)/,
   );
 });
 
