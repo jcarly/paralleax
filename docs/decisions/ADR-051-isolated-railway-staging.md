@@ -15,7 +15,8 @@ email outbox exists only in test mode.
 
 ## Proposed Decision
 
-- Create a separate Railway project (preferably in a separate workspace) with its
+- Create a separate Railway project (in the current workspace if a staging-only
+  token can deploy images, otherwise in a separate workspace) with its
   own PostgreSQL service and volume, API without a public domain, and public web
   service.
 - Deploy the immutable GHCR digests that the release will promote, through a
@@ -26,17 +27,20 @@ email outbox exists only in test mode.
   `NODE_ENV=test` stacks with the outbox.
 - Keep staging IaC as a separate partial for a different project, never in the
   production file.
-- Isolate browser reporting by leaving the runtime Sentry and PostHog variables
-  unset on staging web.
+- Isolate browser reporting. Empty runtime variables are only a stopgap because
+  the image bakes `ENV` values; sharing the web digest requires runtime browser
+  configuration first.
 
 Operational details, risks, costs and teardown are in the
 [staging plan](../operations/staging-environment.md).
 
 ## Open Questions
 
-The status stays Proposed until the operator answers decisions D1 to D8 of the
-staging plan, in particular workspace isolation (D1), email handling (D2) and
-domain choice (D3).
+D1 (second project, workspace only if needed), D2 (real Brevo, production mode)
+and D3 (generated domain) are decided. The status stays Proposed until runtime
+browser configuration or a separate staging web build is chosen (D4), access
+restriction (D8), deployment control (D5) and the Postgres version (D7) are
+settled.
 
 ## Consequences
 
@@ -45,5 +49,6 @@ domain choice (D3).
 - Production-mode staging cannot be driven by the outbox-based acceptance suite.
   If manual verification becomes a bottleneck, a protected staging outbox needs
   its own ADR because it changes configuration semantics.
-- The shared web image sends no browser reports from staging only while the
-  runtime CSP variables stay unset; this is verified in the browser journey.
+- Until browser configuration is read at runtime, a shared web image carries
+  the production Sentry and PostHog values; empty variables only block them
+  through the CSP, as the browser journey verifies.

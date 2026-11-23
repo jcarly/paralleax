@@ -55,11 +55,15 @@ runbook stay identical.
 3. Staging secrets are generated for staging. Nothing is copied from production:
    `DATABASE_URL` references the staging `Postgres`, the Brevo key is a separate
    key, and no database dump from production is restored.
-4. The staging web service leaves `VITE_SENTRY_DSN` and `VITE_POSTHOG_API_HOST`
-   unset. The Nginx Content Security Policy is built from those runtime values,
-   so the browser blocks reports to production Sentry and PostHog even if the
-   bundle contains the baked values. The browser journey below checks this.
-   The API leaves `SENTRY_DSN` unset.
+4. Browser reporting must not reach production. The web image sets
+   `VITE_SENTRY_DSN` and `VITE_POSTHOG_API_HOST` as container `ENV` from build
+   arguments, so a variable that is merely absent in Railway does not clear
+   them. Set both explicitly to an empty value on the staging web service, then
+   check the effective CSP and the network requests (journey 2). This is a
+   stopgap: the bundle still contains the production browser configuration and
+   the PostHog feedback control may stay visible without working. The durable
+   fix is runtime browser configuration (see Prerequisite fix). The API leaves
+   `SENTRY_DSN` unset; it has no baked value.
 5. Staging data is disposable. It is never a source for valuable projects, and
    its backups are not part of the production recovery chain.
 
@@ -82,9 +86,17 @@ production, so the artifact under test is the artifact that ships.
 - The production release job stays unchanged and does not depend on staging.
 
 Because the web image is shared, its baked browser reporting values point to the
-production Sentry and PostHog projects. Rule 4 contains this at runtime. If the
-operator rejects that mitigation, the alternative is a separate staging web
-build, which loses digest identity with production (decision D4).
+production Sentry and PostHog projects. Rule 4 is only a stopgap.
+
+### Prerequisite fix: runtime browser configuration
+
+Sharing one web digest between staging and production (D4) is accepted only
+after browser configuration (Sentry DSN and release, PostHog host, token and
+survey id) is read at runtime instead of build time, for example from a
+generated `config.js` served by the web container. That change touches the
+Dockerfile, the web entrypoint, the CSP template and the web client. It needs
+its own task and tests, and ADR-051 must not be accepted before it, or before
+an explicit decision to use a separate staging web build.
 
 ## Railway Configuration
 
@@ -169,9 +181,9 @@ credential, or `SENTRY_DSN` here.
   origin through the web proxy, no cross-site cookie setting is needed. Keep
   `NODE_ENV=production` so the `Secure` flag, origin guard and CSP are tested as
   they ship.
-- Do not set a cookie `Domain`. A cookie scoped to the parent domain would be
-  shared with `paralleax.app` if staging used a subdomain of it, so use a
-  distinct registrable domain or the generated Railway domain (decision D3).
+- Do not set a cookie `Domain`. The cookie then stays host-only and is not sent
+  to any other host, so a staging subdomain of `paralleax.app` would not receive
+  the production cookie. The generated Railway domain is still chosen (D3).
 
 ### Migrations
 
@@ -268,21 +280,21 @@ Possible extra spending:
 - Brevo plan limits if staging emails share the production quota (use a
   separate key, and check the sender limit);
 - a custom domain registration, if one is chosen;
-- Sentry or PostHog volume if rule 4 is bypassed.
+- Sentry or PostHog volume if rule 4 fails.
 
 ## Risks
 
-| Risk                                               | Mitigation                                                                                            |
-| -------------------------------------------------- | ----------------------------------------------------------------------------------------------------- |
-| Staging token modifies production                  | Separate workspace and token, separate GitHub environment; no workspace token shared (D1).            |
-| Browser events reach production Sentry or PostHog  | Runtime CSP with unset variables, verified in journey 2; separate build if rejected (D4).             |
-| Verification emails reach real users               | Dedicated Brevo key and sender; operator-owned mailboxes only; registration closed between campaigns. |
-| Test outbox exposes tokens                         | `NODE_ENV=test` only on ephemeral stacks without real mailboxes.                                      |
-| Staging cookie shadows or collides with production | No cookie `Domain`; distinct registrable domain or generated Railway domain (D3).                     |
-| IaC planned against the wrong project              | Separate partial and file outside `.railway/`; confirm the linked project before every plan.          |
-| Staging data treated as valuable                   | Disposable notice, no valuable projects, documented reset.                                            |
-| Forward-only migration breaks staging              | Rebuild from an empty database; production rollback is image-only.                                    |
-| Forgotten running stack                            | Usage limit; weekly review; teardown procedure below.                                                 |
+| Risk                                              | Mitigation                                                                                                                  |
+| ------------------------------------------------- | --------------------------------------------------------------------------------------------------------------------------- |
+| Staging token modifies production                 | Project-scoped staging token if it can deploy images, else separate workspace (D1); separate GitHub environment.            |
+| Browser events reach production Sentry or PostHog | Explicit empty variables as a stopgap, verified in journey 2; runtime browser configuration before sharing the digest (D4). |
+| Verification emails reach real users              | Dedicated Brevo key and sender; operator-owned mailboxes only; registration closed between campaigns.                       |
+| Test outbox exposes tokens                        | `NODE_ENV=test` only on ephemeral stacks without real mailboxes.                                                            |
+| Staging cookie collides with production           | No cookie `Domain` (host-only); generated Railway domain (D3).                                                              |
+| IaC planned against the wrong project             | Separate partial and file outside `.railway/`; confirm the linked project before every plan.                                |
+| Staging data treated as valuable                  | Disposable notice, no valuable projects, documented reset.                                                                  |
+| Forward-only migration breaks staging             | Rebuild from an empty database; production rollback is image-only.                                                          |
+| Forgotten running stack                           | Usage limit; weekly review; teardown procedure below.                                                                       |
 
 ## Teardown
 
@@ -307,13 +319,13 @@ them running. A paused database still keeps its volume and its cost.
 
 ## Decisions Needed Before Provisioning
 
-| Id  | Decision                                                                                                                                                          | Recommendation                                                                                      |
-| --- | ----------------------------------------------------------------------------------------------------------------------------------------------------------------- | --------------------------------------------------------------------------------------------------- |
-| D1  | Separate Railway workspace, or a second project in the current workspace?                                                                                         | Separate workspace, so the staging token cannot reach production. Costs a second subscription.      |
-| D2  | Email handling: real Brevo to operator mailboxes, or a staging-only outbox mode (code change, new ADR)?                                                           | Real Brevo now. Consider a protected outbox later only if manual verification becomes a bottleneck. |
-| D3  | Domain: generated `*.up.railway.app`, or a custom staging domain on which registrable domain?                                                                     | Generated domain first; custom domain on a distinct registrable domain only if needed.              |
-| D4  | Share the production web digest, or build a staging web image with its own browser reporting values?                                                              | Share the digest, relying on runtime CSP, to keep digest identity.                                  |
-| D5  | Who may deploy to staging, and is deploy manual only?                                                                                                             | Manual `workflow_dispatch` by repository maintainers.                                               |
-| D6  | Is staging permanent, or created per release candidate and torn down?                                                                                             | Permanent but scaled down between campaigns, to keep the IaC and token wiring exercised.            |
-| D7  | Volume size and Postgres major.                                                                                                                                   | Same image major as production (18) and 500 MB.                                                     |
-| D8  | Does a staging access restriction (obscure domain, closed registration) suffice, given this plan relies on no provider-level access control on the public domain? | Closed registration between campaigns; no public link shared outside testers.                       |
+| Id  | Decision                  | Status and choice                                                                                                                                                                                                                                                              |
+| --- | ------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------ |
+| D1  | Railway isolation         | **Decided:** second project in the current workspace, if a staging-only token can deploy GHCR digests. Test `railway service source connect --image` with a project token; if only a workspace token works, use a separate workspace (one subscription per workspace).         |
+| D2  | Email handling            | **Decided:** real Brevo, dedicated key, operator-controlled test addresses, `NODE_ENV=production`.                                                                                                                                                                             |
+| D3  | Domain                    | **Decided:** generated `*.up.railway.app` domain.                                                                                                                                                                                                                              |
+| D4  | Shared web digest         | **Open:** only after runtime browser configuration (see Prerequisite fix), or choose a separate staging web build.                                                                                                                                                             |
+| D5  | Deployment control        | **Open:** manual `workflow_dispatch` plus a GitHub `staging` environment with its own secrets, minimal permissions and required reviewers or restricted deployers.                                                                                                             |
+| D6  | Permanence                | **Tentative:** keep staging between campaigns, scaled down.                                                                                                                                                                                                                    |
+| D7  | Postgres major and volume | **Open:** confirm the running production server with `SHOW server_version` before fixing the staging image; 500 MB as a starting size.                                                                                                                                         |
+| D8  | Access restriction        | **Open, required:** closed registration and an unshared URL are not protection. With `REGISTRATION_MODE=open` anyone can register and trigger Brevo emails. Choose a real restriction (for example HTTP authentication in the web tier) or an explicit campaign-window policy. |
