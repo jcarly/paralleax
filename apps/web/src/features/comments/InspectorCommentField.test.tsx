@@ -91,6 +91,25 @@ describe('InspectorCommentField', () => {
     expect(screen.getByText('2')).toBeInTheDocument();
   });
 
+  it('shows a plus sign when a semantic discussion count is zero', () => {
+    render(
+      <InspectorCommentSlot
+        slot={{ kind: 'field', field: 'duration' }}
+        label="Duration"
+        semanticCommentCounts={{ 'field:duration': 0 }}
+        onOpenSemanticComments={vi.fn()}
+      >
+        <button type="button">Duration</button>
+      </InspectorCommentSlot>,
+    );
+
+    fireEvent.focus(screen.getByRole('button', { name: 'Duration' }));
+    const badge = screen.getByRole('button', { name: 'Comment on Duration' });
+    fireEvent.blur(screen.getByRole('button', { name: 'Duration' }), { relatedTarget: badge });
+
+    expect(badge).toContainHTML('<small>+</small>');
+  });
+
   function renderContextRow(onOpen = vi.fn()) {
     render(
       <InspectorCommentSlot

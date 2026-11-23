@@ -64,16 +64,8 @@
       "count": 7
     }
   },
-  "apps/api/src/comments/comments.e2e.spec.ts": {
-    "@typescript-eslint/strict-boolean-expressions": {
-      "count": 1
-    }
-  },
   "apps/api/src/comments/comments.postgres.spec.ts": {
     "@typescript-eslint/no-unsafe-type-assertion": {
-      "count": 1
-    },
-    "@typescript-eslint/strict-boolean-expressions": {
       "count": 1
     },
     "max-lines-per-function": {
@@ -91,9 +83,6 @@
   "apps/api/src/comments/comments.repository.ts": {
     "@typescript-eslint/no-unnecessary-condition": {
       "count": 1
-    },
-    "@typescript-eslint/strict-boolean-expressions": {
-      "count": 7
     }
   },
   "apps/api/src/database/database.migrations.postgres.spec.ts": {
@@ -963,9 +952,6 @@
     }
   },
   "apps/web/src/features/comments/CommentDiscussionCard.tsx": {
-    "@typescript-eslint/strict-boolean-expressions": {
-      "count": 2
-    },
     "complexity": {
       "count": 1
     },
@@ -1013,23 +999,12 @@
       "count": 1
     }
   },
-  "apps/web/src/features/comments/InspectorCommentField.tsx": {
-    "@typescript-eslint/prefer-nullish-coalescing": {
-      "count": 1
-    },
-    "@typescript-eslint/strict-boolean-expressions": {
-      "count": 1
-    }
-  },
   "apps/web/src/features/comments/StoryCommentsPanel.test.tsx": {
     "max-lines-per-function": {
       "count": 2
     }
   },
   "apps/web/src/features/comments/StoryCommentsPanel.tsx": {
-    "@typescript-eslint/strict-boolean-expressions": {
-      "count": 1
-    },
     "complexity": {
       "count": 1
     },
@@ -2399,14 +2374,6 @@
   "packages/shared/src/comments.test.ts": {
     "max-lines-per-function": {
       "count": 2
-    }
-  },
-  "packages/shared/src/comments.ts": {
-    "@typescript-eslint/prefer-nullish-coalescing": {
-      "count": 3
-    },
-    "@typescript-eslint/strict-boolean-expressions": {
-      "count": 5
     }
   },
   "packages/shared/src/demo/stories/character-items.ts": {

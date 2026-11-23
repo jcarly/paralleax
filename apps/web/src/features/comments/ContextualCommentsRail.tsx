@@ -30,9 +30,9 @@ export function ContextualCommentsRail({
   canManageThread: (thread: StoryCommentThread) => boolean;
   canDeleteThread?: (thread: StoryCommentThread) => boolean;
   onSelect: (threadId: string | undefined) => void;
-  onCreate: (body: string) => Promise<unknown>;
+  onCreate: (body: string) => Promise<StoryCommentThread | undefined>;
   onCancelDraft: () => void;
-  onReply: (threadId: string, body: string) => Promise<unknown>;
+  onReply: (threadId: string, body: string) => Promise<StoryCommentThread | undefined>;
   onStatus: (threadId: string, status: StoryCommentThread['status']) => Promise<unknown>;
   onDelete?: (threadId: string) => Promise<unknown> | void;
   onReattach?: (threadId: string) => Promise<unknown>;

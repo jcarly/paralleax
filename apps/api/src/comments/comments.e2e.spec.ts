@@ -376,7 +376,7 @@ beforeEach(async () => {
     .useValue({
       userForToken: jest.fn((token?: string) =>
         Promise.resolve(
-          token
+          token !== undefined && token !== ''
             ? {
                 id: token,
                 email: `${token}@paralleax.invalid`,

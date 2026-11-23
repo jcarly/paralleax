@@ -127,10 +127,10 @@ export function canManageCommentThread(
   actorId: string | undefined,
   thread: Pick<StoryCommentThread, 'createdBy'>,
 ) {
-  return Boolean(
-    capabilities?.canManage ||
-    capabilities?.canEdit ||
-    (actorId && thread.createdBy.id === actorId),
+  return (
+    capabilities?.canManage === true ||
+    capabilities?.canEdit === true ||
+    (actorId !== undefined && actorId !== '' && thread.createdBy.id === actorId)
   );
 }
 
@@ -139,7 +139,10 @@ export function canDeleteCommentThread(
   actorId: string | undefined,
   thread: Pick<StoryCommentThread, 'createdBy'>,
 ) {
-  return Boolean(capabilities?.canManage || (actorId && thread.createdBy.id === actorId));
+  return (
+    capabilities?.canManage === true ||
+    (actorId !== undefined && actorId !== '' && thread.createdBy.id === actorId)
+  );
 }
 
 export function isCommentAnchor(value: unknown): value is CommentAnchor {

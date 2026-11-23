@@ -1,4 +1,5 @@
 import type { DatabaseConnection } from '../database/database.connection';
+import type { StoryCommentThread } from '@paralleax/shared';
 import { CommentsRepository } from './comments.repository';
 
 describe('CommentsRepository', () => {
@@ -8,13 +9,24 @@ describe('CommentsRepository', () => {
       .mockResolvedValueOnce({
         rows: [
           threadRow('thread-new', '2026-08-25T10:00:00.000Z'),
-          threadRow('thread-empty', '2026-08-25T09:00:00.000Z'),
+          {
+            ...threadRow('thread-empty', '2026-08-25T09:00:00.000Z'),
+            resolved_by: '',
+            resolved_by_display_name: '',
+            resolved_at: '',
+            deleted_by: '',
+            deleted_by_display_name: '',
+            deleted_at: '',
+          },
           threadRow('thread-old', '2026-08-25T08:00:00.000Z'),
         ],
       })
       .mockResolvedValueOnce({
         rows: [
-          messageRow('new-1', 'thread-new', '2026-08-25T07:00:00.000Z'),
+          {
+            ...messageRow('new-1', 'thread-new', '2026-08-25T07:00:00.000Z'),
+            edited_at: '',
+          },
           messageRow('old-1', 'thread-old', '2026-08-25T07:30:00.000Z'),
           messageRow('new-2', 'thread-new', '2026-08-25T08:00:00.000Z'),
         ],
@@ -25,9 +37,12 @@ describe('CommentsRepository', () => {
 
     expect(threads.map(({ id }) => id)).toEqual(['thread-new', 'thread-empty', 'thread-old']);
     expect(threads[0].messages.map(({ id }) => id)).toEqual(['new-1', 'new-2']);
+    expectThreadMetadataAbsent(threads[0]);
+    expect(threads[0].messages[0]).not.toHaveProperty('editedAt');
     expect(threads[0].createdBy).toEqual({ id: 'user-1', displayName: 'Author' });
     expect(threads[0].createdBy).not.toHaveProperty('email');
     expect(threads[1].messages).toEqual([]);
+    expectThreadMetadataAbsent(threads[1]);
     expect(threads[2].messages.map(({ id }) => id)).toEqual(['old-1']);
     expect(query).toHaveBeenCalledTimes(2);
     expect(query.mock.calls[0]?.[0]).not.toContain('creator.email');
@@ -36,7 +51,9 @@ describe('CommentsRepository', () => {
       ['thread-new', 'thread-empty', 'thread-old'],
     ]);
   });
+});
 
+describe('CommentsRepository with no threads', () => {
   it('does not query messages when the story has no comment threads', async () => {
     const query = jest.fn().mockResolvedValueOnce({ rows: [] });
     const repository = new CommentsRepository({ pool: { query } } as unknown as DatabaseConnection);
@@ -73,4 +90,11 @@ function messageRow(id: string, threadId: string, createdAt: string) {
     created_at: createdAt,
     edited_at: null,
   };
+}
+
+function expectThreadMetadataAbsent(thread: StoryCommentThread) {
+  expect(thread).not.toHaveProperty('resolvedBy');
+  expect(thread).not.toHaveProperty('resolvedAt');
+  expect(thread).not.toHaveProperty('deletedBy');
+  expect(thread).not.toHaveProperty('deletedAt');
 }
