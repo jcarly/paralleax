@@ -1266,7 +1266,7 @@ classes directly.
     accounts that the mocked `AuthService` authenticates.
     The former in-memory `StoriesRepository` fake was removed because e2e specs
     verified it rather than the SQL.
-- PostgreSQL integration: Jest against PostgreSQL 17, including persistence
+- PostgreSQL integration: Jest against PostgreSQL 17 (backup/restore also on 18), including persistence
   across repository instances and concurrent row mutation coverage. Specs that
   need PostgreSQL are skipped when `POSTGRES_TEST_DATABASE_URL` is unset, and
   destructive setup refuses a database whose name does not end with `_test`.

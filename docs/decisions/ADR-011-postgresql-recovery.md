@@ -28,7 +28,10 @@ verified restored database and connection cutover rather than down migrations.
 ## Consequences
 
 - The repository can verify backup tooling without choosing a hosting provider.
-- Operators need compatible `pg_dump` and `pg_restore` binaries.
+- Operators need compatible `pg_dump` and `pg_restore` binaries. The commands
+  enforce it: the client major must be at least the server major (a newer client
+  against an older server is supported by PostgreSQL), otherwise they fail
+  before any dump or restore. CI covers PostgreSQL 17 and 18 (PAR-19).
 - Logical backups alone do not provide a tight RPO or point-in-time recovery.
 - Production remains blocked until scheduling, monitoring, encryption, and a
   real restoration drill are configured in the selected environment.

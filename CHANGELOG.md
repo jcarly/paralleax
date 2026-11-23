@@ -2,6 +2,11 @@
 
 ## Unreleased
 
+- Secured PostgreSQL backup and restore across majors (PAR-19). `db:backup` and
+  `db:restore` now refuse a `pg_dump` or `pg_restore` older than the target
+  server before touching any file or database, naming only the versions. CI
+  verifies backup and restoration against PostgreSQL 17 and 18, the production
+  major (Railway `postgres-ssl:18`), and checks that an older client is refused.
 - `paralleax-mcp login` reports `API_UNREACHABLE` with the API address when the
   API cannot be reached, instead of a generic `INTERNAL_ERROR`.
 - The Inspector shows where an Interaction comes from and drops repeated
