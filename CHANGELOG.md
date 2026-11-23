@@ -2,6 +2,13 @@
 
 ## Unreleased
 
+- Added a chronological PostgreSQL migration test (PAR-20). Synthetic legacy
+  Stories, owners, graph, Triggers, conditions, reader progress, comments and
+  Groups are upgraded one migration at a time through the real migrator, with
+  foreign key, ownership and graph checks after every step, assertions for
+  intentional transformations, schema equality with a fresh install,
+  idempotence, and rollback and resume after a failed migration. It runs in the
+  PostgreSQL CI job on 17 and 18. No migration or runtime change.
 - Secured PostgreSQL backup and restore across majors (PAR-19). `db:backup` and
   `db:restore` now refuse a `pg_dump` or `pg_restore` older than the target
   server before touching any file or database, naming only the versions. CI
