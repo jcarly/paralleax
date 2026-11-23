@@ -2,6 +2,17 @@
 
 ## Unreleased
 
+- Change batches (ADR-050) now create and update characters and locations:
+  `create_character`, `update_character`, `create_location` and
+  `update_location`, with the editor's fields and rules, which moved from
+  `StoryContextService` to shared functions used by both paths. Temporary
+  references work for them in interaction `locationId` and `characterIds` and in
+  `characterId` and `locationId` conditions (Trigger groups and conditional text),
+  with kind checks. The preview summary lists added and updated characters and
+  locations, marks IDs as provisional and annotates fields that name created
+  entities with their `ref`. The MCP tools and server instructions expose the new
+  operations; deletion, stats, items and groups are still out of scope.
+
 - Story library cards show Read, Edit, Export and Access as icon-only links
   (PAR-7, H). Each keeps its accessible name and shows it in a tooltip on hover
   and keyboard focus; permissions, route preloading and the native export

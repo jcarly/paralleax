@@ -1,16 +1,22 @@
-import type { Interaction, Story, Trigger } from '../model/index.js';
+import type { Character, Interaction, Location, Story, Trigger } from '../model/index.js';
 import type { StoryChangeDelta } from '../history/story-history.js';
 import { toCanonicalTrigger } from '../triggers/model.js';
-import { STORY_CHANGE_BATCH_LIMITS } from './contract.js';
+import {
+  fieldSummary,
+  refOf,
+  wholeEntityFields,
+  type StoryChangeFieldSummary,
+} from './summary-fields.js';
 
 export type StoryChangeKind = 'added' | 'updated' | 'removed';
 
-export interface StoryChangeFieldSummary {
-  field: string;
-  before?: unknown;
-  after?: unknown;
-  /** True when a value was shortened to keep the summary bounded. */
-  truncated?: boolean;
+/** A Character or a Location added or updated by the batch. */
+export interface StoryChangeContextEntitySummary {
+  change: StoryChangeKind;
+  id: string;
+  ref?: string;
+  name: string;
+  fields: StoryChangeFieldSummary[];
 }
 
 export interface StoryChangeInteractionSummary {
@@ -46,11 +52,22 @@ export interface StoryChangeSummary {
     interactionsUpdated: number;
     triggersAdded: number;
     triggersUpdated: number;
+    charactersAdded: number;
+    charactersUpdated: number;
+    locationsAdded: number;
+    locationsUpdated: number;
     connectionsAdded: number;
     connectionsRemoved: number;
   };
+  /**
+   * True in a preview, where the IDs of created entities are provisional and
+   * only their `ref` is stable; false once committed, with final IDs.
+   */
+  provisionalIds: boolean;
   interactions: StoryChangeInteractionSummary[];
   triggers: StoryChangeTriggerSummary[];
+  characters: StoryChangeContextEntitySummary[];
+  locations: StoryChangeContextEntitySummary[];
   connections: StoryChangeConnectionSummary[];
   /** Authored Story fields outside interactions changed by the delta. */
   otherChangedFields: string[];
@@ -70,36 +87,89 @@ interface SummaryContext {
  * Trigger connections that appeared or disappeared. The delta stays the source
  * of truth; this summary only makes it reviewable.
  */
+export interface StoryChangeSummaryOptions {
+  /** Temporary reference of each entity the batch creates, by ID. */
+  refsById?: ReadonlyMap<string, string>;
+  /** True for a preview, where the IDs of created entities are provisional. */
+  provisionalIds?: boolean;
+}
+
 export function summarizeStoryChanges(
   before: Story,
   after: Story,
   delta: StoryChangeDelta | undefined,
-  refsById: ReadonlyMap<string, string> = new Map(),
+  options: StoryChangeSummaryOptions = {},
 ): StoryChangeSummary {
-  const summary: StoryChangeSummary = {
-    counts: {
-      interactionsAdded: 0,
-      interactionsUpdated: 0,
-      triggersAdded: 0,
-      triggersUpdated: 0,
-      connectionsAdded: 0,
-      connectionsRemoved: 0,
-    },
-    interactions: [],
-    triggers: [],
-    connections: diffConnections(before, after),
-    otherChangedFields: [],
-  };
-  const context = { summary, refsById };
+  const summary = emptySummary(diffConnections(before, after), options.provisionalIds ?? false);
+  const context = { summary, refsById: options.refsById ?? new Map() };
   for (const [field, fieldDelta] of Object.entries(delta?.kind === 'object' ? delta.fields : {})) {
-    if (field === 'interactions' && fieldDelta.kind === 'entities') {
-      summarizeInteractions(context, before, after, fieldDelta.entries);
-    } else {
+    if (!summarizeField(context, field, fieldDelta, { before, after })) {
       summary.otherChangedFields.push(field);
     }
   }
   countChanges(summary);
   return summary;
+}
+
+function emptySummary(
+  connections: StoryChangeConnectionSummary[],
+  provisionalIds: boolean,
+): StoryChangeSummary {
+  return {
+    counts: {
+      interactionsAdded: 0,
+      interactionsUpdated: 0,
+      triggersAdded: 0,
+      triggersUpdated: 0,
+      charactersAdded: 0,
+      charactersUpdated: 0,
+      locationsAdded: 0,
+      locationsUpdated: 0,
+      connectionsAdded: 0,
+      connectionsRemoved: 0,
+    },
+    provisionalIds,
+    interactions: [],
+    triggers: [],
+    characters: [],
+    locations: [],
+    connections,
+    otherChangedFields: [],
+  };
+}
+
+/** Summarizes an entity list of the Story; false for a field the summary omits. */
+function summarizeField(
+  context: SummaryContext,
+  field: string,
+  fieldDelta: StoryChangeDelta,
+  stories: { before: Story; after: Story },
+): boolean {
+  if (fieldDelta.kind !== 'entities') {
+    return false;
+  }
+  const { before, after } = stories;
+  switch (field) {
+    case 'interactions':
+      summarizeInteractions(context, before, after, fieldDelta.entries);
+      return true;
+    case 'characters':
+      summarizeContextEntities(context, context.summary.characters, {
+        previous: before.characters ?? [],
+        next: after.characters ?? [],
+        entries: fieldDelta.entries,
+      });
+      return true;
+    case 'locations':
+      summarizeContextEntities(context, context.summary.locations, {
+        previous: before.locations ?? [],
+        next: after.locations ?? [],
+        entries: fieldDelta.entries,
+      });
+      return true;
+    default:
+      return false;
+  }
 }
 
 function countChanges(summary: StoryChangeSummary): void {
@@ -108,6 +178,10 @@ function countChanges(summary: StoryChangeSummary): void {
   counts.interactionsUpdated = summary.interactions.filter(isUpdated).length;
   counts.triggersAdded = summary.triggers.filter(isAdded).length;
   counts.triggersUpdated = summary.triggers.filter(isUpdated).length;
+  counts.charactersAdded = summary.characters.filter(isAdded).length;
+  counts.charactersUpdated = summary.characters.filter(isUpdated).length;
+  counts.locationsAdded = summary.locations.filter(isAdded).length;
+  counts.locationsUpdated = summary.locations.filter(isUpdated).length;
   counts.connectionsAdded = summary.connections.filter(isAdded).length;
   counts.connectionsRemoved = summary.connections.length - counts.connectionsAdded;
 }
@@ -151,8 +225,8 @@ function summarizeInteraction(
     change === 'updated'
       ? Object.keys(changedFields)
           .filter((field) => field !== 'triggers')
-          .map((field) => fieldSummary(field, previous, next))
-      : wholeEntityFields(change, current, interactionSummaryExclusions);
+          .map((field) => fieldSummary(context, field, previous, next))
+      : wholeEntityFields(context, change, current, interactionSummaryExclusions);
   if (change === 'updated' && fields.length === 0) {
     return;
   }
@@ -164,6 +238,40 @@ function summarizeInteraction(
     fields,
   });
 }
+
+/** Characters and Locations share one summary: the same authored shape. */
+function summarizeContextEntities(
+  context: SummaryContext,
+  into: StoryChangeContextEntitySummary[],
+  source: {
+    previous: readonly (Character | Location)[];
+    next: readonly (Character | Location)[];
+    entries: EntityEntries;
+  },
+): void {
+  const previousById = new Map(source.previous.map((item) => [item.id, item]));
+  const nextById = new Map(source.next.map((item) => [item.id, item]));
+  for (const [id, entry] of Object.entries(source.entries)) {
+    const previous = previousById.get(id);
+    const next = nextById.get(id);
+    const change = entityChange(entry);
+    const current = next ?? previous;
+    if (!change || !current) {
+      continue;
+    }
+    const changedFields = entry.delta?.kind === 'object' ? Object.keys(entry.delta.fields) : [];
+    const fields =
+      change === 'updated'
+        ? changedFields.map((field) => fieldSummary(context, field, previous, next))
+        : wholeEntityFields(context, change, current, contextEntitySummaryExclusions);
+    if (change === 'updated' && fields.length === 0) {
+      continue;
+    }
+    into.push({ change, id, ...refOf(context.refsById, id), name: current.name, fields });
+  }
+}
+
+const contextEntitySummaryExclusions = new Set(['id', 'name']);
 
 interface TriggerOwner {
   id: string;
@@ -181,6 +289,7 @@ function summarizeOwnedTriggers(
   if (change !== 'updated') {
     for (const trigger of (owner.next ?? owner.previous)?.triggers ?? []) {
       const fields = wholeEntityFields(
+        context,
         change,
         toCanonicalTrigger(trigger),
         triggerSummaryExclusions,
@@ -208,19 +317,21 @@ function summarizeTriggers(
     if (!change || !trigger) {
       continue;
     }
-    const fields = changedTriggerFields(change, entry, { before, after, trigger });
+    const fields = changedTriggerFields(context, change, entry, { before, after, trigger });
     context.summary.triggers.push(triggerSummary(context, { change, owner, trigger, fields }));
   }
 }
 
 /** Changed fields of an updated Trigger, or every field of an added or removed one. */
 function changedTriggerFields(
+  context: SummaryContext,
   change: StoryChangeKind,
   entry: EntityEntry,
   triggers: { before: Trigger | undefined; after: Trigger | undefined; trigger: Trigger },
 ): StoryChangeFieldSummary[] {
   if (change !== 'updated') {
     return wholeEntityFields(
+      context,
       change,
       toCanonicalTrigger(triggers.trigger),
       triggerSummaryExclusions,
@@ -229,7 +340,7 @@ function changedTriggerFields(
   const previous = triggers.before === undefined ? undefined : toCanonicalTrigger(triggers.before);
   const next = triggers.after === undefined ? undefined : toCanonicalTrigger(triggers.after);
   const changed = entry.delta?.kind === 'object' ? Object.keys(entry.delta.fields) : [];
-  return changed.map((field) => fieldSummary(field, previous, next));
+  return changed.map((field) => fieldSummary(context, field, previous, next));
 }
 
 function triggerSummary(
@@ -266,34 +377,6 @@ const triggerSummaryExclusions = new Set([
   'conditions',
 ]);
 
-/**
- * Every authored field of an added or removed entity, so that a new body,
- * effect, condition, probability or timer can be reviewed before it is
- * committed. Empty values are omitted.
- */
-function wholeEntityFields(
-  change: 'added' | 'removed',
-  entity: object,
-  exclusions: ReadonlySet<string>,
-): StoryChangeFieldSummary[] {
-  return Object.entries(entity)
-    .filter(([field, value]) => !exclusions.has(field) && !isEmptyValue(value))
-    .map(([field]) =>
-      change === 'added'
-        ? fieldSummary(field, undefined, entity)
-        : fieldSummary(field, entity, undefined),
-    );
-}
-
-function isEmptyValue(value: unknown): boolean {
-  return (
-    value === undefined ||
-    value === null ||
-    value === '' ||
-    (Array.isArray(value) && value.length === 0)
-  );
-}
-
 function entityChange(entry: EntityEntry): StoryChangeKind | undefined {
   const delta = entry.delta;
   if (delta?.kind === 'value') {
@@ -304,44 +387,6 @@ function entityChange(entry: EntityEntry): StoryChangeKind | undefined {
   }
   // An entry with only `move` changes list order, which the summary omits.
   return delta === undefined ? undefined : 'updated';
-}
-
-function fieldSummary(field: string, before: object | undefined, after: object | undefined) {
-  const summary: StoryChangeFieldSummary = { field };
-  for (const [side, source] of [
-    ['before', before],
-    ['after', after],
-  ] as const) {
-    const value: unknown = source === undefined ? undefined : Reflect.get(source, field);
-    if (value === undefined) {
-      continue;
-    }
-    const bounded = boundValue(value);
-    summary[side] = bounded.value;
-    if (bounded.truncated) {
-      summary.truncated = true;
-    }
-  }
-  return summary;
-}
-
-function boundValue(value: unknown): { value: unknown; truncated: boolean } {
-  const { summaryTextLength, summaryValueLength } = STORY_CHANGE_BATCH_LIMITS;
-  if (typeof value === 'string') {
-    return value.length > summaryTextLength
-      ? { value: `${value.slice(0, summaryTextLength)}…`, truncated: true }
-      : { value, truncated: false };
-  }
-  const serialized = JSON.stringify(value);
-  if (serialized.length > summaryValueLength) {
-    return { value: { omitted: true, serializedLength: serialized.length }, truncated: true };
-  }
-  return { value, truncated: false };
-}
-
-function refOf(refsById: ReadonlyMap<string, string>, id: string): { ref?: string } {
-  const ref = refsById.get(id);
-  return ref === undefined ? {} : { ref };
 }
 
 function connectionKeys(story: Story): Map<string, StoryChangeConnectionSummary> {

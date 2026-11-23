@@ -34,6 +34,14 @@ import type {
   UpdateStatAssignmentDto,
   UpdateStatDefinitionDto,
 } from '../dto/stories.dto';
+import {
+  addCharacter,
+  addLocation,
+  applyCharacterUpdate,
+  applyLocationUpdate,
+  findCharacter,
+  findLocation,
+} from './story-context-edits';
 import { moveStoryItemInstance } from './story-items';
 import { storyMutationMetadata } from './story-mutation-results';
 import { StoryMutationService } from './story-mutations';
@@ -60,16 +68,7 @@ export class StoryContextService {
     const locationId = randomUUID();
     const updatedStory = await this.mutations.update(
       storyId,
-      (story) => {
-        (story.locations ??= []).push({
-          id: locationId,
-          name: input.name.trim(),
-          description: input.description ?? '',
-          ...(input.category?.trim() ? { category: input.category.trim() } : {}),
-          imageUrl: input.imageUrl?.trim() ?? '',
-        });
-        return story;
-      },
+      (story) => addLocation(story, locationId, input),
       userId,
       storyHistoryOperations.locationCreated,
     );
@@ -84,27 +83,7 @@ export class StoryContextService {
   ): Promise<LocationMutationResult> {
     const updatedStory = await this.mutations.update(
       storyId,
-      (story) => {
-        const location = this.location(story, locationId);
-        if (input.name !== undefined) {
-          location.name = input.name.trim();
-        }
-        if (input.description !== undefined) {
-          location.description = input.description;
-        }
-        if (input.category !== undefined) {
-          const category = input.category.trim();
-          if (category) {
-            location.category = category;
-          } else {
-            delete location.category;
-          }
-        }
-        if (input.imageUrl !== undefined) {
-          location.imageUrl = input.imageUrl.trim();
-        }
-        return story;
-      },
+      (story) => applyLocationUpdate(story, locationId, input),
       userId,
       storyHistoryOperations.locationUpdated,
     );
@@ -119,21 +98,7 @@ export class StoryContextService {
     const characterId = randomUUID();
     const updatedStory = await this.mutations.update(
       storyId,
-      (story) => {
-        if (input.isPlayable) {
-          this.clearPlayableCharacters(story);
-        }
-        (story.characters ??= []).push({
-          id: characterId,
-          name: input.name.trim(),
-          description: input.description ?? '',
-          ...(input.category?.trim() ? { category: input.category.trim() } : {}),
-          imageUrl: input.imageUrl?.trim() ?? '',
-          isPlayable: input.isPlayable ?? false,
-          stats: [],
-        });
-        return story;
-      },
+      (story) => addCharacter(story, characterId, input),
       userId,
       storyHistoryOperations.characterCreated,
     );
@@ -148,17 +113,7 @@ export class StoryContextService {
   ): Promise<CharacterMutationResult> {
     const updatedStory = await this.mutations.update(
       storyId,
-      (story) => {
-        const character = this.character(story, characterId);
-        this.updateCharacterFields(character, input);
-        if (input.isPlayable !== undefined) {
-          if (input.isPlayable) {
-            this.clearPlayableCharacters(story);
-          }
-          character.isPlayable = input.isPlayable;
-        }
-        return story;
-      },
+      (story) => applyCharacterUpdate(story, characterId, input),
       userId,
       storyHistoryOperations.characterUpdated,
     );
@@ -441,20 +396,12 @@ export class StoryContextService {
     return { ...storyMutationMetadata(updatedStory), characterId, itemId };
   }
 
-  private location(story: Story, id: string) {
-    const location = (story.locations ?? []).find((item) => item.id === id);
-    if (!location) {
-      throw new NotFoundException('Location not found');
-    }
-    return location;
+  private character(story: Story, id: string) {
+    return findCharacter(story, id);
   }
 
-  private character(story: Story, id: string) {
-    const character = (story.characters ?? []).find((item) => item.id === id);
-    if (!character) {
-      throw new NotFoundException('Character not found');
-    }
-    return character;
+  private location(story: Story, id: string) {
+    return findLocation(story, id);
   }
 
   private stat(story: Story, characterId: string, statId: string) {
@@ -487,35 +434,6 @@ export class StoryContextService {
       throw new NotFoundException('Character item not found');
     }
     return item;
-  }
-
-  private clearPlayableCharacters(story: Story): void {
-    for (const character of story.characters ?? []) {
-      character.isPlayable = false;
-    }
-  }
-
-  private updateCharacterFields(
-    character: NonNullable<Story['characters']>[number],
-    input: UpdateCharacterDto,
-  ): void {
-    if (input.name !== undefined) {
-      character.name = input.name.trim();
-    }
-    if (input.description !== undefined) {
-      character.description = input.description;
-    }
-    if (input.category !== undefined) {
-      const category = input.category.trim();
-      if (category) {
-        character.category = category;
-      } else {
-        delete character.category;
-      }
-    }
-    if (input.imageUrl !== undefined) {
-      character.imageUrl = input.imageUrl.trim();
-    }
   }
 
   private updateItemDefinitionFields(

@@ -109,6 +109,28 @@ assistants: the editor, imports or tests can produce the same batches.
   also split the proposal check from the PostgreSQL commit transaction.
   Proposals can move there later without changing the contract.
 
+## Amendment, 2026-11-22: characters and locations
+
+The union gains `create_character`, `update_character`, `create_location` and
+`update_location`, with no new endpoint, tool or preview/commit mechanism.
+
+- **One set of rules, again.** The creation and update rules of characters and
+  locations were closures of `StoryContextService`. They move to
+  `story-context-edits.ts` (like `story-graph-edits.ts`), used by the single
+  endpoints and by batches; fields are validated by the same DTOs.
+- **Typed references.** Resolution takes the entity kind from the field:
+  `locationId` and `characterIds` of an interaction, and the condition fields
+  listed in `STORY_CHANGE_CONDITION_REFERENCE_KINDS`, both in Trigger groups and
+  conditional text blocks. Kind and ordering rules are unchanged. Stats and items
+  can extend the same table later; they are not generalized now.
+- **Playable character.** Making a character playable clears the flag of the
+  others, as in the editor; the summary shows those characters as updated.
+- **Provisional IDs.** The summary carries `provisionalIds` and, for each field
+  value naming a created entity, `references: [{ id, ref }]`. No proposal or
+  history format changes: the stored operations and the single history delta
+  already cover these entities, so undo and redo treat the whole batch as one
+  change.
+
 ## Consequences
 
 - Assistants and future clients get an atomic, reviewable and stale-safe write

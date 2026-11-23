@@ -9,7 +9,11 @@ import {
 } from '@paralleax/shared';
 import {
   UpdateInteractionDto,
+  type CreateCharacterDto,
+  type CreateLocationDto,
   type CreateTriggerDto,
+  type UpdateCharacterDto,
+  type UpdateLocationDto,
   type UpdateTriggerDto,
 } from '../dto/stories.dto';
 
@@ -28,7 +32,20 @@ const operationKeys: Record<StoryChangeOperation['type'], readonly string[]> = {
   update_interaction: ['type', 'interaction', 'fields'],
   create_trigger: ['type', 'ref', 'interaction', 'inputInteractions', 'fields'],
   update_trigger: ['type', 'interaction', 'trigger', 'inputInteractions', 'fields'],
+  create_character: ['type', 'ref', 'fields'],
+  update_character: ['type', 'character', 'fields'],
+  create_location: ['type', 'ref', 'fields'],
+  update_location: ['type', 'location', 'fields'],
 };
+
+/** Operations whose `fields` object is required. */
+const fieldsRequired: ReadonlySet<StoryChangeOperation['type']> = new Set([
+  'update_interaction',
+  'create_character',
+  'update_character',
+  'create_location',
+  'update_location',
+]);
 
 const validatorOptions = { whitelist: true, forbidNonWhitelisted: true } as const;
 
@@ -65,7 +82,7 @@ export function validateStoryChangeOperationShape(operation: unknown, index: num
   checkTargets(operation, type, error);
   checkReferenceList(operation.inputInteractions, error);
   checkOptionalString(operation.ref, 'ref', error);
-  checkObject(operation.fields, 'fields', type === 'update_interaction', error);
+  checkObject(operation.fields, 'fields', fieldsRequired.has(type), error);
   if (type === 'create_interaction') {
     checkDefaultTrigger(operation.defaultTrigger, error);
   }
@@ -96,6 +113,8 @@ function checkTargets(
     (type === 'update_trigger' && !isTemporaryReferenceValue(operation.trigger));
   checkReference(operation, 'interaction', interactionRequired, error);
   checkReference(operation, 'trigger', type === 'update_trigger', error);
+  checkReference(operation, 'character', type === 'update_character', error);
+  checkReference(operation, 'location', type === 'update_location', error);
 }
 
 function checkReference(
@@ -136,6 +155,18 @@ export function toInteractionInput(
 export function toTriggerInput<T extends CreateTriggerDto | UpdateTriggerDto>(
   dto: new () => T,
   fields: ResolvedStoryChangeTriggerFields & { inputInteractionIds?: string[] },
+  index: number,
+  path: string,
+): { input?: T; diagnostics: Diagnostics } {
+  return validateDto(dto, fields, index, path);
+}
+
+/** Validates Character or Location fields with the single-edit DTO. */
+export function toContextEntityInput<
+  T extends CreateCharacterDto | UpdateCharacterDto | CreateLocationDto | UpdateLocationDto,
+>(
+  dto: new () => T,
+  fields: object,
   index: number,
   path: string,
 ): { input?: T; diagnostics: Diagnostics } {

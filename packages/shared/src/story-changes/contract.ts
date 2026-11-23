@@ -31,12 +31,32 @@ export const STORY_CHANGE_REFERENCE_PATTERN = /^[A-Za-z][A-Za-z0-9_-]{0,63}$/;
  */
 export type StoryChangeReference = string | { ref: string };
 
-type WithInteractionReference<Condition> = Condition extends { interactionId: string }
-  ? Omit<Condition, 'interactionId'> & { interactionId: StoryChangeReference }
-  : Condition;
+/**
+ * Condition fields that name a Story entity, and the kind of entity each one
+ * names. A batch may give a temporary reference in any of them. Statistics and
+ * items extend this table when their operations exist.
+ */
+export const STORY_CHANGE_CONDITION_REFERENCE_KINDS = {
+  interactionId: 'interaction',
+  characterId: 'character',
+  locationId: 'location',
+} as const satisfies Record<string, StoryChangeEntityKind>;
 
-/** A Trigger condition whose visited-interaction target may be a temporary reference. */
-export type StoryChangeCondition = WithInteractionReference<TriggerCondition>;
+type WithReferences<Condition> = Omit<
+  Condition,
+  keyof typeof STORY_CHANGE_CONDITION_REFERENCE_KINDS
+> & {
+  [
+    Field in keyof typeof STORY_CHANGE_CONDITION_REFERENCE_KINDS & keyof Condition
+  ]: StoryChangeReference;
+};
+
+/** A Trigger condition whose entity targets may be temporary references. */
+export type StoryChangeCondition = TriggerCondition extends infer Condition
+  ? Condition extends unknown
+    ? WithReferences<Condition>
+    : never
+  : never;
 
 export interface StoryChangeConditionGroup {
   /** Generated when omitted. */
@@ -56,8 +76,10 @@ export interface StoryChangeInteractionFields {
   /** HTML body, sanitized by the server. */
   body?: string | null;
   position?: Position;
-  locationId?: string | null;
-  characterIds?: string[];
+  /** An existing ID or a temporary reference; null removes the location. */
+  locationId?: StoryChangeReference | null;
+  /** Existing IDs or temporary references; replaces the characters. */
+  characterIds?: StoryChangeReference[];
   statEffects?: StatEffect[];
   itemEffects?: ItemEffect[];
   conditionalTextBlocks?: StoryChangeConditionalTextBlock[];
@@ -110,8 +132,63 @@ export interface UpdateTriggerChange {
   fields?: StoryChangeTriggerFields;
 }
 
+/**
+ * Fields shared by characters and locations, with the limits of the editor
+ * DTOs. Omitted fields are left unchanged; an empty `category` removes it.
+ */
+export interface StoryChangeContextEntityFields {
+  name?: string;
+  description?: string;
+  category?: string;
+  imageUrl?: string;
+}
+
+/** Character fields an operation may set. */
+export interface StoryChangeCharacterFields extends StoryChangeContextEntityFields {
+  /** Making a character playable clears the flag of every other character. */
+  isPlayable?: boolean;
+}
+
+/** Location fields an operation may set. */
+export type StoryChangeLocationFields = StoryChangeContextEntityFields;
+
+export interface CreateCharacterChange {
+  type: 'create_character';
+  /** Temporary reference to the created Character. */
+  ref?: string;
+  /** `name` is required, as for the editor. */
+  fields: StoryChangeCharacterFields & { name: string };
+}
+
+export interface UpdateCharacterChange {
+  type: 'update_character';
+  character: StoryChangeReference;
+  fields: StoryChangeCharacterFields;
+}
+
+export interface CreateLocationChange {
+  type: 'create_location';
+  /** Temporary reference to the created Location. */
+  ref?: string;
+  /** `name` is required, as for the editor. */
+  fields: StoryChangeLocationFields & { name: string };
+}
+
+export interface UpdateLocationChange {
+  type: 'update_location';
+  location: StoryChangeReference;
+  fields: StoryChangeLocationFields;
+}
+
 export type StoryChangeOperation =
-  CreateInteractionChange | UpdateInteractionChange | CreateTriggerChange | UpdateTriggerChange;
+  | CreateInteractionChange
+  | UpdateInteractionChange
+  | CreateTriggerChange
+  | UpdateTriggerChange
+  | CreateCharacterChange
+  | UpdateCharacterChange
+  | CreateLocationChange
+  | UpdateLocationChange;
 
 export type StoryChangeOperationType = StoryChangeOperation['type'];
 
@@ -120,6 +197,10 @@ export const STORY_CHANGE_OPERATION_TYPES = [
   'update_interaction',
   'create_trigger',
   'update_trigger',
+  'create_character',
+  'update_character',
+  'create_location',
+  'update_location',
 ] as const satisfies readonly StoryChangeOperationType[];
 
 export interface StoryChangeBatch {
@@ -142,7 +223,14 @@ export interface StoryChangeDiagnostic {
   details?: Record<string, unknown>;
 }
 
-export type StoryChangeEntityKind = 'interaction' | 'trigger';
+export const STORY_CHANGE_ENTITY_KINDS = [
+  'interaction',
+  'trigger',
+  'character',
+  'location',
+] as const;
+
+export type StoryChangeEntityKind = (typeof STORY_CHANGE_ENTITY_KINDS)[number];
 
 /** An entity created by the batch. */
 export interface StoryChangeCreatedEntity {

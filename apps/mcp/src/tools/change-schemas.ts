@@ -25,9 +25,14 @@ const reference = z
   .describe('An existing ID, or { "ref": "name" } declared by an earlier operation of the batch.');
 
 const condition = z
-  .strictObject({ ...triggerConditionFields, interactionId: reference.optional() })
+  .strictObject({
+    ...triggerConditionFields,
+    interactionId: reference.optional(),
+    locationId: reference.optional(),
+    characterId: reference.optional(),
+  })
   .describe(
-    'Exactly one kind: {interactionId, hasBeenVisited} | {locationId, isCurrentLocation} | {characterId, isPresent} | {statId, operator, value | comparisonStatId | expression} | {itemDefinitionId, isOwned} | {temporal}.',
+    'interactionId, locationId and characterId accept an existing ID or { "ref" } to an entity created earlier in the batch. Exactly one kind: {interactionId, hasBeenVisited} | {locationId, isCurrentLocation} | {characterId, isPresent} | {statId, operator, value | comparisonStatId | expression} | {itemDefinitionId, isOwned} | {temporal}.',
   );
 
 const conditionGroups = z
@@ -53,8 +58,15 @@ const interactionFields = z.strictObject({
   body: body.optional(),
   position: position.optional().describe('Omit to use the editor placement rule.'),
   durationMinutes: z.number().int().min(0).max(1_000_000).optional(),
-  locationId: entityId.nullable().optional().describe('null removes the location.'),
-  characterIds: z.array(entityId).max(500).optional().describe('Replaces the characters.'),
+  locationId: reference
+    .nullable()
+    .optional()
+    .describe('An existing location ID or { "ref" } to a created location; null removes it.'),
+  characterIds: z
+    .array(reference)
+    .max(500)
+    .optional()
+    .describe('Existing character IDs or { "ref" } to created characters; replaces the list.'),
   statEffects: z.array(statEffect).max(500).optional().describe('Replaces all stat effects.'),
   itemEffects: z.array(itemEffect).max(500).optional().describe('Replaces all item effects.'),
   conditionalTextBlocks: z
@@ -67,6 +79,25 @@ const interactionFields = z.strictObject({
     .max(500)
     .optional(),
 });
+
+const contextEntityFields = {
+  name: z.string().min(1).max(200),
+  description: z.string().optional().describe('Plain text.'),
+  category: z.string().max(100).optional().describe('An empty string removes the category.'),
+  imageUrl: z.string().max(2048).optional().describe('An empty string removes the image.'),
+};
+const characterOnlyFields = {
+  isPlayable: z
+    .boolean()
+    .optional()
+    .describe('At most one character is playable: true clears the flag of the others.'),
+};
+
+/** Creation requires a name, as the editor does; an update changes only the listed fields. */
+const characterFields = z.strictObject({ ...contextEntityFields, ...characterOnlyFields });
+const characterUpdateFields = characterFields.partial();
+const locationFields = z.strictObject(contextEntityFields);
+const locationUpdateFields = locationFields.partial();
 
 const inputInteractions = z
   .array(reference)
@@ -104,6 +135,26 @@ const operation = z.discriminatedUnion('type', [
     trigger: reference,
     inputInteractions: inputInteractions.optional().describe('Replaces the inputs.'),
     fields: triggerFields.optional(),
+  }),
+  z.strictObject({
+    type: z.literal('create_character'),
+    ref: refName.optional().describe('Name for later operations of the batch.'),
+    fields: characterFields.describe('name is required.'),
+  }),
+  z.strictObject({
+    type: z.literal('update_character'),
+    character: reference,
+    fields: characterUpdateFields.describe('Only the listed fields change.'),
+  }),
+  z.strictObject({
+    type: z.literal('create_location'),
+    ref: refName.optional().describe('Name for later operations of the batch.'),
+    fields: locationFields.describe('name is required.'),
+  }),
+  z.strictObject({
+    type: z.literal('update_location'),
+    location: reference,
+    fields: locationUpdateFields.describe('Only the listed fields change.'),
   }),
 ]);
 
