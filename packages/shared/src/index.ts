@@ -12,6 +12,7 @@ export * from './model/index.js';
 export * from './operations/index.js';
 export * from './reader/index.js';
 export * from './stats/index.js';
+export * from './story-changes/index.js';
 export * from './time/index.js';
 export * from './triggers/index.js';
 export * from './user-identity.js';

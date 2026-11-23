@@ -1695,6 +1695,14 @@ described in [Current Scope](current-scope.md).
 > exists ahead of stages 1 to 4 ([ADR-047](decisions/ADR-047-local-mcp-adapter-over-http-api.md),
 > [roadmap decision](roadmap.md#priority-decision-2026-11-20)). The stages below
 > remain the plan for any wider release.
+>
+> Status 2026-11-21: the prototype was validated functionally. The atomic
+> grouped mutations of stage 1 and the preview/commit part of stage 4 exist for
+> Interaction and Trigger creation and updates
+> ([ADR-050](decisions/ADR-050-editorial-change-batches.md),
+> [roadmap decision](roadmap.md#priority-decision-2026-11-21)); one batch maps to
+> one history event. Deletion, context entities, read-only or delegated
+> credentials and stages 2, 3 and 5 remain open.
 
 #### 1. Provider-neutral authoring API and operation boundary
 

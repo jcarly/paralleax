@@ -1,9 +1,8 @@
 import { join } from 'node:path';
 import { expect, it } from 'vitest';
 import { apiUrlFromEnvironment, sessionFilePath } from './config.js';
-import { IdempotencyCache } from './idempotency.js';
 import { createToolLogger } from './logger.js';
-import { apiError, connectPerTest, interaction, stubFetch } from './test/fake-api.js';
+import { apiError, connectPerTest, stubFetch } from './test/fake-api.js';
 
 const connect = connectPerTest();
 const storyId = '44444444-4444-4444-8444-444444444444';
@@ -25,54 +24,6 @@ it('writes one JSON line per tool call', () => {
   const lines: string[] = [];
   createToolLogger((line) => lines.push(line)).log({ tool: 't', outcome: 'ok', durationMs: 3 });
   expect(lines[0]).toMatch(/^\{"at":".+","tool":"t","outcome":"ok","durationMs":3\}\n$/);
-});
-
-it('forgets failed, expired and evicted idempotent calls', async () => {
-  let now = 0;
-  const cache = new IdempotencyCache<number>({ ttlMs: 10, maxEntries: 1, now: () => now });
-  const fail = () => Promise.reject(new Error('x'));
-  await expect(cache.run('s', 'key-0001', {}, fail)).rejects.toThrow();
-  expect((await cache.run('s', 'key-0001', { a: 1 }, () => Promise.resolve(1))).replayed).toBe(
-    false,
-  );
-  // Key order and undefined fields do not change the fingerprint.
-  const replay = await cache.run('s', 'key-0001', { b: undefined, a: 1 }, () => Promise.resolve(2));
-  expect(replay).toEqual({ result: 1, replayed: true });
-  // maxEntries 1: a second key evicts the first one.
-  expect((await cache.run('s', 'key-0002', [1], () => Promise.resolve(3))).result).toBe(3);
-  expect((await cache.run('s', 'key-0001', {}, () => Promise.resolve(4))).result).toBe(4);
-  now = 20;
-  expect((await cache.run('s', 'key-0001', { c: 1 }, () => Promise.resolve(5))).result).toBe(5);
-  expect((await cache.run('s', undefined, {}, () => Promise.resolve(6))).replayed).toBe(false);
-});
-
-it('places a root interaction with the shared root rule', async () => {
-  const story = { id: storyId, title: 'S', interactions: [interaction('a')] };
-  const api = stubFetch({
-    [`GET ${base}`]: { body: story },
-    [`POST ${base}/interactions`]: (request) => ({
-      body: { revision: 2, interaction: interaction('n', { position: request.body.position }) },
-    }),
-    [`PATCH ${base}/interactions/n`]: { body: { revision: 3, interaction: interaction('n') } },
-  });
-  const { call } = await connect(api.fetchImpl);
-  const result = await call('create_interaction', { storyId, title: 'Root' });
-  expect(result.isError).toBe(false);
-  expect(api.requests[1]?.body).not.toHaveProperty('parentId');
-  expect(api.requests[1]?.body).toHaveProperty('position');
-});
-
-it('refuses a parent outside the story before creating anything', async () => {
-  const page = { revision: 1, hasMore: false, interactions: [] };
-  const api = stubFetch({ [`GET ${base}/editor/interactions`]: { body: page } });
-  const { call } = await connect(api.fetchImpl);
-  const result = await call('create_interaction', {
-    storyId,
-    title: 'Orphan',
-    parentInteractionId: 'missing',
-  });
-  expect(result.data).toMatchObject({ error: { code: 'PARENT_INTERACTION_NOT_FOUND' } });
-  expect(api.requests.map(({ method }) => method)).toEqual(['GET']);
 });
 
 it('reads structure without context and tolerates missing content entries', async () => {
@@ -121,4 +72,94 @@ it('maps unknown API error bodies to their HTTP status', async () => {
   expect((await second.call('list_stories', {})).data).toMatchObject({
     error: { hint: expect.stringContaining('cannot') as unknown },
   });
+});
+
+const emptyPages = { revision: 1, hasMore: false };
+
+/** The routes of a story with no interactions and one page of context. */
+function contextRoutes(context: object) {
+  return {
+    [`GET ${base}/editor`]: {
+      body: {
+        id: storyId,
+        title: 'S',
+        revision: 1,
+        interactionCount: 0,
+        triggerCount: 0,
+        contextCounts: {},
+      },
+    },
+    [`GET ${base}/editor/interactions`]: { body: { ...emptyPages, interactions: [] } },
+    [`GET ${base}/editor/content/interactions`]: { body: { ...emptyPages, interactions: [] } },
+    [`GET ${base}/editor/triggers`]: { body: { ...emptyPages, triggers: [] } },
+    [`GET ${base}/editor/content/triggers`]: { body: { ...emptyPages, triggers: [] } },
+    [`GET ${base}/editor/context`]: { body: context },
+  };
+}
+
+it('reads every stat assignment of the context, page by page, and flags a next page', async () => {
+  const assignment = (id: string, ownerType: string, ownerId?: string) => ({
+    id,
+    statDefinitionId: 'definition',
+    ownerType,
+    ...(ownerId === undefined ? {} : { ownerId }),
+    initialValue: 100,
+  });
+  const api = stubFetch(
+    contextRoutes({
+      ...emptyPages,
+      hasMore: true,
+      locations: [],
+      characters: [],
+      itemDefinitions: [],
+      statDefinitions: [
+        { id: 'definition', name: 'Reserve', valueType: 'number', changePerHour: -1 },
+      ],
+      statAssignments: [
+        assignment('a1', 'story'),
+        assignment('a2', 'character', 'c1'),
+        assignment('a3', 'itemDefinition', 'i1'),
+      ],
+    }),
+  );
+  const { call } = await connect(api.fetchImpl);
+
+  const result = await call('get_story_structure', { storyId, contextPage: 3 });
+
+  expect(result.data).toMatchObject({
+    context: {
+      page: 3,
+      hasMore: true,
+      statDefinitions: [
+        { id: 'definition', name: 'Reserve', valueType: 'number', changePerHour: -1 },
+      ],
+      statAssignments: [
+        { id: 'a1', ownerType: 'story', initialValue: 100 },
+        { id: 'a2', ownerType: 'character', ownerId: 'c1' },
+        { id: 'a3', ownerType: 'itemDefinition', ownerId: 'i1' },
+      ],
+    },
+  });
+  expect(api.requests.find(({ path }) => path.endsWith('/editor/context'))?.query).toMatchObject({
+    page: '3',
+  });
+});
+
+it('fails with a contract error when the context response omits the stat assignments', async () => {
+  const api = stubFetch(
+    contextRoutes({
+      ...emptyPages,
+      locations: [],
+      characters: [],
+      itemDefinitions: [],
+      statDefinitions: [],
+    }),
+  );
+  const { call } = await connect(api.fetchImpl);
+
+  const result = await call('get_story_structure', { storyId });
+
+  expect(result.isError).toBe(true);
+  expect(result.data).toMatchObject({ error: { code: 'API_CONTRACT_MISMATCH' } });
+  expect(result.data).not.toHaveProperty('context');
 });

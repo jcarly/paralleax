@@ -66,6 +66,7 @@ const structureRoutes = {
       locations: [{ id: 'loc', name: 'Relay station', description: '' }],
       characters: [],
       statDefinitions: [{ id: 's', name: 'Trust' }],
+      statAssignments: [],
       itemDefinitions: [],
     },
   },
@@ -90,20 +91,50 @@ const storyList = {
   hasMore: false,
 };
 
-it('exposes only the six prototype tools with strict input schemas', async () => {
+it('exposes read tools and the preview/commit pair only, with strict input schemas', async () => {
   const { client } = await connect(stubFetch({}).fetchImpl);
   const { tools } = await client.listTools();
   expect(tools.map(({ name }) => name).sort()).toEqual([
-    'create_interaction',
-    'create_trigger',
+    'commit_story_changes',
     'get_interaction',
     'get_story_structure',
     'list_stories',
-    'update_interaction',
+    'preview_story_changes',
   ]);
   for (const tool of tools) {
     expect(tool.inputSchema.additionalProperties).toBe(false);
-    expect(tool.annotations?.destructiveHint).toBe(false);
+    // Only the commit changes a story; it can replace authored content.
+    expect(tool.annotations?.destructiveHint).toBe(tool.name === 'commit_story_changes');
+  }
+});
+
+it('explains how to create characters and locations and reference them', async () => {
+  const { client } = await connect(stubFetch({}).fetchImpl);
+  const instructions = client.getInstructions() ?? '';
+  expect(instructions).toContain('create_character');
+  expect(instructions).toContain('create_location');
+  expect(instructions).toContain('{characterId, isPresent}');
+  expect(instructions).toContain('provisional');
+  const { tools } = await client.listTools();
+  const preview = tools.find(({ name }) => name === 'preview_story_changes');
+  expect(preview?.description).toContain('characters, locations');
+});
+
+it('describes the stat operations in the preview tool and its input schema', async () => {
+  const { client } = await connect(stubFetch({}).fetchImpl);
+  const { tools } = await client.listTools();
+  const preview = tools.find(({ name }) => name === 'preview_story_changes');
+
+  expect(preview?.description).toContain('stat definitions and assignments');
+  expect(preview?.description).toContain('effects and conditions name the assignment');
+  const operations = JSON.stringify(preview?.inputSchema);
+  for (const type of [
+    'create_stat_definition',
+    'update_stat_definition',
+    'create_stat_assignment',
+    'update_stat_assignment',
+  ]) {
+    expect(operations).toContain(type);
   }
 });
 

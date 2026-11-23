@@ -1,6 +1,7 @@
 #!/usr/bin/env node
 // Runs the MCP end-to-end spec against a real API process and PostgreSQL.
-// Requires the built API (npm run build -w @paralleax/api) and
+// Requires the built API and MCP server (npm run build -w @paralleax/api and
+// -w @paralleax/mcp) and
 // MCP_E2E_DATABASE_URL pointing at a dedicated database whose name ends with
 // "_test": the script migrates it and creates accounts and stories in it.
 import { spawn } from 'node:child_process';

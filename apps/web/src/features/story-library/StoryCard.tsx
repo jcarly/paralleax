@@ -1,8 +1,13 @@
+import type { ReactNode } from 'react';
 import { useTranslation } from 'react-i18next';
-import { Link } from 'react-router-dom';
 import type { StorySummary } from '@paralleax/shared';
+import { Link } from 'react-router-dom';
 import { FieldHelpTooltip } from '../../components/FieldHelpTooltip';
+import { CanvasActionIcon, type CanvasActionIconName } from '../../components/StoryCanvasToolbar';
 import { loadStoryEditor, loadStoryPlayer } from '../../pages/storyRouteLoaders';
+
+type StoryCardOnlyIconName = 'edit' | 'export' | 'access';
+type StoryCardIconName = CanvasActionIconName | StoryCardOnlyIconName;
 
 export function StoryCard({
   story,
@@ -58,29 +63,11 @@ function StoryCardActions({
   deleting: boolean;
   deleteDisabled: boolean;
 }) {
-  const { t } = useTranslation();
   const canEdit = story.capabilities?.canEdit === true;
   const canManage = story.capabilities?.canManage === true;
   return (
     <div>
-      <Link
-        className={`${canEdit ? 'product-secondary' : 'product-primary'} compact`}
-        to={`/stories/${story.id}/play`}
-        onMouseEnter={() => void loadStoryPlayer()}
-        onFocus={() => void loadStoryPlayer()}
-      >
-        {t('library.card.read')}
-      </Link>
-      {canEdit ? <StoryEditLink storyId={story.id} label={t('library.card.edit')} /> : null}
-      {canEdit ? (
-        <a
-          className="product-ghost compact"
-          href={`/api/stories/${encodeURIComponent(story.id)}/export`}
-          download
-        >
-          {t('library.card.export')}
-        </a>
-      ) : null}
+      <StoryCardOpenLinks story={story} canEdit={canEdit} />
       {canManage ? (
         <StoryManageActions
           story={story}
@@ -93,16 +80,114 @@ function StoryCardActions({
   );
 }
 
-function StoryEditLink({ storyId, label }: { storyId: string; label: string }) {
+function StoryCardOpenLinks({ story, canEdit }: { story: StorySummary; canEdit: boolean }) {
+  const { t } = useTranslation();
   return (
-    <Link
-      className="product-primary compact"
-      to={`/stories/${storyId}/edit`}
-      onMouseEnter={() => void loadStoryEditor()}
-      onFocus={() => void loadStoryEditor()}
+    <>
+      <StoryCardIconLink
+        className={canEdit ? 'product-secondary' : 'product-primary'}
+        icon="play"
+        label={t('library.card.read')}
+        to={`/stories/${story.id}/play`}
+        preload={loadStoryPlayer}
+      />
+      {canEdit ? (
+        <>
+          <StoryCardIconLink
+            className="product-primary"
+            icon="edit"
+            label={t('library.card.edit')}
+            to={`/stories/${story.id}/edit`}
+            preload={loadStoryEditor}
+          />
+          <StoryCardIconLink
+            className="product-ghost"
+            icon="export"
+            label={t('library.card.export')}
+            href={`/api/stories/${encodeURIComponent(story.id)}/export`}
+          />
+        </>
+      ) : null}
+    </>
+  );
+}
+
+/** Icon-only navigation or download link; the name stays accessible and shows in a tooltip. */
+function StoryCardIconLink({
+  className,
+  icon,
+  label,
+  to,
+  href,
+  preload,
+}: {
+  className: string;
+  icon: StoryCardIconName;
+  label: string;
+  to?: string;
+  href?: string;
+  preload?: () => Promise<unknown>;
+}) {
+  return (
+    <FieldHelpTooltip
+      label={label}
+      help={label}
+      className={`${className} compact library-card-icon-link`}
+      onTriggerFocus={preload ? () => void preload() : undefined}
+      onTriggerPointerEnter={preload ? () => void preload() : undefined}
+      renderTrigger={(iconContent) =>
+        renderStoryCardLinkTrigger({ children: iconContent, to, href })
+      }
     >
-      {label} <span aria-hidden="true">→</span>
-    </Link>
+      <StoryCardActionIcon name={icon} />
+    </FieldHelpTooltip>
+  );
+}
+
+function StoryCardActionIcon({ name }: { name: StoryCardIconName }) {
+  if (name === 'edit') {
+    return (
+      <svg aria-hidden="true" viewBox="0 0 24 24">
+        <path d="m4 20 1-4L16 5l3 3L8 19l-4 1Z" />
+        <path d="m14 7 3 3" />
+      </svg>
+    );
+  }
+  if (name === 'export') {
+    return (
+      <svg aria-hidden="true" viewBox="0 0 24 24">
+        <path d="M12 4v11M7 11l5 5 5-5" />
+        <path d="M5 20h14" />
+      </svg>
+    );
+  }
+  if (name === 'access') {
+    return (
+      <svg aria-hidden="true" viewBox="0 0 24 24">
+        <rect x="5" y="11" width="14" height="9" rx="2" />
+        <path d="M8 11V8a4 4 0 0 1 8 0v3" />
+      </svg>
+    );
+  }
+  return <CanvasActionIcon name={name} />;
+}
+
+function renderStoryCardLinkTrigger({
+  children,
+  to,
+  href,
+}: {
+  children: ReactNode;
+  to?: string;
+  href?: string;
+}) {
+  if (to !== undefined) {
+    return <Link to={to}>{children}</Link>;
+  }
+  return (
+    <a href={href} download>
+      {children}
+    </a>
   );
 }
 
@@ -120,14 +205,13 @@ function StoryManageActions({
   const { t } = useTranslation();
   return (
     <>
-      <Link
-        className="product-ghost compact"
+      <StoryCardIconLink
+        className="product-ghost"
+        icon="access"
+        label={t('library.card.access')}
         to={`/stories/${story.id}/edit?settings=access`}
-        onMouseEnter={() => void loadStoryEditor()}
-        onFocus={() => void loadStoryEditor()}
-      >
-        {t('library.card.access')}
-      </Link>
+        preload={loadStoryEditor}
+      />
       <FieldHelpTooltip
         label={t(deleting ? 'library.card.deleting' : 'library.card.delete')}
         help={t('library.card.deleteTooltip')}
@@ -141,10 +225,7 @@ function StoryManageActions({
           );
         }}
       >
-        <svg aria-hidden="true" viewBox="0 0 24 24">
-          <path d="M4 7h16M9 7V4h6v3M7 7l1 14h8l1-14" />
-          <path d="M10 11v6M14 11v6" />
-        </svg>
+        <CanvasActionIcon name="delete" />
       </FieldHelpTooltip>
     </>
   );

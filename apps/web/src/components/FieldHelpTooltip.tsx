@@ -1,7 +1,44 @@
 import { createPortal } from 'react-dom';
-import type { KeyboardEvent as ReactKeyboardEvent, ReactNode } from 'react';
-import { useContext, useEffect, useId, useLayoutEffect, useRef, useState } from 'react';
+import type { KeyboardEvent as ReactKeyboardEvent, ReactElement, ReactNode } from 'react';
+import { useContext, useEffect, useId, useRef, useState } from 'react';
 import { ModalPortalContext } from './modalPortalContext';
+
+export type FieldHelpTooltipTriggerProps = {
+  ref: (element: HTMLElement | null) => void;
+  'aria-describedby': string;
+  'aria-label': string;
+  className: string;
+  onBlur: () => void;
+  onFocus: () => void;
+  onKeyDown: (event: ReactKeyboardEvent<HTMLElement>) => void;
+  onPointerEnter: () => void;
+  onPointerLeave: () => void;
+};
+
+type FieldHelpTooltipTriggerElement = ReactElement<{
+  href?: string;
+  to?: string;
+  download?: boolean;
+  disabled?: boolean;
+  type?: 'button' | 'submit' | 'reset';
+}>;
+
+type FieldHelpTooltipTriggerRenderer = (children: ReactNode) => FieldHelpTooltipTriggerElement;
+
+function resolveTriggerRenderer(
+  renderTrigger: FieldHelpTooltipTriggerRenderer | undefined,
+  disabled: boolean | undefined,
+  onClick: (() => void) | undefined,
+): FieldHelpTooltipTriggerRenderer {
+  if (renderTrigger) {
+    return renderTrigger;
+  }
+  return (children) => (
+    <button disabled={disabled} type="button" onClick={onClick}>
+      {children ?? '?'}
+    </button>
+  );
+}
 
 export function FieldHelpTooltip({
   label,
@@ -10,6 +47,9 @@ export function FieldHelpTooltip({
   className,
   disabled,
   onClick,
+  onTriggerFocus = () => undefined,
+  onTriggerPointerEnter = () => undefined,
+  renderTrigger,
 }: {
   label: string;
   help: string;
@@ -17,10 +57,13 @@ export function FieldHelpTooltip({
   className?: string;
   disabled?: boolean;
   onClick?: () => void;
+  onTriggerFocus?: () => void;
+  onTriggerPointerEnter?: () => void;
+  renderTrigger?: (children: ReactNode) => FieldHelpTooltipTriggerElement;
 }) {
   const modalPortal = useContext(ModalPortalContext);
   const tooltipId = useId();
-  const triggerRef = useRef<HTMLButtonElement>(null);
+  const triggerRef = useRef<HTMLElement | null>(null);
   const tooltipRef = useRef<HTMLSpanElement>(null);
   const closeTimerRef = useRef<number | undefined>(undefined);
   const triggerHoveredRef = useRef(false);
@@ -70,7 +113,7 @@ export function FieldHelpTooltip({
     }, 160);
   }
 
-  function dismissTooltip(event: ReactKeyboardEvent<HTMLButtonElement>) {
+  function dismissTooltip(event: ReactKeyboardEvent<HTMLElement>) {
     if (event.key !== 'Escape' || !open) {
       return;
     }
@@ -97,53 +140,51 @@ export function FieldHelpTooltip({
     if (!open) {
       return;
     }
-    const reposition = () => {
-      updatePosition();
-    };
-    window.addEventListener('resize', reposition);
-    window.addEventListener('scroll', reposition, true);
+    window.addEventListener('resize', updatePosition);
+    window.addEventListener('scroll', updatePosition, true);
     return () => {
-      window.removeEventListener('resize', reposition);
-      window.removeEventListener('scroll', reposition, true);
+      window.removeEventListener('resize', updatePosition);
+      window.removeEventListener('scroll', updatePosition, true);
     };
   }, [open]);
 
-  useLayoutEffect(() => {
-    if (open) {
-      updatePosition();
-    }
-  }, [open]);
+  const triggerProps: FieldHelpTooltipTriggerProps = {
+    ref: (element: HTMLElement | null) => {
+      triggerRef.current = element;
+    },
+    'aria-describedby': tooltipId,
+    'aria-label': children === undefined ? `? — ${label}` : label,
+    className: `field-help-tooltip-trigger${className ? ` ${className}` : ''}`,
+    onBlur: () => {
+      triggerFocusedRef.current = false;
+      scheduleTooltipClose();
+    },
+    onFocus: () => {
+      triggerFocusedRef.current = true;
+      showTooltip();
+      onTriggerFocus();
+    },
+    onKeyDown: dismissTooltip,
+    onPointerEnter: () => {
+      triggerHoveredRef.current = true;
+      showTooltip();
+      onTriggerPointerEnter();
+    },
+    onPointerLeave: () => {
+      triggerHoveredRef.current = false;
+      scheduleTooltipClose();
+    },
+  };
+
+  const triggerElement = resolveTriggerRenderer(renderTrigger, disabled, onClick)(children);
+  const Trigger = triggerElement.type;
+  const trigger = (
+    <Trigger key={triggerElement.key ?? undefined} {...triggerElement.props} {...triggerProps} />
+  );
 
   return (
     <>
-      <button
-        aria-describedby={tooltipId}
-        aria-label={children === undefined ? `? — ${label}` : label}
-        className={`field-help-tooltip-trigger${className ? ` ${className}` : ''}`}
-        disabled={disabled}
-        ref={triggerRef}
-        type="button"
-        onClick={onClick}
-        onBlur={() => {
-          triggerFocusedRef.current = false;
-          scheduleTooltipClose();
-        }}
-        onFocus={() => {
-          triggerFocusedRef.current = true;
-          showTooltip();
-        }}
-        onKeyDown={dismissTooltip}
-        onPointerEnter={() => {
-          triggerHoveredRef.current = true;
-          showTooltip();
-        }}
-        onPointerLeave={() => {
-          triggerHoveredRef.current = false;
-          scheduleTooltipClose();
-        }}
-      >
-        {children ?? '?'}
-      </button>
+      {trigger}
       {createPortal(
         <span
           className={`field-help-tooltip-content${open ? ' is-visible' : ''}`}

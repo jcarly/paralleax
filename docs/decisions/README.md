@@ -53,6 +53,7 @@ This folder records accepted architecture and product-shaping decisions.
 - [ADR-047 - Local MCP Adapter over the HTTP API](ADR-047-local-mcp-adapter-over-http-api.md) (prototype)
 - [ADR-048 - PostHog Surveys for Voluntary In-App Feedback](ADR-048-posthog-survey-feedback.md)
 - [ADR-049 - Portable Trigger Probability Identity](ADR-049-portable-trigger-probability.md)
+- [ADR-050 - Editorial Change Batches: Preview, Diff and Commit](ADR-050-editorial-change-batches.md)
 
 ## Proposals
 

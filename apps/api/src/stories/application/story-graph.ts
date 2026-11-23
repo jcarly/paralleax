@@ -1,33 +1,17 @@
-import {
-  BadRequestException,
-  ConflictException,
-  Injectable,
-  NotFoundException,
-} from '@nestjs/common';
+import { BadRequestException, Injectable, NotFoundException } from '@nestjs/common';
 import { randomUUID } from 'node:crypto';
 import {
   deleteGraphDecorationFromStory,
   deleteInteractionFromStory,
   deleteTriggerInStory,
-  findNewTriggerInputConflict,
-  getTriggerAppearanceProbability,
-  getTriggerConditionGroups,
-  getTriggerTimerSeconds,
-  getStoryItemEntries,
-  isStoryDate,
-  isStoryTime,
-  normalizeTriggerInputIds,
   storyHistoryOperations,
   updateGraphDecorationInStory,
   updateStoryGraphPositions,
-  updateTriggerInStory,
   type GraphDecorationMutationResult,
   type GraphDecorationDeletionResult,
   type InteractionDeletionResult,
   type InteractionMutationResult,
   type Story,
-  type TriggerCondition,
-  type TriggerConditionGroup,
   type TriggerMutationResult,
   type TriggerDeletionResult,
 } from '@paralleax/shared';
@@ -35,27 +19,24 @@ import type {
   CreateGraphDecorationDto,
   CreateInteractionDto,
   CreateTriggerDto,
-  TriggerConditionDto,
   UpdateGraphDecorationDto,
   UpdateInteractionDto,
   UpdateStoryGraphPositionsDto,
   UpdateTriggerDto,
 } from '../dto/stories.dto';
-import { sanitizeRichText } from '../rich-text';
-import { apiErrorResponse } from '../../operations/api-error-response';
 import { buildGraphDecoration } from './graph-decorations';
-import { buildInteractionWithDefaultTrigger } from './interaction-factory';
+import {
+  addInteraction,
+  addTrigger,
+  applyInteractionUpdate,
+  applyTriggerUpdate,
+  defaultInteractionPosition,
+  findInteraction,
+  validateNativeInteractionRelations,
+} from './story-graph-edits';
 import { storyMutationMetadata } from './story-mutation-results';
 import { StoryMutationService } from './story-mutations';
-import { buildStatCondition, validateStatEffects } from './story-stats';
 
-type ConditionKind = 'interaction' | 'location' | 'character' | 'stat' | 'item' | 'temporal';
-type ConditionReferences = {
-  interactions: ReadonlySet<string>;
-  locations: ReadonlySet<string>;
-  characters: ReadonlySet<string>;
-  itemDefinitions: ReadonlySet<string>;
-};
 type UpdateTriggerArgs = [
   storyId: string,
   interactionId: string,
@@ -63,91 +44,6 @@ type UpdateTriggerArgs = [
   input: UpdateTriggerDto,
   userId: string,
 ];
-
-function conditionValue<T>(value: T | undefined): T {
-  if (value === undefined) {
-    throw new BadRequestException('Condition is invalid');
-  }
-  return value;
-}
-
-function matchesInteractionCondition(condition: TriggerConditionDto): boolean {
-  return condition.interactionId !== undefined && condition.hasBeenVisited !== undefined;
-}
-
-function matchesLocationCondition(condition: TriggerConditionDto): boolean {
-  return condition.locationId !== undefined && condition.isCurrentLocation !== undefined;
-}
-
-function matchesCharacterCondition(condition: TriggerConditionDto): boolean {
-  return condition.characterId !== undefined && condition.isPresent !== undefined;
-}
-
-function matchesStatCondition(condition: TriggerConditionDto): boolean {
-  const statOperandCount = [
-    condition.value !== undefined,
-    condition.comparisonStatId !== undefined,
-    condition.expression !== undefined,
-  ].filter(Boolean).length;
-  return (
-    condition.statId !== undefined && condition.operator !== undefined && statOperandCount === 1
-  );
-}
-
-function matchesItemCondition(condition: TriggerConditionDto): boolean {
-  return condition.itemDefinitionId !== undefined && condition.isOwned !== undefined;
-}
-
-function conditionKind(condition: TriggerConditionDto): ConditionKind {
-  const supportedKinds: Array<[ConditionKind, boolean]> = [
-    ['interaction', matchesInteractionCondition(condition)],
-    ['location', matchesLocationCondition(condition)],
-    ['character', matchesCharacterCondition(condition)],
-    ['stat', matchesStatCondition(condition)],
-    ['item', matchesItemCondition(condition)],
-    ['temporal', condition.temporal !== undefined],
-  ];
-  const kinds = supportedKinds.filter(([, matches]) => matches).map(([kind]) => kind);
-  if (kinds.length !== 1) {
-    throw new BadRequestException('A condition must contain exactly one supported condition type');
-  }
-  const kind = kinds[0];
-  if (kind === undefined) {
-    throw new BadRequestException('Condition is invalid');
-  }
-  return kind;
-}
-
-function assertItemEffectsBelongToStory(
-  story: Story,
-  itemEffects: NonNullable<UpdateInteractionDto['itemEffects']>,
-): void {
-  const itemIds = new Set(getStoryItemEntries(story).map(({ item }) => item.id));
-  const itemDefinitionIds = new Set((story.itemDefinitions ?? []).map(({ id }) => id));
-  const characterIds = new Set((story.characters ?? []).map(({ id }) => id));
-  const hasForeignTarget = itemEffects.some(
-    ({ itemId, itemDefinitionId, characterId }) =>
-      Number(itemId !== undefined) + Number(itemDefinitionId !== undefined) !== 1 ||
-      (itemId !== undefined && !itemIds.has(itemId)) ||
-      (itemDefinitionId !== undefined && !itemDefinitionIds.has(itemDefinitionId)) ||
-      (characterId !== undefined && !characterIds.has(characterId)),
-  );
-  if (hasForeignTarget) {
-    throw new BadRequestException('Item effects must belong to the same story');
-  }
-}
-
-function assertUniqueItemEffectTargets(
-  itemEffects: NonNullable<UpdateInteractionDto['itemEffects']>,
-): void {
-  const effectTargets = itemEffects.map(
-    ({ itemId, itemDefinitionId, characterId }) =>
-      `${characterId ?? ''}:${itemId ?? `definition:${itemDefinitionId}`}`,
-  );
-  if (new Set(effectTargets).size !== itemEffects.length) {
-    throw new BadRequestException('An interaction can only affect an item once');
-  }
-}
 
 function validateGraphPositionUpdates(story: Story, input: UpdateStoryGraphPositionsDto): void {
   const interactionIds = new Set(story.interactions.map(({ id }) => id));
@@ -199,23 +95,7 @@ export class StoryGraphService {
     story: Story,
     interaction: Story['interactions'][number],
   ): string | undefined {
-    if (new Set(interaction.characterIds ?? []).size !== (interaction.characterIds ?? []).length) {
-      return 'Interaction characters must be unique';
-    }
-    const copy = { ...interaction };
-    this.updateInteractionRelationships(story, copy, interaction);
-    this.updateInteractionEffects(story, copy, interaction);
-    for (const block of interaction.conditionalTextBlocks ?? []) {
-      this.conditions(story, block.conditions);
-    }
-    for (const trigger of interaction.triggers) {
-      if (new Set(trigger.inputInteractionIds).size !== trigger.inputInteractionIds.length) {
-        return 'Trigger inputs must be unique';
-      }
-      this.assertInteractionReferences(story, trigger.inputInteractionIds);
-      this.triggerConditionGroups(story, trigger, trigger);
-    }
-    return undefined;
+    return validateNativeInteractionRelations(story, interaction);
   }
 
   async createInteraction(
@@ -230,17 +110,11 @@ export class StoryGraphService {
         if (input.parentId && !story.interactions.some((item) => item.id === input.parentId)) {
           throw new NotFoundException('Parent interaction not found');
         }
-        story.interactions.push(
-          buildInteractionWithDefaultTrigger({
-            id: interactionId,
-            inputInteractionIds: input.parentId ? [input.parentId] : [],
-            position: input.position ?? {
-              x: 80 + story.interactions.length * 40,
-              y: 100 + story.interactions.length * 30,
-            },
-          }),
-        );
-        return story;
+        return addInteraction(story, {
+          interactionId,
+          inputInteractionIds: input.parentId ? [input.parentId] : [],
+          position: input.position ?? defaultInteractionPosition(story),
+        });
       },
       userId,
       storyHistoryOperations.interactionCreated,
@@ -256,7 +130,7 @@ export class StoryGraphService {
   ): Promise<InteractionMutationResult> {
     const updatedStory = await this.mutations.update(
       storyId,
-      (story) => this.applyInteractionUpdate(story, interactionId, input),
+      (story) => applyInteractionUpdate(story, interactionId, input),
       userId,
       storyHistoryOperations.interactionUpdated,
     );
@@ -287,7 +161,7 @@ export class StoryGraphService {
     const updatedStory = await this.mutations.update(
       storyId,
       (story) => {
-        this.interaction(story, interactionId);
+        findInteraction(story, interactionId);
         return deleteInteractionFromStory(story, interactionId);
       },
       userId,
@@ -353,34 +227,7 @@ export class StoryGraphService {
     const [storyId, interactionId, triggerId, input, userId] = args;
     const updatedStory = await this.mutations.update(
       storyId,
-      (story) => {
-        const interaction = this.interaction(story, interactionId);
-        const trigger = interaction.triggers.find((item) => item.id === triggerId);
-        if (!trigger) {
-          throw new NotFoundException('Trigger not found');
-        }
-        const conditionGroups = this.triggerConditionGroups(story, input, trigger);
-        const inputInteractionIds =
-          input.inputInteractionIds === undefined
-            ? trigger.inputInteractionIds
-            : normalizeTriggerInputIds(input.inputInteractionIds);
-        this.assertInteractionReferences(story, inputInteractionIds);
-        if (input.inputInteractionIds !== undefined) {
-          this.assertNoTriggerConnectionConflicts(story, interactionId, inputInteractionIds, {
-            triggerId,
-            existingInputInteractionIds: trigger.inputInteractionIds,
-          });
-        }
-        return updateTriggerInStory(story, interactionId, triggerId, {
-          inputInteractionIds,
-          conditionGroups,
-          appearanceProbability:
-            input.appearanceProbability ?? getTriggerAppearanceProbability(trigger),
-          timerSeconds:
-            input.timerSeconds === undefined ? getTriggerTimerSeconds(trigger) : input.timerSeconds,
-          ...(input.position === undefined ? {} : { position: input.position }),
-        });
-      },
+      (story) => applyTriggerUpdate(story, interactionId, triggerId, input),
       userId,
       storyHistoryOperations.triggerUpdated,
     );
@@ -396,21 +243,7 @@ export class StoryGraphService {
     const triggerId = randomUUID();
     const updatedStory = await this.mutations.update(
       storyId,
-      (story) => {
-        const conditionGroups = this.triggerConditionGroups(story, input);
-        const inputInteractionIds = normalizeTriggerInputIds(input.inputInteractionIds ?? []);
-        this.assertInteractionReferences(story, inputInteractionIds);
-        this.assertNoTriggerConnectionConflicts(story, interactionId, inputInteractionIds);
-        this.interaction(story, interactionId).triggers.push({
-          id: triggerId,
-          inputInteractionIds,
-          conditionGroups,
-          appearanceProbability: input.appearanceProbability ?? 100,
-          timerSeconds: input.timerSeconds ?? null,
-          ...(input.position === undefined ? {} : { position: input.position }),
-        });
-        return story;
-      },
+      (story) => addTrigger(story, interactionId, triggerId, input),
       userId,
       storyHistoryOperations.triggerCreated,
     );
@@ -427,7 +260,7 @@ export class StoryGraphService {
     const updatedStory = await this.mutations.update(
       storyId,
       (story) => {
-        const interaction = this.interaction(story, interactionId);
+        const interaction = findInteraction(story, interactionId);
         if (!interaction.triggers.some((item) => item.id === triggerId)) {
           throw new NotFoundException('Trigger not found');
         }
@@ -440,97 +273,6 @@ export class StoryGraphService {
     return { ...storyMutationMetadata(updatedStory), interactionId, triggerId, triggerRemoved };
   }
 
-  private applyInteractionUpdate(
-    story: Story,
-    interactionId: string,
-    input: UpdateInteractionDto,
-  ): Story {
-    const interaction = this.interaction(story, interactionId);
-    this.updateInteractionContent(story, interaction, input);
-    this.updateInteractionRelationships(story, interaction, input);
-    this.updateInteractionEffects(story, interaction, input);
-    if (input.durationMinutes !== undefined) {
-      interaction.durationMinutes = input.durationMinutes;
-    }
-    return story;
-  }
-
-  private updateInteractionContent(
-    story: Story,
-    interaction: Story['interactions'][number],
-    input: UpdateInteractionDto,
-  ): void {
-    if (input.title !== undefined) {
-      interaction.title = input.title;
-    }
-    if (input.conditionalTextBlocks !== undefined) {
-      const blockIds = input.conditionalTextBlocks.map(({ id }) => id);
-      if (new Set(blockIds).size !== blockIds.length) {
-        throw new BadRequestException('Conditional text block IDs must be unique');
-      }
-      interaction.conditionalTextBlocks = input.conditionalTextBlocks.map((block) => ({
-        id: block.id,
-        conditions: this.conditions(story, block.conditions),
-      }));
-    }
-    if (input.body !== undefined) {
-      interaction.body = sanitizeRichText(input.body ?? '', story);
-    }
-    if (input.position !== undefined) {
-      interaction.position = input.position;
-    }
-  }
-
-  private updateInteractionRelationships(
-    story: Story,
-    interaction: Story['interactions'][number],
-    input: UpdateInteractionDto,
-  ): void {
-    if (input.locationId !== undefined) {
-      if (
-        input.locationId !== null &&
-        !(story.locations ?? []).some(({ id }) => id === input.locationId)
-      ) {
-        throw new BadRequestException('Interaction location must belong to the same story');
-      }
-      if (input.locationId === null) {
-        delete interaction.locationId;
-      } else {
-        interaction.locationId = input.locationId;
-      }
-    }
-    if (input.characterIds !== undefined) {
-      const characterIds = new Set((story.characters ?? []).map(({ id }) => id));
-      if (input.characterIds.some((id) => !characterIds.has(id))) {
-        throw new BadRequestException('Interaction characters must belong to the same story');
-      }
-      interaction.characterIds = [...new Set(input.characterIds)];
-    }
-  }
-
-  private updateInteractionEffects(
-    story: Story,
-    interaction: Story['interactions'][number],
-    input: UpdateInteractionDto,
-  ): void {
-    if (input.statEffects !== undefined) {
-      interaction.statEffects = validateStatEffects(story, input.statEffects);
-    }
-    if (input.itemEffects !== undefined) {
-      assertItemEffectsBelongToStory(story, input.itemEffects);
-      assertUniqueItemEffectTargets(input.itemEffects);
-      interaction.itemEffects = input.itemEffects;
-    }
-  }
-
-  private interaction(story: Story, id: string) {
-    const interaction = story.interactions.find((item) => item.id === id);
-    if (!interaction) {
-      throw new NotFoundException('Interaction not found');
-    }
-    return interaction;
-  }
-
   private graphDecoration(story: Story, id: string) {
     const decoration = (story.graphDecorations ?? []).find((item) => item.id === id);
     if (!decoration) {
@@ -539,207 +281,9 @@ export class StoryGraphService {
     return decoration;
   }
 
-  private assertInteractionReferences(story: Story, inputInteractionIds: string[]) {
-    const interactionIds = new Set(story.interactions.map(({ id }) => id));
-    if (inputInteractionIds.some((id) => !interactionIds.has(id))) {
-      throw new BadRequestException('Trigger references must belong to the same story');
-    }
-  }
-
-  private assertNoTriggerConnectionConflicts(
-    story: Story,
-    interactionId: string,
-    inputInteractionIds: string[],
-    options: { triggerId?: string; existingInputInteractionIds?: string[] } = {},
-  ) {
-    const conflict = findNewTriggerInputConflict(
-      story,
-      interactionId,
-      inputInteractionIds,
-      options,
-    );
-    if (conflict) {
-      throw new ConflictException(
-        apiErrorResponse(
-          'TRIGGER_CONNECTION_EXISTS',
-          'Another Trigger already connects these Interactions.',
-          conflict,
-        ),
-      );
-    }
-  }
-
-  private triggerConditionGroups(
-    story: Story,
-    input: CreateTriggerDto | UpdateTriggerDto,
-    current?: Story['interactions'][number]['triggers'][number],
-  ): TriggerConditionGroup[] {
-    if (input.conditionGroups !== undefined && input.conditions !== undefined) {
-      throw new BadRequestException('Use conditionGroups instead of legacy conditions');
-    }
-    const groups = this.buildTriggerConditionGroups(story, input, current);
-    if (new Set(groups.map(({ id }) => id)).size !== groups.length) {
-      throw new BadRequestException('Trigger condition group IDs must be unique');
-    }
-    if (groups.reduce((count, group) => count + group.conditions.length, 0) > 500) {
-      throw new BadRequestException('A Trigger can contain at most 500 conditions');
-    }
-    return groups;
-  }
-
-  private buildTriggerConditionGroups(
-    story: Story,
-    input: CreateTriggerDto | UpdateTriggerDto,
-    current?: Story['interactions'][number]['triggers'][number],
-  ): TriggerConditionGroup[] {
-    if (input.conditionGroups !== undefined) {
-      return input.conditionGroups.map((group) => ({
-        id: group.id,
-        conditions: this.conditions(story, group.conditions),
-      }));
-    }
-    if (input.conditions !== undefined) {
-      return [
-        {
-          id: current ? getTriggerConditionGroups(current)[0].id : randomUUID(),
-          conditions: this.conditions(story, input.conditions),
-        },
-      ];
-    }
-    return current ? getTriggerConditionGroups(current) : [{ id: randomUUID(), conditions: [] }];
-  }
-
-  private conditions(story: Story, conditions: TriggerConditionDto[]): TriggerCondition[] {
-    const references: ConditionReferences = {
-      interactions: new Set(story.interactions.map(({ id }) => id)),
-      locations: new Set((story.locations ?? []).map(({ id }) => id)),
-      characters: new Set((story.characters ?? []).map(({ id }) => id)),
-      itemDefinitions: new Set((story.itemDefinitions ?? []).map(({ id }) => id)),
-    };
-    return conditions.map((condition) => this.condition(story, condition, references));
-  }
-
-  private condition(
-    story: Story,
-    condition: TriggerConditionDto,
-    references: ConditionReferences,
-  ): TriggerCondition {
-    switch (conditionKind(condition)) {
-      case 'interaction':
-        return this.interactionCondition(references, condition);
-      case 'location':
-        return this.locationCondition(references, condition);
-      case 'character':
-        return this.characterCondition(references, condition);
-      case 'stat':
-        return this.statCondition(story, condition);
-      case 'item':
-        return this.itemCondition(references, condition);
-      case 'temporal':
-        return this.temporalCondition(condition);
-      default:
-        throw new BadRequestException('Condition is invalid');
-    }
-  }
-
-  private interactionCondition(
-    references: ConditionReferences,
-    condition: TriggerConditionDto,
-  ): TriggerCondition {
-    const interactionId = conditionValue(condition.interactionId);
-    const hasBeenVisited = conditionValue(condition.hasBeenVisited);
-    this.assertConditionReference(references.interactions, interactionId);
-    return { interactionId, hasBeenVisited };
-  }
-
-  private locationCondition(
-    references: ConditionReferences,
-    condition: TriggerConditionDto,
-  ): TriggerCondition {
-    const locationId = conditionValue(condition.locationId);
-    const isCurrentLocation = conditionValue(condition.isCurrentLocation);
-    this.assertConditionReference(references.locations, locationId);
-    return { locationId, isCurrentLocation };
-  }
-
-  private characterCondition(
-    references: ConditionReferences,
-    condition: TriggerConditionDto,
-  ): TriggerCondition {
-    const characterId = conditionValue(condition.characterId);
-    const isPresent = conditionValue(condition.isPresent);
-    this.assertConditionReference(references.characters, characterId);
-    return { characterId, isPresent };
-  }
-
-  private itemCondition(
-    references: ConditionReferences,
-    condition: TriggerConditionDto,
-  ): TriggerCondition {
-    const itemDefinitionId = conditionValue(condition.itemDefinitionId);
-    const isOwned = conditionValue(condition.isOwned);
-    this.assertConditionReference(references.itemDefinitions, itemDefinitionId);
-    return { itemDefinitionId, isOwned };
-  }
-
-  private statCondition(story: Story, condition: TriggerConditionDto): TriggerCondition {
-    const target = {
-      statId: conditionValue(condition.statId),
-      ...(condition.itemId ? { itemId: condition.itemId } : {}),
-      operator: conditionValue(condition.operator),
-    };
-    if (condition.comparisonStatId !== undefined) {
-      return buildStatCondition(story, {
-        ...target,
-        comparisonStatId: condition.comparisonStatId,
-        ...(condition.comparisonItemId ? { comparisonItemId: condition.comparisonItemId } : {}),
-      });
-    }
-    if (condition.expression !== undefined) {
-      return buildStatCondition(story, { ...target, expression: condition.expression });
-    }
-    return buildStatCondition(story, { ...target, value: conditionValue(condition.value) });
-  }
-
-  private temporalCondition(condition: TriggerConditionDto): TriggerCondition {
-    const temporal = conditionValue(condition.temporal);
-    const dates = [...new Set(temporal.dates ?? [])];
-    const dateRanges = temporal.dateRanges ?? [];
-    const weekdays = [...new Set(temporal.weekdays ?? [])];
-    const timeSlots = temporal.timeSlots ?? [];
-    if (
-      dates.length + dateRanges.length + weekdays.length + timeSlots.length === 0 ||
-      dates.some((date) => !isStoryDate(date)) ||
-      dateRanges.some(
-        ({ startDate, endDate }) =>
-          !isStoryDate(startDate) || !isStoryDate(endDate) || startDate > endDate,
-      ) ||
-      timeSlots.some(
-        ({ startTime, endTime }) =>
-          !isStoryTime(startTime) || !isStoryTime(endTime) || startTime === endTime,
-      )
-    ) {
-      throw new BadRequestException('Temporal condition is invalid');
-    }
-    return {
-      temporal: {
-        dates,
-        dateRanges: dateRanges.map((range) => ({ ...range })),
-        weekdays,
-        timeSlots: timeSlots.map((slot) => ({ ...slot })),
-      },
-    };
-  }
-
-  private assertConditionReference(validIds: ReadonlySet<string>, referenceId: string): void {
-    if (!validIds.has(referenceId)) {
-      throw new BadRequestException('Condition references must belong to the same story');
-    }
-  }
-
   private interactionResult(story: Story, interactionId: string): InteractionMutationResult {
     return {
-      interaction: structuredClone(this.interaction(story, interactionId)),
+      interaction: structuredClone(findInteraction(story, interactionId)),
       ...storyMutationMetadata(story),
     };
   }
@@ -756,7 +300,7 @@ export class StoryGraphService {
     interactionId: string,
     triggerId: string,
   ): TriggerMutationResult {
-    const trigger = this.interaction(story, interactionId).triggers.find(
+    const trigger = findInteraction(story, interactionId).triggers.find(
       ({ id }) => id === triggerId,
     );
     if (!trigger) {

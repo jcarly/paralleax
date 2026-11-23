@@ -7,6 +7,51 @@
   server before touching any file or database, naming only the versions. CI
   verifies backup and restoration against PostgreSQL 17 and 18, the production
   major (Railway `postgres-ssl:18`), and checks that an older client is refused.
+- Change batches (ADR-050 amendment) now create and update stat definitions and
+  assignments: `create_stat_definition`, `update_stat_definition`,
+  `create_stat_assignment` and `update_stat_assignment`, with the editor's
+  stat rules (the same functions and DTOs) and an explicit, required
+  `valueType`. The owner of an assignment is the Story, a character, a location
+  or an existing item definition. Temporary references work for definitions,
+  assignments and owners, in interaction `statEffects[].statId` and in stat
+  conditions (`statId`, `comparisonStatId`; Trigger groups and conditional text),
+  with kind checks that never confuse a definition with an assignment. The
+  preview summary lists every added or updated definition and assignment, whoever
+  owns it, with definition, owner and initial value. `get_story_structure` now
+  returns every stat assignment, page by page (`contextPage`). References inside
+  expressions, item instances and deletion are not supported yet. No migration;
+  `story-changes-context.e2e.spec.ts` and the new stats spec join the PostgreSQL
+  CI list.
+
+- Change batches (ADR-050) now create and update characters and locations:
+  `create_character`, `update_character`, `create_location` and
+  `update_location`, with the editor's fields and rules, which moved from
+  `StoryContextService` to shared functions used by both paths. Temporary
+  references work for them in interaction `locationId` and `characterIds` and in
+  `characterId` and `locationId` conditions (Trigger groups and conditional text),
+  with kind checks. The preview summary lists added and updated characters and
+  locations, marks IDs as provisional and annotates fields that name created
+  entities with their `ref`. The MCP tools and server instructions expose the new
+  operations; deletion, stats, items and groups are still out of scope.
+
+- Story library cards show Read, Edit, Export and Access as icon-only links
+  (PAR-7, H). Each keeps its accessible name and shows it in a tooltip on hover
+  and keyboard focus; permissions, route preloading and the native export
+  download are unchanged. `FieldHelpTooltip` can now render its trigger as a
+  router link or a download link.
+- Added editorial change batches (ADR-050, [docs/story-changes.md](docs/story-changes.md)).
+  `POST /api/stories/:id/changes/preview` applies an ordered list of
+  Interaction and Trigger creations and updates, with temporary references
+  between them, to an unsaved copy, returns a reviewable diff (every field of
+  created entities) and per-operation diagnostics, and stores the valid batch
+  as a one-hour proposal. `POST /api/stories/:id/changes/commit` applies only a
+  stored proposal, by ID, against its revision in one transaction, one revision
+  and one "Grouped changes applied" history entry, refuses stale, expired or
+  foreign proposals, and answers a repeated commit without writing again.
+- The local MCP server replaces `create_interaction`, `update_interaction` and
+  `create_trigger` with `preview_story_changes` and `commit_story_changes`
+  (annotated as destructive), and its instructions require a preview and the
+  author's explicit confirmation before every commit.
 - `paralleax-mcp login` reports `API_UNREACHABLE` with the API address when the
   API cannot be reached, instead of a generic `INTERNAL_ERROR`.
 - The Inspector shows where an Interaction comes from and drops repeated

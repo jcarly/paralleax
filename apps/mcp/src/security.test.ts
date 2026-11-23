@@ -18,15 +18,14 @@ it('sends nothing to the API without a session', async () => {
 it('maps API authentication, access and not-found errors without leaking the token', async () => {
   const api = stubFetch({
     'GET /stories': apiError(401, 'AUTHENTICATION_REQUIRED'),
-    [`POST /stories/${storyId}/interactions`]: apiError(403, 'FORBIDDEN'),
+    [`POST /stories/${storyId}/changes/preview`]: apiError(403, 'FORBIDDEN'),
     [`GET /stories/${storyId}`]: apiError(404, 'STORY_NOT_FOUND'),
   });
   const { call, logs } = await connect(api.fetchImpl);
   const unauthenticated = await call('list_stories', {});
-  const forbidden = await call('create_interaction', {
+  const forbidden = await call('preview_story_changes', {
     storyId,
-    title: 'x',
-    position: { x: 0, y: 0 },
+    operations: [{ type: 'create_interaction', fields: { title: 'x' } }],
   });
   const hidden = await call('get_interaction', { storyId, interactionId: 'a' });
   expect(unauthenticated.data).toMatchObject({
@@ -42,33 +41,41 @@ it('maps API authentication, access and not-found errors without leaking the tok
   ]);
 });
 
+const createScene = (fields: Record<string, unknown>) => [{ type: 'create_interaction', fields }];
+
 it.each([
-  ['an unknown field', { storyId, title: 'x', ownerId: 'someone-else' }],
-  ['a path traversal identifier', { storyId: '..', title: 'x' }],
-  ['an empty title', { storyId, title: '   ' }],
-  ['an oversized body', { storyId, title: 'x', body: 'x'.repeat(64_001) }],
-])('rejects %s before calling the API', async (_case, args) => {
+  ['an unknown field', { storyId, operations: createScene({ title: 'x' }), ownerId: 'someone' }],
+  ['a path traversal identifier', { storyId: '..', operations: createScene({ title: 'x' }) }],
+  ['an empty title', { storyId, operations: createScene({ title: '   ' }) }],
+  ['an oversized body', { storyId, operations: createScene({ body: 'x'.repeat(64_001) }) }],
+  ['an unknown field in an operation', { storyId, operations: createScene({ ownerId: 'x' }) }],
+  ['a deletion', { storyId, operations: [{ type: 'delete_interaction', interaction: 'a' }] }],
+  ['an empty batch', { storyId, operations: [] }],
+  [
+    'an invalid reference name',
+    { storyId, operations: [{ type: 'create_interaction', ref: '../x' }] },
+  ],
+  [
+    'an update without fields',
+    { storyId, operations: [{ type: 'update_interaction', interaction: 'a' }] },
+  ],
+])('rejects a preview with %s before calling the API', async (_case, args) => {
   const api = stubFetch({});
   const { client } = await connect(api.fetchImpl);
   const result = await client
-    .callTool({ name: 'create_interaction', arguments: args })
+    .callTool({ name: 'preview_story_changes', arguments: args })
     .catch(() => ({ isError: true }));
   expect(result.isError).toBe(true);
   expect(api.requests).toHaveLength(0);
 });
 
-it('refuses an empty update and a trigger without inputs', async () => {
+it('rejects a malformed proposal identifier before calling the API', async () => {
   const api = stubFetch({});
   const { client } = await connect(api.fetchImpl);
-  const empty = await client.callTool({
-    name: 'update_interaction',
-    arguments: { storyId, interactionId: 'a', changes: {} },
-  });
-  const noInputs = await client.callTool({
-    name: 'create_trigger',
-    arguments: { storyId, targetInteractionId: 'a', inputInteractionIds: [] },
-  });
-  expect([empty.isError, noInputs.isError]).toEqual([true, true]);
+  const result = await client
+    .callTool({ name: 'commit_story_changes', arguments: { storyId, proposalId: 'abc' } })
+    .catch(() => ({ isError: true }));
+  expect(result.isError).toBe(true);
   expect(api.requests).toHaveLength(0);
 });
 

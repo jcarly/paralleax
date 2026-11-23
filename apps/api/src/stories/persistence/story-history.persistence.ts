@@ -37,13 +37,15 @@ export async function insertStoryHistoryEvent(
     changes: StoryChangeDelta;
     createdAt: string;
     revertsEventId?: string;
+    /** Commit of a change batch (ADR-050): its proposal and the IDs it created. */
+    proposal?: { id: string; result: unknown };
   },
 ): Promise<string> {
   const result = await client.query<{ id: string | number }>(
     `INSERT INTO story_change_events
        (story_id, actor_user_id, revision, kind, operation, changes,
-        reverts_event_id, created_at)
-     VALUES ($1, $2, $3, $4, $5, $6::jsonb, $7, $8)
+        reverts_event_id, created_at, proposal_id, proposal_result)
+     VALUES ($1, $2, $3, $4, $5, $6::jsonb, $7, $8, $9, $10::jsonb)
      RETURNING id`,
     [
       input.storyId,
@@ -54,9 +56,57 @@ export async function insertStoryHistoryEvent(
       JSON.stringify(input.changes),
       input.revertsEventId ?? null,
       input.createdAt,
+      input.proposal?.id ?? null,
+      input.proposal === undefined ? null : JSON.stringify(input.proposal.result),
     ],
   );
   return String(result.rows[0].id);
+}
+
+export interface CommittedStoryChangeProposal {
+  revision: number;
+  actorUserId: string | null;
+  result: unknown;
+  /** True when the batch was undone later (and not redone since). */
+  reverted: boolean;
+}
+
+/** Finds the history event that committed a change batch proposal, if any. */
+export async function findCommittedStoryChangeProposal(
+  client: Queryable,
+  storyId: string,
+  proposalId: string,
+): Promise<CommittedStoryChangeProposal | undefined> {
+  const result = await client.query<{
+    revision: number;
+    actor_user_id: string | null;
+    proposal_result: unknown;
+    reverted: boolean;
+  }>(
+    `WITH RECURSIVE chain AS (
+       SELECT event.id, 0 AS depth
+       FROM story_change_events AS event
+       WHERE event.story_id = $1 AND event.proposal_id = $2
+       UNION ALL
+       SELECT inverse.id, chain.depth + 1
+       FROM story_change_events AS inverse
+       JOIN chain ON inverse.reverts_event_id = chain.id
+     )
+     SELECT event.revision, event.actor_user_id, event.proposal_result,
+            (SELECT max(depth) FROM chain) % 2 = 1 AS reverted
+     FROM story_change_events AS event
+     WHERE event.story_id = $1 AND event.proposal_id = $2`,
+    [storyId, proposalId],
+  );
+  const row = result.rows.at(0);
+  return row === undefined
+    ? undefined
+    : {
+        revision: row.revision,
+        actorUserId: row.actor_user_id,
+        result: row.proposal_result,
+        reverted: row.reverted,
+      };
 }
 
 export async function findStoryHistoryCandidate(
