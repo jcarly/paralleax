@@ -231,6 +231,9 @@ it('rejects malformed context operations before calling the API', async () => {
   const { call } = await connect(api.fetchImpl);
   const invalid = [
     [{ type: 'create_character' }],
+    [{ type: 'create_character', fields: { description: 'No name' } }],
+    [{ type: 'create_location', fields: { category: 'Hub' } }],
+    [{ type: 'create_location', fields: { name: '' } }],
     [{ type: 'create_character', fields: { name: 'A', unknown: 1 } }],
     [{ type: 'create_location', fields: { name: 'A', isPlayable: true } }],
     [{ type: 'update_character', fields: { name: 'A' } }],
@@ -244,4 +247,20 @@ it('rejects malformed context operations before calling the API', async () => {
     );
   }
   expect(api.requests).toEqual([]);
+});
+
+it('accepts updates without a name but requires one to create', async () => {
+  const api = stubFetch({ [`POST ${base}/preview`]: validPreview });
+  const { call } = await connect(api.fetchImpl);
+
+  const update = await call('preview_story_changes', {
+    storyId,
+    operations: [
+      { type: 'update_character', character: 'c', fields: { isPlayable: true } },
+      { type: 'update_location', location: 'l', fields: { category: '' } },
+    ],
+  });
+
+  expect(update.isError).toBe(false);
+  expect(api.requests).toHaveLength(1);
 });

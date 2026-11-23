@@ -157,7 +157,7 @@ export interface CreateCharacterChange {
   /** Temporary reference to the created Character. */
   ref?: string;
   /** `name` is required, as for the editor. */
-  fields: StoryChangeCharacterFields;
+  fields: StoryChangeCharacterFields & { name: string };
 }
 
 export interface UpdateCharacterChange {
@@ -171,7 +171,7 @@ export interface CreateLocationChange {
   /** Temporary reference to the created Location. */
   ref?: string;
   /** `name` is required, as for the editor. */
-  fields: StoryChangeLocationFields;
+  fields: StoryChangeLocationFields & { name: string };
 }
 
 export interface UpdateLocationChange {

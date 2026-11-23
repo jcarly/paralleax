@@ -81,21 +81,23 @@ const interactionFields = z.strictObject({
 });
 
 const contextEntityFields = {
-  name: z.string().min(1).max(200).optional(),
+  name: z.string().min(1).max(200),
   description: z.string().optional().describe('Plain text.'),
   category: z.string().max(100).optional().describe('An empty string removes the category.'),
   imageUrl: z.string().max(2048).optional().describe('An empty string removes the image.'),
 };
-
-const characterFields = z.strictObject({
-  ...contextEntityFields,
+const characterOnlyFields = {
   isPlayable: z
     .boolean()
     .optional()
     .describe('At most one character is playable: true clears the flag of the others.'),
-});
+};
 
+/** Creation requires a name, as the editor does; an update changes only the listed fields. */
+const characterFields = z.strictObject({ ...contextEntityFields, ...characterOnlyFields });
+const characterUpdateFields = characterFields.partial();
 const locationFields = z.strictObject(contextEntityFields);
+const locationUpdateFields = locationFields.partial();
 
 const inputInteractions = z
   .array(reference)
@@ -142,7 +144,7 @@ const operation = z.discriminatedUnion('type', [
   z.strictObject({
     type: z.literal('update_character'),
     character: reference,
-    fields: characterFields.describe('Only the listed fields change.'),
+    fields: characterUpdateFields.describe('Only the listed fields change.'),
   }),
   z.strictObject({
     type: z.literal('create_location'),
@@ -152,7 +154,7 @@ const operation = z.discriminatedUnion('type', [
   z.strictObject({
     type: z.literal('update_location'),
     location: reference,
-    fields: locationFields.describe('Only the listed fields change.'),
+    fields: locationUpdateFields.describe('Only the listed fields change.'),
   }),
 ]);
 
