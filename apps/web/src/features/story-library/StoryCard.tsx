@@ -2,10 +2,7 @@ import type { ReactNode } from 'react';
 import { useTranslation } from 'react-i18next';
 import type { StorySummary } from '@paralleax/shared';
 import { Link } from 'react-router-dom';
-import {
-  FieldHelpTooltip,
-  type FieldHelpTooltipTriggerProps,
-} from '../../components/FieldHelpTooltip';
+import { FieldHelpTooltip } from '../../components/FieldHelpTooltip';
 import { CanvasActionIcon, type CanvasActionIconName } from '../../components/StoryCanvasToolbar';
 import { loadStoryEditor, loadStoryPlayer } from '../../pages/storyRouteLoaders';
 
@@ -136,8 +133,10 @@ function StoryCardIconLink({
       label={label}
       help={label}
       className={`${className} compact library-card-icon-link`}
-      renderTrigger={(triggerProps, iconContent) =>
-        renderStoryCardLinkTrigger(triggerProps, iconContent, to, href, preload)
+      onTriggerFocus={preload ? () => void preload() : undefined}
+      onTriggerPointerEnter={preload ? () => void preload() : undefined}
+      renderTrigger={(iconContent) =>
+        renderStoryCardLinkTrigger({ children: iconContent, to, href })
       }
     >
       <StoryCardActionIcon name={icon} />
@@ -173,33 +172,20 @@ function StoryCardActionIcon({ name }: { name: StoryCardIconName }) {
   return <CanvasActionIcon name={name} />;
 }
 
-function renderStoryCardLinkTrigger(
-  triggerProps: FieldHelpTooltipTriggerProps,
-  children: ReactNode,
-  to: string | undefined,
-  href: string | undefined,
-  preload: (() => Promise<unknown>) | undefined,
-) {
-  const linkProps = {
-    ...triggerProps,
-    onFocus: () => {
-      triggerProps.onFocus();
-      void preload?.();
-    },
-    onPointerEnter: () => {
-      triggerProps.onPointerEnter();
-      void preload?.();
-    },
-  };
+function renderStoryCardLinkTrigger({
+  children,
+  to,
+  href,
+}: {
+  children: ReactNode;
+  to?: string;
+  href?: string;
+}) {
   if (to !== undefined) {
-    return (
-      <Link {...linkProps} to={to}>
-        {children}
-      </Link>
-    );
+    return <Link to={to}>{children}</Link>;
   }
   return (
-    <a {...linkProps} href={href} download>
+    <a href={href} download>
       {children}
     </a>
   );
