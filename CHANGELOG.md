@@ -5,8 +5,9 @@
 - Secured PostgreSQL backup and restore across majors (PAR-19). `db:backup` and
   `db:restore` now refuse a `pg_dump` or `pg_restore` older than the target
   server before touching any file or database, naming only the versions. CI
-  verifies backup and restoration against PostgreSQL 17 and 18, the production
-  major (Railway `postgres-ssl:18`), and checks that an older client is refused.
+  verifies backup and restoration against PostgreSQL 17 and 18, the configured
+  production major (Railway image `postgres-ssl:18`; the running server version
+  is still to be confirmed), and checks that an older client is refused.
 - Change batches (ADR-050 amendment) now create and update stat definitions and
   assignments: `create_stat_definition`, `update_stat_definition`,
   `create_stat_assignment` and `update_stat_assignment`, with the editor's

@@ -23,9 +23,9 @@ as recoverable before those gates pass.
 ## Backup
 
 Install PostgreSQL client tools whose major version is **at least** the server
-major (production runs PostgreSQL 18, so use `postgresql-client-18`). Before
+major (production is configured for PostgreSQL 18, so use `postgresql-client-18`; confirm the running version with `SHOW server_version`). Before
 dumping or restoring, the commands compare `pg_dump`/`pg_restore --version` with
-the server's `SHOW server_version_num` and stop with
+the server's `SHOW server_version_num`. The client-version policy is conservative and does not by itself prove archive compatibility: `pg_restore --list` remains required and stop with
 `pg_dump 17 is older than the PostgreSQL 18 server` if the client is older.
 A newer client against an older server is accepted. The check prints versions
 only, never connection details. Then set `BACKUP_DATABASE_URL` or `DATABASE_URL` and choose a new archive path:
@@ -71,10 +71,10 @@ After restoration:
 
 ## Version Matrix
 
-| Environment          | Server                                            | Client tools | Verified by                                  |
-| -------------------- | ------------------------------------------------- | ------------ | -------------------------------------------- |
-| Railway production   | 18 (`postgres-ssl:18`, image tag read 2026-11-23) | 18           | CI restore on 18, not run against production |
-| CI and local Compose | 17                                                | 17           | CI restore on 17                             |
+| Environment          | Server                                                                                         | Client tools | Verified by                                  |
+| -------------------- | ---------------------------------------------------------------------------------------------- | ------------ | -------------------------------------------- |
+| Railway production   | 18 configured (`postgres-ssl:18` image tag read 2026-11-23; running version not yet confirmed) | 18           | CI restore on 18, not run against production |
+| CI and local Compose | 17                                                                                             | 17           | CI restore on 17                             |
 
 Keep a restore archive's tools at or above the version that created it. Upgrade
 `compose.yaml` to 18 separately: an existing local volume needs a data

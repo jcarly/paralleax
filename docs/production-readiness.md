@@ -67,7 +67,7 @@ the provider before collecting tester responses.
   require an explicit restore target, and CI restores into a temporary database
   and compares migrations and core row counts. The integration job installs the
   PostgreSQL 17 and 18 clients explicitly and restores on a PostgreSQL 17 and a
-  PostgreSQL 18 service (production runs 18); the commands refuse a client
+  PostgreSQL 18 service (production is configured for 18, running version to be confirmed); the commands refuse a client
   older than the server (PAR-19).
 - Configure monitored, encrypted, off-host PostgreSQL backup scheduling and
   complete a recorded restoration drill in the selected production provider.

@@ -5,6 +5,7 @@ import { join } from 'node:path';
 import test from 'node:test';
 import {
   assertClientCompatible,
+  captureCommand,
   clientMajor,
   createBackup,
   databaseConnection,
@@ -183,4 +184,19 @@ test('CI keeps verifying backup and restore on the production and previous major
   assert.match(workflow, /postgresql-client-17 postgresql-client-18/);
   assert.match(workflow, /EXPECTED_PG_MAJOR: '18'/);
   assert.match(workflow, /older than the PostgreSQL 18 server/);
+});
+
+test('captureCommand failures keep a redacted cause without child stderr', async () => {
+  const failure = await captureCommand(
+    process.execPath,
+    ['-e', "console.error('db-host-leak'); process.exit(3)"],
+    process.env,
+  ).catch((error) => error);
+
+  assert.match(failure.message, /could not be run/);
+  assert.equal(failure.cause instanceof Error, true);
+  assert.equal(
+    `${failure.message} ${failure.cause.message} ${failure.cause.stack}`.includes('db-host-leak'),
+    false,
+  );
 });

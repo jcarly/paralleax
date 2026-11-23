@@ -53,7 +53,7 @@ the following. Test accounts and feedback remain subject to the alpha notice and
 the service's normal security, access, and privacy controls:
 
 - separate staging and production projects;
-- a managed PostgreSQL 18 database (Railway `postgres-ssl:18`; the repository also verifies 17) with encrypted connections;
+- a managed PostgreSQL database, configured as Railway `postgres-ssl:18` (confirm the running version with `SHOW server_version`; the repository verifies backups on 17 and 18) with encrypted connections;
 - automated encrypted backups in a separate failure domain;
 - a completed restore drill following the PostgreSQL recovery runbook;
 - secret-manager entries for every production environment value;

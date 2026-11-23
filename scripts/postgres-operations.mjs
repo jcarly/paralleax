@@ -164,8 +164,12 @@ export async function captureCommand(command, args, environment) {
     const { stdout } = await execFileAsync(command, args, { env: environment, windowsHide: true });
     return stdout;
   } catch (error) {
-    // Never forward the child's stderr or arguments: they may echo connection details.
-    throw new Error(`${command} could not be run to check version compatibility (${error.code})`);
+    // The raw error embeds the child's stderr, which can echo the host or user,
+    // so only a fresh cause carrying the exit code is kept.
+    throw new Error(`${command} could not be run to check version compatibility`, {
+      // eslint-disable-next-line preserve-caught-error -- deliberate redaction: the caught error must not reach logs
+      cause: new Error(`${command} failed with code ${error.code}`),
+    });
   }
 }
 
