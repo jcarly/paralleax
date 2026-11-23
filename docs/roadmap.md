@@ -42,6 +42,15 @@ This narrows the "context-entity operations wait" consequence above to groups,
 stats and items; deletion stays out of scope. No new MCP tool and no new
 preview/commit mechanism.
 
+**Update, 2026-11-23.** The project owner commissioned stat definitions,
+assignments and their use in effects and conditions as operations of the same
+batch contract ([ADR-050 amendment](decisions/ADR-050-editorial-change-batches.md)),
+as a targeted MCP task delivered in two pull requests: definitions,
+assignments, temporary references, literal effects and conditions first;
+references in expressions and item-related cases later. It does not displace
+the open-alpha prerequisites (tasks 2, 5, 8 and 11). Groups and items remain
+unsupported by batches; deletion stays out of scope.
+
 ## Priority decision, 2026-11-20
 
 **A private, local MCP prototype exists; external agent integration stays a

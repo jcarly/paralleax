@@ -86,16 +86,63 @@ machine. ChatGPT on the web cannot use it; see [Remote access](#remote-access).
 
 ## Tools
 
-| Tool                    | Access | Purpose                                                                                                                                                                                               |
-| ----------------------- | ------ | ----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| `list_stories`          | read   | Stories the user can access: id, title, interaction count, revision, `canEdit`. Search, filter, paging.                                                                                               |
-| `get_story_structure`   | read   | One page (default 50, max 200) of interactions with text excerpts and effects, Triggers (inputs → output, condition groups), and the story context. Reports `consistentRevision`.                     |
-| `get_interaction`       | read   | One interaction in full: HTML body, conditional text blocks, effects, incoming Triggers, outgoing connections.                                                                                        |
-| `preview_story_changes` | edit   | Validates an ordered batch of operations (interactions, Triggers, characters, locations) on an unsaved copy and returns `proposalId`, `baseRevision`, a diff summary and diagnostics. Writes nothing. |
-| `commit_story_changes`  | edit   | Applies a previewed proposal in one revision and one history entry, or not at all. Returns the final IDs of the created entities.                                                                     |
+| Tool                    | Access | Purpose                                                                                                                                                                                                                                                                                                                                                                          |
+| ----------------------- | ------ | -------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `list_stories`          | read   | Stories the user can access: id, title, interaction count, revision, `canEdit`. Search, filter, paging.                                                                                                                                                                                                                                                                          |
+| `get_story_structure`   | read   | One page (default 50, max 200) of interactions with text excerpts and effects, Triggers (inputs → output, condition groups), and a page of the story context (`contextPage`: locations, characters, stat definitions, **stat assignments** with their owner and initial value, item definitions; `context.hasMore` says that another page exists). Reports `consistentRevision`. |
+| `get_interaction`       | read   | One interaction in full: HTML body, conditional text blocks, effects, incoming Triggers, outgoing connections.                                                                                                                                                                                                                                                                   |
+| `preview_story_changes` | edit   | Validates an ordered batch of operations (interactions, Triggers, characters, locations, stat definitions and assignments) on an unsaved copy and returns `proposalId`, `baseRevision`, a diff summary and diagnostics. Writes nothing.                                                                                                                                          |
+| `commit_story_changes`  | edit   | Applies a previewed proposal in one revision and one history entry, or not at all. Returns the final IDs of the created entities.                                                                                                                                                                                                                                                |
 
 The batch operations, references (`{ "ref": "name" }`), diff, errors and retry
 rules are described in [Story change batches](story-changes.md).
+
+### Stats, assignments and their use
+
+Stat definitions and assignments are operations of the same batch (no new tool).
+A definition is a reusable typed name; an assignment gives one owner its own
+initial value; effects and conditions target the **assignment**. The existing IDs
+come from `get_story_structure`: `context.statAssignments` lists them all, page
+by page (`contextPage`, until `context.hasMore` is false).
+
+```json
+[
+  {
+    "type": "create_stat_definition",
+    "ref": "reserveDef",
+    "fields": { "name": "Réserve électrique", "valueType": "number" }
+  },
+  {
+    "type": "create_stat_assignment",
+    "ref": "reserve",
+    "statDefinition": { "ref": "reserveDef" },
+    "owner": { "type": "story" },
+    "fields": { "initialValue": 100 }
+  },
+  {
+    "type": "create_interaction",
+    "ref": "maintain",
+    "inputInteractions": ["<existing interaction id>"],
+    "fields": {
+      "title": "Maintenir le résonateur actif",
+      "statEffects": [{ "statId": { "ref": "reserve" }, "operation": "add", "value": -20 }]
+    }
+  },
+  {
+    "type": "create_interaction",
+    "inputInteractions": [{ "ref": "maintain" }],
+    "fields": { "title": "Activer le protocole de secours" },
+    "defaultTrigger": {
+      "conditionGroups": [
+        { "conditions": [{ "statId": { "ref": "reserve" }, "operator": "gte", "value": 60 }] }
+      ]
+    }
+  }
+]
+```
+
+Not supported yet: references inside expressions, exact item instances, and
+deletion. See [Story change batches](story-changes.md).
 
 ### Characters and locations
 

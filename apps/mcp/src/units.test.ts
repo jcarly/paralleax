@@ -73,3 +73,93 @@ it('maps unknown API error bodies to their HTTP status', async () => {
     error: { hint: expect.stringContaining('cannot') as unknown },
   });
 });
+
+const emptyPages = { revision: 1, hasMore: false };
+
+/** The routes of a story with no interactions and one page of context. */
+function contextRoutes(context: object) {
+  return {
+    [`GET ${base}/editor`]: {
+      body: {
+        id: storyId,
+        title: 'S',
+        revision: 1,
+        interactionCount: 0,
+        triggerCount: 0,
+        contextCounts: {},
+      },
+    },
+    [`GET ${base}/editor/interactions`]: { body: { ...emptyPages, interactions: [] } },
+    [`GET ${base}/editor/content/interactions`]: { body: { ...emptyPages, interactions: [] } },
+    [`GET ${base}/editor/triggers`]: { body: { ...emptyPages, triggers: [] } },
+    [`GET ${base}/editor/content/triggers`]: { body: { ...emptyPages, triggers: [] } },
+    [`GET ${base}/editor/context`]: { body: context },
+  };
+}
+
+it('reads every stat assignment of the context, page by page, and flags a next page', async () => {
+  const assignment = (id: string, ownerType: string, ownerId?: string) => ({
+    id,
+    statDefinitionId: 'definition',
+    ownerType,
+    ...(ownerId === undefined ? {} : { ownerId }),
+    initialValue: 100,
+  });
+  const api = stubFetch(
+    contextRoutes({
+      ...emptyPages,
+      hasMore: true,
+      locations: [],
+      characters: [],
+      itemDefinitions: [],
+      statDefinitions: [
+        { id: 'definition', name: 'Reserve', valueType: 'number', changePerHour: -1 },
+      ],
+      statAssignments: [
+        assignment('a1', 'story'),
+        assignment('a2', 'character', 'c1'),
+        assignment('a3', 'itemDefinition', 'i1'),
+      ],
+    }),
+  );
+  const { call } = await connect(api.fetchImpl);
+
+  const result = await call('get_story_structure', { storyId, contextPage: 3 });
+
+  expect(result.data).toMatchObject({
+    context: {
+      page: 3,
+      hasMore: true,
+      statDefinitions: [
+        { id: 'definition', name: 'Reserve', valueType: 'number', changePerHour: -1 },
+      ],
+      statAssignments: [
+        { id: 'a1', ownerType: 'story', initialValue: 100 },
+        { id: 'a2', ownerType: 'character', ownerId: 'c1' },
+        { id: 'a3', ownerType: 'itemDefinition', ownerId: 'i1' },
+      ],
+    },
+  });
+  expect(api.requests.find(({ path }) => path.endsWith('/editor/context'))?.query).toMatchObject({
+    page: '3',
+  });
+});
+
+it('fails with a contract error when the context response omits the stat assignments', async () => {
+  const api = stubFetch(
+    contextRoutes({
+      ...emptyPages,
+      locations: [],
+      characters: [],
+      itemDefinitions: [],
+      statDefinitions: [],
+    }),
+  );
+  const { call } = await connect(api.fetchImpl);
+
+  const result = await call('get_story_structure', { storyId });
+
+  expect(result.isError).toBe(true);
+  expect(result.data).toMatchObject({ error: { code: 'API_CONTRACT_MISMATCH' } });
+  expect(result.data).not.toHaveProperty('context');
+});

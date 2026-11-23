@@ -7,6 +7,13 @@ import {
   wholeEntityFields,
   type StoryChangeFieldSummary,
 } from './summary-fields.js';
+import {
+  isStatField,
+  statCounts,
+  summarizeStats,
+  type StoryChangeStatAssignmentSummary,
+  type StoryChangeStatDefinitionSummary,
+} from './summary-stats.js';
 
 export type StoryChangeKind = 'added' | 'updated' | 'removed';
 
@@ -56,6 +63,10 @@ export interface StoryChangeSummary {
     charactersUpdated: number;
     locationsAdded: number;
     locationsUpdated: number;
+    statDefinitionsAdded: number;
+    statDefinitionsUpdated: number;
+    statAssignmentsAdded: number;
+    statAssignmentsUpdated: number;
     connectionsAdded: number;
     connectionsRemoved: number;
   };
@@ -68,6 +79,14 @@ export interface StoryChangeSummary {
   triggers: StoryChangeTriggerSummary[];
   characters: StoryChangeContextEntitySummary[];
   locations: StoryChangeContextEntitySummary[];
+  /** Reusable, typed definitions added or updated. */
+  statDefinitions: StoryChangeStatDefinitionSummary[];
+  /**
+   * Every assignment added or updated, whoever owns it (Story, character,
+   * location or item definition), with its definition, owner and initial value.
+   * Owners' own summaries leave their `stats` out, so nothing is listed twice.
+   */
+  statAssignments: StoryChangeStatAssignmentSummary[];
   connections: StoryChangeConnectionSummary[];
   /** Authored Story fields outside interactions changed by the delta. */
   otherChangedFields: string[];
@@ -107,6 +126,7 @@ export function summarizeStoryChanges(
       summary.otherChangedFields.push(field);
     }
   }
+  Object.assign(summary, summarizeStats(context, before, after));
   countChanges(summary);
   return summary;
 }
@@ -125,6 +145,10 @@ function emptySummary(
       charactersUpdated: 0,
       locationsAdded: 0,
       locationsUpdated: 0,
+      statDefinitionsAdded: 0,
+      statDefinitionsUpdated: 0,
+      statAssignmentsAdded: 0,
+      statAssignmentsUpdated: 0,
       connectionsAdded: 0,
       connectionsRemoved: 0,
     },
@@ -133,6 +157,8 @@ function emptySummary(
     triggers: [],
     characters: [],
     locations: [],
+    statDefinitions: [],
+    statAssignments: [],
     connections,
     otherChangedFields: [],
   };
@@ -168,7 +194,8 @@ function summarizeField(
       });
       return true;
     default:
-      return false;
+      // Stat fields are reported by `summarizeStats`, which compares assignments directly.
+      return isStatField(field, fieldDelta.entries) ?? false;
   }
 }
 
@@ -182,6 +209,7 @@ function countChanges(summary: StoryChangeSummary): void {
   counts.charactersUpdated = summary.characters.filter(isUpdated).length;
   counts.locationsAdded = summary.locations.filter(isAdded).length;
   counts.locationsUpdated = summary.locations.filter(isUpdated).length;
+  Object.assign(counts, statCounts(summary));
   counts.connectionsAdded = summary.connections.filter(isAdded).length;
   counts.connectionsRemoved = summary.connections.length - counts.connectionsAdded;
 }
@@ -259,7 +287,10 @@ function summarizeContextEntities(
     if (!change || !current) {
       continue;
     }
-    const changedFields = entry.delta?.kind === 'object' ? Object.keys(entry.delta.fields) : [];
+    const changedFields =
+      entry.delta?.kind === 'object'
+        ? Object.keys(entry.delta.fields).filter((field) => field !== 'stats')
+        : [];
     const fields =
       change === 'updated'
         ? changedFields.map((field) => fieldSummary(context, field, previous, next))
@@ -271,7 +302,8 @@ function summarizeContextEntities(
   }
 }
 
-const contextEntitySummaryExclusions = new Set(['id', 'name']);
+// `stats` are reported as assignments (see `statAssignments`).
+const contextEntitySummaryExclusions = new Set(['id', 'name', 'stats']);
 
 interface TriggerOwner {
   id: string;

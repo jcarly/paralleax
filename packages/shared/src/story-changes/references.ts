@@ -10,6 +10,7 @@ import {
   type StoryChangeReference,
   type StoryChangeTriggerFields,
 } from './contract.js';
+import { isStatOperation, resolveStatEffects, resolveStatOperation } from './stat-references.js';
 import type {
   ResolvedStoryChangeInteractionFields,
   ResolvedStoryChangeOperation,
@@ -56,10 +57,10 @@ class ReferenceResolver {
   readonly created: StoryChangeCreatedEntity[] = [];
   readonly diagnostics: StoryChangeDiagnostic[] = [];
   private readonly references = new Map<string, DeclaredReference>();
-  private index = 0;
+  index = 0;
   private operationDiagnostics = 0;
 
-  constructor(private readonly generateId: () => string) {}
+  constructor(readonly generateId: () => string) {}
 
   resolve(
     operation: StoryChangeOperation,
@@ -76,6 +77,9 @@ class ReferenceResolver {
   }
 
   private resolveOperation(operation: StoryChangeOperation): ResolvedStoryChangeOperation {
+    if (isStatOperation(operation)) {
+      return resolveStatOperation(this, operation);
+    }
     switch (operation.type) {
       case 'create_interaction':
         return this.createInteraction(operation);
@@ -222,11 +226,12 @@ class ReferenceResolver {
     fields: StoryChangeInteractionFields,
     path: string,
   ): ResolvedStoryChangeInteractionFields {
-    const { conditionalTextBlocks, locationId, characterIds, ...others } = fields;
+    const { conditionalTextBlocks, locationId, characterIds, statEffects, ...others } = fields;
     // Request values are untrusted: widen them and keep malformed ones as is.
     const rest = {
       ...others,
       ...this.relationships({ locationId, characterIds }, path),
+      ...resolveStatEffects(this, statEffects, path),
     };
     const blocks: unknown = conditionalTextBlocks;
     if (!Array.isArray(blocks)) {
@@ -328,11 +333,7 @@ class ReferenceResolver {
     );
   }
 
-  private reference(
-    reference: StoryChangeReference,
-    kind: StoryChangeEntityKind,
-    path: string,
-  ): string {
+  reference(reference: StoryChangeReference, kind: StoryChangeEntityKind, path: string): string {
     if (!isTemporaryReference(reference)) {
       return reference;
     }
@@ -358,7 +359,7 @@ class ReferenceResolver {
     return declared.id;
   }
 
-  private declare(ref: string | undefined, path: string, reference: DeclaredReference): void {
+  declare(ref: string | undefined, path: string, reference: DeclaredReference): void {
     if (this.failed()) {
       return;
     }

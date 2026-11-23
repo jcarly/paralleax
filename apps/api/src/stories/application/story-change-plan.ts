@@ -34,6 +34,13 @@ import {
   applyLocationUpdate,
 } from './story-context-edits';
 import {
+  applyStatStep,
+  isStatOperation,
+  isStatStep,
+  planStatOperation,
+  type PlannedStatStep,
+} from './story-change-stats-plan';
+import {
   addInteraction,
   addTrigger,
   applyInteractionUpdate,
@@ -81,7 +88,8 @@ type PlannedStep =
   | { type: 'create_character'; index: number; characterId: string; character: CreateCharacterDto }
   | { type: 'update_character'; index: number; characterId: string; character: UpdateCharacterDto }
   | { type: 'create_location'; index: number; locationId: string; location: CreateLocationDto }
-  | { type: 'update_location'; index: number; locationId: string; location: UpdateLocationDto };
+  | { type: 'update_location'; index: number; locationId: string; location: UpdateLocationDto }
+  | PlannedStatStep;
 
 export interface StoryChangePlan {
   steps: PlannedStep[];
@@ -123,6 +131,9 @@ type Resolved<T extends ResolvedStoryChangeOperation['type']> = Extract<
 >;
 
 function planStep(operation: ResolvedStoryChangeOperation): PlannedResult {
+  if (isStatOperation(operation)) {
+    return planStatOperation(operation);
+  }
   switch (operation.type) {
     case 'create_interaction':
       return planCreateInteraction(operation);
@@ -294,6 +305,9 @@ function isContextStep(step: PlannedStep): step is ContextStep {
 }
 
 function applyStep(story: Story, step: PlannedStep): Story {
+  if (isStatStep(step)) {
+    return applyStatStep(story, step);
+  }
   return isContextStep(step) ? applyContextStep(story, step) : applyGraphStep(story, step);
 }
 
@@ -310,7 +324,7 @@ function applyContextStep(story: Story, step: ContextStep): Story {
   }
 }
 
-type GraphStep = Exclude<PlannedStep, ContextStep>;
+type GraphStep = Exclude<PlannedStep, ContextStep | PlannedStatStep>;
 
 function applyGraphStep(story: Story, step: GraphStep): Story {
   switch (step.type) {
