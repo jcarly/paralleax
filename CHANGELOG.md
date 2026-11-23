@@ -2,6 +2,11 @@
 
 ## Unreleased
 
+- Documented a proposed isolated Railway staging environment (PAR-21): topology,
+  immutable image promotion, email and test accounts, cookies and CORS,
+  migrations, healthchecks, browser journeys, costs, risks and teardown, with
+  ADR-051 (Proposed) and the decisions needed before provisioning. Documentation
+  only; no Railway resource was created and production is unchanged.
 - Secured PostgreSQL backup and restore across majors (PAR-19). `db:backup` and
   `db:restore` now refuse a `pg_dump` or `pg_restore` older than the target
   server before touching any file or database, naming only the versions. CI

@@ -52,7 +52,7 @@ Before accepting valuable user-created project data, record evidence for all of
 the following. Test accounts and feedback remain subject to the alpha notice and
 the service's normal security, access, and privacy controls:
 
-- separate staging and production projects;
+- separate staging and production projects (see the proposed [staging plan](staging-environment.md); not provisioned yet);
 - a managed PostgreSQL database, configured as Railway `postgres-ssl:18` (confirm the running version with `SHOW server_version`; the repository verifies backups on 17 and 18) with encrypted connections;
 - automated encrypted backups in a separate failure domain;
 - a completed restore drill following the PostgreSQL recovery runbook;
