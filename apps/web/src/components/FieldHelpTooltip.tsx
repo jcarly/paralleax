@@ -1,5 +1,5 @@
 import { createPortal } from 'react-dom';
-import type { KeyboardEvent as ReactKeyboardEvent, ReactNode } from 'react';
+import type { KeyboardEvent as ReactKeyboardEvent, ReactElement, ReactNode } from 'react';
 import { useContext, useEffect, useId, useRef, useState } from 'react';
 import { ModalPortalContext } from './modalPortalContext';
 
@@ -15,6 +15,31 @@ export type FieldHelpTooltipTriggerProps = {
   onPointerLeave: () => void;
 };
 
+type FieldHelpTooltipTriggerElement = ReactElement<{
+  href?: string;
+  to?: string;
+  download?: boolean;
+  disabled?: boolean;
+  type?: 'button' | 'submit' | 'reset';
+}>;
+
+type FieldHelpTooltipTriggerRenderer = (children: ReactNode) => FieldHelpTooltipTriggerElement;
+
+function resolveTriggerRenderer(
+  renderTrigger: FieldHelpTooltipTriggerRenderer | undefined,
+  disabled: boolean | undefined,
+  onClick: (() => void) | undefined,
+): FieldHelpTooltipTriggerRenderer {
+  if (renderTrigger) {
+    return renderTrigger;
+  }
+  return (children) => (
+    <button disabled={disabled} type="button" onClick={onClick}>
+      {children ?? '?'}
+    </button>
+  );
+}
+
 export function FieldHelpTooltip({
   label,
   help,
@@ -22,6 +47,8 @@ export function FieldHelpTooltip({
   className,
   disabled,
   onClick,
+  onTriggerFocus = () => undefined,
+  onTriggerPointerEnter = () => undefined,
   renderTrigger,
 }: {
   label: string;
@@ -30,7 +57,9 @@ export function FieldHelpTooltip({
   className?: string;
   disabled?: boolean;
   onClick?: () => void;
-  renderTrigger?: (props: FieldHelpTooltipTriggerProps, children: ReactNode) => ReactNode;
+  onTriggerFocus?: () => void;
+  onTriggerPointerEnter?: () => void;
+  renderTrigger?: (children: ReactNode) => FieldHelpTooltipTriggerElement;
 }) {
   const modalPortal = useContext(ModalPortalContext);
   const tooltipId = useId();
@@ -133,11 +162,13 @@ export function FieldHelpTooltip({
     onFocus: () => {
       triggerFocusedRef.current = true;
       showTooltip();
+      onTriggerFocus();
     },
     onKeyDown: dismissTooltip,
     onPointerEnter: () => {
       triggerHoveredRef.current = true;
       showTooltip();
+      onTriggerPointerEnter();
     },
     onPointerLeave: () => {
       triggerHoveredRef.current = false;
@@ -145,12 +176,10 @@ export function FieldHelpTooltip({
     },
   };
 
-  const trigger = renderTrigger ? (
-    renderTrigger(triggerProps, children)
-  ) : (
-    <button {...triggerProps} disabled={disabled} type="button" onClick={onClick}>
-      {children ?? '?'}
-    </button>
+  const triggerElement = resolveTriggerRenderer(renderTrigger, disabled, onClick)(children);
+  const Trigger = triggerElement.type;
+  const trigger = (
+    <Trigger key={triggerElement.key ?? undefined} {...triggerElement.props} {...triggerProps} />
   );
 
   return (
