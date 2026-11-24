@@ -112,7 +112,9 @@ describe('AuthService', () => {
           displayName: user.displayName,
           role: user.role,
           createdAt: user.createdAt,
-          ...(user.emailVerifiedAt ? { emailVerifiedAt: user.emailVerifiedAt } : {}),
+          ...(typeof user.emailVerifiedAt === 'string' && user.emailVerifiedAt !== ''
+            ? { emailVerifiedAt: user.emailVerifiedAt }
+            : {}),
         })),
       ),
     ),
@@ -128,7 +130,9 @@ describe('AuthService', () => {
         displayName: user.displayName,
         role: user.role,
         createdAt: user.createdAt,
-        ...(user.emailVerifiedAt ? { emailVerifiedAt: user.emailVerifiedAt } : {}),
+        ...(typeof user.emailVerifiedAt === 'string' && user.emailVerifiedAt !== ''
+          ? { emailVerifiedAt: user.emailVerifiedAt }
+          : {}),
       });
     }),
     updateDisplayName: jest.fn((id: string, displayName: string) => {
@@ -143,7 +147,9 @@ describe('AuthService', () => {
         displayName: user.displayName,
         role: user.role,
         createdAt: user.createdAt,
-        ...(user.emailVerifiedAt ? { emailVerifiedAt: user.emailVerifiedAt } : {}),
+        ...(typeof user.emailVerifiedAt === 'string' && user.emailVerifiedAt !== ''
+          ? { emailVerifiedAt: user.emailVerifiedAt }
+          : {}),
       });
     }),
   };
@@ -224,6 +230,11 @@ describe('AuthService', () => {
   it('resends verification for unverified accounts and uses it for their recovery request', async () => {
     const auth = service();
     await auth.register('author@example.com', 'correct horse battery staple', 'Author');
+    const unverifiedUser = users.get('author@example.com');
+    if (unverifiedUser === undefined) {
+      throw new Error('Expected the registered test user');
+    }
+    unverifiedUser.emailVerifiedAt = '';
     const initialMessages = jest.mocked(email.send).mock.calls.length;
 
     await auth.resendVerification('AUTHOR@example.com');
@@ -295,6 +306,22 @@ describe('AuthService', () => {
     );
   });
 
+  it('treats empty session tokens as absent', async () => {
+    const auth = service();
+
+    await expect(auth.userForToken('')).resolves.toBeUndefined();
+    expect(repository.deleteExpiredSessions).not.toHaveBeenCalled();
+    expect(repository.findUserBySessionHash).not.toHaveBeenCalled();
+
+    await expect(auth.logout('')).resolves.toBeUndefined();
+    expect(repository.deleteSession).not.toHaveBeenCalled();
+
+    await expect(auth.revokeOtherSessions('user-1', '')).rejects.toBeInstanceOf(
+      UnauthorizedException,
+    );
+    expect(repository.deleteOtherSessions).not.toHaveBeenCalled();
+  });
+
   it('keeps registration unavailable when email delivery is not configured', async () => {
     Object.assign(email, { isConfigured: false });
     const auth = service();
@@ -344,9 +371,10 @@ describe('AuthService', () => {
   function emailToken() {
     const message = jest.mocked(email.send).mock.calls.at(-1)?.[0];
     const match = message?.text.match(/[?&]token=([^\s&]+)/u);
-    if (!match?.[1]) {
+    const token = match?.[1];
+    if (token === undefined || token === '') {
       throw new Error('Expected an account action token in the email');
     }
-    return decodeURIComponent(match[1]);
+    return decodeURIComponent(token);
   }
 });

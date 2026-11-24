@@ -85,7 +85,7 @@ export class AuthService {
         apiErrorResponse('INVALID_CREDENTIALS', 'Invalid email or password'),
       );
     }
-    if (!user.emailVerifiedAt) {
+    if (typeof user.emailVerifiedAt !== 'string' || user.emailVerifiedAt === '') {
       throw new ForbiddenException(
         apiErrorResponse(
           'EMAIL_VERIFICATION_REQUIRED',
@@ -97,7 +97,7 @@ export class AuthService {
   }
 
   async userForToken(token: string | undefined) {
-    if (!token) {
+    if (typeof token !== 'string' || token === '') {
       return undefined;
     }
     await this.repository.deleteExpiredSessions();
@@ -105,7 +105,7 @@ export class AuthService {
   }
 
   async logout(token: string | undefined) {
-    if (token) {
+    if (typeof token === 'string' && token !== '') {
       await this.repository.deleteSession(hashToken(token));
     }
   }
@@ -113,7 +113,7 @@ export class AuthService {
   async resendVerification(email: string): Promise<void> {
     this.assertEmailDeliveryConfigured();
     const user = await this.repository.findUserByEmail(email.trim().toLowerCase());
-    if (!user || user.emailVerifiedAt) {
+    if (!user || (typeof user.emailVerifiedAt === 'string' && user.emailVerifiedAt !== '')) {
       return;
     }
     await this.sendVerificationEmail(user);
@@ -136,7 +136,7 @@ export class AuthService {
     if (!user) {
       return;
     }
-    if (!user.emailVerifiedAt) {
+    if (typeof user.emailVerifiedAt !== 'string' || user.emailVerifiedAt === '') {
       await this.sendVerificationEmail(user);
       return;
     }
@@ -167,7 +167,7 @@ export class AuthService {
   }
 
   async revokeOtherSessions(userId: string, currentToken: string | undefined): Promise<void> {
-    if (!currentToken) {
+    if (typeof currentToken !== 'string' || currentToken === '') {
       throw new UnauthorizedException(
         apiErrorResponse('AUTHENTICATION_REQUIRED', 'Authentication is required'),
       );
@@ -293,7 +293,9 @@ function publicUser(user: AuthUser): PublicAuthUser {
     displayName: user.displayName,
     role: user.role,
     createdAt: user.createdAt,
-    ...(user.emailVerifiedAt ? { emailVerifiedAt: user.emailVerifiedAt } : {}),
+    ...(typeof user.emailVerifiedAt === 'string' && user.emailVerifiedAt !== ''
+      ? { emailVerifiedAt: user.emailVerifiedAt }
+      : {}),
   };
 }
 
