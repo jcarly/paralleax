@@ -228,8 +228,9 @@ requests, and can also be started manually:
 - production Compose validation and API/web image builds.
 
 Coverage and Playwright reports are retained as workflow artifacts for seven
-days. PostgreSQL integration runs against PostgreSQL 17 and verifies backup
-restoration with the matching version of `pg_dump`.
+days. PostgreSQL integration runs against PostgreSQL 17. Backup restoration is
+verified with matching client tools on PostgreSQL 17 and on PostgreSQL 18, the
+configured production major, and an older client is checked to be refused.
 
 ## Docker
 

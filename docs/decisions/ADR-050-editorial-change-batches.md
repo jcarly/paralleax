@@ -109,6 +109,69 @@ assistants: the editor, imports or tests can produce the same batches.
   also split the proposal check from the PostgreSQL commit transaction.
   Proposals can move there later without changing the contract.
 
+## Amendment, 2026-11-22: characters and locations
+
+The union gains `create_character`, `update_character`, `create_location` and
+`update_location`, with no new endpoint, tool or preview/commit mechanism.
+
+- **One set of rules, again.** The creation and update rules of characters and
+  locations were closures of `StoryContextService`. They move to
+  `story-context-edits.ts` (like `story-graph-edits.ts`), used by the single
+  endpoints and by batches; fields are validated by the same DTOs.
+- **Typed references.** Resolution takes the entity kind from the field:
+  `locationId` and `characterIds` of an interaction, and the condition fields
+  listed in `STORY_CHANGE_CONDITION_REFERENCE_KINDS`, both in Trigger groups and
+  conditional text blocks. Kind and ordering rules are unchanged. Stats and items
+  can extend the same table later; they are not generalized now.
+- **Playable character.** Making a character playable clears the flag of the
+  others, as in the editor; the summary shows those characters as updated.
+- **Provisional IDs.** The summary carries `provisionalIds` and, for each field
+  value naming a created entity, `references: [{ id, ref }]`. No proposal or
+  history format changes: the stored operations and the single history delta
+  already cover these entities, so undo and redo treat the whole batch as one
+  change.
+
+## Amendment, 2026-11-23: statistics, assignments and effects
+
+The union gains `create_stat_definition`, `update_stat_definition`,
+`create_stat_assignment` and `update_stat_assignment`, with no new endpoint,
+tool, migration or preview/commit mechanism. Deletion stays out of scope.
+
+- **Two concepts, two entity kinds.** A stat definition (reusable, typed,
+  Story-owned) and a stat assignment (an owner's own value, ADR-021) are
+  distinct `ref` kinds: `statDefinition` and `statAssignment`. Effects and
+  conditions name an assignment (`statId`, `comparisonStatId`), so a definition
+  reference there fails with `REFERENCE_KIND_MISMATCH`. There is no combined
+  "create stat" operation: it would hide that distinction.
+- **One set of rules.** The operations call the existing functions of
+  `story-stats.ts` (`createStatDefinition`, `updateStatDefinition`,
+  `createStatAssignment`, `updateStatAssignment`, `validateStatEffects`,
+  `buildStatCondition`) on the disposable copy, and validate fields with the
+  same DTOs. Types, `set` and `add`, comparison operators, hourly change,
+  one assignment per definition and owner, same-Story references and quotas keep
+  their semantics. No implicit conversion and no invented default: a batch
+  requires `valueType` and `initialValue` explicitly (the editor endpoint still
+  defaults a missing `valueType` to `number`).
+- **Owners.** An assignment's `owner` is the Story, a character, a location or
+  an item definition. A character or location may be a reference to an earlier
+  creation; an item definition is an existing ID (batches create no items).
+  Effects on exact item instances are existing IDs only; item instances are not
+  created or read by batches.
+- **Typed references.** `STORY_CHANGE_CONDITION_REFERENCE_KINDS` gains
+  `statId` and `comparisonStatId` (assignments); interaction `statEffects[].statId`
+  accepts a reference. Expressions keep existing assignment IDs only in this
+  increment; references inside expressions (through the existing expression
+  remapping, without new syntax) are a later increment.
+- **Complete diff.** The summary gains `statDefinitions` and `statAssignments`.
+  Every added or changed assignment is listed with its definition, owner and
+  initial value, whichever kind of owner it belongs to; the stats of characters,
+  locations and item definitions are no longer reported as raw fields of their
+  owners, so nothing is shown twice or omitted. No history format changes: the
+  delta already covers stats, so undo and redo treat the batch as one change.
+- **MCP reads.** `get_story_structure` returns every stat assignment of the
+  Story context and pages through the context (`contextPage`), with no silent
+  truncation. No write tool is added.
+
 ## Consequences
 
 - Assistants and future clients get an atomic, reviewable and stale-safe write

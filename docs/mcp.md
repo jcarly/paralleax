@@ -86,16 +86,104 @@ machine. ChatGPT on the web cannot use it; see [Remote access](#remote-access).
 
 ## Tools
 
-| Tool                    | Access | Purpose                                                                                                                                                                           |
-| ----------------------- | ------ | --------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| `list_stories`          | read   | Stories the user can access: id, title, interaction count, revision, `canEdit`. Search, filter, paging.                                                                           |
-| `get_story_structure`   | read   | One page (default 50, max 200) of interactions with text excerpts and effects, Triggers (inputs → output, condition groups), and the story context. Reports `consistentRevision`. |
-| `get_interaction`       | read   | One interaction in full: HTML body, conditional text blocks, effects, incoming Triggers, outgoing connections.                                                                    |
-| `preview_story_changes` | edit   | Validates an ordered batch of operations on an unsaved copy and returns `proposalId`, `baseRevision`, a diff summary and diagnostics. Writes nothing.                             |
-| `commit_story_changes`  | edit   | Applies a previewed proposal in one revision and one history entry, or not at all. Returns the final IDs of the created entities.                                                 |
+| Tool                    | Access | Purpose                                                                                                                                                                                                                                                                                                                                                                          |
+| ----------------------- | ------ | -------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `list_stories`          | read   | Stories the user can access: id, title, interaction count, revision, `canEdit`. Search, filter, paging.                                                                                                                                                                                                                                                                          |
+| `get_story_structure`   | read   | One page (default 50, max 200) of interactions with text excerpts and effects, Triggers (inputs → output, condition groups), and a page of the story context (`contextPage`: locations, characters, stat definitions, **stat assignments** with their owner and initial value, item definitions; `context.hasMore` says that another page exists). Reports `consistentRevision`. |
+| `get_interaction`       | read   | One interaction in full: HTML body, conditional text blocks, effects, incoming Triggers, outgoing connections.                                                                                                                                                                                                                                                                   |
+| `preview_story_changes` | edit   | Validates an ordered batch of operations (interactions, Triggers, characters, locations, stat definitions and assignments) on an unsaved copy and returns `proposalId`, `baseRevision`, a diff summary and diagnostics. Writes nothing.                                                                                                                                          |
+| `commit_story_changes`  | edit   | Applies a previewed proposal in one revision and one history entry, or not at all. Returns the final IDs of the created entities.                                                                                                                                                                                                                                                |
 
 The batch operations, references (`{ "ref": "name" }`), diff, errors and retry
 rules are described in [Story change batches](story-changes.md).
+
+### Stats, assignments and their use
+
+Stat definitions and assignments are operations of the same batch (no new tool).
+A definition is a reusable typed name; an assignment gives one owner its own
+initial value; effects and conditions target the **assignment**. The existing IDs
+come from `get_story_structure`: `context.statAssignments` lists them all, page
+by page (`contextPage`, until `context.hasMore` is false).
+
+```json
+[
+  {
+    "type": "create_stat_definition",
+    "ref": "reserveDef",
+    "fields": { "name": "Réserve électrique", "valueType": "number" }
+  },
+  {
+    "type": "create_stat_assignment",
+    "ref": "reserve",
+    "statDefinition": { "ref": "reserveDef" },
+    "owner": { "type": "story" },
+    "fields": { "initialValue": 100 }
+  },
+  {
+    "type": "create_interaction",
+    "ref": "maintain",
+    "inputInteractions": ["<existing interaction id>"],
+    "fields": {
+      "title": "Maintenir le résonateur actif",
+      "statEffects": [{ "statId": { "ref": "reserve" }, "operation": "add", "value": -20 }]
+    }
+  },
+  {
+    "type": "create_interaction",
+    "inputInteractions": [{ "ref": "maintain" }],
+    "fields": { "title": "Activer le protocole de secours" },
+    "defaultTrigger": {
+      "conditionGroups": [
+        { "conditions": [{ "statId": { "ref": "reserve" }, "operator": "gte", "value": 60 }] }
+      ]
+    }
+  }
+]
+```
+
+Not supported yet: references inside expressions, exact item instances, and
+deletion. See [Story change batches](story-changes.md).
+
+### Characters and locations
+
+There is no `create_character` or `create_location` tool: they are operations of
+the same batch, so a character, a location, the scene that uses them and a
+condition on them are one proposal, one revision and one undo.
+
+```json
+[
+  {
+    "type": "create_character",
+    "ref": "alya",
+    "fields": { "name": "Alya", "description": "Station engineer." }
+  },
+  { "type": "create_location", "ref": "station", "fields": { "name": "Station Néréide-7" } },
+  {
+    "type": "create_interaction",
+    "ref": "lab",
+    "inputInteractions": ["<existing interaction id>"],
+    "fields": {
+      "title": "Inspection du laboratoire",
+      "locationId": { "ref": "station" },
+      "characterIds": [{ "ref": "alya" }]
+    },
+    "defaultTrigger": {
+      "conditionGroups": [
+        { "conditions": [{ "characterId": { "ref": "alya" }, "isPresent": true }] }
+      ]
+    }
+  }
+]
+```
+
+- Create the entity before the operation that uses it; a `{ "ref" }` only points
+  to an earlier creation of the right kind. Existing characters and locations
+  are named by the IDs `get_story_structure` returns.
+- Use `update_character` and `update_location` to change only the listed fields.
+- Conditions use `{ characterId, isPresent }` and `{ locationId, isCurrentLocation }`.
+- IDs in the preview are provisional: the summary names created entities by
+  `ref`. Check the result after the commit with `get_story_structure`, which
+  lists the characters and locations.
 
 ### Required sequence
 
@@ -139,8 +227,8 @@ The direct write tools of the first prototype (`create_interaction`,
 `update_interaction`, `create_trigger`) were removed so that every MCP write
 goes through preview and commit.
 
-Not exposed: deletion, context entities, access and collaborator changes,
-administration, imports and whole-graph replacement.
+Not exposed: deletion, groups, stats, items (and their assignments), access and
+collaborator changes, administration, imports and whole-graph replacement.
 
 ## Demo
 
@@ -196,8 +284,8 @@ The API allows five registrations per minute, so wait a minute between runs.
   read-only or per-story credential.
 - Human confirmation before a commit depends on the assistant and the MCP
   client (see [Required sequence](#required-sequence)).
-- Batches support creating and updating interactions and Triggers only, up to
-  100 operations and the API's 128 KiB request body. A preview loads the
+- Batches support creating and updating interactions, Triggers, characters and
+  locations only, up to 100 operations and the API's 128 KiB request body. A preview loads the
   complete Story.
 - Previews can be committed for one hour; each user keeps at most 20.
 - Session file protection is verified on Linux and macOS only, not on Windows.

@@ -97,7 +97,10 @@ function readStructurePages(api: ParalleaxApiClient, input: StoryStructureInput)
     api.get(path('/triggers'), triggerPageSchema, paging),
     api.get(path('/content/triggers'), triggerContentPageSchema, paging),
     input.includeContext
-      ? api.get(path('/context'), contextPageSchema, { page: 1, pageSize: MAX_STORY_PAGE_SIZE })
+      ? api.get(path('/context'), contextPageSchema, {
+          page: input.contextPage,
+          pageSize: MAX_STORY_PAGE_SIZE,
+        })
       : Promise.resolve(undefined),
   ]);
 }
@@ -136,7 +139,7 @@ export async function getStoryStructure(api: ParalleaxApiClient, input: StoryStr
     hasMoreTriggers: triggers.hasMore,
     // Pages are separate reads; a concurrent edit between them is reported.
     consistentRevision: revisions.every((revision) => revision === bootstrap.revision),
-    ...(context === undefined ? {} : { context: storyContextView(context) }),
+    ...(context === undefined ? {} : { context: storyContextView(context, input.contextPage) }),
   };
 }
 

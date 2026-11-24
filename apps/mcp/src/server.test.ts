@@ -66,6 +66,7 @@ const structureRoutes = {
       locations: [{ id: 'loc', name: 'Relay station', description: '' }],
       characters: [],
       statDefinitions: [{ id: 's', name: 'Trust' }],
+      statAssignments: [],
       itemDefinitions: [],
     },
   },
@@ -104,6 +105,36 @@ it('exposes read tools and the preview/commit pair only, with strict input schem
     expect(tool.inputSchema.additionalProperties).toBe(false);
     // Only the commit changes a story; it can replace authored content.
     expect(tool.annotations?.destructiveHint).toBe(tool.name === 'commit_story_changes');
+  }
+});
+
+it('explains how to create characters and locations and reference them', async () => {
+  const { client } = await connect(stubFetch({}).fetchImpl);
+  const instructions = client.getInstructions() ?? '';
+  expect(instructions).toContain('create_character');
+  expect(instructions).toContain('create_location');
+  expect(instructions).toContain('{characterId, isPresent}');
+  expect(instructions).toContain('provisional');
+  const { tools } = await client.listTools();
+  const preview = tools.find(({ name }) => name === 'preview_story_changes');
+  expect(preview?.description).toContain('characters, locations');
+});
+
+it('describes the stat operations in the preview tool and its input schema', async () => {
+  const { client } = await connect(stubFetch({}).fetchImpl);
+  const { tools } = await client.listTools();
+  const preview = tools.find(({ name }) => name === 'preview_story_changes');
+
+  expect(preview?.description).toContain('stat definitions and assignments');
+  expect(preview?.description).toContain('effects and conditions name the assignment');
+  const operations = JSON.stringify(preview?.inputSchema);
+  for (const type of [
+    'create_stat_definition',
+    'update_stat_definition',
+    'create_stat_assignment',
+    'update_stat_assignment',
+  ]) {
+    expect(operations).toContain(type);
   }
 });
 

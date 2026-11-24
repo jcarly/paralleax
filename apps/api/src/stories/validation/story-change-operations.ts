@@ -9,7 +9,14 @@ import {
 } from '@paralleax/shared';
 import {
   UpdateInteractionDto,
+  type CreateCharacterDto,
+  type CreateLocationDto,
+  type CreateStatDefinitionDto,
   type CreateTriggerDto,
+  type UpdateCharacterDto,
+  type UpdateLocationDto,
+  type UpdateStatAssignmentDto,
+  type UpdateStatDefinitionDto,
   type UpdateTriggerDto,
 } from '../dto/stories.dto';
 
@@ -28,7 +35,28 @@ const operationKeys: Record<StoryChangeOperation['type'], readonly string[]> = {
   update_interaction: ['type', 'interaction', 'fields'],
   create_trigger: ['type', 'ref', 'interaction', 'inputInteractions', 'fields'],
   update_trigger: ['type', 'interaction', 'trigger', 'inputInteractions', 'fields'],
+  create_character: ['type', 'ref', 'fields'],
+  update_character: ['type', 'character', 'fields'],
+  create_location: ['type', 'ref', 'fields'],
+  update_location: ['type', 'location', 'fields'],
+  create_stat_definition: ['type', 'ref', 'fields'],
+  update_stat_definition: ['type', 'statDefinition', 'fields'],
+  create_stat_assignment: ['type', 'ref', 'statDefinition', 'owner', 'fields'],
+  update_stat_assignment: ['type', 'assignment', 'fields'],
 };
+
+/** Operations whose `fields` object is required. */
+const fieldsRequired: ReadonlySet<StoryChangeOperation['type']> = new Set([
+  'update_interaction',
+  'create_character',
+  'update_character',
+  'create_location',
+  'update_location',
+  'create_stat_definition',
+  'update_stat_definition',
+  'create_stat_assignment',
+  'update_stat_assignment',
+]);
 
 const validatorOptions = { whitelist: true, forbidNonWhitelisted: true } as const;
 
@@ -65,7 +93,7 @@ export function validateStoryChangeOperationShape(operation: unknown, index: num
   checkTargets(operation, type, error);
   checkReferenceList(operation.inputInteractions, error);
   checkOptionalString(operation.ref, 'ref', error);
-  checkObject(operation.fields, 'fields', type === 'update_interaction', error);
+  checkObject(operation.fields, 'fields', fieldsRequired.has(type), error);
   if (type === 'create_interaction') {
     checkDefaultTrigger(operation.defaultTrigger, error);
   }
@@ -96,6 +124,81 @@ function checkTargets(
     (type === 'update_trigger' && !isTemporaryReferenceValue(operation.trigger));
   checkReference(operation, 'interaction', interactionRequired, error);
   checkReference(operation, 'trigger', type === 'update_trigger', error);
+  checkReference(operation, 'character', type === 'update_character', error);
+  checkReference(operation, 'location', type === 'update_location', error);
+  checkStatTargets(operation, type, error);
+}
+
+/** Stat operations: definition and assignment targets, and the owner of an assignment. */
+function checkStatTargets(
+  operation: OperationRecord,
+  type: StoryChangeOperation['type'],
+  error: ReportError,
+): void {
+  checkReference(
+    operation,
+    'statDefinition',
+    type === 'update_stat_definition' || type === 'create_stat_assignment',
+    error,
+  );
+  checkReference(operation, 'assignment', type === 'update_stat_assignment', error);
+  if (type === 'create_stat_assignment') {
+    checkOwner(operation.owner, error);
+  }
+  // A batch never assumes a type: the editor's default (number) is not applied.
+  if (type === 'create_stat_definition' && isRecord(operation.fields)) {
+    if (operation.fields.valueType === undefined) {
+      error('REQUIRED_FIELD', 'Field "valueType" is required.', 'fields.valueType');
+    }
+  }
+}
+
+const OWNER_TYPES = ['story', 'character', 'location', 'itemDefinition'];
+
+function checkOwner(owner: unknown, error: ReportError): void {
+  if (!isRecord(owner) || typeof owner.type !== 'string' || !OWNER_TYPES.includes(owner.type)) {
+    error(
+      'INVALID_FIELD',
+      `"owner" must be { "type": "${OWNER_TYPES.join('" | "')}" } with an "id" unless the type is "story".`,
+      'owner',
+    );
+    return;
+  }
+  for (const key of Object.keys(owner)) {
+    if (key !== 'type' && key !== 'id') {
+      error('UNKNOWN_FIELD', `Field "${key}" is not allowed in owner.`, `owner.${key}`);
+    }
+  }
+  checkOwnerId(owner, error);
+}
+
+/** The Story owner has no ID; an item definition is an existing ID; others may be references. */
+function checkOwnerId(owner: OperationRecord, error: ReportError): void {
+  const { id } = owner;
+  if (owner.type === 'story') {
+    if (id !== undefined) {
+      error('INVALID_FIELD', 'The Story owner has no "id".', 'owner.id');
+    }
+    return;
+  }
+  if (id === undefined) {
+    error('REQUIRED_FIELD', 'Field "owner.id" is required.', 'owner.id');
+    return;
+  }
+  const existingOnly = owner.type === 'itemDefinition';
+  if (!(existingOnly ? isIdString(id) : isReference(id))) {
+    error(
+      'INVALID_REFERENCE',
+      existingOnly
+        ? 'An item definition owner is an existing ID string.'
+        : 'A reference is an existing ID string or { "ref": "name" }.',
+      'owner.id',
+    );
+  }
+}
+
+function isIdString(value: unknown): boolean {
+  return typeof value === 'string' && value.length > 0 && value.length <= MAX_ID_LENGTH;
 }
 
 function checkReference(
@@ -136,6 +239,25 @@ export function toInteractionInput(
 export function toTriggerInput<T extends CreateTriggerDto | UpdateTriggerDto>(
   dto: new () => T,
   fields: ResolvedStoryChangeTriggerFields & { inputInteractionIds?: string[] },
+  index: number,
+  path: string,
+): { input?: T; diagnostics: Diagnostics } {
+  return validateDto(dto, fields, index, path);
+}
+
+/** Validates Character, Location or stat fields with the single-edit DTO. */
+export function toContextEntityInput<
+  T extends
+    | CreateCharacterDto
+    | UpdateCharacterDto
+    | CreateLocationDto
+    | UpdateLocationDto
+    | CreateStatDefinitionDto
+    | UpdateStatDefinitionDto
+    | UpdateStatAssignmentDto,
+>(
+  dto: new () => T,
+  fields: object,
   index: number,
   path: string,
 ): { input?: T; diagnostics: Diagnostics } {

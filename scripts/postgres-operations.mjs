@@ -1,7 +1,10 @@
-import { spawn } from 'node:child_process';
+import { execFile, spawn } from 'node:child_process';
 import { access, chmod, mkdir, rename, rm } from 'node:fs/promises';
 import { dirname, resolve } from 'node:path';
 import { URL } from 'node:url';
+import { promisify } from 'node:util';
+
+const execFileAsync = promisify(execFile);
 
 const SAFE_DATABASE_NAME = /^[A-Za-z0-9_.-]+$/;
 
@@ -45,7 +48,48 @@ export function hasFlag(args, name) {
   return args.includes(`--${name}`);
 }
 
-export async function createBackup({ databaseUrl, output, overwrite = false, run = runCommand }) {
+export function clientMajor(versionOutput) {
+  const match = /\(PostgreSQL\)\s+(\d+)/.exec(versionOutput);
+  if (!match) {
+    throw new Error('Unable to read the PostgreSQL client version');
+  }
+  return Number(match[1]);
+}
+
+export function serverMajor(serverVersionNum) {
+  const number = Number(String(serverVersionNum).trim());
+  if (!Number.isInteger(number) || number < 100000) {
+    throw new Error('Unable to read the PostgreSQL server version');
+  }
+  return Math.floor(number / 10000);
+}
+
+/**
+ * Refuses a client tool older than the target server. pg_dump cannot dump a
+ * newer server, and pg_restore of a newer-format archive is likewise unsafe.
+ * A newer client against an older server is supported by PostgreSQL.
+ * Messages carry versions only, never connection details.
+ */
+export async function assertClientCompatible({ tool, environment, capture = captureCommand }) {
+  const client = clientMajor(await capture(tool, ['--version'], environment));
+  const server = serverMajor(
+    await capture('psql', ['-X', '-A', '-t', '-c', 'SHOW server_version_num'], environment),
+  );
+  if (client < server) {
+    throw new Error(
+      `${tool} ${client} is older than the PostgreSQL ${server} server; install postgresql-client-${server} or newer`,
+    );
+  }
+  return { client, server };
+}
+
+export async function createBackup({
+  databaseUrl,
+  output,
+  overwrite = false,
+  run = runCommand,
+  capture = captureCommand,
+}) {
   const target = resolve(output);
   const temporaryTarget = `${target}.partial-${process.pid}`;
   if (!overwrite) {
@@ -64,6 +108,7 @@ export async function createBackup({ databaseUrl, output, overwrite = false, run
   await rm(temporaryTarget, { force: true });
 
   try {
+    await assertClientCompatible({ tool: 'pg_dump', environment, capture });
     await run(
       'pg_dump',
       ['--format=custom', '--no-owner', '--no-privileges', `--file=${temporaryTarget}`],
@@ -80,7 +125,13 @@ export async function createBackup({ databaseUrl, output, overwrite = false, run
   return target;
 }
 
-export async function restoreBackup({ databaseUrl, input, confirmedDatabase, run = runCommand }) {
+export async function restoreBackup({
+  databaseUrl,
+  input,
+  confirmedDatabase,
+  run = runCommand,
+  capture = captureCommand,
+}) {
   const source = resolve(input);
   const { database, environment } = databaseConnection(databaseUrl);
   if (['postgres', 'template0', 'template1'].includes(database)) {
@@ -91,6 +142,7 @@ export async function restoreBackup({ databaseUrl, input, confirmedDatabase, run
   }
 
   await access(source);
+  await assertClientCompatible({ tool: 'pg_restore', environment, capture });
   await run('pg_restore', ['--list', source], environment);
   await run(
     'pg_restore',
@@ -105,6 +157,20 @@ export async function restoreBackup({ databaseUrl, input, confirmedDatabase, run
     ],
     environment,
   );
+}
+
+export async function captureCommand(command, args, environment) {
+  try {
+    const { stdout } = await execFileAsync(command, args, { env: environment, windowsHide: true });
+    return stdout;
+  } catch (error) {
+    // The raw error embeds the child's stderr, which can echo the host or user,
+    // so only a fresh cause carrying the exit code is kept.
+    throw new Error(`${command} could not be run to check version compatibility`, {
+      // eslint-disable-next-line preserve-caught-error -- deliberate redaction: the caught error must not reach logs
+      cause: new Error(`${command} failed with code ${error.code}`),
+    });
+  }
 }
 
 export function runCommand(command, args, environment) {

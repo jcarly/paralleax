@@ -2,6 +2,46 @@
 
 ## Unreleased
 
+- Added a chronological PostgreSQL migration test (PAR-20). Synthetic legacy
+  Stories, owners, graph, Triggers, conditions, reader progress, comments and
+  Groups are upgraded one migration at a time through the real migrator, with
+  foreign key, ownership and graph checks after every step, assertions for
+  intentional transformations, schema equality with a fresh install,
+  idempotence, and rollback and resume after a failed migration. It runs in the
+  PostgreSQL CI job on 17 and 18. No migration or runtime change.
+- Secured PostgreSQL backup and restore across majors (PAR-19). `db:backup` and
+  `db:restore` now refuse a `pg_dump` or `pg_restore` older than the target
+  server before touching any file or database, naming only the versions. CI
+  verifies backup and restoration against PostgreSQL 17 and 18, the configured
+  production major (Railway image `postgres-ssl:18`; the running server version
+  is still to be confirmed), and checks that an older client is refused.
+- Change batches (ADR-050 amendment) now create and update stat definitions and
+  assignments: `create_stat_definition`, `update_stat_definition`,
+  `create_stat_assignment` and `update_stat_assignment`, with the editor's
+  stat rules (the same functions and DTOs) and an explicit, required
+  `valueType`. The owner of an assignment is the Story, a character, a location
+  or an existing item definition. Temporary references work for definitions,
+  assignments and owners, in interaction `statEffects[].statId` and in stat
+  conditions (`statId`, `comparisonStatId`; Trigger groups and conditional text),
+  with kind checks that never confuse a definition with an assignment. The
+  preview summary lists every added or updated definition and assignment, whoever
+  owns it, with definition, owner and initial value. `get_story_structure` now
+  returns every stat assignment, page by page (`contextPage`). References inside
+  expressions, item instances and deletion are not supported yet. No migration;
+  `story-changes-context.e2e.spec.ts` and the new stats spec join the PostgreSQL
+  CI list.
+
+- Change batches (ADR-050) now create and update characters and locations:
+  `create_character`, `update_character`, `create_location` and
+  `update_location`, with the editor's fields and rules, which moved from
+  `StoryContextService` to shared functions used by both paths. Temporary
+  references work for them in interaction `locationId` and `characterIds` and in
+  `characterId` and `locationId` conditions (Trigger groups and conditional text),
+  with kind checks. The preview summary lists added and updated characters and
+  locations, marks IDs as provisional and annotates fields that name created
+  entities with their `ref`. The MCP tools and server instructions expose the new
+  operations; deletion, stats, items and groups are still out of scope.
+
 - Story library cards show Read, Edit, Export and Access as icon-only links
   (PAR-7, H). Each keeps its accessible name and shows it in a tooltip on hover
   and keyboard focus; permissions, route preloading and the native export

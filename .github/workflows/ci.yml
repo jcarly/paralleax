@@ -276,6 +276,21 @@ jobs:
           --health-interval 10s
           --health-timeout 5s
           --health-retries 5
+      # Railway production runs PostgreSQL 18 (postgres-ssl:18). This service
+      # exists only to verify backup and restore against the production major.
+      postgres18:
+        image: postgres:18-alpine
+        env:
+          POSTGRES_USER: paralleax
+          POSTGRES_PASSWORD: paralleax
+          POSTGRES_DB: paralleax_test
+        ports:
+          - 5433:5432
+        options: >-
+          --health-cmd "pg_isready -U paralleax -d paralleax_test"
+          --health-interval 10s
+          --health-timeout 5s
+          --health-retries 5
     env:
       POSTGRES_TEST_DATABASE_URL: postgres://paralleax:paralleax@localhost:5432/paralleax_test
       POSTGRES_TEST_DATABASE_URL_B: postgres://paralleax:paralleax@localhost:5432/paralleax_b_test
@@ -298,7 +313,7 @@ jobs:
       - name: Create the second Story transfer test database
         run: docker exec "${{ job.services.postgres.id }}" createdb -U paralleax paralleax_b_test
 
-      - name: Install PostgreSQL 17 client for recovery verification
+      - name: Install PostgreSQL 17 and 18 clients for recovery verification
         if: needs.changes.outputs.postgres_restore == 'true'
         run: |
           sudo install -d /usr/share/postgresql-common/pgdg
@@ -309,11 +324,15 @@ jobs:
           echo "deb [signed-by=/usr/share/postgresql-common/pgdg/apt.postgresql.org.asc] https://apt.postgresql.org/pub/repos/apt ${VERSION_CODENAME}-pgdg main" \
             | sudo tee /etc/apt/sources.list.d/pgdg.list
           sudo apt-get update
-          sudo apt-get install --yes --no-install-recommends postgresql-client-17
-          PG17_BIN=/usr/lib/postgresql/17/bin
-          echo "$PG17_BIN" >> "$GITHUB_PATH"
-          "$PG17_BIN/pg_dump" --version | grep -E ' 17([.]|$)'
-          "$PG17_BIN/pg_restore" --version | grep -E ' 17([.]|$)'
+          sudo apt-get install --yes --no-install-recommends postgresql-client-17 postgresql-client-18
+          # Versioned directories are selected per verification step, so the
+          # default PATH keeps resolving the PostgreSQL 17 tools.
+          echo /usr/lib/postgresql/17/bin >> "$GITHUB_PATH"
+          for major in 17 18; do
+            "/usr/lib/postgresql/$major/bin/pg_dump" --version | grep -E " $major([.]|$)"
+            "/usr/lib/postgresql/$major/bin/pg_restore" --version | grep -E " $major([.]|$)"
+            "/usr/lib/postgresql/$major/bin/psql" --version | grep -E " $major([.]|$)"
+          done
 
       # API e2e specs run against PostgreSQL, so API coverage runs here, where the
       # database exists. The coverage suite already includes every PostgreSQL spec.
@@ -334,9 +353,43 @@ jobs:
           if-no-files-found: ignore
           retention-days: 7
 
-      - name: Verify backup restoration
+      - name: Verify backup restoration (PostgreSQL 17)
         if: needs.changes.outputs.postgres_restore == 'true'
         run: npm run test:restore
+
+      - name: Apply migrations to the PostgreSQL 18 service
+        if: needs.changes.outputs.postgres_restore == 'true'
+        env:
+          DATABASE_URL: postgres://paralleax:paralleax@localhost:5433/paralleax_test
+        run: npm run migrate
+
+      - name: Verify backup restoration (PostgreSQL 18, production major)
+        if: needs.changes.outputs.postgres_restore == 'true'
+        env:
+          POSTGRES_TEST_DATABASE_URL: postgres://paralleax:paralleax@localhost:5433/paralleax_test
+          EXPECTED_PG_MAJOR: '18'
+        run: |
+          PATH="/usr/lib/postgresql/18/bin:$PATH" npm run test:restore
+
+      - name: Verify an older client is refused against PostgreSQL 18
+        if: needs.changes.outputs.postgres_restore == 'true'
+        env:
+          BACKUP_DATABASE_URL: postgres://paralleax:paralleax@localhost:5433/paralleax_test
+        run: |
+          target="$RUNNER_TEMP/must-not-exist.dump"
+          if PATH="/usr/lib/postgresql/17/bin:$PATH" node scripts/backup-postgres.mjs \
+            --output="$target" 2> "$RUNNER_TEMP/refusal.log"; then
+            echo "::error::A PostgreSQL 17 pg_dump was accepted against a PostgreSQL 18 server."
+            exit 1
+          fi
+          grep -F 'pg_dump 17 is older than the PostgreSQL 18 server' "$RUNNER_TEMP/refusal.log"
+          test ! -e "$target"
+
+      - name: Replay the chronological migration history on PostgreSQL 18
+        if: needs.changes.outputs.postgres_integration == 'true'
+        env:
+          POSTGRES_TEST_DATABASE_URL: postgres://paralleax:paralleax@localhost:5433/paralleax_test
+        run: npm run test:migration-history -w @paralleax/api
 
       - name: Run scheduled PostgreSQL stress baseline
         if: needs.changes.outputs.full == 'true'

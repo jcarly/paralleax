@@ -267,6 +267,278 @@ it('reports invalid references, including another story, as diagnostics', async 
   });
 });
 
+/** Alya and the station, a scene that uses both and a branch conditioned on them. */
+function contextOperations(rootId: string) {
+  return [
+    {
+      type: 'create_character',
+      ref: 'alya',
+      fields: { name: 'Alya', description: 'Ingénieure de la station.' },
+    },
+    {
+      type: 'create_location',
+      ref: 'station',
+      fields: { name: 'Station Néréide-7', description: 'Une station de recherche sous-marine.' },
+    },
+    {
+      type: 'create_interaction',
+      ref: 'lab',
+      inputInteractions: [rootId],
+      fields: {
+        title: 'Inspection du laboratoire',
+        locationId: { ref: 'station' },
+        characterIds: [{ ref: 'alya' }],
+      },
+    },
+    {
+      type: 'create_interaction',
+      ref: 'debrief',
+      inputInteractions: [{ ref: 'lab' }],
+      fields: { title: 'Compte rendu' },
+      defaultTrigger: {
+        conditionGroups: [{ conditions: [{ characterId: { ref: 'alya' }, isPresent: true }] }],
+      },
+    },
+  ];
+}
+
+/** The story of the reference scenario, shared by its three ordered steps. */
+const station = { storyId: '', rootId: '', proposalId: '', alyaId: '', stationId: '', labId: '' };
+
+it('previews a character, a location and a scene that uses them without writing', async () => {
+  station.storyId = await createStory(`Station ${randomUUID().slice(0, 8)}`);
+  const owner = await mcp(accounts.owner);
+  const structure = await owner.ok('get_story_structure', { storyId: station.storyId });
+  station.rootId = z.array(idSchema).parse(structure.interactions)[0]?.id ?? '';
+  const before = await readStory(accounts.owner.token, station.storyId);
+
+  const preview = await owner.ok('preview_story_changes', {
+    storyId: station.storyId,
+    operations: contextOperations(station.rootId),
+    expectedRevision: before.revision,
+  });
+
+  expect(preview).toMatchObject({
+    valid: true,
+    idsAreProvisional: true,
+    summary: {
+      provisionalIds: true,
+      counts: { charactersAdded: 1, locationsAdded: 1, interactionsAdded: 2 },
+      characters: [{ change: 'added', ref: 'alya', name: 'Alya' }],
+      locations: [{ change: 'added', ref: 'station', name: 'Station Néréide-7' }],
+    },
+    diagnostics: [],
+  });
+  expect(await readStory(accounts.owner.token, station.storyId)).toEqual(before);
+  station.proposalId = String(preview.proposalId);
+});
+
+it('commits them in one revision, with final IDs the simulation uses', async () => {
+  const owner = await mcp(accounts.owner);
+  const before = await readStory(accounts.owner.token, station.storyId);
+
+  const commit = await owner.ok('commit_story_changes', {
+    storyId: station.storyId,
+    proposalId: station.proposalId,
+  });
+
+  expect(commit).toMatchObject({ status: 'committed', revision: before.revision + 1 });
+  station.alyaId = createdId(commit, 'alya');
+  station.stationId = createdId(commit, 'station');
+  station.labId = createdId(commit, 'lab');
+  const read = await readStory(accounts.owner.token, station.storyId);
+  expect(read.characters).toEqual([expect.objectContaining({ id: station.alyaId, name: 'Alya' })]);
+  expect(read.locations).toEqual([expect.objectContaining({ id: station.stationId })]);
+  const lab = await owner.ok('get_interaction', {
+    storyId: station.storyId,
+    interactionId: station.labId,
+  });
+  expect(lab).toMatchObject({
+    interaction: { locationId: station.stationId, characterIds: [station.alyaId] },
+  });
+  // The condition on Alya's presence holds in the Simulation runtime at the lab.
+  const slice = await rest(
+    accounts.owner.token,
+    'POST',
+    `/stories/${station.storyId}/runtime/slice`,
+    { currentInteractionId: station.labId, includeOptions: true, page: 1, pageSize: 50 },
+  );
+  expect(
+    z.looseObject({ optionInteractionIds: z.array(z.string()) }).parse(slice.json)
+      .optionInteractionIds,
+  ).toContain(createdId(commit, 'debrief'));
+});
+
+it('undoes and redoes the whole scenario, then edits and exports the entities', async () => {
+  const token = accounts.owner.token;
+  const history = (action: 'undo' | 'redo') =>
+    rest(token, 'POST', `/stories/${station.storyId}/history/${action}`);
+  const entities = await readStory(token, station.storyId);
+
+  expect((await history('undo')).status).toBe(201);
+  expect(await readStory(token, station.storyId)).toMatchObject({ characters: [], locations: [] });
+  expect((await history('redo')).status).toBe(201);
+  expect((await readStory(token, station.storyId)).characters).toEqual(entities.characters);
+
+  const edited = await rest(
+    token,
+    'PATCH',
+    `/stories/${station.storyId}/characters/${station.alyaId}`,
+    { description: 'Modifiée dans l’éditeur.' },
+  );
+  expect(edited.status).toBe(200);
+  const exported = JSON.stringify(
+    (await rest(token, 'GET', `/stories/${station.storyId}/export`)).json,
+  );
+  expect(exported).toContain('Station Néréide-7');
+  expect(exported).toContain('Modifiée dans l’éditeur.');
+});
+
+/** Réserve électrique: three succession steps, thresholds at 60 (>= and <). */
+function reserveOperations(rootId: string) {
+  return [...reserveStatOperations(), ...reserveSceneOperations(rootId)];
+}
+
+function reserveStatOperations() {
+  return [
+    {
+      type: 'create_stat_definition',
+      ref: 'reserveDef',
+      fields: { name: 'Réserve électrique', valueType: 'number' },
+    },
+    {
+      type: 'create_stat_assignment',
+      ref: 'reserve',
+      statDefinition: { ref: 'reserveDef' },
+      owner: { type: 'story' },
+      fields: { initialValue: 100 },
+    },
+    { type: 'create_character', ref: 'alya', fields: { name: 'Alya' } },
+    {
+      type: 'create_stat_definition',
+      ref: 'calmDef',
+      fields: { name: 'Sang-froid', valueType: 'number' },
+    },
+    {
+      type: 'create_stat_assignment',
+      ref: 'calm',
+      statDefinition: { ref: 'calmDef' },
+      owner: { type: 'character', id: { ref: 'alya' } },
+      fields: { initialValue: 50 },
+    },
+  ];
+}
+
+function reserveSceneOperations(rootId: string) {
+  const effects = [{ statId: { ref: 'reserve' }, operation: 'add', value: -20 }];
+  const choice = (ref: string, sceneTitle: string, operator: string) => ({
+    type: 'create_interaction',
+    ref,
+    inputInteractions: [{ ref: 'maintain' }, { ref: 'again' }],
+    fields: { title: sceneTitle },
+    defaultTrigger: {
+      conditionGroups: [{ conditions: [{ statId: { ref: 'reserve' }, operator, value: 60 }] }],
+    },
+  });
+  return [
+    {
+      type: 'create_interaction',
+      ref: 'maintain',
+      inputInteractions: [rootId],
+      fields: { title: 'Maintenir le résonateur actif', statEffects: effects },
+    },
+    {
+      type: 'create_interaction',
+      ref: 'again',
+      inputInteractions: [{ ref: 'maintain' }],
+      fields: { title: 'Maintenir encore', statEffects: effects },
+    },
+    choice('backup', 'Activer le protocole de secours', 'gte'),
+    choice('lowPower', 'Basculer sur les batteries', 'lt'),
+  ];
+}
+
+const reserve = { storyId: '', proposalId: '', reserveId: '', alyaCalmId: '' };
+
+it('previews stats, assignments, effects and conditions in one batch without writing', async () => {
+  reserve.storyId = await createStory(`Réserve ${randomUUID().slice(0, 8)}`);
+  const owner = await mcp(accounts.owner);
+  const structure = await owner.ok('get_story_structure', { storyId: reserve.storyId });
+  const rootId = z.array(idSchema).parse(structure.interactions)[0]?.id ?? '';
+  const before = await readStory(accounts.owner.token, reserve.storyId);
+
+  const preview = await owner.ok('preview_story_changes', {
+    storyId: reserve.storyId,
+    operations: reserveOperations(rootId),
+    expectedRevision: before.revision,
+  });
+
+  expect(preview).toMatchObject({
+    valid: true,
+    summary: {
+      counts: { statDefinitionsAdded: 2, statAssignmentsAdded: 2, charactersAdded: 1 },
+      statAssignments: expect.arrayContaining([
+        expect.objectContaining({
+          ref: 'reserve',
+          owner: { type: 'story' },
+          fields: [{ field: 'initialValue', after: 100 }],
+        }),
+        expect.objectContaining({
+          ref: 'calm',
+          owner: expect.objectContaining({
+            type: 'character',
+            ref: 'alya',
+            name: 'Alya',
+          }) as unknown,
+          fields: [{ field: 'initialValue', after: 50 }],
+        }),
+      ]) as unknown,
+    },
+    diagnostics: [],
+  });
+  expect(await readStory(accounts.owner.token, reserve.storyId)).toEqual(before);
+  reserve.proposalId = String(preview.proposalId);
+});
+
+it('commits them and lists the assignments, effects and conditions for reading', async () => {
+  const owner = await mcp(accounts.owner);
+
+  const commit = await owner.ok('commit_story_changes', {
+    storyId: reserve.storyId,
+    proposalId: reserve.proposalId,
+  });
+
+  expect(commit).toMatchObject({ status: 'committed' });
+  reserve.reserveId = createdId(commit, 'reserve');
+  reserve.alyaCalmId = createdId(commit, 'calm');
+  const structure = await owner.ok('get_story_structure', { storyId: reserve.storyId });
+  expect(structure).toMatchObject({
+    context: {
+      hasMore: false,
+      statAssignments: expect.arrayContaining([
+        expect.objectContaining({ id: reserve.reserveId, ownerType: 'story', initialValue: 100 }),
+        expect.objectContaining({
+          id: reserve.alyaCalmId,
+          ownerType: 'character',
+          initialValue: 50,
+        }),
+      ]) as unknown,
+    },
+  });
+  const maintain = await owner.ok('get_interaction', {
+    storyId: reserve.storyId,
+    interactionId: createdId(commit, 'maintain'),
+  });
+  expect(maintain).toMatchObject({
+    interaction: { statEffects: [{ statId: reserve.reserveId, operation: 'add', value: -20 }] },
+  });
+  const backup = await owner.ok('get_interaction', {
+    storyId: reserve.storyId,
+    interactionId: createdId(commit, 'backup'),
+  });
+  expect(JSON.stringify(backup)).toContain(`"statId":"${reserve.reserveId}","operator":"gte"`);
+});
+
 it('lets a viewer read but never preview or commit', async () => {
   const viewer = await mcp(accounts.viewer);
   const before = await readStory(accounts.owner.token, storyId);

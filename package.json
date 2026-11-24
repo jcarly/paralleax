@@ -39,18 +39,18 @@
     "@eslint-react/eslint-plugin": "^5.30.3",
     "@eslint/js": "^10.0.1",
     "concurrently": "^10.0.7",
-    "dependency-cruiser": "^18.7.2",
+    "dependency-cruiser": "^18.8.0",
     "eslint": "^10.15.0",
     "eslint-plugin-jsx-a11y-x": "^0.2.0",
     "eslint-plugin-react-hooks": "^7.1.1",
-    "eslint-plugin-react-refresh": "^0.5.7",
+    "eslint-plugin-react-refresh": "^0.5.8",
     "eslint-plugin-sonarjs": "^4.2.2",
     "jscpd": "^4.3.0",
     "prettier": "^3.10.1",
     "railway": "3.17.0",
     "stylelint": "^18.0.0",
     "typescript": "5.9.3",
-    "typescript-eslint": "^8.72.2"
+    "typescript-eslint": "^8.73.0"
   },
   "engines": {
     "node": "26.x",
@@ -73,8 +73,8 @@
     "source-map-js": "1.2.2"
   },
   "dependencies": {
-    "@sentry/nestjs": "^11.12.0",
-    "@sentry/profiling-node": "^11.12.0",
+    "@sentry/nestjs": "^11.13.0",
+    "@sentry/profiling-node": "^11.13.0",
     "class-validator": "^0.15.1",
     "elkjs": "^0.12.1"
   }

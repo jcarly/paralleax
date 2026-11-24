@@ -1,6 +1,6 @@
-import type { Position } from '../model/index.js';
 import {
   STORY_CHANGE_BATCH_LIMITS,
+  STORY_CHANGE_CONDITION_REFERENCE_KINDS,
   STORY_CHANGE_REFERENCE_PATTERN,
   type StoryChangeCreatedEntity,
   type StoryChangeDiagnostic,
@@ -10,57 +10,12 @@ import {
   type StoryChangeReference,
   type StoryChangeTriggerFields,
 } from './contract.js';
-
-/** Interaction fields with every temporary reference and omitted ID resolved. */
-export type ResolvedStoryChangeInteractionFields = Omit<
-  StoryChangeInteractionFields,
-  'conditionalTextBlocks'
-> & {
-  /** Checked by the caller's entity validation, like any other field value. */
-  conditionalTextBlocks?: unknown[];
-};
-
-/** Trigger fields with every temporary reference and omitted ID resolved. */
-export interface ResolvedStoryChangeTriggerFields {
-  /** Checked by the caller's entity validation, like any other field value. */
-  conditionGroups?: unknown[];
-  appearanceProbability?: number;
-  timerSeconds?: number | null;
-  position?: Position;
-}
-
-export type ResolvedStoryChangeOperation =
-  | {
-      type: 'create_interaction';
-      index: number;
-      interactionId: string;
-      triggerId: string;
-      inputInteractionIds: string[];
-      fields: ResolvedStoryChangeInteractionFields;
-      defaultTrigger: ResolvedStoryChangeTriggerFields;
-    }
-  | {
-      type: 'update_interaction';
-      index: number;
-      interactionId: string;
-      fields: ResolvedStoryChangeInteractionFields;
-    }
-  | {
-      type: 'create_trigger';
-      index: number;
-      interactionId: string;
-      triggerId: string;
-      inputInteractionIds: string[];
-      fields: ResolvedStoryChangeTriggerFields;
-    }
-  | {
-      type: 'update_trigger';
-      index: number;
-      interactionId: string;
-      triggerId: string;
-      inputInteractionIds?: string[];
-      fields: ResolvedStoryChangeTriggerFields;
-    };
+import { isStatOperation, resolveStatEffects, resolveStatOperation } from './stat-references.js';
+import type {
+  ResolvedStoryChangeInteractionFields,
+  ResolvedStoryChangeOperation,
+  ResolvedStoryChangeTriggerFields,
+} from './resolved.js';
 
 export interface StoryChangeResolution {
   operations: ResolvedStoryChangeOperation[];
@@ -102,10 +57,10 @@ class ReferenceResolver {
   readonly created: StoryChangeCreatedEntity[] = [];
   readonly diagnostics: StoryChangeDiagnostic[] = [];
   private readonly references = new Map<string, DeclaredReference>();
-  private index = 0;
+  index = 0;
   private operationDiagnostics = 0;
 
-  constructor(private readonly generateId: () => string) {}
+  constructor(readonly generateId: () => string) {}
 
   resolve(
     operation: StoryChangeOperation,
@@ -122,6 +77,9 @@ class ReferenceResolver {
   }
 
   private resolveOperation(operation: StoryChangeOperation): ResolvedStoryChangeOperation {
+    if (isStatOperation(operation)) {
+      return resolveStatOperation(this, operation);
+    }
     switch (operation.type) {
       case 'create_interaction':
         return this.createInteraction(operation);
@@ -136,6 +94,30 @@ class ReferenceResolver {
         return this.createTrigger(operation);
       case 'update_trigger':
         return this.updateTrigger(operation);
+      case 'create_character': {
+        const characterId = this.generateId();
+        this.declare(operation.ref, 'ref', { kind: 'character', id: characterId });
+        return { type: operation.type, index: this.index, characterId, fields: operation.fields };
+      }
+      case 'update_character':
+        return {
+          type: operation.type,
+          index: this.index,
+          characterId: this.reference(operation.character, 'character', 'character'),
+          fields: operation.fields,
+        };
+      case 'create_location': {
+        const locationId = this.generateId();
+        this.declare(operation.ref, 'ref', { kind: 'location', id: locationId });
+        return { type: operation.type, index: this.index, locationId, fields: operation.fields };
+      }
+      case 'update_location':
+        return {
+          type: operation.type,
+          index: this.index,
+          locationId: this.reference(operation.location, 'location', 'location'),
+          fields: operation.fields,
+        };
     }
   }
 
@@ -244,8 +226,13 @@ class ReferenceResolver {
     fields: StoryChangeInteractionFields,
     path: string,
   ): ResolvedStoryChangeInteractionFields {
-    const { conditionalTextBlocks, ...rest } = fields;
+    const { conditionalTextBlocks, locationId, characterIds, statEffects, ...others } = fields;
     // Request values are untrusted: widen them and keep malformed ones as is.
+    const rest = {
+      ...others,
+      ...this.relationships({ locationId, characterIds }, path),
+      ...resolveStatEffects(this, statEffects, path),
+    };
     const blocks: unknown = conditionalTextBlocks;
     if (!Array.isArray(blocks)) {
       return rest;
@@ -265,6 +252,31 @@ class ReferenceResolver {
           : block,
       ),
     };
+  }
+
+  /** `locationId` and `characterIds`: existing IDs or references to earlier creations. */
+  private relationships(
+    fields: { locationId?: unknown; characterIds?: unknown },
+    path: string,
+  ): Record<string, unknown> {
+    const resolved: Record<string, unknown> = {};
+    if (fields.locationId !== undefined) {
+      resolved.locationId = this.entityField(fields.locationId, 'location', `${path}.locationId`);
+    }
+    const { characterIds } = fields;
+    if (characterIds !== undefined) {
+      resolved.characterIds = Array.isArray(characterIds)
+        ? characterIds.map((id: unknown, index) =>
+            this.entityField(id, 'character', `${path}.characterIds.${index}`),
+          )
+        : characterIds;
+    }
+    return resolved;
+  }
+
+  /** A reference is resolved; any other value is left to the field validation. */
+  private entityField(value: unknown, kind: StoryChangeEntityKind, path: string): unknown {
+    return isTemporaryReference(value) ? this.reference(value, kind, path) : value;
   }
 
   private triggerFields(
@@ -298,17 +310,20 @@ class ReferenceResolver {
       return conditions;
     }
     return conditions.map((condition: unknown, conditionIndex) => {
-      if (!isRecord(condition) || !isTemporaryReference(condition.interactionId)) {
+      if (!isRecord(condition)) {
         return condition;
       }
-      return {
-        ...condition,
-        interactionId: this.reference(
-          condition.interactionId,
-          'interaction',
-          `${path}.${conditionIndex}.interactionId`,
-        ),
-      };
+      const resolved = { ...condition };
+      for (const [field, kind] of Object.entries(STORY_CHANGE_CONDITION_REFERENCE_KINDS)) {
+        if (isTemporaryReference(condition[field])) {
+          resolved[field] = this.reference(
+            condition[field],
+            kind,
+            `${path}.${conditionIndex}.${field}`,
+          );
+        }
+      }
+      return resolved;
     });
   }
 
@@ -318,11 +333,7 @@ class ReferenceResolver {
     );
   }
 
-  private reference(
-    reference: StoryChangeReference,
-    kind: StoryChangeEntityKind,
-    path: string,
-  ): string {
+  reference(reference: StoryChangeReference, kind: StoryChangeEntityKind, path: string): string {
     if (!isTemporaryReference(reference)) {
       return reference;
     }
@@ -348,7 +359,7 @@ class ReferenceResolver {
     return declared.id;
   }
 
-  private declare(ref: string | undefined, path: string, reference: DeclaredReference): void {
+  declare(ref: string | undefined, path: string, reference: DeclaredReference): void {
     if (this.failed()) {
       return;
     }

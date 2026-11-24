@@ -4,7 +4,7 @@ import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 import { URL } from 'node:url';
 import pg from 'pg';
-import { createBackup, restoreBackup } from './postgres-operations.mjs';
+import { createBackup, restoreBackup, serverMajor } from './postgres-operations.mjs';
 
 const sourceUrl = process.env.POSTGRES_TEST_DATABASE_URL;
 if (!sourceUrl) {
@@ -21,7 +21,23 @@ const archive = join(directory, 'backup.dump');
 const admin = new pg.Client({ connectionString: adminUrl.toString() });
 let adminConnected = false;
 
+async function assertExpectedServerMajor() {
+  const expected = process.env.EXPECTED_PG_MAJOR;
+  if (!expected) {
+    return;
+  }
+  const client = new pg.Client({ connectionString: sourceUrl });
+  await client.connect();
+  try {
+    const { rows } = await client.query('SHOW server_version_num');
+    assert.equal(serverMajor(rows[0].server_version_num), Number(expected));
+  } finally {
+    await client.end();
+  }
+}
+
 try {
+  await assertExpectedServerMajor();
   await createBackup({ databaseUrl: sourceUrl, output: archive });
   await admin.connect();
   adminConnected = true;

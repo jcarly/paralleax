@@ -242,7 +242,7 @@
   },
   "apps/api/src/stories/application/story-context.ts": {
     "@typescript-eslint/strict-boolean-expressions": {
-      "count": 4
+      "count": 1
     },
     "max-lines": {
       "count": 1

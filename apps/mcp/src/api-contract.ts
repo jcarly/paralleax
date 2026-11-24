@@ -1,3 +1,4 @@
+import { STORY_CHANGE_ENTITY_KINDS } from '@paralleax/shared';
 import { z } from 'zod';
 
 /**
@@ -109,7 +110,23 @@ export const contextPageSchema = z.looseObject({
   locations: z.array(named),
   characters: z.array(named),
   statDefinitions: z.array(
-    z.looseObject({ id: z.string(), name: z.string(), valueType: z.string().default('number') }),
+    z.looseObject({
+      id: z.string(),
+      name: z.string(),
+      valueType: z.string().default('number'),
+      category: z.string().optional(),
+      changePerHour: z.number().optional(),
+    }),
+  ),
+  // Required: a response without it must fail, not read as "no assignments".
+  statAssignments: z.array(
+    z.looseObject({
+      id: z.string(),
+      statDefinitionId: z.string(),
+      ownerType: z.string(),
+      ownerId: z.string().optional(),
+      initialValue: z.union([z.number(), z.boolean(), z.string()]),
+    }),
   ),
   itemDefinitions: z.array(named),
 });
@@ -153,7 +170,7 @@ const diagnostic = z.looseObject({
 });
 
 const createdEntity = z.looseObject({
-  kind: z.enum(['interaction', 'trigger']),
+  kind: z.enum(STORY_CHANGE_ENTITY_KINDS),
   operationIndex: z.number(),
   id: z.string(),
   ref: z.string().optional(),
@@ -164,6 +181,10 @@ const changeSummary = z.looseObject({
   counts: z.record(z.string(), z.number()),
   interactions: z.array(z.looseObject({ change: z.string(), id: z.string() })),
   triggers: z.array(z.looseObject({ change: z.string(), id: z.string() })),
+  characters: z.array(z.looseObject({ change: z.string(), id: z.string() })).default([]),
+  locations: z.array(z.looseObject({ change: z.string(), id: z.string() })).default([]),
+  statDefinitions: z.array(z.looseObject({ change: z.string(), id: z.string() })),
+  statAssignments: z.array(z.looseObject({ change: z.string(), id: z.string() })),
   connections: z.array(z.looseObject({ change: z.string() })),
 });
 
