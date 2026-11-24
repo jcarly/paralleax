@@ -397,7 +397,7 @@ function extractActBlocks(
       remainingCode.push(lines[index]);
       continue;
     }
-    if (!header.name) {
+    if (header.name === undefined || header.name === '') {
       addQspSourceIssue(
         report,
         { ...source, line: source.line + index },
@@ -610,7 +610,7 @@ function readActionOnlyBranch(
       continue;
     }
     const header = parseActHeader(lines[index]);
-    if (!header?.name) {
+    if (header?.name === undefined || header.name === '') {
       return undefined;
     }
     const parsed = readActBlock(lines, index, endIndex, source, header);
@@ -650,16 +650,16 @@ function readActBlock(
   },
   header: { name?: string; image?: string; inlineCode?: string },
 ): { block: ParsedActBlock; nextIndex: number } | undefined {
-  if (!header.name) {
+  if (header.name === undefined || header.name === '') {
     return undefined;
   }
-  if (header.inlineCode) {
+  if (header.inlineCode !== undefined && header.inlineCode !== '') {
     const line = source.line + startIndex;
     return {
       block: {
         action: {
           name: header.name,
-          ...(header.image ? { image: header.image } : {}),
+          ...(header.image !== undefined && header.image !== '' ? { image: header.image } : {}),
           code: [header.inlineCode],
         },
         sourceLine: line,
@@ -676,7 +676,7 @@ function readActBlock(
     block: {
       action: {
         name: header.name,
-        ...(header.image ? { image: header.image } : {}),
+        ...(header.image !== undefined && header.image !== '' ? { image: header.image } : {}),
         // Keep the header slot so code diagnostics retain their physical line.
         code: ['', ...lines.slice(startIndex + 1, endIndex)],
       },
@@ -719,14 +719,18 @@ function parseActHeader(
   const argumentsText = match[1].slice(0, colon).trim();
   const inlineCode = match[1].slice(colon + 1).trim();
   const name = parseQspStringLiteral(argumentsText);
-  if (!name) {
+  if (name === undefined || name === '') {
     return {};
   }
   const afterName = argumentsText.slice(consumedLiteralLength(argumentsText)).trim();
   const image = afterName.startsWith(',')
     ? parseQspStringLiteral(afterName.slice(1).trim())
     : undefined;
-  return { name, ...(image ? { image } : {}), ...(inlineCode ? { inlineCode } : {}) };
+  return {
+    name,
+    ...(image !== undefined && image !== '' ? { image } : {}),
+    ...(inlineCode ? { inlineCode } : {}),
+  };
 }
 
 function deduplicateActions(actions: ParsedQspAction[]) {

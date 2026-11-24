@@ -152,10 +152,11 @@ describe('story group persistence', () => {
 
     let created: string | false = false;
     await act(async () => {
-      created = await result.current.actions.createGroup('Opening', [
-        'interaction-1',
-        'interaction-2',
-      ]);
+      created = await result.current.actions.createGroup(
+        'Opening',
+        ['interaction-1', 'interaction-2'],
+        '',
+      );
     });
 
     expect(created).toBe('group-1');

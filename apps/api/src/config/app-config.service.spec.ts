@@ -90,6 +90,18 @@ describe('AppConfigService configuration normalization', () => {
     expect(config.nodeEnvironment).toBe('production');
   });
 
+  it.each(['', '   '])('treats blank optional email settings as absent: %j', (value) => {
+    expect(
+      loadAppConfig({
+        BREVO_API_KEY: value,
+        EMAIL_FROM: value,
+        EMAIL_REPLY_TO: value,
+        EMAIL_SMTP_URL: value,
+        REGISTRATION_ACCESS_CODE: value,
+      }),
+    ).toMatchObject({ brevoApiKey: undefined, emailFrom: undefined, emailReplyTo: undefined });
+  });
+
   it('accepts a complete Brevo delivery configuration', () => {
     expect(
       loadAppConfig({

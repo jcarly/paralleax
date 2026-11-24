@@ -24,7 +24,7 @@ export function CommentDiscussionCard({
   variant?: 'rail' | 'post-it';
   onExpand: () => void;
   onCollapse?: () => void;
-  onReply: (body: string) => Promise<unknown>;
+  onReply: (body: string) => Promise<StoryCommentThread | undefined>;
   onStatus: (status: StoryCommentThread['status']) => Promise<unknown>;
   onDelete?: () => Promise<unknown> | void;
   onReattach?: () => Promise<unknown>;
@@ -41,7 +41,7 @@ export function CommentDiscussionCard({
     }
     setPending(true);
     const result = await onReply(body.trim());
-    if (result) {
+    if (result !== undefined) {
       setBody('');
     }
     setPending(false);
@@ -177,7 +177,7 @@ export function CommentDraftCard({
 }: {
   description: string;
   variant?: 'rail' | 'post-it';
-  onCreate: (body: string) => Promise<unknown>;
+  onCreate: (body: string) => Promise<StoryCommentThread | undefined>;
   onCancel: () => void;
 }) {
   const { t } = useTranslation();
@@ -191,7 +191,7 @@ export function CommentDraftCard({
     }
     setPending(true);
     const result = await onCreate(body.trim());
-    if (result) {
+    if (result !== undefined) {
       setBody('');
     }
     setPending(false);

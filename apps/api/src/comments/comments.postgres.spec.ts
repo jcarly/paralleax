@@ -8,7 +8,8 @@ import { StoriesRepository } from '../stories/stories.repository';
 import { CommentsRepository } from './comments.repository';
 
 const connectionString = process.env.POSTGRES_TEST_DATABASE_URL;
-const describePostgres = connectionString ? describe : describe.skip;
+const describePostgres =
+  connectionString !== undefined && connectionString !== '' ? describe : describe.skip;
 
 describePostgres('CommentsRepository PostgreSQL integration', () => {
   const pool = new Pool({ connectionString });

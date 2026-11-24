@@ -172,13 +172,31 @@ describe('TriggerEdge', () => {
   });
 
   it('renders only the edge when no input interaction is attached', () => {
-    const { container } = render(
+    const { container, rerender } = render(
       <svg>
         <TriggerEdge {...baseProps} data={undefined} />
       </svg>,
     );
 
     expect(screen.getByTestId('base-edge')).toBeInTheDocument();
+    expect(container.querySelector('.trigger-edge-hitbox')).not.toBeInTheDocument();
+    expect(screen.queryByRole('button', { name: 'Remove trigger input' })).not.toBeInTheDocument();
+
+    rerender(
+      <svg>
+        <TriggerEdge
+          {...baseProps}
+          data={{
+            interactionId: 'target-1',
+            triggerId: 'trigger-1',
+            inputInteractionId: '',
+            selected: false,
+            conditionCount: 0,
+          }}
+        />
+      </svg>,
+    );
+
     expect(container.querySelector('.trigger-edge-hitbox')).not.toBeInTheDocument();
     expect(screen.queryByRole('button', { name: 'Remove trigger input' })).not.toBeInTheDocument();
   });

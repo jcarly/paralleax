@@ -1,5 +1,5 @@
 import { createPortal } from 'react-dom';
-import { DndContext, DragOverlay, pointerWithin } from '@dnd-kit/core';
+import { DndContext, DragOverlay, pointerWithin, type DragOverEvent } from '@dnd-kit/core';
 import { useTranslation } from 'react-i18next';
 import { StoryGroupRootDrop } from './StoryGroupRootDrop';
 import { StoryGroupTreeRows } from './StoryGroupTreeRows';
@@ -151,8 +151,8 @@ function GroupDragOverlay({ activeId, navigation }: { activeId?: string; navigat
 function createDragAnnouncements(t: ReturnType<typeof useTranslation>['t']) {
   return {
     onDragStart: () => t('editor.groups.dragStarted'),
-    onDragOver: ({ over }: { over: unknown }) =>
-      over ? t('editor.groups.dropPreview') : undefined,
+    onDragOver: ({ over }: DragOverEvent) =>
+      over !== null ? t('editor.groups.dropPreview') : undefined,
     onDragEnd: () => t('editor.groups.dragEnded'),
     onDragCancel: () => t('editor.groups.dragCancelled'),
   };

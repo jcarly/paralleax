@@ -166,10 +166,42 @@ describe('story connection controller', () => {
     act(() => {
       result.current.endCanvasConnection(mouseEvent(0, 0), connectionState(true));
     });
+    act(() => {
+      result.current.startCanvasConnection(mouseEvent(0, 0), {
+        nodeId: '',
+        handleType: 'source',
+        handleId: null,
+      });
+    });
+    act(() => {
+      result.current.endCanvasConnection(mouseEvent(0, 0), emptyConnectionState());
+    });
 
     expect(actions.createChildFromInteraction).not.toHaveBeenCalled();
     expect(actions.createParentForInteraction).not.toHaveBeenCalled();
   });
+});
+
+it.each([
+  ['interactionId', ''],
+  ['interactionId', undefined],
+  ['triggerId', ''],
+  ['triggerId', undefined],
+] as const)('does not connect to a trigger marker with %s set to %s', (missingKey, value) => {
+  const { actions, result } = renderController();
+  const marker = document.createElement('button');
+  marker.dataset.triggerDropTarget = 'true';
+  marker.dataset.interactionId = 'target';
+  marker.dataset.triggerId = 'target-trigger';
+  if (value === undefined) {
+    delete marker.dataset[missingKey];
+  } else {
+    marker.dataset[missingKey] = value;
+  }
+
+  endDrag(result.current, { nodeId: 'source', handleType: 'source' }, marker);
+
+  expect(actions.connectToExistingTrigger).not.toHaveBeenCalled();
 });
 
 function renderController() {

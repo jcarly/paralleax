@@ -4,6 +4,10 @@ import { getStatTargets, statTargetValueType } from './storyStats';
 
 export type ConditionType = 'interaction' | 'location' | 'character' | 'stat' | 'item' | 'dateTime';
 
+export function hasNonEmptyItemId(itemId: string | undefined): itemId is string {
+  return typeof itemId === 'string' && itemId !== '';
+}
+
 export function createTriggerCondition(
   story: Story,
   currentInteractionId: string,
@@ -23,15 +27,17 @@ export function createTriggerCondition(
       return character ? { characterId: character.id, isPresent: true } : undefined;
     }
     case 'stat': {
-      const target = getStatTargets(story)[0];
-      return target
-        ? {
-            statId: target.assignment.id,
-            ...(target.itemId ? { itemId: target.itemId } : {}),
-            operator: statTargetValueType(target) === 'number' ? 'gte' : 'eq',
-            value: target.assignment.initialValue,
-          }
-        : undefined;
+      const targets = getStatTargets(story);
+      if (targets.length === 0) {
+        return undefined;
+      }
+      const target = targets[0];
+      return {
+        statId: target.assignment.id,
+        ...(hasNonEmptyItemId(target.itemId) ? { itemId: target.itemId } : {}),
+        operator: statTargetValueType(target) === 'number' ? 'gte' : 'eq',
+        value: target.assignment.initialValue,
+      };
     }
     case 'item': {
       const definition = story.itemDefinitions?.[0];

@@ -33,7 +33,14 @@ export class EmailService {
   ) {}
 
   get isConfigured() {
-    return this.config.testEmailOutbox || Boolean(this.config.brevoApiKey && this.config.emailFrom);
+    return (
+      this.config.testEmailOutbox ||
+      Boolean(
+        this.config.brevoApiKey !== undefined &&
+        this.config.brevoApiKey !== '' &&
+        this.config.emailFrom,
+      )
+    );
   }
 
   async send(message: EmailMessage): Promise<DeliveredEmail> {
@@ -70,7 +77,11 @@ export class EmailService {
   }
 
   private brevoClient() {
-    if (!this.config.brevoApiKey || !this.config.emailFrom) {
+    if (
+      this.config.brevoApiKey === undefined ||
+      this.config.brevoApiKey === '' ||
+      !this.config.emailFrom
+    ) {
       throw unavailableEmailDelivery();
     }
     this.client ??= new BrevoClient({
@@ -90,7 +101,7 @@ function normalizeMessage(message: EmailMessage): EmailMessage {
     throw new Error('Transactional emails require a text body');
   }
   const html = message.html?.trim();
-  return { to, subject, text, ...(html ? { html } : {}) };
+  return { to, subject, text, ...(html !== undefined && html !== '' ? { html } : {}) };
 }
 
 function toBrevoMessage(
@@ -103,7 +114,7 @@ function toBrevoMessage(
     to: [{ email: message.to }],
     subject: message.subject,
     textContent: message.text,
-    ...(message.html ? { htmlContent: message.html } : {}),
+    ...(message.html !== undefined && message.html !== '' ? { htmlContent: message.html } : {}),
     ...(replyTo ? { replyTo } : {}),
   };
 }
@@ -131,9 +142,9 @@ function brevoFailureLog(error: unknown) {
     event: 'email_delivery_failed',
     provider: 'brevo',
     errorType: error instanceof BrevoTimeoutError ? 'timeout' : brevoError ? 'api' : 'unexpected',
-    ...(statusCode ? { statusCode } : {}),
-    ...(providerCode ? { providerCode } : {}),
-    ...(providerRequestId ? { providerRequestId } : {}),
+    ...(statusCode !== undefined ? { statusCode } : {}),
+    ...(providerCode !== undefined ? { providerCode } : {}),
+    ...(providerRequestId !== undefined ? { providerRequestId } : {}),
   };
 }
 
@@ -144,7 +155,7 @@ function safeHttpStatus(value: unknown) {
 }
 
 function safeProviderCode(body: unknown) {
-  if (!body || typeof body !== 'object' || !('code' in body)) {
+  if (body === null || typeof body !== 'object' || !('code' in body)) {
     return undefined;
   }
   return safeLogToken(body.code);

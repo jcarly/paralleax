@@ -79,7 +79,9 @@ function CommentBadge({
       onClick={onClick}
     >
       <span aria-hidden="true">◆</span>
-      <small>{count || '+'}</small>
+      <small>
+        {typeof count === 'number' && count !== 0 && !Number.isNaN(count) ? count : '+'}
+      </small>
     </button>
   );
 }

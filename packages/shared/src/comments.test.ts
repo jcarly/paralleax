@@ -335,6 +335,7 @@ describe('comment anchors', () => {
     expect(canManageCommentThread({ canManage: false, canEdit: false }, 'reader-1', thread)).toBe(
       false,
     );
+    expect(canManageCommentThread({ canManage: false, canEdit: false }, '', thread)).toBe(false);
     expect(canManageCommentThread(undefined, undefined, thread)).toBe(false);
   });
 
@@ -344,6 +345,7 @@ describe('comment anchors', () => {
     expect(canDeleteCommentThread({ canManage: true }, 'manager-1', thread)).toBe(true);
     expect(canDeleteCommentThread({ canManage: false }, 'creator-1', thread)).toBe(true);
     expect(canDeleteCommentThread({ canManage: false }, 'editor-1', thread)).toBe(false);
+    expect(canDeleteCommentThread({ canManage: false }, '', thread)).toBe(false);
     expect(canDeleteCommentThread(undefined, undefined, thread)).toBe(false);
   });
 });

@@ -79,14 +79,15 @@ function assertRequiredProductionSettings(
     ['CORS_ORIGIN', environment.CORS_ORIGIN],
     ['REGISTRATION_MODE', environment.REGISTRATION_MODE],
   ];
-  const missingSetting = requiredSettings.find(([, value]) => !value);
+  const missingSetting = requiredSettings.find(([, value]) => value === undefined || value === '');
   if (missingSetting) {
     throw new Error(`${missingSetting[0]} is required in production`);
   }
 }
 
 function assertSupportedRegistrationConfiguration(environment: NodeJS.ProcessEnv) {
-  if (environment.REGISTRATION_ACCESS_CODE?.trim()) {
+  const accessCode = environment.REGISTRATION_ACCESS_CODE?.trim();
+  if (accessCode !== undefined && accessCode !== '') {
     throw new Error(
       'REGISTRATION_ACCESS_CODE is no longer supported; use REGISTRATION_MODE=open or closed',
     );
@@ -129,7 +130,8 @@ function devEmailVerificationSkipEnabled(
 }
 
 function loadEmailConfiguration(environment: NodeJS.ProcessEnv) {
-  if (environment.EMAIL_SMTP_URL?.trim()) {
+  const smtpUrl = environment.EMAIL_SMTP_URL?.trim();
+  if (smtpUrl !== undefined && smtpUrl !== '') {
     throw new Error('EMAIL_SMTP_URL is no longer supported; configure BREVO_API_KEY instead');
   }
   const brevoApiKey = optionalBrevoApiKey(environment.BREVO_API_KEY);
@@ -147,7 +149,7 @@ function assertEmailConfiguration(
   if (Boolean(brevoApiKey) !== Boolean(emailFrom)) {
     throw new Error('BREVO_API_KEY and EMAIL_FROM must be configured together');
   }
-  if (emailReplyTo && !brevoApiKey) {
+  if (emailReplyTo && (brevoApiKey === undefined || brevoApiKey === '')) {
     throw new Error('EMAIL_REPLY_TO requires BREVO_API_KEY and EMAIL_FROM');
   }
 }
@@ -198,7 +200,7 @@ function booleanValue(name: string, value: string) {
 
 function optionalBrevoApiKey(value: string | undefined) {
   const normalized = value?.trim();
-  if (!normalized) {
+  if (normalized === undefined || normalized === '') {
     return undefined;
   }
   if (/^xsmtpsib-/i.test(normalized)) {
@@ -212,7 +214,7 @@ function optionalBrevoApiKey(value: string | undefined) {
 
 function optionalEmailAddress(name: string, value: string | undefined): EmailAddress | undefined {
   const normalized = value?.trim();
-  if (!normalized) {
+  if (normalized === undefined || normalized === '') {
     return undefined;
   }
   if (/[\r\n]/.test(normalized)) {
@@ -221,7 +223,10 @@ function optionalEmailAddress(name: string, value: string | undefined): EmailAdd
   const { email, displayName } = parseEmailAddress(normalized);
   assertValidEmailAddress(name, email);
   assertDisplayNameLength(name, displayName);
-  return { email, ...(displayName ? { name: displayName } : {}) };
+  return {
+    email,
+    ...(displayName !== undefined && displayName !== '' ? { name: displayName } : {}),
+  };
 }
 
 function parseEmailAddress(value: string) {
@@ -238,7 +243,7 @@ function assertValidEmailAddress(name: string, email: string) {
 }
 
 function assertDisplayNameLength(name: string, displayName: string | undefined) {
-  if (displayName && displayName.length > 70) {
+  if (displayName !== undefined && displayName !== '' && displayName.length > 70) {
     throw new Error(`${name} display name must contain at most 70 characters`);
   }
 }

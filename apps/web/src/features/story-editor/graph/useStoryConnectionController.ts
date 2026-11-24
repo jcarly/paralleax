@@ -56,7 +56,7 @@ export function useStoryConnectionController({
   );
 
   const startCanvasConnection = useCallback<OnConnectStart>((_, params) => {
-    if (!params.nodeId || !params.handleType) {
+    if (params.nodeId === null || params.nodeId === '' || params.handleType === null) {
       pendingConnectionStart.current = null;
       return;
     }
@@ -159,7 +159,12 @@ function getExistingTriggerConnection(
     return undefined;
   }
   const target = getTriggerDropTarget(event);
-  if (!target?.interactionId || !target.triggerId) {
+  if (
+    target?.interactionId === undefined ||
+    target.interactionId === '' ||
+    target.triggerId === undefined ||
+    target.triggerId === ''
+  ) {
     return undefined;
   }
   return {
