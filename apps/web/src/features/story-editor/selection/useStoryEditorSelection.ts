@@ -81,8 +81,12 @@ export function useStoryEditorSelection(story: Story | undefined) {
   const handleGraphSelectionStart = useCallback(
     (event?: { shiftKey: boolean; altKey: boolean }) => {
       gestureBase.current =
-        graphSelection ?? (selectedId ? { interactionIds: [selectedId], triggers: [] } : undefined);
-      gestureMode.current = event?.altKey ? 'remove' : event?.shiftKey ? 'add' : 'replace';
+        graphSelection ??
+        (hasNonEmptyIdentifier(selectedId)
+          ? { interactionIds: [selectedId], triggers: [] }
+          : undefined);
+      gestureMode.current =
+        event?.altKey === true ? 'remove' : event?.shiftKey === true ? 'add' : 'replace';
       graphSelectionGesture.current = true;
       graphSelectionCandidate.current = undefined;
       selectExclusive();
@@ -147,13 +151,13 @@ export function useStoryEditorSelection(story: Story | undefined) {
   );
   const selectedContextReference: StoryContextReference | undefined = useMemo(
     () =>
-      selectedLocationId
+      hasNonEmptyIdentifier(selectedLocationId)
         ? { type: 'location', id: selectedLocationId }
-        : selectedCharacterId
+        : hasNonEmptyIdentifier(selectedCharacterId)
           ? { type: 'character', id: selectedCharacterId }
-          : selectedStatDefinitionId
+          : hasNonEmptyIdentifier(selectedStatDefinitionId)
             ? { type: 'stat', id: selectedStatDefinitionId }
-            : selectedItemDefinitionId
+            : hasNonEmptyIdentifier(selectedItemDefinitionId)
               ? { type: 'item', id: selectedItemDefinitionId }
               : undefined,
     [selectedCharacterId, selectedItemDefinitionId, selectedLocationId, selectedStatDefinitionId],
@@ -229,4 +233,8 @@ export function useStoryEditorSelection(story: Story | undefined) {
     handleGraphSelectionChange,
     handleGraphSelectionEnd,
   };
+}
+
+function hasNonEmptyIdentifier(value: string | undefined): value is string {
+  return value !== undefined && value !== '';
 }

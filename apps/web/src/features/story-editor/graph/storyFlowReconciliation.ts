@@ -81,7 +81,7 @@ function areProjectionValuesEqual(left: unknown, right: unknown): boolean {
   if (Object.is(left, right)) {
     return true;
   }
-  if (!left || !right || typeof left !== 'object' || typeof right !== 'object') {
+  if (left === null || right === null || typeof left !== 'object' || typeof right !== 'object') {
     return false;
   }
 

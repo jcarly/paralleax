@@ -315,7 +315,7 @@ function useGroupDragExpansion(
       return;
     }
     const groupId = target?.groupId;
-    if (!groupId) {
+    if (groupId === undefined || groupId === '') {
       return;
     }
     const timer = window.setTimeout(() => {
@@ -332,11 +332,13 @@ function canExpandDropTarget(
   target: GroupDropTarget | undefined,
   groups: readonly Group[],
 ) {
-  return Boolean(
-    activeId &&
+  return (
+    activeId !== undefined &&
+    activeId !== '' &&
     target?.position === 'inside' &&
-    target.groupId &&
-    getGroupDropInput(groups, activeId, target),
+    target.groupId !== undefined &&
+    target.groupId !== '' &&
+    getGroupDropInput(groups, activeId, target) !== undefined
   );
 }
 
@@ -348,8 +350,8 @@ function useGroupPointerPosition() {
     pointerPosition.current = { x: event.clientX, y: event.clientY };
   }, []);
   const onTouchMoveCapture = useCallback((event: ReactTouchEvent<HTMLElement>) => {
-    const touch = event.touches[0];
-    if (!touch) {
+    const touch = event.touches.item(0);
+    if (touch === null) {
       return;
     }
     pointerY.current = touch.clientY;

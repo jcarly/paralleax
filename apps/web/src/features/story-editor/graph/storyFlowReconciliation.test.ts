@@ -62,6 +62,25 @@ describe('story Flow reconciliation', () => {
   });
 });
 
+describe('story Flow primitive reconciliation', () => {
+  it('compares changed empty strings, zero coordinates, and false selections', () => {
+    const current = interactionNode({
+      position: { x: 0, y: 0 },
+      data: { title: '', body: '', selected: false },
+    });
+    const projected = interactionNode({
+      position: { x: 0, y: 1 },
+      data: { title: 'Start', body: '', selected: true },
+    });
+
+    const [reconciled] = reconcileStoryFlowNodes([current], [projected]);
+
+    expect(reconciled).not.toBe(current);
+    expect(reconciled.data).toEqual(projected.data);
+    expect(reconciled.position).toEqual(projected.position);
+  });
+});
+
 function interactionNode(
   overrides: Partial<StoryFlowNode> = {},
 ): Extract<StoryFlowNode, { type: 'interaction' }> {

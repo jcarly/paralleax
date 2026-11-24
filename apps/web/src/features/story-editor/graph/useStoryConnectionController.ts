@@ -56,7 +56,7 @@ export function useStoryConnectionController({
   );
 
   const startCanvasConnection = useCallback<OnConnectStart>((_, params) => {
-    if (!params.nodeId || !params.handleType) {
+    if (params.nodeId === null || params.nodeId === '' || params.handleType === null) {
       pendingConnectionStart.current = null;
       return;
     }

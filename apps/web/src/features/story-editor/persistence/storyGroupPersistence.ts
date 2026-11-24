@@ -21,7 +21,7 @@ export function useStoryGroupPersistence({
         api.createGroup(storyId, {
           title,
           interactionIds,
-          ...(parentGroupId ? { parentGroupId } : {}),
+          ...(parentGroupId !== undefined && parentGroupId !== '' ? { parentGroupId } : {}),
         }),
       );
       return (
@@ -56,7 +56,7 @@ function applySavedGroupMutation<T>(
   result: T | undefined,
   apply: (story: Story, result: T) => Story,
 ): T | undefined {
-  if (!result) {
+  if (result === undefined) {
     return undefined;
   }
   setStory((current) => (current?.id === storyId ? apply(current, result) : current));
