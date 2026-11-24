@@ -100,7 +100,10 @@ export function useStoryContextNavigation({
     () => (normalizedSearchQuery ? matchingInteractionIds : referencedInteractionIds),
     [normalizedSearchQuery, matchingInteractionIds, referencedInteractionIds],
   );
-  const currentNavigationIndex = selectedId ? navigationInteractionIds.indexOf(selectedId) : -1;
+  const currentNavigationIndex =
+    selectedId !== undefined && selectedId !== ''
+      ? navigationInteractionIds.indexOf(selectedId)
+      : -1;
   const emphasizedInteractionIds = useMemo(
     () =>
       selectedContextReference?.type === 'location' ||

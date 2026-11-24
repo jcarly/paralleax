@@ -166,6 +166,16 @@ describe('story connection controller', () => {
     act(() => {
       result.current.endCanvasConnection(mouseEvent(0, 0), connectionState(true));
     });
+    act(() => {
+      result.current.startCanvasConnection(mouseEvent(0, 0), {
+        nodeId: '',
+        handleType: 'source',
+        handleId: null,
+      });
+    });
+    act(() => {
+      result.current.endCanvasConnection(mouseEvent(0, 0), emptyConnectionState());
+    });
 
     expect(actions.createChildFromInteraction).not.toHaveBeenCalled();
     expect(actions.createParentForInteraction).not.toHaveBeenCalled();

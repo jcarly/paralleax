@@ -44,7 +44,7 @@ function setup(
     onUpdate: vi
       .fn<(id: string, input: UpdateGroupInput) => Promise<boolean>>()
       .mockResolvedValue(true),
-    onDelete: vi.fn().mockResolvedValue(true),
+    onDelete: vi.fn<(id: string) => Promise<boolean>>().mockResolvedValue(true),
     onCreate: vi.fn().mockResolvedValue('new'),
   };
   function Harness() {
@@ -78,7 +78,12 @@ function setup(
               ...old,
               groups: requireValue(old.groups, 'story groups').map((group) =>
                 group.id === id
-                  ? { ...group, ...(patch.title ? { title: patch.title } : {}) }
+                  ? {
+                      ...group,
+                      ...(patch.title !== undefined && patch.title !== ''
+                        ? { title: patch.title }
+                        : {}),
+                    }
                   : group,
               ),
             };

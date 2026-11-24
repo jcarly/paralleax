@@ -48,16 +48,6 @@
       "count": 1
     }
   },
-  "apps/api/src/auth/auth.service.ts": {
-    "@typescript-eslint/strict-boolean-expressions": {
-      "count": 7
-    }
-  },
-  "apps/api/src/comments/comments.e2e.spec.ts": {
-    "@typescript-eslint/strict-boolean-expressions": {
-      "count": 1
-    }
-  },
   "apps/api/src/comments/comments.postgres.spec.ts": {
     "@typescript-eslint/no-unsafe-type-assertion": {
       "count": 1
@@ -1151,9 +1141,6 @@
     "@typescript-eslint/prefer-optional-chain": {
       "count": 1
     },
-    "@typescript-eslint/strict-boolean-expressions": {
-      "count": 2
-    },
     "complexity": {
       "count": 1
     }
@@ -1167,9 +1154,6 @@
     }
   },
   "apps/web/src/features/story-editor/graph/useStoryConnectionController.ts": {
-    "@typescript-eslint/strict-boolean-expressions": {
-      "count": 1
-    },
     "max-lines-per-function": {
       "count": 1
     }
@@ -1218,11 +1202,6 @@
       "count": 1
     }
   },
-  "apps/web/src/features/story-editor/navigation/StoryGroupTreeContent.tsx": {
-    "@typescript-eslint/strict-boolean-expressions": {
-      "count": 1
-    }
-  },
   "apps/web/src/features/story-editor/navigation/StoryGroupTreePanel.drag.test.tsx": {
     "@typescript-eslint/consistent-type-imports": {
       "count": 1
@@ -1258,9 +1237,6 @@
     "@typescript-eslint/no-unsafe-return": {
       "count": 1
     },
-    "@typescript-eslint/strict-boolean-expressions": {
-      "count": 2
-    },
     "max-lines-per-function": {
       "count": 3
     }
@@ -1278,9 +1254,6 @@
   "apps/web/src/features/story-editor/navigation/useGroupTreeDrag.ts": {
     "@typescript-eslint/no-unnecessary-condition": {
       "count": 1
-    },
-    "@typescript-eslint/strict-boolean-expressions": {
-      "count": 4
     }
   },
   "apps/web/src/features/story-editor/navigation/useGroupTreeNavigation.ts": {
@@ -1297,9 +1270,6 @@
     }
   },
   "apps/web/src/features/story-editor/navigation/useStoryContextNavigation.ts": {
-    "@typescript-eslint/strict-boolean-expressions": {
-      "count": 1
-    },
     "complexity": {
       "count": 1
     },
@@ -1349,11 +1319,6 @@
       "count": 1
     }
   },
-  "apps/web/src/features/story-editor/persistence/storyGroupPersistence.ts": {
-    "@typescript-eslint/strict-boolean-expressions": {
-      "count": 2
-    }
-  },
   "apps/web/src/features/story-editor/persistence/useStoryPersistenceLifecycle.test.ts": {
     "max-lines-per-function": {
       "count": 1
@@ -1374,9 +1339,6 @@
   },
   "apps/web/src/features/story-editor/selection/useStoryEditorSelection.ts": {
     "@typescript-eslint/prefer-nullish-coalescing": {
-      "count": 7
-    },
-    "@typescript-eslint/strict-boolean-expressions": {
       "count": 7
     },
     "complexity": {
