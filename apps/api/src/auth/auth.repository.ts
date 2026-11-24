@@ -45,7 +45,7 @@ export class AuthRepository {
        FROM users WHERE email = $1`,
       [email],
     );
-    return result.rows[0] ? mapUser(result.rows[0]) : undefined;
+    return result.rows.length === 0 ? undefined : mapUser(result.rows[0]);
   }
 
   async findUserById(id: string): Promise<AuthUser | undefined> {
@@ -54,7 +54,7 @@ export class AuthRepository {
        FROM users WHERE id = $1`,
       [id],
     );
-    return result.rows[0] ? mapUser(result.rows[0]) : undefined;
+    return result.rows.length === 0 ? undefined : mapUser(result.rows[0]);
   }
 
   async createUser(user: Omit<AuthUser, 'role'>): Promise<AuthUser | undefined> {
@@ -82,7 +82,7 @@ export class AuthRepository {
         ],
       );
       await client.query('COMMIT');
-      return result.rows[0] ? mapUser(result.rows[0]) : undefined;
+      return result.rows.length === 0 ? undefined : mapUser(result.rows[0]);
     } catch (error) {
       await client.query('ROLLBACK');
       throw error;
@@ -120,7 +120,7 @@ export class AuthRepository {
         [id, role],
       );
       await client.query('COMMIT');
-      return result.rows[0] ? mapManagedUser(result.rows[0]) : undefined;
+      return result.rows.length === 0 ? undefined : mapManagedUser(result.rows[0]);
     } catch (error) {
       await client.query('ROLLBACK');
       throw error;
@@ -137,7 +137,7 @@ export class AuthRepository {
        RETURNING id, email, display_name, role, created_at, email_verified_at`,
       [id, displayName],
     );
-    return result.rows[0] ? mapManagedUser(result.rows[0]) : undefined;
+    return result.rows.length === 0 ? undefined : mapManagedUser(result.rows[0]);
   }
 
   async createSession(session: {
@@ -163,7 +163,7 @@ export class AuthRepository {
        WHERE sessions.token_hash = $1 AND sessions.expires_at > now()`,
       [tokenHash],
     );
-    return result.rows[0] ? mapUser(result.rows[0]) : undefined;
+    return result.rows.length === 0 ? undefined : mapUser(result.rows[0]);
   }
 
   async deleteExpiredSessions(): Promise<void> {
@@ -236,7 +236,7 @@ export class AuthRepository {
          RETURNING id, email, display_name, password_hash, role, created_at, email_verified_at`,
           [userId, passwordHash],
         );
-        if (result.rows[0]) {
+        if (result.rows.length > 0) {
           await client.query('DELETE FROM sessions WHERE user_id = $1', [userId]);
         }
         return result;
@@ -278,13 +278,13 @@ export class AuthRepository {
          RETURNING user_id`,
         [tokenHash, kind, now],
       );
-      if (!token.rows[0]) {
+      if (token.rows.length === 0) {
         await client.query('COMMIT');
         return undefined;
       }
       const result = await apply(client, token.rows[0].user_id);
       await client.query('COMMIT');
-      return result.rows[0] ? mapUser(result.rows[0]) : undefined;
+      return result.rows.length === 0 ? undefined : mapUser(result.rows[0]);
     } catch (error) {
       await client.query('ROLLBACK');
       throw error;

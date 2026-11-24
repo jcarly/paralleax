@@ -19,9 +19,6 @@
     "@typescript-eslint/prefer-optional-chain": {
       "count": 2
     },
-    "@typescript-eslint/strict-boolean-expressions": {
-      "count": 3
-    },
     "max-lines-per-function": {
       "count": 2
     }
@@ -32,11 +29,6 @@
     },
     "max-lines-per-function": {
       "count": 1
-    }
-  },
-  "apps/api/src/auth/auth.repository.ts": {
-    "@typescript-eslint/strict-boolean-expressions": {
-      "count": 9
     }
   },
   "apps/api/src/auth/auth.service.spec.ts": {
@@ -52,9 +44,6 @@
     "@typescript-eslint/prefer-optional-chain": {
       "count": 2
     },
-    "@typescript-eslint/strict-boolean-expressions": {
-      "count": 4
-    },
     "max-lines-per-function": {
       "count": 1
     }
@@ -62,6 +51,11 @@
   "apps/api/src/auth/auth.service.ts": {
     "@typescript-eslint/strict-boolean-expressions": {
       "count": 7
+    }
+  },
+  "apps/api/src/comments/comments.e2e.spec.ts": {
+    "@typescript-eslint/strict-boolean-expressions": {
+      "count": 1
     }
   },
   "apps/api/src/comments/comments.postgres.spec.ts": {

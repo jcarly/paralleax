@@ -131,7 +131,9 @@ describe('Auth API', () => {
           displayName: user.displayName,
           role: user.role,
           createdAt: user.createdAt,
-          ...(user.emailVerifiedAt ? { emailVerifiedAt: user.emailVerifiedAt } : {}),
+          ...(typeof user.emailVerifiedAt === 'string' && user.emailVerifiedAt !== ''
+            ? { emailVerifiedAt: user.emailVerifiedAt }
+            : {}),
         });
       },
       claimMigratedStories: () => Promise.resolve(0),
@@ -338,14 +340,14 @@ describe('Auth API', () => {
   function tokenFromLastEmail() {
     const text = sentMessages.at(-1)?.text ?? '';
     const token = text.match(/[?&]token=([^\s&]+)/u)?.[1];
-    if (!token) {
+    if (typeof token !== 'string' || token === '') {
       throw new Error('Expected an account action token in the email');
     }
     return decodeURIComponent(token);
   }
 
   function readProperty(value: unknown, key: string): unknown {
-    if (!value || typeof value !== 'object') {
+    if (value === null || typeof value !== 'object') {
       return undefined;
     }
     return Reflect.get(value, key);

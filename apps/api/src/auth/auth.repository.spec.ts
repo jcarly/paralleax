@@ -93,6 +93,15 @@ describe('AuthRepository', () => {
     await expect(repository.findUserBySessionHash('token-hash')).resolves.toEqual(user);
   });
 
+  it('returns no user for lookups and updates with empty result rows', async () => {
+    query.mockResolvedValue({ rows: [] });
+
+    await expect(repository.findUserByEmail(user.email)).resolves.toBeUndefined();
+    await expect(repository.findUserById(user.id)).resolves.toBeUndefined();
+    await expect(repository.findUserBySessionHash('missing-token-hash')).resolves.toBeUndefined();
+    await expect(repository.updateDisplayName(user.id, 'New Author')).resolves.toBeUndefined();
+  });
+
   it('creates and removes sessions and purges expired ones', async () => {
     query.mockResolvedValue({ rowCount: 1 });
     await repository.createSession({
@@ -217,6 +226,27 @@ describe('AuthRepository', () => {
       resetRow.password_hash,
     ]);
     expect(clientQuery).toHaveBeenCalledWith('DELETE FROM sessions WHERE user_id = $1', [user.id]);
+    expect(clientQuery).toHaveBeenCalledWith('COMMIT');
+  });
+
+  it('does not revoke sessions when a password reset updates no user row', async () => {
+    clientQuery
+      .mockResolvedValueOnce({})
+      .mockResolvedValueOnce({ rows: [{ user_id: user.id }] })
+      .mockResolvedValueOnce({ rows: [] })
+      .mockResolvedValueOnce({});
+
+    await expect(
+      repository.resetPasswordWithActionToken(
+        'reset-hash',
+        'scrypt:replacement:hash',
+        '2026-07-18T01:00:00.000Z',
+      ),
+    ).resolves.toBeUndefined();
+
+    expect(clientQuery).not.toHaveBeenCalledWith('DELETE FROM sessions WHERE user_id = $1', [
+      user.id,
+    ]);
     expect(clientQuery).toHaveBeenCalledWith('COMMIT');
   });
 
