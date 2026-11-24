@@ -11,9 +11,9 @@ export interface CommentPinNodeData extends Record<string, unknown> {
   canManageThread: boolean;
   canDeleteThread: boolean;
   onOpen: (threadId: string) => void;
-  onCreate: (body: string) => Promise<unknown>;
+  onCreate: (body: string) => Promise<StoryCommentThread | undefined>;
   onCancelDraft: () => void;
-  onReply: (threadId: string, body: string) => Promise<unknown>;
+  onReply: (threadId: string, body: string) => Promise<StoryCommentThread | undefined>;
   onStatus: (threadId: string, status: StoryCommentThread['status']) => Promise<unknown>;
   onDelete: (threadId: string) => Promise<unknown> | void;
 }

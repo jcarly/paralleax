@@ -282,14 +282,14 @@ function mapThread(row: ThreadRow, messages: MessageRow[]): StoryCommentThread {
     createdBy: author(row.created_by, row.created_by_display_name),
     createdAt: iso(row.created_at),
     updatedAt: iso(row.updated_at),
-    ...(row.resolved_by && row.resolved_by_display_name
+    ...(isPresent(row.resolved_by) && isPresent(row.resolved_by_display_name)
       ? { resolvedBy: author(row.resolved_by, row.resolved_by_display_name) }
       : {}),
-    ...(row.resolved_at ? { resolvedAt: iso(row.resolved_at) } : {}),
-    ...(row.deleted_by && row.deleted_by_display_name
+    ...(isPresent(row.resolved_at) ? { resolvedAt: iso(row.resolved_at) } : {}),
+    ...(isPresent(row.deleted_by) && isPresent(row.deleted_by_display_name)
       ? { deletedBy: author(row.deleted_by, row.deleted_by_display_name) }
       : {}),
-    ...(row.deleted_at ? { deletedAt: iso(row.deleted_at) } : {}),
+    ...(isPresent(row.deleted_at) ? { deletedAt: iso(row.deleted_at) } : {}),
     messages: messages.map(mapMessage),
   };
 }
@@ -301,8 +301,12 @@ function mapMessage(row: MessageRow): CommentMessage {
     author: author(row.author_user_id, row.author_display_name),
     body: row.body,
     createdAt: iso(row.created_at),
-    ...(row.edited_at ? { editedAt: iso(row.edited_at) } : {}),
+    ...(isPresent(row.edited_at) ? { editedAt: iso(row.edited_at) } : {}),
   };
+}
+
+function isPresent(value: string | Date | null | undefined): value is string | Date {
+  return typeof value === 'string' ? value !== '' : value instanceof Date;
 }
 
 function groupMessagesByThread(rows: MessageRow[]) {

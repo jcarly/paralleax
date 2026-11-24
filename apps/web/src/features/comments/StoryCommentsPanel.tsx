@@ -48,8 +48,8 @@ export function StoryCommentsPanel({
   onClose: () => void;
   onSelect: (threadId: string | undefined) => void;
   onCancelDraft: () => void;
-  onCreate: (body: string) => Promise<unknown>;
-  onReply: (threadId: string, body: string) => Promise<unknown>;
+  onCreate: (body: string) => Promise<StoryCommentThread | undefined>;
+  onReply: (threadId: string, body: string) => Promise<StoryCommentThread | undefined>;
   onStatus: (threadId: string, status: StoryCommentThread['status']) => Promise<unknown>;
   onDelete?: (threadId: string) => Promise<unknown> | void;
   onRestore?: (threadId: string) => Promise<unknown> | void;
@@ -82,7 +82,7 @@ export function StoryCommentsPanel({
       : selectedThread
         ? await onReply(selectedThread.id, body.trim())
         : undefined;
-    if (result) {
+    if (result !== undefined) {
       setBody('');
     }
     setPending(false);

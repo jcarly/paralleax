@@ -1,4 +1,4 @@
-import { cleanup, render, screen } from '@testing-library/react';
+import { cleanup, render, screen, waitFor } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import { afterEach, describe, expect, it, vi } from 'vitest';
 import type { StoryCommentThread } from '@paralleax/shared';
@@ -58,6 +58,38 @@ describe('StoryCommentsPanel', () => {
     await user.click(screen.getByRole('button', { name: 'Send' }));
 
     expect(onCreate).toHaveBeenCalledWith('Move this closer to the opening.');
+    await waitFor(() => {
+      expect(screen.getByRole('textbox')).toHaveValue('');
+    });
+  });
+
+  it('keeps the draft text when creating a thread fails', async () => {
+    const user = userEvent.setup();
+    const onCreate = vi.fn().mockResolvedValue(undefined);
+    render(
+      <StoryCommentsPanel
+        open
+        loading={false}
+        error=""
+        threads={[]}
+        draftAnchor={{ kind: 'canvas', position: { x: 12, y: 24 } }}
+        canComment
+        onClose={vi.fn()}
+        onSelect={vi.fn()}
+        onCancelDraft={vi.fn()}
+        onCreate={onCreate}
+        onReply={vi.fn()}
+        onStatus={vi.fn()}
+      />,
+    );
+
+    const textbox = screen.getByRole('textbox');
+    await user.type(textbox, 'Keep this comment for retry.');
+    await user.click(screen.getByRole('button', { name: 'Send' }));
+
+    await waitFor(() => {
+      expect(textbox).toHaveValue('Keep this comment for retry.');
+    });
   });
 
   it('shows a discussion and resolves it', async () => {
