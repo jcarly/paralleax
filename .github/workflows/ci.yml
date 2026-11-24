@@ -385,6 +385,12 @@ jobs:
           grep -F 'pg_dump 17 is older than the PostgreSQL 18 server' "$RUNNER_TEMP/refusal.log"
           test ! -e "$target"
 
+      - name: Replay the chronological migration history on PostgreSQL 18
+        if: needs.changes.outputs.postgres_integration == 'true'
+        env:
+          POSTGRES_TEST_DATABASE_URL: postgres://paralleax:paralleax@localhost:5433/paralleax_test
+        run: npm run test:migration-history -w @paralleax/api
+
       - name: Run scheduled PostgreSQL stress baseline
         if: needs.changes.outputs.full == 'true'
         env:

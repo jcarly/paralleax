@@ -61,8 +61,10 @@ the provider before collecting tester responses.
   wholesale story deletion and PostgreSQL tests cover the upgrade path.
 - Implemented foundation: migrations execute through an explicit command rather
   than from repositories or user requests.
-- Add an automated migration test that starts from representative legacy data
-  and verifies rows and foreign keys after every migration.
+- Implemented foundation (PAR-20): a chronological migration test seeds
+  synthetic legacy Stories at the schema version where each entity first
+  existed and verifies rows, ownership, graph routes and every foreign key
+  after each of the 49 migrations (see "Migration history test" below).
 - Implemented foundation: repository backup/restore commands validate archives,
   require an explicit restore target, and CI restores into a temporary database
   and compares migrations and core row counts. The integration job installs the
@@ -349,3 +351,61 @@ editing tools.
 
 This sequence takes precedence over adding broad simulation complexity when the
 intended milestone is public hosting.
+
+## Migration history test (PAR-20)
+
+`database.migration-history.postgres.spec.ts` (with `migration-history.*.ts`)
+upgrades a dedicated test database one migration at a time through the real
+`DatabaseMigrator`; it only restricts the registered list to a prefix for each
+step, so there is no second migration engine and no historical migration is
+modified. It reuses `postgres-test-database.ts`, so it refuses any database
+whose name does not end with `_test`. All data is synthetic.
+
+Fixture: a legacy JSON Story with a duplicate input, an invalid condition, an
+interaction missing its title and position, and two Triggers sharing one route;
+an empty legacy Story; a Story owned by a real account; accounts, a session,
+a location, a character, a stat and its effect, reader progress, a comment
+thread anchored on a Trigger, Groups, a history event, and incoherent access
+settings. Each entity is seeded just before the migration that transforms it.
+
+After every migration:
+
+- every foreign key in the catalog is validated and has no orphan row;
+- Stories (owner, title, creation time), Interactions (text, position, order)
+  and reachability routes (inputs and ordered conditions, whatever the storage
+  layout of the step) equal the expected graph; routes are keyed by source set,
+  so the intentional Trigger merge must not lose or reorder a condition, and
+  once Triggers store condition groups their exact group boundaries are
+  compared as well;
+- the seeded users, sessions, locations, characters, stats, comment threads and
+  Groups still exist, and reader progress rows (user, Story, visited Interactions) match exactly.
+
+Intentional transformations are asserted instead of preserved: JSON
+normalisation defaults, placeholder owner, input de-duplication, invalid
+condition removal, admin promotion, comment policy mapping, typed stat values,
+save slots, Trigger merge with comment anchor retargeting, display names,
+verified accounts, exclusive Group membership, coherent access policies and
+proposal columns.
+
+Also covered: the upgraded schema (columns, constraints, indexes, triggers)
+equals a fresh install (columns, constraints, indexes and trigger names only,
+not every PostgreSQL object, such as sequences, functions or privileges); re-running the migrator changes nothing; a failing
+migration rolls back completely (data, schema, history) and the upgrade resumes
+afterwards; earlier committed migrations survive a later failure.
+
+Versions: CI runs the spec on PostgreSQL 17 (integration job) and on
+PostgreSQL 18, the configured production major. Run time is about 10 seconds.
+
+Limits:
+
+- Item instances, item relationships and location item roots are covered only
+  by the targeted scenarios in `database.migrations.postgres.spec.ts`, not by
+  the chronological fixture.
+- Graph decorations, trigger positions and timers, conditional text blocks,
+  account tokens and story-user permissions are checked for relational
+  integrity only, without seeded rows.
+- The placeholder-owner deletion branch (no Story left on `migration-user`)
+  is not exercised.
+- Synthetic data cannot reveal production-only anomalies; run a restoration
+  drill against a recent backup before a risky migration.
+- Large-data performance and lock duration are not measured.
