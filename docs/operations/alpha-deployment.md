@@ -79,11 +79,10 @@ EMAIL_FROM=Paralleax <accounts@alpha.example.com>
 POSTGRES_SSL=true
 
 # Optional Sentry monitoring. Set both DSNs to enable API/browser error reports.
-# Use one immutable commit or image digest in both release values.
+# The web image derives its release from the build tag; set the API release separately.
 SENTRY_DSN=https://<api-public-key>@o<organization>.ingest.sentry.io/<project>
 SENTRY_RELEASE=<immutable-commit-or-image-digest>
 VITE_SENTRY_DSN=https://<web-public-key>@o<organization>.ingest.sentry.io/<project>
-VITE_SENTRY_RELEASE=<immutable-commit-or-image-digest>
 ```
 
 `BREVO_API_KEY` must contain a Brevo API key, not an SMTP key. The API sends
@@ -147,9 +146,13 @@ runs the deployment smoke check. Re-tagging or deleting a version does not
 deploy. No branch push publishes images or runs the GitHub Actions release job.
 
 The release tags each image with the version and source commit for discovery,
-but Railway receives `ghcr.io/...@sha256:...` references. Set the web runtime
-`VITE_SENTRY_RELEASE` and API `SENTRY_RELEASE` to the version tag to identify
-the same release; the source-map upload uses that tag at build time.
+but Railway receives `ghcr.io/...@sha256:...` references. The web image stores
+the version tag used for its source-map upload and serves it as the browser
+release at startup. It travels with the digest and cannot be overridden by a
+stale runtime `VITE_SENTRY_RELEASE`. The API image also embeds the version tag
+as `SENTRY_RELEASE`. For local Compose builds, `VITE_SENTRY_RELEASE` is an
+optional build argument; without it browser monitoring falls back to the package
+version and uploaded source maps need a matching release.
 If browser source maps are enabled, store `SENTRY_AUTH_TOKEN` as a GitHub Actions
 secret. Only the web image build mounts it as a BuildKit secret; it is not passed
 to the API build, a build argument, or the final image. Local production Compose
@@ -316,8 +319,7 @@ API_PORT=3000
 ```
 
 Configure browser monitoring on the web service at runtime, before deploying a
-new image: `VITE_SENTRY_DSN`, `VITE_SENTRY_RELEASE`, and optionally
-`VITE_SENTRY_TRACES_SAMPLE_RATE`. To enable feedback, set all three
+new image: `VITE_SENTRY_DSN` and optionally `VITE_SENTRY_TRACES_SAMPLE_RATE`. To enable feedback, set all three
 `VITE_POSTHOG_PROJECT_TOKEN`, `VITE_POSTHOG_API_HOST`, and
 `VITE_POSTHOG_FEEDBACK_SURVEY_ID`. These values are public. Missing or invalid
 values disable the corresponding integration. The container generates a
@@ -325,11 +327,18 @@ same-origin `/runtime-config.json` with `Cache-Control: no-store`, and derives
 CSP origins from the validated configuration. No production value is a default.
 Use different projects and surveys for each environment.
 
-Before promoting this image, operators must migrate the existing public values
-from build-time settings to the web service's runtime environment, including an
-explicit survey ID and release matching the source-map upload. No production
-configuration is changed by this code. `SENTRY_AUTH_TOKEN` remains a build
-secret and must never be supplied as a browser value.
+Before the first deployment of this image, an operator must configure the web
+service's runtime environment: copy the intended public `VITE_SENTRY_DSN`,
+`VITE_POSTHOG_PROJECT_TOKEN`, and `VITE_POSTHOG_API_HOST` from the old build
+configuration, explicitly set `VITE_POSTHOG_FEEDBACK_SURVEY_ID` to the survey
+for that project, and set `VITE_SENTRY_TRACES_SAMPLE_RATE` only if tracing is
+wanted. Leave an integration's values empty to disable it. Existing deployments
+keep running until a new image is deployed; this repository change does not
+change their configuration. Remove any stale runtime `VITE_SENTRY_RELEASE`:
+the new image ignores it and uses its own release tag. Verify the generated JSON,
+CSP and reporting in a safe environment before promoting a digest. The source-map
+upload continues to use `SENTRY_AUTH_TOKEN` as a build secret; never put it or a
+PostHog private key in a browser variable.
 
 Nginx listens on `PORT`, and both image and Railway healthchecks use that same
 value. Keep the public-domain target port and `PORT` aligned; `8080` is the

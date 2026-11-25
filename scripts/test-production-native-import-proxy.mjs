@@ -80,6 +80,9 @@ async function verifyRuntimeConfigurations(stagingUrl, gateway, apiPort) {
   const stage = await stageResponse.json();
   assert.equal(stage.sentryDsn, null);
   assert.equal(stage.posthogProjectToken, null);
+  if (process.env.EXPECTED_WEB_RELEASE !== undefined) {
+    assert.equal(stage.sentryRelease, process.env.EXPECTED_WEB_RELEASE);
+  }
   const stageCsp = (await fetch(stagingUrl)).headers.get('content-security-policy');
   assert.doesNotMatch(stageCsp, /sentry|posthog|production\.example/);
 
@@ -87,7 +90,8 @@ async function verifyRuntimeConfigurations(stagingUrl, gateway, apiPort) {
   try {
     startConfiguredContainer(name, gateway, apiPort);
     const configuredUrl = await waitForProxy(name);
-    await verifyConfiguredResponse(configuredUrl);
+    const configuredRelease = await verifyConfiguredResponse(configuredUrl);
+    assert.equal(configuredRelease, stage.sentryRelease);
     const emptyAgain = await (await fetch(`${stagingUrl}/runtime-config.json`)).json();
     assert.deepEqual(emptyAgain, stage);
     const leaked = execFileSync(
@@ -132,6 +136,8 @@ function startConfiguredContainer(name, gateway, apiPort) {
       '--env',
       'VITE_SENTRY_DSN=https://public@production.example/42',
       '--env',
+      'VITE_SENTRY_RELEASE=stale-runtime-release',
+      '--env',
       'VITE_POSTHOG_PROJECT_TOKEN=phc_runtime_test',
       '--env',
       'VITE_POSTHOG_API_HOST=https://feedback.example',
@@ -154,6 +160,10 @@ async function verifyConfiguredResponse(configuredUrl) {
   const config = JSON.parse(text);
   assert.equal(config.sentryDsn, 'https://public@production.example/42');
   assert.equal(config.posthogApiHost, 'https://feedback.example');
+  assert.notEqual(config.sentryRelease, 'stale-runtime-release');
+  if (process.env.EXPECTED_WEB_RELEASE !== undefined) {
+    assert.equal(config.sentryRelease, process.env.EXPECTED_WEB_RELEASE);
+  }
   assert.doesNotMatch(text, /private-canary|phx_/);
   const csp = (await fetch(configuredUrl)).headers.get('content-security-policy');
   assert.match(
@@ -161,6 +171,7 @@ async function verifyConfiguredResponse(configuredUrl) {
     /connect-src 'self' https:\/\/production\.example https:\/\/feedback\.example;/,
   );
   assert.doesNotMatch(csp, /public@|private-canary/);
+  return config.sentryRelease;
 }
 
 async function handleApiRequest(request, response, forwardedRequests) {

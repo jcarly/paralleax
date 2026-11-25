@@ -360,10 +360,14 @@ test(
     const filter = fileURLToPath(new URL('../deploy/runtime-config.jq', import.meta.url));
     const generate = (env) =>
       JSON.parse(
-        execFileSync('jq', ['-n', '-f', filter], {
-          encoding: 'utf8',
-          env: { PATH: process.env.PATH, ...env },
-        }),
+        execFileSync(
+          'jq',
+          ['-n', '--arg', 'image_release', env.IMAGE_SENTRY_RELEASE ?? '', '-f', filter],
+          {
+            encoding: 'utf8',
+            env: { PATH: process.env.PATH, ...env },
+          },
+        ),
       );
     const safe = generate({
       VITE_SENTRY_DSN: 'https://public-key@o123.ingest.sentry.io/42',
@@ -374,6 +378,12 @@ test(
     });
     assert.equal(safe.sentryDsn, 'https://public-key@o123.ingest.sentry.io/42');
     assert.equal(safe.posthogApiHost, 'https://test.example');
+    assert.equal(
+      generate({ IMAGE_SENTRY_RELEASE: 'image-v42', VITE_SENTRY_RELEASE: 'stale-v1' })
+        .sentryRelease,
+      'image-v42',
+    );
+    assert.equal(generate({ VITE_SENTRY_RELEASE: 'stale-v1' }).sentryRelease, null);
     assert.doesNotMatch(JSON.stringify(safe), /secret-test/);
     for (const host of [
       'https://test.example;unsafe',
@@ -384,7 +394,7 @@ test(
       assert.equal(generate({ VITE_POSTHOG_API_HOST: host }).posthogApiHost, null);
     }
     assert.equal(generate({ VITE_POSTHOG_PROJECT_TOKEN: 'phx_private' }).posthogProjectToken, null);
-    assert.equal(generate({ VITE_SENTRY_RELEASE: 'phx_private' }).sentryRelease, null);
+    assert.equal(generate({ IMAGE_SENTRY_RELEASE: 'phx_private' }).sentryRelease, null);
     assert.equal(
       generate({ VITE_SENTRY_DSN: 'https://sntrys_private@example.com/42' }).sentryDsn,
       null,

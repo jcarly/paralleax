@@ -2,7 +2,7 @@
 # validated public values are written; never serialize the process environment.
 mkdir -p /tmp/nginx
 config_file=/tmp/nginx/runtime-config.json
-jq -n -f /etc/nginx/runtime-config.jq > "$config_file.tmp"
+jq -n --arg image_release "$(cat /etc/nginx/sentry-image-release.txt)" -f /etc/nginx/runtime-config.jq > "$config_file.tmp"
 mv "$config_file.tmp" "$config_file"
 SENTRY_CSP_ORIGIN=$(jq -r 'if .sentryDsn then .sentryDsn | capture("^(?<scheme>https?)://[^@]+@(?<host>[^/]+)") | .scheme + "://" + .host else "" end' "$config_file")
 POSTHOG_CSP_ORIGIN=$(jq -r 'if .posthogProjectToken and .posthogApiHost and .posthogFeedbackSurveyId then .posthogApiHost else "" end' "$config_file")

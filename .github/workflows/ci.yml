@@ -541,9 +541,11 @@ jobs:
         run: docker build --target api --tag paralleax-api:ci .
 
       - name: Build production web image
-        run: docker build --target web --tag paralleax-web:ci .
+        run: docker build --target web --build-arg VITE_SENTRY_RELEASE=ci-image-release --tag paralleax-web:ci .
 
-      - name: Verify native Story upload limits through production Nginx
+      - name: Verify native Story uploads and runtime configuration through production Nginx
+        env:
+          EXPECTED_WEB_RELEASE: ci-image-release
         run: npm run test:production-proxy -- paralleax-web:ci
 
   # Stable required check for integration branches. Path-based skips are allowed

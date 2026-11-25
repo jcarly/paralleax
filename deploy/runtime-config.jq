@@ -16,6 +16,6 @@ def safe_string: select(test("^[A-Za-z0-9._/-]{1,200}$") and (test("^(phx_|sntry
 (env.VITE_POSTHOG_PROJECT_TOKEN // "" | [select(test("^phc_[A-Za-z0-9_-]+$"))] | .[0]) as $token |
 (env.VITE_POSTHOG_API_HOST // "" | sub("/$"; "") | [select(valid_origin)] | .[0]) as $host |
 (env.VITE_POSTHOG_FEEDBACK_SURVEY_ID // "" | [select(test("^[A-Za-z0-9-]+$"))] | .[0]) as $survey |
-{ sentryDsn: $dsn, sentryRelease: (env.VITE_SENTRY_RELEASE // "" | [safe_string] | .[0]),
+{ sentryDsn: $dsn, sentryRelease: ($image_release | [safe_string] | .[0]),
   sentryTracesSampleRate: (env.VITE_SENTRY_TRACES_SAMPLE_RATE // "" | [select(test("^(0(\\.[0-9]+)?|1(\\.0+)?)$"))] | .[0]),
   posthogProjectToken: $token, posthogApiHost: $host, posthogFeedbackSurveyId: $survey }
