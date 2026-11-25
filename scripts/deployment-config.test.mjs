@@ -205,6 +205,7 @@ test('Railway web IaC uses Docker and preserves its release, region, and network
     '/scripts/check-web-bundle.mjs',
     '/deploy/nginx.conf.template',
     '/deploy/sentry-csp.envsh',
+    '/deploy/runtime-config.jq',
   ]);
   assert.equal(configuration.deploy.healthcheckPath, '/healthz');
   assert.equal(configuration.deploy.healthcheckTimeout, 300);
@@ -323,20 +324,19 @@ test('Railway image releases use supported source connect options', async () => 
   assert.ok(!sourceConnect.includes(' --json'), 'Railway source connect does not accept --json');
 });
 
-test('the optional PostHog web build and CSP use the same public API host', async () => {
+test('runtime observability uses validated CSP origins', async () => {
   const dockerfile = await readRepositoryFile('Dockerfile');
   const productionCompose = await readRepositoryFile('compose.production.yaml');
   const nginxConfiguration = await readRepositoryFile('deploy/nginx.conf.template');
-
-  assert.match(dockerfile, /^ARG VITE_POSTHOG_PROJECT_TOKEN=$/m);
-  assert.match(dockerfile, /^ARG VITE_POSTHOG_API_HOST=$/m);
-  assert.match(dockerfile, /^ARG VITE_POSTHOG_FEEDBACK_SURVEY_ID=$/m);
-  assert.match(productionCompose, /^\s+VITE_POSTHOG_API_HOST: \$\{VITE_POSTHOG_API_HOST:-\}$/m);
+  assert.doesNotMatch(dockerfile, /^ARG VITE_POSTHOG_/m);
+  assert.match(
+    productionCompose,
+    /^\s+VITE_POSTHOG_PROJECT_TOKEN: \$\{VITE_POSTHOG_PROJECT_TOKEN:-\}$/m,
+  );
   assert.match(
     nginxConfiguration,
-    /connect-src 'self' \$\{SENTRY_CSP_ORIGIN\} \$\{VITE_POSTHOG_API_HOST\};/,
+    /connect-src 'self' \$\{SENTRY_CSP_ORIGIN\} \$\{POSTHOG_CSP_ORIGIN\};/,
   );
-  // The survey renderer is bundled: no third-party script origin is allowed.
   assert.match(nginxConfiguration, /script-src 'self';/);
   assert.doesNotMatch(nginxConfiguration, /FORMBRICKS|posthog\.com/i);
 });
@@ -354,26 +354,44 @@ test('local development exposes services only through IPv4 loopback', async () =
 });
 
 test(
-  'the Sentry CSP origin uses only the public DSN hostname',
+  'runtime configuration rejects private keys and CSP injection',
   { skip: process.platform === 'win32' },
   () => {
-    const scriptPath = fileURLToPath(new URL('../deploy/sentry-csp.envsh', import.meta.url));
-    const originFor = (dsn) =>
-      execFileSync('sh', ['-c', '. "$1"; printf "%s" "$SENTRY_CSP_ORIGIN"', 'sh', scriptPath], {
-        encoding: 'utf8',
-        env: { ...process.env, VITE_SENTRY_DSN: dsn },
-      });
-
+    const filter = fileURLToPath(new URL('../deploy/runtime-config.jq', import.meta.url));
+    const generate = (env) =>
+      JSON.parse(
+        execFileSync('jq', ['-n', '-f', filter], {
+          encoding: 'utf8',
+          env: { PATH: process.env.PATH, ...env },
+        }),
+      );
+    const safe = generate({
+      VITE_SENTRY_DSN: 'https://public-key@o123.ingest.sentry.io/42',
+      VITE_POSTHOG_PROJECT_TOKEN: 'phc_test',
+      VITE_POSTHOG_API_HOST: 'https://test.example',
+      VITE_POSTHOG_FEEDBACK_SURVEY_ID: 'survey-1',
+      SENTRY_AUTH_TOKEN: 'secret-test',
+    });
+    assert.equal(safe.sentryDsn, 'https://public-key@o123.ingest.sentry.io/42');
+    assert.equal(safe.posthogApiHost, 'https://test.example');
+    assert.doesNotMatch(JSON.stringify(safe), /secret-test/);
+    for (const host of [
+      'https://test.example;unsafe',
+      'https://x.example\nscript-src *',
+      'https://x..example',
+      'https://x.example:99999',
+    ]) {
+      assert.equal(generate({ VITE_POSTHOG_API_HOST: host }).posthogApiHost, null);
+    }
+    assert.equal(generate({ VITE_POSTHOG_PROJECT_TOKEN: 'phx_private' }).posthogProjectToken, null);
+    assert.equal(generate({ VITE_SENTRY_RELEASE: 'phx_private' }).sentryRelease, null);
     assert.equal(
-      originFor('https://public-key@o123.ingest.de.sentry.io/42'),
-      'https://o123.ingest.de.sentry.io',
+      generate({ VITE_SENTRY_DSN: 'https://sntrys_private@example.com/42' }).sentryDsn,
+      null,
     );
     assert.equal(
-      originFor('https://public-key@o987.ingest.sentry.io/42'),
-      'https://o987.ingest.sentry.io',
+      generate({ VITE_SENTRY_DSN: 'https://key:secret@example.com/42' }).sentryDsn,
+      null,
     );
-    assert.equal(originFor(''), '');
-    assert.equal(originFor('not-a-dsn'), '');
-    assert.equal(originFor('https://key@bad-host.example;unsafe/42'), '');
   },
 );

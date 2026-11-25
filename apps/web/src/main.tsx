@@ -17,16 +17,16 @@ import './responsive.css';
 import { i18nReady } from './i18n';
 import { App } from './App';
 import { startBrowserMonitoring } from './observability/browserMonitoring';
+import { loadBrowserConfig } from './observability/browserConfig';
 import { RouteErrorPage } from './pages/RouteErrorPage';
 
 const router = createBrowserRouter([
   { path: '*', element: <App />, errorElement: <RouteErrorPage /> },
 ]);
 
-// Start monitoring on page load, without preventing normal app startup.
-void startBrowserMonitoring();
-
-void i18nReady.then(() => {
+// Configuration is loaded before either optional SDK can initialize.
+void Promise.all([loadBrowserConfig(), i18nReady]).then(() => {
+  void startBrowserMonitoring();
   const root = document.getElementById('root');
   if (root === null) {
     throw new Error('The application root element is missing');

@@ -91,9 +91,9 @@ transactional messages over HTTPS so deployment plans that block outbound SMTP
 do not require a mail-port exception.
 
 To enable the optional contextual feedback button, also set
-`VITE_POSTHOG_PROJECT_TOKEN` and `VITE_POSTHOG_API_HOST` (and optionally
-`VITE_POSTHOG_FEEDBACK_SURVEY_ID`) before building the web image. They are
-public build inputs, not server secrets. Follow the
+`VITE_POSTHOG_PROJECT_TOKEN`, `VITE_POSTHOG_API_HOST`, and
+`VITE_POSTHOG_FEEDBACK_SURVEY_ID` on the running web service. They are
+public runtime values, not server secrets. Follow the
 [PostHog feedback runbook](posthog-feedback.md) before collecting tester
 responses.
 
@@ -147,10 +147,9 @@ runs the deployment smoke check. Re-tagging or deleting a version does not
 deploy. No branch push publishes images or runs the GitHub Actions release job.
 
 The release tags each image with the version and source commit for discovery,
-but Railway receives `ghcr.io/...@sha256:...` references. The web Sentry release
-and API `SENTRY_RELEASE` are set from the version tag so both services identify
-the same release. The workflow uses the existing public web Sentry DSN and
-optional public PostHog build values from GitHub Actions repository variables.
+but Railway receives `ghcr.io/...@sha256:...` references. Set the web runtime
+`VITE_SENTRY_RELEASE` and API `SENTRY_RELEASE` to the version tag to identify
+the same release; the source-map upload uses that tag at build time.
 If browser source maps are enabled, store `SENTRY_AUTH_TOKEN` as a GitHub Actions
 secret. Only the web image build mounts it as a BuildKit secret; it is not passed
 to the API build, a build argument, or the final image. Local production Compose
@@ -269,10 +268,6 @@ Before creating the first release tag, configure the GitHub repository:
   token types to the same CLI invocation. Treat this credential as privileged;
   keep it in GitHub Actions secrets, not build arguments or application images.
   The workflow verifies read access to both services before building images.
-- Copy the existing `VITE_SENTRY_DSN` build value into the `VITE_SENTRY_DSN`
-  Actions variable. If enabled, also add `VITE_POSTHOG_PROJECT_TOKEN`,
-  `VITE_POSTHOG_API_HOST`, optional `VITE_POSTHOG_FEEDBACK_SURVEY_ID`, and
-  `VITE_SENTRY_TRACES_SAMPLE_RATE` as Actions variables.
 - If browser source-map uploads are enabled, add `SENTRY_AUTH_TOKEN` as an
   Actions secret and `SENTRY_ORG`, `SENTRY_PROJECT`, and optional `SENTRY_URL`
   as Actions variables. Keep the token in GitHub Actions only; Railway deploys
@@ -320,16 +315,21 @@ API_HOST=${{api.RAILWAY_PRIVATE_DOMAIN}}
 API_PORT=3000
 ```
 
-If PostHog feedback is enabled, add `VITE_POSTHOG_API_HOST` to the web service
-with the same value as the image build, so the runtime Content Security Policy
-allows the PostHog API. Remove any former `VITE_FORMBRICKS_*` variables.
+Configure browser monitoring on the web service at runtime, before deploying a
+new image: `VITE_SENTRY_DSN`, `VITE_SENTRY_RELEASE`, and optionally
+`VITE_SENTRY_TRACES_SAMPLE_RATE`. To enable feedback, set all three
+`VITE_POSTHOG_PROJECT_TOKEN`, `VITE_POSTHOG_API_HOST`, and
+`VITE_POSTHOG_FEEDBACK_SURVEY_ID`. These values are public. Missing or invalid
+values disable the corresponding integration. The container generates a
+same-origin `/runtime-config.json` with `Cache-Control: no-store`, and derives
+CSP origins from the validated configuration. No production value is a default.
+Use different projects and surveys for each environment.
 
-Browser reports are configured at image build time. Set `VITE_SENTRY_DSN`,
-`VITE_SENTRY_TRACES_SAMPLE_RATE`, and the release value through the GitHub
-Actions variables used by the tag workflow. For source-map uploads, provide
-`SENTRY_AUTH_TOKEN`, `SENTRY_ORG`, and `SENTRY_PROJECT` there as described above.
-The token needs Sentry project write/release administration access and must not
-be exposed as a `VITE_*` value, a build argument, or part of the final web image.
+Before promoting this image, operators must migrate the existing public values
+from build-time settings to the web service's runtime environment, including an
+explicit survey ID and release matching the source-map upload. No production
+configuration is changed by this code. `SENTRY_AUTH_TOKEN` remains a build
+secret and must never be supplied as a browser value.
 
 Nginx listens on `PORT`, and both image and Railway healthchecks use that same
 value. Keep the public-domain target port and `PORT` aligned; `8080` is the

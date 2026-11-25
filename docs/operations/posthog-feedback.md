@@ -64,14 +64,14 @@ the display checks depend on SDK behavior, so each upgrade is a reviewed change
 that must keep `posthogFeedbackClient.sdk.test.ts` and the feedback end-to-end
 tests green.
 
-The token and the API host are required. Leaving either one empty keeps the
+The token, API host and survey ID are required. Leaving any one empty keeps the
 SDK and the button disabled:
 
 ```dotenv
 VITE_POSTHOG_PROJECT_TOKEN=phc_<public project token>
 VITE_POSTHOG_API_HOST=https://eu.i.posthog.com
-# Optional: a separate test survey. Empty uses the Paralleax survey.
-VITE_POSTHOG_FEEDBACK_SURVEY_ID=
+# Set the survey belonging to this environment.
+VITE_POSTHOG_FEEDBACK_SURVEY_ID=<survey-id>
 ```
 
 - `VITE_POSTHOG_PROJECT_TOKEN` is the **public project token** (`phc_...`) from
@@ -80,42 +80,30 @@ VITE_POSTHOG_FEEDBACK_SURVEY_ID=
 - `VITE_POSTHOG_API_HOST` must be a bare origin (no path, query, or
   credentials). A reverse proxy origin is possible later; it would also become
   the CSP entry.
-- `VITE_POSTHOG_FEEDBACK_SURVEY_ID` overrides the survey, for example a test
-  survey in a staging project.
+- `VITE_POSTHOG_FEEDBACK_SURVEY_ID` selects the survey in this environment.
 
-These are public web-build settings, not secrets. Vite embeds them into the
-browser bundle. A production Docker image must therefore receive them while it
-is built:
-
-```bash
-docker build --target web \
-  --build-arg VITE_POSTHOG_PROJECT_TOKEN=phc_<token> \
-  --build-arg VITE_POSTHOG_API_HOST=https://eu.i.posthog.com \
-  --tag paralleax-web:<commit> .
-```
+These are public runtime settings, not secrets. The web container generates a
+same-origin JSON document on startup; the bundle contains no project-specific
+values. For local Vite development, set them in the local environment instead; the
+existing Paralleax survey remains the development-only default.
 
 ### Content Security Policy
 
 The SDK and its survey renderer are bundled with Paralleax
 (`posthog-js/no-external`); no PostHog script, remote configuration, or
 feature-flag request is loaded. The production Nginx template therefore keeps
-`script-src 'self'` and adds only `${VITE_POSTHOG_API_HOST}` to `connect-src`.
-Survey styles are injected into a shadow root and rely on the existing
-`style-src 'self' 'unsafe-inline'`. The web container needs
-`VITE_POSTHOG_API_HOST` at runtime with the same value as the build. Docker
-Compose passes it at build and runtime.
+`script-src 'self'` and adds the validated runtime API origin to `connect-src`
+when the feedback configuration is complete. Survey styles are injected into a
+shadow root and rely on `style-src 'self' 'unsafe-inline'`.
 
 The browser contacts only these API paths: `GET /api/surveys/` (survey
 definition) and `POST /e/` (survey events).
 
 ### Railway
 
-The tagged release workflow builds the web image in GitHub Actions. Add
-`VITE_POSTHOG_PROJECT_TOKEN`, `VITE_POSTHOG_API_HOST`, and, if used,
-`VITE_POSTHOG_FEEDBACK_SURVEY_ID` as GitHub Actions **variables**. On the
-Railway `web` service, set `VITE_POSTHOG_API_HOST` to the same value so the
-runtime CSP allows it. Remove the former `VITE_FORMBRICKS_WORKSPACE_ID` and
-`VITE_FORMBRICKS_APP_URL` variables from both places.
+Set all three public values on the Railway web service, separately for each
+environment. No PostHog values are needed by the image build. Remove former
+`VITE_FORMBRICKS_*` variables. Never place private keys in browser configuration.
 
 ## What is sent
 

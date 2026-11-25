@@ -24,8 +24,9 @@ tracking.
 
 1. **PostHog replaces Formbricks.** Formbricks code, dependency, environment
    variables and CSP entries are removed. The survey trigger contract is now
-   the survey id (`DEFAULT_FEEDBACK_SURVEY_ID`, overridable per environment)
-   instead of a code action.
+   the survey id supplied explicitly for each environment instead of a code
+   action. PAR-26 removed the built-in production survey default to keep
+   environments isolated.
 2. **One adapter in the web layer.** `apps/web/src/features/feedback/` is the
    only place that imports `posthog-js`. The shared domain, API and persistence
    layers do not know about PostHog. `PostHogFeedbackClient` exposes

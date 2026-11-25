@@ -6,21 +6,11 @@ ARG RUNTIME_TARGET=web
 
 FROM node:26-alpine AS build
 
-ARG VITE_POSTHOG_PROJECT_TOKEN=
-ARG VITE_POSTHOG_API_HOST=
-ARG VITE_POSTHOG_FEEDBACK_SURVEY_ID=
-ARG VITE_SENTRY_DSN=
 ARG VITE_SENTRY_RELEASE=
-ARG VITE_SENTRY_TRACES_SAMPLE_RATE=
 ARG SENTRY_ORG=
 ARG SENTRY_PROJECT=
 ARG SENTRY_URL=
-ENV VITE_POSTHOG_PROJECT_TOKEN=${VITE_POSTHOG_PROJECT_TOKEN}
-ENV VITE_POSTHOG_API_HOST=${VITE_POSTHOG_API_HOST}
-ENV VITE_POSTHOG_FEEDBACK_SURVEY_ID=${VITE_POSTHOG_FEEDBACK_SURVEY_ID}
-ENV VITE_SENTRY_DSN=${VITE_SENTRY_DSN}
 ENV VITE_SENTRY_RELEASE=${VITE_SENTRY_RELEASE}
-ENV VITE_SENTRY_TRACES_SAMPLE_RATE=${VITE_SENTRY_TRACES_SAMPLE_RATE}
 ENV SENTRY_ORG=${SENTRY_ORG}
 ENV SENTRY_PROJECT=${SENTRY_PROJECT}
 ENV SENTRY_URL=${SENTRY_URL}
@@ -90,23 +80,21 @@ CMD ["node", "apps/api/dist/main.js"]
 
 FROM nginx:alpine AS web
 
-ARG VITE_POSTHOG_API_HOST=
-ARG VITE_SENTRY_DSN=
 
 COPY deploy/nginx.conf.template /etc/nginx/templates/nginx.conf.template
+COPY deploy/runtime-config.jq /etc/nginx/runtime-config.jq
 COPY deploy/sentry-csp.envsh /docker-entrypoint.d/15-sentry-csp.envsh
 COPY --from=web-build /workspace/apps/web/dist /usr/share/nginx/html
 
 ENV API_HOST=api
 ENV API_PORT=3000
 ENV PORT=8080
-ENV VITE_POSTHOG_API_HOST=${VITE_POSTHOG_API_HOST}
-ENV VITE_SENTRY_DSN=${VITE_SENTRY_DSN}
 
 ENV NGINX_ENVSUBST_OUTPUT_DIR=/tmp/nginx
 ENV NGINX_ENTRYPOINT_LOCAL_RESOLVERS=1
 
-RUN chmod +x /docker-entrypoint.d/15-sentry-csp.envsh \
+RUN apk add --no-cache jq \
+  && chmod +x /docker-entrypoint.d/15-sentry-csp.envsh \
   && mkdir -p /tmp/nginx && chown nginx:nginx /tmp/nginx
 
 
