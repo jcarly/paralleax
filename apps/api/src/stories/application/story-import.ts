@@ -18,7 +18,6 @@ import type { ImportChoiceScriptDto, ImportQspDto, QspSourceMetadataDto } from '
 import { StoriesRepository } from '../stories.repository';
 import { apiErrorResponse } from '../../operations/api-error-response';
 import { ImportJobService } from '../../imports/import-job.service';
-import { ImportReportStorage } from '../../imports/import-report-storage';
 import { QspImportWorkerService } from './qsp-import-worker.service';
 import { ChoiceScriptImportWorkerService } from './choicescript-import-worker.service';
 import { QspImportProgressService } from './qsp-import-progress.service';
@@ -34,7 +33,6 @@ export class StoryImportService {
     private readonly choiceScriptWorkers: ChoiceScriptImportWorkerService,
     private readonly qspProgress: QspImportProgressService,
     private readonly jobs: ImportJobService,
-    private readonly reportStorage: ImportReportStorage,
   ) {}
 
   async createChoiceScript(
@@ -63,13 +61,11 @@ export class StoryImportService {
         : (abortSignal ?? jobSignal);
     let result: ChoiceScriptImportResult;
     try {
-      const reportPath = await this.createReportFile(job.id, 'choicescript');
       this.jobs.update(job.id, { status: 'running', phase: 'parsing' });
       result = await this.choiceScriptWorkers.run(
         input.files,
         importOptions(),
         effectiveAbortSignal,
-        reportPath,
       );
     } catch (caught) {
       if (effectiveAbortSignal?.aborted || this.jobs.isCancelled(job.id)) {
@@ -157,7 +153,6 @@ export class StoryImportService {
         : (abortSignal ?? jobSignal);
     let result: QspImportResult;
     try {
-      const reportPath = await this.createReportFile(job.id, 'qsp');
       this.jobs.update(job.id, { status: 'running', phase: 'decoding' });
       result = await this.qspWorkers.run(
         source,
@@ -171,9 +166,9 @@ export class StoryImportService {
           });
         },
         effectiveAbortSignal,
-        reportPath,
       );
     } catch (caught) {
+      this.qspProgress.complete(userId, progressId);
       if (effectiveAbortSignal?.aborted || this.jobs.isCancelled(job.id)) {
         this.jobs.cancel(job.id);
         return this.finishCancelledImport(job.id);
@@ -227,14 +222,13 @@ export class StoryImportService {
     if (this.jobs.isCancelled(importId)) {
       return this.finishCancelledImport(importId);
     }
-    const report = { ...result.report, issues: [] };
+    const report = result.report;
     if (!result.story || result.report.errorCount > 0) {
       this.jobs.update(importId, {
         status: 'failed',
         phase: 'finalizing',
         warningCount: result.report.warningCount,
         errorCount: result.report.errorCount,
-        reportAvailable: true,
       });
       this.jobs.complete(importId);
       throw new BadRequestException(
@@ -250,7 +244,6 @@ export class StoryImportService {
         phase: 'finalizing',
         warningCount: result.report.warningCount,
         errorCount: result.report.errorCount,
-        reportAvailable: true,
       });
       this.jobs.complete(importId);
       return { status: 'confirmation_required' as const, importId, report };
@@ -265,7 +258,6 @@ export class StoryImportService {
       !this.jobs.beginPersistence(importId, {
         warningCount: result.report.warningCount,
         errorCount: result.report.errorCount,
-        reportAvailable: true,
       })
     ) {
       return this.finishCancelledImport(importId);
@@ -277,18 +269,25 @@ export class StoryImportService {
       this.jobs.update(importId, { status: 'failed', phase: 'finalizing' });
       this.jobs.complete(importId);
       if (caught instanceof UnprocessableEntityException) {
+        const original = caught.getResponse();
+        if (typeof original === 'object') {
+          const body = original as { details?: unknown };
+          const details =
+            typeof body.details === 'object' && body.details !== null ? body.details : {};
+          throw new UnprocessableEntityException({
+            ...body,
+            details: { ...details, importId, report },
+          });
+        }
         throw caught;
       }
       throw new InternalServerErrorException(
         apiErrorResponse(
           'STORY_IMPORT_SAVE_FAILED',
-          'The converted Story could not be saved; its diagnostic report remains available.',
+          'The converted Story could not be saved; a diagnostic preview is included.',
           {
             importId,
-            format: result.report.format,
-            warningCount: result.report.warningCount,
-            errorCount: result.report.errorCount,
-            reportAvailable: true,
+            report,
           },
         ),
         { cause: caught },
@@ -300,7 +299,6 @@ export class StoryImportService {
       progress: 100,
       warningCount: result.report.warningCount,
       errorCount: result.report.errorCount,
-      reportAvailable: true,
       storyId: result.story.id,
     });
     this.jobs.complete(importId);
@@ -329,18 +327,7 @@ export class StoryImportService {
 
   private async finishCancelledImport(importId: string) {
     this.jobs.complete(importId);
-    await this.reportStorage.deleteReport(importId);
     return { status: 'cancelled' as const, importId };
-  }
-
-  private async createReportFile(importId: string, format: 'choicescript' | 'qsp') {
-    try {
-      return await this.reportStorage.createReportFile(importId, format);
-    } catch (caught) {
-      this.jobs.update(importId, { status: 'failed', phase: 'finalizing' });
-      this.jobs.complete(importId);
-      throw this.importInfrastructureError(importId, format, caught);
-    }
   }
 
   private async failInfrastructureImport(
@@ -348,17 +335,8 @@ export class StoryImportService {
     format: 'choicescript' | 'qsp',
     caught: unknown,
   ): Promise<never> {
-    this.jobs.update(importId, { status: 'failed', phase: 'finalizing', reportAvailable: false });
+    this.jobs.update(importId, { status: 'failed', phase: 'finalizing' });
     this.jobs.complete(importId);
-    try {
-      await this.reportStorage.deleteReport(importId);
-    } catch (cleanupError) {
-      throw this.importInfrastructureError(
-        importId,
-        format,
-        new AggregateError([caught, cleanupError], 'Import report cleanup also failed.'),
-      );
-    }
     throw this.importInfrastructureError(importId, format, caught);
   }
 
@@ -367,7 +345,7 @@ export class StoryImportService {
     return new InternalServerErrorException(
       apiErrorResponse(
         'STORY_IMPORT_EXECUTION_FAILED',
-        `${format} import execution failed while creating or finalizing its diagnostic report.`,
+        `${format} import execution failed during processing.`,
         { importId, format, errorType },
       ),
       { cause: caught instanceof Error ? caught : undefined },

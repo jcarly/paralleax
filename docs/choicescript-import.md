@@ -52,14 +52,12 @@ The adapter is split by pipeline responsibility:
 - `importer.ts` is the thin public orchestrator and stops the pipeline before
   persistence whenever a structural error is present.
 
-ChoiceScript and QSP reports extend the same `ImportDiagnostics` contract. With
-no capture options, every issue remains in the report as before. An adapter may
-also send every issue to `onIssue` while retaining only `maxPreviewIssues` in
-memory; warning and error counts remain complete even when the preview is empty
-or truncated. The API writes all issues to a private JSONL report file. Import
-responses include report counts and conversion statistics but no issue preview;
-the authenticated `GET /api/imports/:importId/report` endpoint streams the full
-report as a download.
+ChoiceScript and QSP reports extend the same `ImportDiagnostics` contract.
+The worker keeps at most 50 diagnostics, prioritizing blocking errors, while
+counts and statistics remain complete. The browser can download the displayed
+preview as JSONL. If the preview is truncated, the full report is not available;
+the interface states this explicitly. No report is retained by the API. Closing
+the dialog loses the preview unless it has been downloaded.
 
 `models.ts` and `helpers.ts` are internal to this adapter. They are not exported
 as Paralleax domain concepts.
@@ -111,7 +109,7 @@ can then use the editor's complete or scoped automatic layout.
 ## Explicit approximations
 
 Commands or expressions that cannot be represented by the current Paralleax
-model are not executed. The import report identifies their source file and line.
+model are not executed. The diagnostic preview identifies their source file and line when available.
 Current examples include:
 
 - `*rand`, array commands, calculated assignments, and dynamic variable types;
@@ -127,7 +125,7 @@ Story with warnings is suitable for graph inspection and manual adaptation, not
 as proof of runtime-equivalent execution.
 
 Unlike ChoiceForge's pragmatic importer, Paralleax does not yet have a canonical
-place to preserve unconverted raw scene source. The report is therefore mandatory
+place to preserve unconverted raw scene source. Diagnostic review is therefore important
 and the UI does not claim lossless round-tripping.
 
 ## Compatibility corpora and licensing

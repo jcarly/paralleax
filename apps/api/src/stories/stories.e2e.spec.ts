@@ -16,7 +16,6 @@ import {
 import { StoriesRepository } from './stories.repository';
 import { StoryEventsService } from './story.events';
 import {
-  parseJsonValue,
   parseResponse,
   parseResponseArray,
   required,
@@ -587,13 +586,13 @@ it('writes ChoiceScript warnings to the downloadable JSONL report', async () => 
   );
   expect(parseResponse(response)).toMatchObject({
     status: 'confirmation_required',
-    report: { format: 'choicescript', warningCount: 1, errorCount: 0, issues: [] },
+    report: {
+      format: 'choicescript',
+      warningCount: 1,
+      errorCount: 0,
+      issues: [expect.objectContaining({ code: 'missing_startup_scene' })],
+    },
   });
-  const report = await getApi(
-    `/api/imports/${responseStringAt(parseResponse(response), 'importId')}/report`,
-    200,
-  );
-  expect(report.text).toContain('missing_startup_scene');
   expect(responseObjectArrayAt(parseResponse(await getApi('/api/stories', 200)), 'items')).toEqual(
     [],
   );
@@ -647,30 +646,6 @@ function qspCompatibilityRequest() {
   };
 }
 
-async function expectQspReportDownload(
-  preview: ApiJsonObject,
-  importId: string,
-  reportBody: ApiJsonObject,
-): Promise<void> {
-  const report = await request(httpServer)
-    .get(`/api/imports/${importId}/report`)
-    .expect(200)
-    .expect('content-type', /application\/x-ndjson/)
-    .expect('content-disposition', new RegExp(`attachment; filename="${importId}\\.jsonl"`));
-  const issues = report.text
-    .split('\n')
-    .filter(Boolean)
-    .map((line) => parseJsonValue(line));
-  expect(issues).toHaveLength(
-    responseNumberAt(preview, 'report', 'warningCount') +
-      responseNumberAt(preview, 'report', 'errorCount'),
-  );
-  expect(issues).toEqual(
-    expect.arrayContaining([expect.objectContaining({ severity: 'warning' })]),
-  );
-  expect(reportBody).toMatchObject({ errorCount: 0, issues: [] });
-}
-
 it('previews QSP compatibility warnings and serves the downloadable report', async () => {
   const preview = await postApi('/api/stories/imports/qsp', qspCompatibilityRequest());
   const previewBody = parseResponse(preview);
@@ -680,13 +655,9 @@ it('previews QSP compatibility warnings and serves the downloadable report', asy
   expect(previewBody.story).toBeUndefined();
   expect(typeof reportBody.warningCount).toBe('number');
   expect(responseNumberAt(previewBody, 'report', 'warningCount')).toBeGreaterThan(0);
-  await expectQspReportDownload(previewBody, importId, reportBody);
-  await request(httpServer)
-    .get(`/api/imports/${importId}/report`)
-    .set('Cookie', 'paralleax_session=user-two')
-    .expect(403);
-  await getApi('/api/imports/not-a-uuid/report', 400);
-  await getApi(`/api/imports/${randomUUID()}/report`, 404);
+  const issues = responseObjectArrayAt(previewBody, 'report', 'issues');
+  expect(issues).toHaveLength(responseNumberAt(previewBody, 'report', 'warningCount'));
+  await getApi(`/api/imports/${importId}/report`, 404);
   expect(responseObjectArrayAt(parseResponse(await getApi('/api/stories')), 'items')).toEqual([]);
 });
 
@@ -783,6 +754,28 @@ it('reports QSP compatibility coverage and lists the imported story', async () =
     ]),
   );
 });
+it('bounds a large QSP preview while retaining the blocking error and complete counts', async () => {
+  const source = `# Start\n${'unknown_command\n'.repeat(100)}goto 'Missing'\n--- Start ---`;
+  const response = await postApi(
+    '/api/stories/imports/qsp',
+    {
+      file: {
+        name: 'large.qsps',
+        format: 'text',
+        contentBase64: Buffer.from(source).toString('base64'),
+      },
+    },
+    400,
+  );
+  const body = parseResponse(response);
+  const issues = responseObjectArrayAt(body, 'details', 'report', 'issues');
+  expect(responseNumberAt(body, 'details', 'report', 'warningCount')).toBeGreaterThanOrEqual(100);
+  expect(responseNumberAt(body, 'details', 'report', 'errorCount')).toBeGreaterThan(0);
+  expect(issues).toHaveLength(50);
+  expect(issues.map((issue) => issue.code)).toContain('missing_location_target');
+  await getApi(`/api/imports/${responseStringAt(body, 'details', 'importId')}/report`, 404);
+  expect(responseObjectArrayAt(parseResponse(await getApi('/api/stories')), 'items')).toEqual([]);
+});
 it('requires QSP warning confirmation when the issue preview is empty', async () => {
   const source = '# Start\nunknown_command\n--- Start ---';
   const response = await postApi(
@@ -798,7 +791,11 @@ it('requires QSP warning confirmation when the issue preview is empty', async ()
   );
   expect(parseResponse(response)).toMatchObject({
     status: 'confirmation_required',
-    report: { warningCount: 1, errorCount: 0, issues: [] },
+    report: {
+      warningCount: 1,
+      errorCount: 0,
+      issues: [expect.objectContaining({ severity: 'warning' })],
+    },
   });
   expect(responseObjectArrayAt(parseResponse(await getApi('/api/stories', 200)), 'items')).toEqual(
     [],
@@ -920,13 +917,12 @@ it('validates QSP format metadata and rejects unresolved locations atomically', 
   });
   expect(responseObjectAt(parseResponse(unresolved), 'details', 'report')).toMatchObject({
     errorCount: 1,
-    issues: [],
   });
-  const report = await getApi(
-    `/api/imports/${responseStringAt(parseResponse(unresolved), 'details', 'importId')}/report`,
-    200,
-  );
-  expect(report.text).toContain('missing_location_target');
+  expect(
+    responseObjectArrayAt(parseResponse(unresolved), 'details', 'report', 'issues').map(
+      (issue) => issue.code,
+    ),
+  ).toContain('missing_location_target');
   const listResponse = await getApi('/api/stories', 200);
   expect(responseObjectArrayAt(parseResponse(listResponse), 'items')).toEqual([]);
 });

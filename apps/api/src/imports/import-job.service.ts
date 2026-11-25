@@ -22,7 +22,6 @@ export interface ImportJobSnapshot {
   currentFile?: string;
   warningCount: number;
   errorCount: number;
-  reportAvailable: boolean;
   storyId?: string;
   createdAt: string;
   updatedAt: string;
@@ -64,7 +63,6 @@ export class ImportJobService implements OnModuleInit, OnModuleDestroy {
       progress: 0,
       warningCount: 0,
       errorCount: 0,
-      reportAvailable: false,
       createdAt: now,
       updatedAt: now,
     };
@@ -108,7 +106,7 @@ export class ImportJobService implements OnModuleInit, OnModuleDestroy {
     if (!current || isTerminal(current.status) || current.phase === 'saving') {
       return false;
     }
-    this.update(id, { status: 'cancelled', reportAvailable: false });
+    this.update(id, { status: 'cancelled' });
     this.abortControllers.get(id)?.abort();
     this.complete(id);
     return true;

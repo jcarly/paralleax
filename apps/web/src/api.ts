@@ -434,7 +434,6 @@ export const api = {
       body: JSON.stringify({ files, ...(confirmWarnings ? { confirmWarnings: true } : {}) }),
       ...(signal ? { signal } : {}),
     }),
-  importReportUrl: (importId: string) => `/api/imports/${encodeURIComponent(importId)}/report`,
   previewNativeStory: (file: Blob, signal?: AbortSignal) =>
     uploadBinary<NativeStoryImportSummary>(
       '/stories/imports/native/preview',

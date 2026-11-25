@@ -33,8 +33,6 @@ type StoryImportProgress =
 type StoryImportRequestError = {
   summary: string;
   report?: StoryImportReport;
-  importId?: string;
-  reportAvailable?: boolean;
 };
 type QspImportProgressSession = { progressId?: string; close: () => void };
 
@@ -234,8 +232,6 @@ function createStoryImportError(
       t(format === 'qsp' ? 'library.import.qsp.failed' : 'library.import.failed'),
     ),
     report: storyImportFailureReport(caught),
-    importId: storyImportFailureId(caught),
-    reportAvailable: storyImportReportAvailable(caught),
   };
 }
 
@@ -296,7 +292,6 @@ function StoryImportDialogView({ controller }: { controller: StoryImportControll
               key={controller.outcome.status}
               mode={controller.outcome.status === 'imported' ? 'imported' : 'review'}
               report={controller.outcome.report}
-              importId={controller.outcome.importId}
             />
           ) : (
             <StoryImportForm controller={controller} />
@@ -491,21 +486,12 @@ function ImportRequestError({
   selectionError?: string;
   error?: StoryImportRequestError;
 }) {
-  const { t } = useTranslation();
   return (
     <>
       <div className="library-error choicescript-import-error" role="alert">
         <p>{selectionError || error?.summary}</p>
       </div>
-      {error?.report ? (
-        <StoryImportReportView mode="failure" report={error.report} importId={error.importId} />
-      ) : error?.reportAvailable && error.importId ? (
-        <div className="story-import-report-heading">
-          <a className="product-secondary" href={api.importReportUrl(error.importId)}>
-            {t('library.import.downloadReport')}
-          </a>
-        </div>
-      ) : null}
+      {error?.report ? <StoryImportReportView mode="failure" report={error.report} /> : null}
     </>
   );
 }
@@ -557,50 +543,111 @@ function ImportProgress({ progress }: { progress: StoryImportProgress }) {
 function StoryImportReportView({
   report,
   mode,
-  importId,
 }: {
   report: StoryImportReport;
   mode: 'failure' | 'review' | 'imported';
-  importId?: string;
 }) {
   const { t } = useTranslation();
-  const sourceCount = report.format === 'qsp' ? report.locationCount : report.sceneCount;
+  const truncated = report.warningCount + report.errorCount > report.issues.length;
   return (
     <div className="choicescript-import-result">
       <div className="story-import-report-heading">
         <p>{t(`library.import.${mode}Description`)}</p>
-        {importId ? (
-          <a className="product-secondary" href={api.importReportUrl(importId)}>
-            {t('library.import.downloadReport')}
-          </a>
-        ) : null}
+        <button
+          className="product-secondary"
+          type="button"
+          onClick={() => {
+            downloadReport(report);
+          }}
+        >
+          {t(truncated ? 'library.import.downloadPreview' : 'library.import.downloadReport')}
+        </button>
       </div>
-      <dl>
-        <div>
-          <dt>
-            {t(report.format === 'qsp' ? 'library.import.qsp.locations' : 'library.import.scenes')}
-          </dt>
-          <dd>{sourceCount}</dd>
-        </div>
-        <div>
-          <dt>{t('library.import.interactions')}</dt>
-          <dd>{report.interactionCount}</dd>
-        </div>
-        <div>
-          <dt>{t('library.import.warnings')}</dt>
-          <dd>{report.warningCount}</dd>
-        </div>
-        <div>
-          <dt>{t('library.import.errors')}</dt>
-          <dd>{report.errorCount}</dd>
-        </div>
-      </dl>
+      <ImportReportCounts report={report} />
       {report.warningCount === 0 && report.errorCount === 0 ? (
         <p className="choicescript-import-clean">{t('library.import.noWarnings')}</p>
       ) : null}
+      {truncated ? (
+        <p role="status">{t('library.import.reportTruncated', { count: report.issues.length })}</p>
+      ) : null}
+      <ImportIssueList issues={report.issues} />
       {report.format === 'qsp' ? <QspCoverage report={report} /> : null}
     </div>
   );
+}
+
+function ImportReportCounts({ report }: { report: StoryImportReport }) {
+  const { t } = useTranslation();
+  const sourceCount = report.format === 'qsp' ? report.locationCount : report.sceneCount;
+  return (
+    <dl>
+      <div>
+        <dt>
+          {t(report.format === 'qsp' ? 'library.import.qsp.locations' : 'library.import.scenes')}
+        </dt>
+        <dd>{sourceCount}</dd>
+      </div>
+      <div>
+        <dt>{t('library.import.interactions')}</dt>
+        <dd>{report.interactionCount}</dd>
+      </div>
+      <div>
+        <dt>{t('library.import.warnings')}</dt>
+        <dd>{report.warningCount}</dd>
+      </div>
+      <div>
+        <dt>{t('library.import.errors')}</dt>
+        <dd>{report.errorCount}</dd>
+      </div>
+    </dl>
+  );
+}
+
+function ImportIssueList({ issues }: { issues: StoryImportReport['issues'] }) {
+  const { t } = useTranslation();
+  const counts = new Map<string, number>();
+  if (issues.length === 0) {
+    return null;
+  }
+  return (
+    <ul>
+      {issues.map((issue) => {
+        const identity = JSON.stringify(issue);
+        const occurrence = counts.get(identity) ?? 0;
+        counts.set(identity, occurrence + 1);
+        return (
+          <li key={`${identity}-${occurrence}`}>
+            {t(`library.import.severity.${issue.severity}`)}: {issue.message}
+            {issue.fileName ? ` · ${issue.fileName}` : ''}
+            {issue.locationName ? ` · ${issue.locationName}` : ''}
+            {issue.line !== undefined ? ` · ${t('library.import.line', { line: issue.line })}` : ''}
+          </li>
+        );
+      })}
+    </ul>
+  );
+}
+
+function downloadReport(report: StoryImportReport) {
+  const lines = report.issues.map(({ fileName, locationName, ...issue }) =>
+    JSON.stringify({
+      ...issue,
+      ...(fileName === undefined ? {} : { file: fileName }),
+      ...(locationName === undefined ? {} : { location: locationName }),
+    }),
+  );
+  const url = URL.createObjectURL(
+    new Blob([lines.join('\n'), lines.length ? '\n' : ''], {
+      type: 'application/x-ndjson;charset=utf-8',
+    }),
+  );
+  const link = document.createElement('a');
+  link.href = url;
+  link.download = `${report.format}-import-report.jsonl`;
+  link.click();
+  setTimeout(() => {
+    URL.revokeObjectURL(url);
+  }, 0);
 }
 
 function QspCoverage({ report }: { report: QspImportReport }) {
@@ -873,29 +920,14 @@ function storyImportFailureReport(caught: unknown): StoryImportReport | undefine
   return report as unknown as StoryImportReport;
 }
 
-function storyImportReportAvailable(caught: unknown) {
-  if (!isStoryImportFailure(caught) || !isRecord(caught.details)) {
-    return false;
-  }
-  return caught.details.reportAvailable === true || storyImportFailureReport(caught) !== undefined;
-}
-
-function storyImportFailureId(caught: unknown) {
-  if (!isStoryImportFailure(caught) || !storyImportReportAvailable(caught)) {
-    return undefined;
-  }
-  if (!isRecord(caught.details) || typeof caught.details.importId !== 'string') {
-    return undefined;
-  }
-  return caught.details.importId;
-}
-
 function isStoryImportFailure(
   caught: unknown,
 ): caught is Error & { status: number; code: string; details?: unknown } {
   return (
     isApiErrorLike(caught) &&
-    (caught.code === 'STORY_IMPORT_FAILED' || caught.code === 'STORY_IMPORT_SAVE_FAILED')
+    (caught.code === 'STORY_IMPORT_FAILED' ||
+      caught.code === 'STORY_IMPORT_SAVE_FAILED' ||
+      caught.code === 'STORY_QUOTA_EXCEEDED')
   );
 }
 
