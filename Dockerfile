@@ -39,7 +39,7 @@ RUN npm run build --workspace=@paralleax/api
 FROM shared-build AS web-build
 
 RUN --mount=type=secret,id=sentry_auth_token,required=false \
-  case "$VITE_SENTRY_RELEASE" in *[!a-zA-Z0-9._/-]*|phx_*|sntrys_*|sntryu_*) exit 1 ;; esac \
+  case "$VITE_SENTRY_RELEASE" in *[!a-zA-Z0-9._/+@-]*|phx_*|sntrys_*|sntryu_*) exit 1 ;; esac \
   && [ "${#VITE_SENTRY_RELEASE}" -le 200 ] \
   && if [ -s /run/secrets/sentry_auth_token ]; then \
     SENTRY_AUTH_TOKEN="$(cat /run/secrets/sentry_auth_token)" npm run build --workspace=@paralleax/web; \

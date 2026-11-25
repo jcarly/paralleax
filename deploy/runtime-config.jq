@@ -11,7 +11,7 @@ def dsn:
   select(.key | test("^(phx_|sntrys_|sntryu_)") | not) |
   select(.path | test("[A-Za-z0-9_]")) |
   .scheme + "://" + .key + "@" + .host + "/" + .path;
-def safe_string: select(test("^[A-Za-z0-9._/-]{1,200}$") and (test("^(phx_|sntrys_|sntryu_)") | not));
+def safe_string: select(test("^[A-Za-z0-9._/+@-]{1,200}$") and (test("^(phx_|sntrys_|sntryu_)") | not));
 (env.VITE_SENTRY_DSN // "" | [dsn] | .[0]) as $dsn |
 (env.VITE_POSTHOG_PROJECT_TOKEN // "" | [select(test("^phc_[A-Za-z0-9_-]+$"))] | .[0]) as $token |
 (env.VITE_POSTHOG_API_HOST // "" | sub("/$"; "") | [select(valid_origin)] | .[0]) as $host |

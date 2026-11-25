@@ -379,9 +379,9 @@ test(
     assert.equal(safe.sentryDsn, 'https://public-key@o123.ingest.sentry.io/42');
     assert.equal(safe.posthogApiHost, 'https://test.example');
     assert.equal(
-      generate({ IMAGE_SENTRY_RELEASE: 'image-v42', VITE_SENTRY_RELEASE: 'stale-v1' })
+      generate({ IMAGE_SENTRY_RELEASE: 'image-v42+build', VITE_SENTRY_RELEASE: 'stale-v1' })
         .sentryRelease,
-      'image-v42',
+      'image-v42+build',
     );
     assert.equal(generate({ VITE_SENTRY_RELEASE: 'stale-v1' }).sentryRelease, null);
     assert.doesNotMatch(JSON.stringify(safe), /secret-test/);
