@@ -1,16 +1,16 @@
 import { describe, expect, it } from 'vitest';
-import { DEFAULT_FEEDBACK_SURVEY_ID, parsePostHogFeedbackConfig } from './feedbackConfig';
+import { parsePostHogFeedbackConfig } from './feedbackConfig';
 
 describe('parsePostHogFeedbackConfig', () => {
-  it('normalizes a complete configuration and uses the Paralleax survey by default', () => {
-    expect(parsePostHogFeedbackConfig(' phc_public_token ', ' https://eu.i.posthog.com/ ')).toEqual(
-      {
-        projectToken: 'phc_public_token',
-        apiHost: 'https://eu.i.posthog.com',
-        surveyId: DEFAULT_FEEDBACK_SURVEY_ID,
-      },
-    );
-    expect(DEFAULT_FEEDBACK_SURVEY_ID).toBe('01a1f88c-830b-0000-a431-e0f5703c21fc');
+  it('requires an explicit environment-specific survey', () => {
+    expect(parsePostHogFeedbackConfig('phc_public_token', 'https://eu.i.posthog.com')).toBeNull();
+    expect(
+      parsePostHogFeedbackConfig(' phc_public_token ', ' https://eu.i.posthog.com/ ', 'survey-1'),
+    ).toEqual({
+      projectToken: 'phc_public_token',
+      apiHost: 'https://eu.i.posthog.com',
+      surveyId: 'survey-1',
+    });
   });
 
   it('accepts an explicit test survey and a local HTTP host', () => {

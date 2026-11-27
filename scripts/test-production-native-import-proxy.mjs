@@ -56,6 +56,7 @@ try {
   );
   containerStarted = true;
   const proxyUrl = await waitForProxy(containerName);
+  await verifyRuntimeConfigurations(proxyUrl, dockerGateway, apiPort);
   await verifyAcceptedFiles(proxyUrl, requestsSeen);
   await verifyRejectedFiles(proxyUrl, requestsSeen);
   process.stdout.write(
@@ -70,6 +71,107 @@ try {
     }
   }
   await close(api);
+}
+
+async function verifyRuntimeConfigurations(stagingUrl, gateway, apiPort) {
+  const stageResponse = await fetch(`${stagingUrl}/runtime-config.json`);
+  assert.equal(stageResponse.status, 200);
+  assert.match(stageResponse.headers.get('cache-control'), /no-store/);
+  const stage = await stageResponse.json();
+  assert.equal(stage.sentryDsn, null);
+  assert.equal(stage.posthogProjectToken, null);
+  if (process.env.EXPECTED_WEB_RELEASE !== undefined) {
+    assert.equal(stage.sentryRelease, process.env.EXPECTED_WEB_RELEASE);
+  }
+  const stageCsp = (await fetch(stagingUrl)).headers.get('content-security-policy');
+  assert.doesNotMatch(stageCsp, /sentry|posthog|production\.example/);
+
+  const name = `${containerName}-configured`;
+  try {
+    startConfiguredContainer(name, gateway, apiPort);
+    const configuredUrl = await waitForProxy(name);
+    const configuredRelease = await verifyConfiguredResponse(configuredUrl);
+    assert.equal(configuredRelease, stage.sentryRelease);
+    const emptyAgain = await (await fetch(`${stagingUrl}/runtime-config.json`)).json();
+    assert.deepEqual(emptyAgain, stage);
+    const leaked = execFileSync(
+      'docker',
+      [
+        'exec',
+        name,
+        'sh',
+        '-c',
+        "if grep -R -l -E 'production\\.example|feedback\\.example|phc_runtime_test|private-canary' /usr/share/nginx/html; then exit 1; fi",
+      ],
+      { encoding: 'utf8' },
+    );
+    assert.equal(leaked, '');
+  } finally {
+    try {
+      execFileSync('docker', ['stop', name], { stdio: 'ignore' });
+    } catch {
+      /* already stopped */
+    }
+  }
+}
+
+function startConfiguredContainer(name, gateway, apiPort) {
+  execFileSync(
+    'docker',
+    [
+      'run',
+      '--detach',
+      '--rm',
+      '--name',
+      name,
+      '--publish',
+      '127.0.0.1::8080',
+      '--read-only',
+      '--tmpfs',
+      '/tmp',
+      '--env',
+      `API_HOST=${gateway}`,
+      '--env',
+      `API_PORT=${apiPort}`,
+      '--env',
+      'VITE_SENTRY_DSN=https://public@production.example/42',
+      '--env',
+      'VITE_SENTRY_RELEASE=stale-runtime-release',
+      '--env',
+      'VITE_POSTHOG_PROJECT_TOKEN=phc_runtime_test',
+      '--env',
+      'VITE_POSTHOG_API_HOST=https://feedback.example',
+      '--env',
+      'VITE_POSTHOG_FEEDBACK_SURVEY_ID=survey-test',
+      '--env',
+      'SENTRY_AUTH_TOKEN=private-canary',
+      '--env',
+      'BREVO_API_KEY=private-canary',
+      image,
+    ],
+    { stdio: 'pipe' },
+  );
+}
+
+async function verifyConfiguredResponse(configuredUrl) {
+  const response = await fetch(`${configuredUrl}/runtime-config.json`);
+  assert.match(response.headers.get('cache-control'), /no-store/);
+  const text = await response.text();
+  const config = JSON.parse(text);
+  assert.equal(config.sentryDsn, 'https://public@production.example/42');
+  assert.equal(config.posthogApiHost, 'https://feedback.example');
+  assert.notEqual(config.sentryRelease, 'stale-runtime-release');
+  if (process.env.EXPECTED_WEB_RELEASE !== undefined) {
+    assert.equal(config.sentryRelease, process.env.EXPECTED_WEB_RELEASE);
+  }
+  assert.doesNotMatch(text, /private-canary|phx_/);
+  const csp = (await fetch(configuredUrl)).headers.get('content-security-policy');
+  assert.match(
+    csp,
+    /connect-src 'self' https:\/\/production\.example https:\/\/feedback\.example;/,
+  );
+  assert.doesNotMatch(csp, /public@|private-canary/);
+  return config.sentryRelease;
 }
 
 async function handleApiRequest(request, response, forwardedRequests) {

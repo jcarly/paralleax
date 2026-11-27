@@ -32,7 +32,13 @@ http {
     add_header X-Frame-Options DENY always;
     add_header Referrer-Policy strict-origin-when-cross-origin always;
     add_header Permissions-Policy "camera=(), geolocation=(), microphone=()" always;
-    add_header Content-Security-Policy "default-src 'self'; base-uri 'none'; connect-src 'self' ${SENTRY_CSP_ORIGIN} ${VITE_POSTHOG_API_HOST}; font-src 'self' data:; form-action 'self'; frame-ancestors 'none'; frame-src https://www.youtube.com https://www.youtube-nocookie.com https://player.vimeo.com; img-src 'self' data: https:; media-src 'self' https:; object-src 'none'; script-src 'self'; style-src 'self' 'unsafe-inline'" always;
+    add_header Content-Security-Policy "default-src 'self'; base-uri 'none'; connect-src 'self' ${SENTRY_CSP_ORIGIN} ${POSTHOG_CSP_ORIGIN}; font-src 'self' data:; form-action 'self'; frame-ancestors 'none'; frame-src https://www.youtube.com https://www.youtube-nocookie.com https://player.vimeo.com; img-src 'self' data: https:; media-src 'self' https:; object-src 'none'; script-src 'self'; style-src 'self' 'unsafe-inline'" always;
+
+    location = /runtime-config.json {
+      alias /tmp/nginx/runtime-config.json;
+      default_type application/json;
+      add_header Cache-Control "no-store" always;
+    }
 
     location = /healthz {
       access_log off;

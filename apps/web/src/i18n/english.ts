@@ -367,11 +367,14 @@ export const englishTranslation = {
       resultTitle: 'ChoiceScript story imported',
       importedDescription: 'The complete story was created in one operation.',
       reviewDescription:
-        'The story has not been created yet. Review every warning, then confirm the import to continue.',
+        'The story has not been created yet. Review the available warnings, then confirm the import to continue.',
       failureDescription:
         'No story was created. Review the blocking errors below before correcting the source.',
       errorReport: 'Error report',
       downloadReport: 'Download report',
+      downloadPreview: 'Download preview',
+      reportTruncated:
+        'Only {{count}} diagnostics are available. The complete report cannot be downloaded yet.',
       showMoreIssues: 'Show more issues ({{count}} remaining)',
       confirm: 'Confirm import',
       scenes: 'Scenes',

@@ -1,6 +1,6 @@
 # Roadmap
 
-Status reviewed: 2026-11-23.
+Status reviewed: 2026-11-25.
 
 This page answers one question: **what comes next, and in which order?** It is
 deliberately short. What exists today is in [Current scope](current-scope.md).
@@ -12,6 +12,14 @@ Product positioning, the audience hypothesis, and the competitive context are in
 [Positioning](positioning.md). Operational gates are in
 [Production readiness](production-readiness.md); implementation debt is in the
 [Code quality backlog](code-quality-backlog.md).
+
+## Priority decision, 2026-11-25
+
+Task 8 is split into two deliveries. The alpha first lot returns complete counts
+and up to 50 diagnostics, prioritizing errors, without retaining a server report.
+The interface identifies a truncated preview. Full report download with bounded
+memory remains a separate follow-up, to start after the first lot is validated.
+The preview does not satisfy the original complete-report acceptance criterion.
 
 ## Priority decision, 2026-11-23
 
@@ -171,7 +179,7 @@ feedback.
 | ---------- | ---------------------------------------------------------- | -------------------------------------------------------------------------------------------------------------------------------------------- |
 | 2          | Complete confirmed Lot A quick fixes                       | 1 of 3 implemented (Story deletion confirmation, still untested); localized default Interaction text and the "add a choice" wording remain   |
 | 5          | Complete the valuable-project safety gate (P0)             | To do: legacy-data migration test, scheduled encrypted off-host `pg_dump` and restore drill, staging and HTTPS verification                  |
-| 8          | Deliver import reports without server-side retention       | To do: send the full report to the browser, keep no server copy, drop the 7-day retention promise                                            |
+| 8          | Deliver import diagnostics without server-side retention   | First lot: bounded preview; full bounded-memory download is a separate follow-up                                                             |
 | 11         | Make the Interaction inspector legible                     | To do: mockup validated by the author first, then implementation                                                                             |
 | 9          | Open the creator alpha                                     | After 2, 5, 8 and 11: close the open-alpha gates, rehearse manual account export/deletion, configure the feedback survey, publish the notice |
 | 10         | Triage feedback and ship the next improvement it points to | Continuous, from 9                                                                                                                           |

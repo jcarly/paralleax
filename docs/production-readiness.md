@@ -165,12 +165,10 @@ the provider before collecting tester responses.
   the selected provider and complete a recorded rollback drill.
 - Add scheduled expired-session cleanup; Story size/entity quotas are already
   implemented.
-- Before the open creator alpha, send the complete import report to the browser
-  and keep no server copy (roadmap task 8, decided 2026-11-19), so no report
-  depends on the API container's ephemeral directory. Durable storage through
-  `PARALLEAX_IMPORT_REPORT_DIR` or an `ImportReportStorage` object-store adapter,
-  with persisted import-job metadata, is needed only before claiming reports
-  survive API restarts or multiple instances.
+- Task 8 is split: the alpha first lot returns a bounded preview without server
+  report retention. Full report delivery with bounded memory is a separate
+  follow-up after validation of that first lot; truncated reports cannot yet be
+  downloaded in full.
 
 ### P2 — Before Public Story Reading
 

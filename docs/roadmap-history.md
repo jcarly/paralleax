@@ -184,7 +184,21 @@ and 11 are new. Where an acceptance criterion says "observed evidence" or
    model boundary is agreed. **Acceptance:** round-trip evidence covers representative
    Stories and invalid input is rejected before persistence. This task does not
    depend on advanced collaboration, offline authoring, or text-merge support.
-8. **Deliver import reports without server-side retention.** _Redefined
+8. **Deliver import reports without server-side retention.** _Split 2026-11-25._
+   The alpha first lot returns complete counts and a maximum of 50 diagnostics,
+   prioritizing errors, with no server-side report. Warning confirmation repeats
+   analysis; cancellation retains no report. The interface identifies truncated
+   previews. Full-report delivery is a separate, not yet implemented follow-up.
+
+   The recommended follow-up protocol is a streaming POST response in NDJSON,
+   containing ordered diagnostic records followed by one terminal result record.
+   A bounded worker-to-HTTP channel must propagate backpressure to the synchronous
+   importer, abort workers on disconnect or cancellation, and surface transfer
+   failures without treating an incomplete stream as success. The browser needs
+   a bounded sink for the complete report; support and fallback behavior must be
+   tested per browser. No server retention or additional storage is required.
+
+   **Previous acceptance criteria (2026-11-19; superseded for the first lot).** _Redefined
    2026-11-19._ QSP and ChoiceScript imports are already available to every
    signed-in user, and their reports currently live in an ephemeral API
    directory and an in-memory job map that a restart or a second instance

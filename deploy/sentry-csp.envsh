@@ -1,24 +1,9 @@
-# Loaded by the official Nginx entrypoint before envsubst processes templates.
-# Only the DSN's origin is allowed by CSP; the public DSN key is not included.
-SENTRY_CSP_ORIGIN=''
-if [ -n "${VITE_SENTRY_DSN:-}" ]; then
-  case "$VITE_SENTRY_DSN" in
-    https://*@*/* | http://*@*/*)
-      sentry_scheme="${VITE_SENTRY_DSN%%://*}"
-      sentry_host_and_path="${VITE_SENTRY_DSN#*@}"
-      sentry_host="${sentry_host_and_path%%/*}"
-      case "$sentry_host" in
-        '' | *[!a-zA-Z0-9.:-]* | *..* | .* | *.)
-          echo "Sentry DSN hostname invalid; Sentry CSP origin unavailable" >&2
-          ;;
-        *)
-          SENTRY_CSP_ORIGIN="$sentry_scheme://$sentry_host"
-          ;;
-      esac
-      ;;
-    *)
-      echo "Sentry DSN invalid; Sentry CSP origin unavailable" >&2
-      ;;
-  esac
-fi
-export SENTRY_CSP_ORIGIN
+# Sourced by the nginx entrypoint before envsubst. Only explicitly allowed,
+# validated public values are written; never serialize the process environment.
+mkdir -p /tmp/nginx
+config_file=/tmp/nginx/runtime-config.json
+jq -n --arg image_release "$(cat /etc/nginx/sentry-image-release.txt)" -f /etc/nginx/runtime-config.jq > "$config_file.tmp"
+mv "$config_file.tmp" "$config_file"
+SENTRY_CSP_ORIGIN=$(jq -r 'if .sentryDsn then .sentryDsn | capture("^(?<scheme>https?)://[^@]+@(?<host>[^/]+)") | .scheme + "://" + .host else "" end' "$config_file")
+POSTHOG_CSP_ORIGIN=$(jq -r 'if .posthogProjectToken and .posthogApiHost and .posthogFeedbackSurveyId then .posthogApiHost else "" end' "$config_file")
+export SENTRY_CSP_ORIGIN POSTHOG_CSP_ORIGIN

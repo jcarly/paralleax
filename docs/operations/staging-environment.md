@@ -2,7 +2,7 @@
 
 Status: Proposed. No Railway resource described here exists yet.
 
-Last reviewed: 2026-11-23
+Last reviewed: 2026-11-27
 
 Tracking: PAR-21. Decision record: [ADR-051](../decisions/ADR-051-isolated-railway-staging.md).
 
@@ -18,24 +18,26 @@ until the open decisions at the end are answered and recorded in ADR-051.
 
 ## Audit Of The Current Setup
 
-Checked on 2026-11-23 (read-only).
+Checked on 2026-11-27 (read-only).
 
-| Area                | Finding                                                                                                                                                                                                                           |
-| ------------------- | --------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| Railway projects    | One project, `fearless-warmth`, with one `production` environment: `@paralleax/api`, `@paralleax/web`, `Postgres` (`postgres-ssl:18`) and `postgres-volume` (500 MB). There is no staging project or environment.                 |
-| Application sources | Both services run immutable `ghcr.io/jcarly/...@sha256:` digests deployed by the tag workflow.                                                                                                                                    |
-| IaC                 | `.railway/railway.ts` declares `project('fearless-warmth')` and the `paralleax-apps` partial, with `domains: paralleax.app` and a GitHub `main` bootstrap source. It cannot be reused for another project as is.                  |
-| Release workflow    | The `release` job in `.github/workflows/ci.yml` hardcodes the production project id, the `production` environment and `https://paralleax.app`, and authenticates with `RAILWAY_API_TOKEN`. There is no staging deploy path.       |
-| Token scope         | The documented token is a workspace (or account) token because `service source connect --image` needs it. Such a token reaches every project in the workspace, so a staging job that used it could also modify production.        |
-| Web image           | The web image bakes `VITE_SENTRY_DSN` and the optional PostHog values at build time. The production digest therefore reports browser errors and feedback to the production Sentry and PostHog projects.                           |
-| Email               | `TEST_EMAIL_OUTBOX` and the `/api/test/auth/emails/latest` route exist only under `NODE_ENV=test`. `NODE_ENV=production` is the only mode with `Secure` cookies, the exact-`Origin` guard on mutations, helmet CSP and JSON logs. |
-| Acceptance suite    | `npm run test:acceptance` against `PARALLEAX_ACCEPTANCE_BASE_URL` needs the test outbox, hence `NODE_ENV=test`, so it cannot validate production cookie or origin behaviour.                                                      |
+| Area                | Finding                                                                                                                                                                                                                                                                                                                                                             |
+| ------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| Railway projects    | One project, `fearless-warmth`, with one `production` environment: `@paralleax/api`, `@paralleax/web`, `Postgres` (`postgres-ssl:18`) and `postgres-volume` (500 MB). There is no staging project or environment.                                                                                                                                                   |
+| PostgreSQL runtime  | The read-only inventory reports the custom image tag `postgres-ssl:18`. Railway's managed-database inspection actions reject this custom template (`INVALID_ARGUMENT`), and the available deployment logs do not report the server version. The actual `SHOW server_version` result is unverified; the image tag is not proof. No credentials were read or exposed. |
+| Application sources | Both services run immutable `ghcr.io/jcarly/...@sha256:` digests deployed by the tag workflow.                                                                                                                                                                                                                                                                      |
+| IaC                 | `.railway/railway.ts` declares `project('fearless-warmth')` and the `paralleax-apps` partial, with `domains: paralleax.app` and a GitHub `main` bootstrap source. It cannot be reused for another project as is.                                                                                                                                                    |
+| Release workflow    | The `release` job in `.github/workflows/ci.yml` hardcodes the production project id, the `production` environment and `https://paralleax.app`, and authenticates with `RAILWAY_API_TOKEN`. There is no staging deploy path.                                                                                                                                         |
+| Token scope         | The documented production token is workspace-scoped. A staging workflow must use a staging-only project token if that token can deploy GHCR digests, or an isolated workspace token otherwise; it must never read `RAILWAY_API_TOKEN`.                                                                                                                              |
+| Web image           | PAR-26 now generates `/runtime-config.json` at container startup from validated public runtime variables. The same web digest can use separate Sentry/PostHog settings per environment; the bundle contains no environment-specific DSNs, tokens or hosts. The CSP is derived from that effective configuration.                                                    |
+| Sentry release      | The web image carries the immutable release value used for its source maps. Runtime configuration reads that image value, not a stale runtime override. `SENTRY_AUTH_TOKEN` is only a BuildKit build secret.                                                                                                                                                        |
+| Email               | `TEST_EMAIL_OUTBOX` and the `/api/test/auth/emails/latest` route exist only under `NODE_ENV=test`. `NODE_ENV=production` is the only mode with `Secure` cookies, the exact-`Origin` guard on mutations, helmet CSP and JSON logs.                                                                                                                                   |
+| Acceptance suite    | `npm run test:acceptance` against `PARALLEAX_ACCEPTANCE_BASE_URL` needs the test outbox, hence `NODE_ENV=test`, so it cannot validate production cookie or origin behaviour.                                                                                                                                                                                        |
 
 ## Target Topology
 
 ```text
 browser → Railway edge (HTTPS, generated or staging domain)
-        → web service (public, port 8080, /api proxy)
+        → web service (public, port 8080, Nginx Basic Auth, /api proxy)
         → api service (no public domain, railway.internal only)
         → staging-only Postgres (own volume)
 ```
@@ -55,28 +57,35 @@ runbook stay identical.
 3. Staging secrets are generated for staging. Nothing is copied from production:
    `DATABASE_URL` references the staging `Postgres`, the Brevo key is a separate
    key, and no database dump from production is restored.
-4. Browser reporting must not reach production. The web image sets
-   `VITE_SENTRY_DSN` and `VITE_POSTHOG_API_HOST` as container `ENV` from build
-   arguments, so a variable that is merely absent in Railway does not clear
-   them. Set both explicitly to an empty value on the staging web service, then
-   check the effective CSP and the network requests (journey 2). This is a
-   stopgap: the bundle still contains the production browser configuration and
-   the PostHog feedback control may stay visible without working. The durable
-   fix is runtime browser configuration (see Prerequisite fix). The API leaves
-   `SENTRY_DSN` unset; it has no baked value.
-5. Staging data is disposable. It is never a source for valuable projects, and
+4. Browser configuration is public and environment-specific at runtime. The
+   web image generates `/runtime-config.json` at startup from validated
+   `VITE_SENTRY_*` and `VITE_POSTHOG_*` values; none are image build arguments
+   or defaults. Empty or invalid integration settings disable that integration.
+   A configuration-fetch or parse failure leaves the application usable with
+   optional browser monitoring and feedback disabled. The CSP origins come from
+   the same accepted settings. Never put private credentials in these browser
+   variables; they are visible to every visitor.
+5. The Sentry browser release is embedded in the immutable web image from the
+   release tag used for source-map upload. Runtime settings cannot change it,
+   so the release identifier remains consistent with the maps when the same
+   digest is promoted. Keep `SENTRY_AUTH_TOKEN` as a build-only secret and keep
+   API `SENTRY_DSN`/credentials in API runtime configuration.
+6. Staging data is disposable. It is never a source for valuable projects, and
    its backups are not part of the production recovery chain.
 
 ## Immutable Images
 
-Staging deploys the same GHCR digests that the release will later send to
-production, so the artifact under test is the artifact that ships.
+Staging deploys the exact API and web GHCR digests that the release will later
+send to production, so the artifacts under test are the artifacts that ship.
+Runtime configuration may differ by environment; rebuilding an image for
+staging invalidates this promotion guarantee.
 
 - A release candidate is built once by the existing exhaustive CI path and
   recorded by digest in the job summary.
-- A manual `workflow_dispatch` staging deploy (not yet written) takes the two
-  digests as inputs, refuses tags and branches, and runs in a GitHub Actions
-  environment named `staging` with its own secrets and variables.
+- A manual `workflow_dispatch` staging deploy (not yet written) takes both
+  `sha256` digests as inputs, refuses tags and branches, and runs only from
+  `main` in a GitHub Actions environment named `staging` with its own secrets
+  and variables.
 - It authenticates with a staging-only Railway token (`RAILWAY_STAGING_API_TOKEN`)
   and targets a staging project id variable. It must never read
   `RAILWAY_API_TOKEN`.
@@ -85,18 +94,31 @@ production, so the artifact under test is the artifact that ships.
   `npm run smoke:deployment -- https://<staging-domain>`.
 - The production release job stays unchanged and does not depend on staging.
 
-Because the web image is shared, its baked browser reporting values point to the
-production Sentry and PostHog projects. Rule 4 is only a stopgap.
+The GitHub Actions job gets only `contents: read` (and `packages: read` only if
+the images are private). Its Railway token is scoped to the staging project; if
+Railway cannot deploy digest sources with a project token, isolate it in a
+separate workspace rather than reusing the production token. The manual dispatch
+is the deployment approval for this single-operator workflow; no additional
+reviewer is required to trigger each campaign.
 
-### Prerequisite fix: runtime browser configuration
+### Runtime browser configuration (implemented by PAR-26)
 
-Sharing one web digest between staging and production (D4) is accepted only
-after browser configuration (Sentry DSN and release, PostHog host, token and
-survey id) is read at runtime instead of build time, for example from a
-generated `config.js` served by the web container. That change touches the
-Dockerfile, the web entrypoint, the CSP template and the web client. It needs
-its own task and tests, and ADR-051 must not be accepted before it, or before
-an explicit decision to use a separate staging web build.
+`deploy/sentry-csp.envsh` generates the allowlisted browser config at web
+container startup; Nginx serves the same-origin `/runtime-config.json` with
+`Cache-Control: no-store`. `deploy/runtime-config.jq` validates and serializes
+only the public Sentry DSN, optional tracing rate, PostHog project token, host
+and feedback survey id, plus the immutable release file copied into the image.
+The source bundle has no environment-specific observability values. CSP
+connect origins are derived from this generated config, and the web application
+continues to start when configuration cannot be loaded. Incomplete Sentry or
+PostHog settings leave the relevant integration disabled. Development continues
+to use Vite's local `.env` values; the container-generated config applies to the
+production image.
+
+Before the first deployment of this image, migrate the intended public Sentry
+and PostHog values from build configuration to the web service's runtime
+environment. Keep source-map upload credentials in the build secret only. D4
+is decided: staging and production can use the same web digest.
 
 ## Railway Configuration
 
@@ -163,10 +185,18 @@ Web service:
 PORT=8080
 API_HOST=${{api.RAILWAY_PRIVATE_DOMAIN}}
 API_PORT=3000
+# Optional public browser settings; set per environment at runtime, never at build.
+VITE_SENTRY_DSN=<staging-public-sentry-dsn>
+VITE_SENTRY_TRACES_SAMPLE_RATE=0
+VITE_POSTHOG_PROJECT_TOKEN=<staging-public-project-token>
+VITE_POSTHOG_API_HOST=https://<staging-posthog-host>
+VITE_POSTHOG_FEEDBACK_SURVEY_ID=<staging-survey-id>
 ```
 
-Never set `TEST_EMAIL_OUTBOX`, `DEV_SKIP_EMAIL_VERIFICATION`, any production
-credential, or `SENTRY_DSN` here.
+Leave optional values empty to disable that integration. These are browser-visible
+public values, not secrets. Never set `TEST_EMAIL_OUTBOX`,
+`DEV_SKIP_EMAIL_VERIFICATION`, a production credential, `SENTRY_AUTH_TOKEN`, or
+the API's `SENTRY_DSN` on the web service.
 
 ### Domain, cookies and CORS
 
@@ -202,7 +232,10 @@ production dump.
 | `/api/ready`  | PostgreSQL reachable, latest migration present | `smoke:deployment`  |
 
 `npm run smoke:deployment -- https://<staging-domain>` must pass before any
-browser validation.
+browser validation. If D8 Basic Auth is enabled, the smoke command must receive
+the staging-only HTTP credentials without printing them; Railway's API
+healthcheck stays on the private API service, and `/healthz` remains open for
+the web healthcheck.
 
 ## Verification Email And Test Accounts
 
@@ -228,9 +261,38 @@ operator.
   and never on a stack holding real mailboxes, because the outbox route returns
   verification tokens to anyone who knows an address.
 
+## Staging HTTP Protection (D8)
+
+Recommended: use Nginx's built-in
+[HTTP Basic Auth module](https://nginx.org/en/docs/http/ngx_http_auth_basic_module.html)
+at the public web proxy. Apply `auth_basic` and `auth_basic_user_file` to the
+server so the app, static assets, generated `/runtime-config.json` and same-origin
+`/api` proxy are all protected. Keep TLS enabled; Basic Auth is only appropriate
+over HTTPS.
+
+Store a pre-hashed `htpasswd` entry as a staging-only runtime secret and write it
+to a mode-`0600` file under `/run` during container startup. Do not bake the
+password or hash into the image, log it, or place it in a browser test artifact.
+Rotate the shared password between campaigns. A shared account is simple and
+has no direct hosting cost, but it provides no per-user audit trail, SSO or
+identity lifecycle; choose an identity proxy only if those controls become a
+requirement.
+
+Use an exact `/healthz` location with `auth_basic off` so Railway's public web
+healthcheck can still probe the process. The API healthcheck calls the private
+API service directly and is unaffected. Keep `/api/ready` protected: the
+deployment smoke command must support a staging-only username/password and send
+the Basic Auth header without logging it. Browser journeys can use the browser's
+HTTP credentials; any Playwright run aimed at protected staging must configure
+`httpCredentials`. The normal acceptance suite continues on its isolated
+`NODE_ENV=test` stack and does not need these credentials.
+
 ## Browser Validation Journeys
 
 Run after the smoke check, in a clean browser profile, on the staging domain.
+When D8 Basic Auth is enabled, supply its staging-only credentials through the
+browser's HTTP-auth mechanism; do not store them in the repository or in browser
+test output.
 
 1. **Transport and headers:** the page loads over HTTPS, HTTP redirects to
    HTTPS, `/api` has no direct public route, response headers include the CSP
@@ -255,46 +317,65 @@ production.
 
 ## Resources And Costs
 
-Resources a staging project would add:
+An isolated staging project adds three single-replica services (API, web and
+PostgreSQL `postgres-ssl:18`), a PostgreSQL volume (500 MB starting assumption),
+a generated public web domain, network egress, and a staging mail sender/key.
+Image builds and GHCR image storage do not incur Railway resource charges.
 
-- 3 services: API, web, PostgreSQL (`postgres-ssl:18`), each with one replica;
-- 1 persistent volume for PostgreSQL (500 MB, like production);
-- 1 public Railway domain (and an optional custom domain);
-- outbound network traffic and image pulls from GHCR;
-- a Brevo sender or key, and Railway workspace seats if a separate workspace is used.
+Railway currently charges $10/GB-month of RAM, $20/vCPU-month, $0.15/GB-month
+for volumes and $0.05/GB of egress. Hobby is a $5/month minimum including the
+first $5 of usage; Pro is $20/month including the first $20. These rates change,
+so recheck the official [pricing page](https://docs.railway.com/pricing) before
+provisioning.
 
-Railway bills per resource usage (CPU, memory, volume, egress) on top of the
-subscription. Services that stay running accrue usage continuously, so an idle
-staging stack still costs. A second workspace may need its own subscription. Do
-not rely on figures in this repository: read the current
-[Railway pricing](https://docs.railway.com/pricing/plans) before provisioning,
-and set a usage limit on the staging workspace.
+For planning only, assume the complete active stack averages 1–2 GB RAM and
+0.5–1 vCPU. That is about $20–$40/month for compute, plus about $0.08/month for
+a 500 MB volume and egress. The actual invoice depends on observed resources;
+the existing plan's included usage offsets the first $5 or $20. A second
+workspace can add a separate plan minimum.
+
+### D6 options
+
+| Mode                                   | Resource estimate                                                                                                                                                                                                                          | Ready again                                                                                                                          | Data retention and trade-off                                                                                                                                                                  |
+| -------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------ | ------------------------------------------------------------------------------------------------------------------------------------ | --------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| Always on                              | About $20–$40/month compute + $0.08 storage in the example above.                                                                                                                                                                          | Immediate.                                                                                                                           | Database and test accounts remain between campaigns; still needs cleanup and retention rules.                                                                                                 |
+| On-demand web/API, PostgreSQL retained | Web and API can use Railway's serverless sleep mode and incur no compute while asleep. PostgreSQL remains online; an illustrative 0.5–1 GB RAM and 0.25–0.5 vCPU DB profile is about $10–$20/month, plus $0.08 storage and egress.         | A request wakes a sleeping service; allow seconds to a few minutes as an unverified planning range and measure the first wake.       | 500 MB database volume and tester data persist. Sleep/wake does not reset state; ensure accounts and data are removed under a retention schedule.                                             |
+| Campaign-only stack, delete after      | At four 4-hour campaigns per month, the example full-stack profile costs roughly $0.45–$0.88 compute, plus egress. Add $0.08/month only if a 500 MB volume is kept; delete it to erase the data. The workspace plan minimum still applies. | Reserve 5–15 minutes to redeploy images, run migrations, healthchecks and smoke validation; this is a planning estimate, not an SLA. | Destroying the volume deletes tester data; retaining it preserves that data and its storage charge. Recreating the whole stack adds operator steps and more chances to mis-target production. |
+
+Recommended starting point for one operator: sleep the web and API services
+between campaigns and retain only the isolated PostgreSQL service/volume. It
+avoids a second hosting platform and avoids rebuilding the database each time.
+If the database's baseline cost is not acceptable, choose campaign-only creation
+and explicitly accept data deletion; first validate the wake path and timing on
+a disposable environment. Railway's [serverless mode](https://docs.railway.com/platform/advanced-concepts#deploy-options)
+documents zero resource usage for sleeping services. The estimate does not
+assume that PostgreSQL itself can safely sleep or wake on a database connection.
 
 Possible extra spending:
 
 - a new subscription if a separate workspace is chosen;
-- usage left running after a campaign (mitigate by teardown or by removing the
-  replicas);
+- PostgreSQL compute left running between campaigns under the recommended D6
+  mode;
 - volume growth from test data or imports;
 - network egress during large imports or load tests;
 - Brevo plan limits if staging emails share the production quota (use a
   separate key, and check the sender limit);
-- a custom domain registration, if one is chosen;
-- Sentry or PostHog volume if rule 4 fails.
+- a custom domain registration, if one is chosen.
 
 ## Risks
 
-| Risk                                              | Mitigation                                                                                                                  |
-| ------------------------------------------------- | --------------------------------------------------------------------------------------------------------------------------- |
-| Staging token modifies production                 | Project-scoped staging token if it can deploy images, else separate workspace (D1); separate GitHub environment.            |
-| Browser events reach production Sentry or PostHog | Explicit empty variables as a stopgap, verified in journey 2; runtime browser configuration before sharing the digest (D4). |
-| Verification emails reach real users              | Dedicated Brevo key and sender; operator-owned mailboxes only; registration closed between campaigns.                       |
-| Test outbox exposes tokens                        | `NODE_ENV=test` only on ephemeral stacks without real mailboxes.                                                            |
-| Staging cookie collides with production           | No cookie `Domain` (host-only); generated Railway domain (D3).                                                              |
-| IaC planned against the wrong project             | Separate partial and file outside `.railway/`; confirm the linked project before every plan.                                |
-| Staging data treated as valuable                  | Disposable notice, no valuable projects, documented reset.                                                                  |
-| Forward-only migration breaks staging             | Rebuild from an empty database; production rollback is image-only.                                                          |
-| Forgotten running stack                           | Usage limit; weekly review; teardown procedure below.                                                                       |
+| Risk                                              | Mitigation                                                                                                                 |
+| ------------------------------------------------- | -------------------------------------------------------------------------------------------------------------------------- |
+| Staging token modifies production                 | Project-scoped staging token if it can deploy images, else separate workspace (D1); isolated GitHub `staging` environment. |
+| Browser events reach production Sentry or PostHog | Use only per-environment runtime values; verify effective `/runtime-config.json`, CSP and browser requests (D4).           |
+| Verification emails reach real users              | Dedicated Brevo key and sender; operator-owned mailboxes only; registration closed between campaigns.                      |
+| Test outbox exposes tokens                        | `NODE_ENV=test` only on ephemeral stacks without real mailboxes.                                                           |
+| Staging cookie collides with production           | No cookie `Domain` (host-only); generated Railway domain (D3).                                                             |
+| IaC planned against the wrong project             | Separate partial and file outside `.railway/`; confirm the linked project before every plan.                               |
+| Staging data treated as valuable                  | Disposable notice, no valuable projects, retention decision and reset procedure (D6).                                      |
+| Forward-only migration breaks staging             | Rebuild from an empty database; production rollback is image-only.                                                         |
+| Unauthorized browsing or signup                   | Web-tier Basic Auth (D8), plus closed registration between campaigns.                                                      |
+| Forgotten running stack                           | Railway sleep for web/API; usage limit and monthly review of the PostgreSQL service.                                       |
 
 ## Teardown
 
@@ -302,30 +383,36 @@ Do this in order. Each step is destructive; confirm the project id first.
 
 1. Confirm the target is the staging project, not `fearless-warmth`, by name and id.
 2. Set `REGISTRATION_MODE=closed` and tell testers.
-3. Export anything worth keeping (logs, screenshots, findings). The database is
-   not retained.
+3. Export anything worth keeping (logs, screenshots, findings). Decide whether
+   to retain tester accounts/data for the next campaign or delete them under the
+   agreed retention period (D6).
 4. Remove the custom domain (if any) and its DNS record, so the name cannot be
    taken over.
 5. Revoke the staging Brevo key and the staging Railway token, and delete the
    GitHub `staging` environment secrets and variables.
-6. Delete the staging project in Railway. This removes its services, the
-   PostgreSQL volume and its data.
+6. For full teardown, delete the staging project and explicitly verify that its
+   PostgreSQL volume is deleted as well. Railway queues volume deletion and
+   permanently deletes it within 48 hours; do not confuse stopping/removing a
+   deployment with deleting its persistent data.
 7. If a separate workspace was created only for staging, delete or downgrade it.
 8. Verify in Railway that no volume, domain or usage line remains, and that the
    production project and workspace token are unaffected.
 
-To pause without deleting, scale the staging services down rather than leaving
-them running. A paused database still keeps its volume and its cost.
+Between campaigns, the D6 recommendation is to enable Railway serverless sleep
+for web and API and leave PostgreSQL online. Sleeping services do not incur
+compute, but the database continues to incur compute and its 500 MB volume
+continues to incur storage charges. Railway volumes persist independently of
+application image/deployment changes.
 
 ## Decisions Needed Before Provisioning
 
-| Id  | Decision                  | Status and choice                                                                                                                                                                                                                                                              |
-| --- | ------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------ |
-| D1  | Railway isolation         | **Decided:** second project in the current workspace, if a staging-only token can deploy GHCR digests. Test `railway service source connect --image` with a project token; if only a workspace token works, use a separate workspace (one subscription per workspace).         |
-| D2  | Email handling            | **Decided:** real Brevo, dedicated key, operator-controlled test addresses, `NODE_ENV=production`.                                                                                                                                                                             |
-| D3  | Domain                    | **Decided:** generated `*.up.railway.app` domain.                                                                                                                                                                                                                              |
-| D4  | Shared web digest         | **Open:** only after runtime browser configuration (see Prerequisite fix), or choose a separate staging web build.                                                                                                                                                             |
-| D5  | Deployment control        | **Open:** manual `workflow_dispatch` plus a GitHub `staging` environment with its own secrets, minimal permissions and required reviewers or restricted deployers.                                                                                                             |
-| D6  | Permanence                | **Tentative:** keep staging between campaigns, scaled down.                                                                                                                                                                                                                    |
-| D7  | Postgres major and volume | **Open:** confirm the running production server with `SHOW server_version` before fixing the staging image; 500 MB as a starting size.                                                                                                                                         |
-| D8  | Access restriction        | **Open, required:** closed registration and an unshared URL are not protection. With `REGISTRATION_MODE=open` anyone can register and trigger Brevo emails. Choose a real restriction (for example HTTP authentication in the web tier) or an explicit campaign-window policy. |
+| Id  | Decision                  | Status and choice                                                                                                                                                                                                                                                                                                                                                                                                                                                                                  |
+| --- | ------------------------- | -------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| D1  | Railway isolation         | **Conditional:** second project in the current workspace if a project-scoped staging token can deploy GHCR digests; otherwise a separate workspace (and subscription). Verify token scope before provisioning.                                                                                                                                                                                                                                                                                     |
+| D2  | Email handling            | **Decided:** real Brevo, dedicated key, operator-controlled test addresses, `NODE_ENV=production`.                                                                                                                                                                                                                                                                                                                                                                                                 |
+| D3  | Domain                    | **Decided:** generated `*.up.railway.app` domain.                                                                                                                                                                                                                                                                                                                                                                                                                                                  |
+| D4  | Shared web digest         | **Decided by PAR-26:** promote the exact same web digest; configure public Sentry/PostHog values at container runtime. Release identity and source maps travel with the image.                                                                                                                                                                                                                                                                                                                     |
+| D5  | Deployment control        | **Recommended decision:** manual `workflow_dispatch` from `main`, two digest-only inputs, a branch-restricted GitHub `staging` environment, staging-only Railway token, and `GITHUB_TOKEN` limited to `contents: read` (plus `packages: read` only for private images). Manual dispatch is the operator gate; production secrets/token are unavailable to the job.                                                                                                                                 |
+| D6  | Permanence                | **Recommended:** on-demand web/API using Railway serverless sleep; retain the isolated PostgreSQL service and 500 MB volume between campaigns for simple reactivation. Human validation remains: accept roughly $10–$20/month illustrative DB compute plus storage, or choose campaign-only teardown and lose tester data. Measure wake time and actual resource use before committing to a budget.                                                                                                |
+| D7  | Postgres major and volume | **Open:** the live template tag is `postgres-ssl:18`, but the actual server version was not verifiable through the authorized read-only connector. An operator with approved read-only DB access must run `SHOW server_version` and record only the result; 500 MB remains a provisional volume size.                                                                                                                                                                                              |
+| D8  | Access restriction        | **Recommended:** Nginx HTTP Basic Auth at the web proxy, protecting the app, `/runtime-config.json` and `/api`; exempt only `/healthz`. API healthchecks remain direct/private. Before enabling it, add optional staging credentials to `smoke:deployment` and configure browser `httpCredentials`; automated acceptance remains on its existing ephemeral `NODE_ENV=test` stack. Human validation: accept one shared rotating secret (no per-user audit/SSO) or choose a separate identity proxy. |

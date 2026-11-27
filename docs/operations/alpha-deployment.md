@@ -78,12 +78,10 @@ EMAIL_FROM=Paralleax <accounts@alpha.example.com>
 # EMAIL_REPLY_TO is optional.
 POSTGRES_SSL=true
 
-# Optional Sentry monitoring. Set both DSNs to enable API/browser error reports.
-# Use one immutable commit or image digest in both release values.
+# API runtime DSN; the API release identity is embedded in its immutable image.
 SENTRY_DSN=https://<api-public-key>@o<organization>.ingest.sentry.io/<project>
-SENTRY_RELEASE=<immutable-commit-or-image-digest>
+# Web runtime monitoring. Public browser configuration; never pass these as build arguments.
 VITE_SENTRY_DSN=https://<web-public-key>@o<organization>.ingest.sentry.io/<project>
-VITE_SENTRY_RELEASE=<immutable-commit-or-image-digest>
 ```
 
 `BREVO_API_KEY` must contain a Brevo API key, not an SMTP key. The API sends
@@ -91,9 +89,9 @@ transactional messages over HTTPS so deployment plans that block outbound SMTP
 do not require a mail-port exception.
 
 To enable the optional contextual feedback button, also set
-`VITE_POSTHOG_PROJECT_TOKEN` and `VITE_POSTHOG_API_HOST` (and optionally
-`VITE_POSTHOG_FEEDBACK_SURVEY_ID`) before building the web image. They are
-public build inputs, not server secrets. Follow the
+`VITE_POSTHOG_PROJECT_TOKEN`, `VITE_POSTHOG_API_HOST`, and
+`VITE_POSTHOG_FEEDBACK_SURVEY_ID` on the running web service. Sentry and PostHog
+browser values are public runtime settings, not server secrets. Follow the
 [PostHog feedback runbook](posthog-feedback.md) before collecting tester
 responses.
 
@@ -147,10 +145,13 @@ runs the deployment smoke check. Re-tagging or deleting a version does not
 deploy. No branch push publishes images or runs the GitHub Actions release job.
 
 The release tags each image with the version and source commit for discovery,
-but Railway receives `ghcr.io/...@sha256:...` references. The web Sentry release
-and API `SENTRY_RELEASE` are set from the version tag so both services identify
-the same release. The workflow uses the existing public web Sentry DSN and
-optional public PostHog build values from GitHub Actions repository variables.
+but Railway receives `ghcr.io/...@sha256:...` references. The web image stores
+the version tag used for its source-map upload and serves it as the browser
+release at startup. It travels with the digest and cannot be overridden by a
+stale runtime `VITE_SENTRY_RELEASE`. The API image also embeds the version tag
+as `SENTRY_RELEASE`. For local Compose builds, `VITE_SENTRY_RELEASE` is an
+optional build argument; without it browser monitoring falls back to the package
+version and uploaded source maps need a matching release.
 If browser source maps are enabled, store `SENTRY_AUTH_TOKEN` as a GitHub Actions
 secret. Only the web image build mounts it as a BuildKit secret; it is not passed
 to the API build, a build argument, or the final image. Local production Compose
@@ -269,10 +270,6 @@ Before creating the first release tag, configure the GitHub repository:
   token types to the same CLI invocation. Treat this credential as privileged;
   keep it in GitHub Actions secrets, not build arguments or application images.
   The workflow verifies read access to both services before building images.
-- Copy the existing `VITE_SENTRY_DSN` build value into the `VITE_SENTRY_DSN`
-  Actions variable. If enabled, also add `VITE_POSTHOG_PROJECT_TOKEN`,
-  `VITE_POSTHOG_API_HOST`, optional `VITE_POSTHOG_FEEDBACK_SURVEY_ID`, and
-  `VITE_SENTRY_TRACES_SAMPLE_RATE` as Actions variables.
 - If browser source-map uploads are enabled, add `SENTRY_AUTH_TOKEN` as an
   Actions secret and `SENTRY_ORG`, `SENTRY_PROJECT`, and optional `SENTRY_URL`
   as Actions variables. Keep the token in GitHub Actions only; Railway deploys
@@ -300,8 +297,11 @@ POSTGRES_SSL=true
 CORS_ORIGIN=https://${{web.RAILWAY_PUBLIC_DOMAIN}}
 REGISTRATION_MODE=open
 SENTRY_DSN=<api-sentry-dsn>
-SENTRY_RELEASE=<immutable-commit-or-image-digest>
 ```
+
+Do not override `SENTRY_RELEASE` at runtime. The API image gets the version tag
+at build time, just as the web image stores the release used for source-map
+upload.
 
 The `Postgres` and `web` names in reference variables are case-sensitive and
 must match the Railway service names. A custom public domain may replace the
@@ -320,16 +320,30 @@ API_HOST=${{api.RAILWAY_PRIVATE_DOMAIN}}
 API_PORT=3000
 ```
 
-If PostHog feedback is enabled, add `VITE_POSTHOG_API_HOST` to the web service
-with the same value as the image build, so the runtime Content Security Policy
-allows the PostHog API. Remove any former `VITE_FORMBRICKS_*` variables.
+Configure browser monitoring on the web service at runtime, before deploying a
+new image: `VITE_SENTRY_DSN` and optionally `VITE_SENTRY_TRACES_SAMPLE_RATE`. To enable feedback, set all three
+`VITE_POSTHOG_PROJECT_TOKEN`, `VITE_POSTHOG_API_HOST`, and
+`VITE_POSTHOG_FEEDBACK_SURVEY_ID`. These values are public. Missing or invalid
+values disable the corresponding integration. The container generates a
+same-origin `/runtime-config.json` with `Cache-Control: no-store`, and derives
+CSP origins from the validated configuration. No production value is a default.
+Use different projects and surveys for each environment.
 
-Browser reports are configured at image build time. Set `VITE_SENTRY_DSN`,
-`VITE_SENTRY_TRACES_SAMPLE_RATE`, and the release value through the GitHub
-Actions variables used by the tag workflow. For source-map uploads, provide
-`SENTRY_AUTH_TOKEN`, `SENTRY_ORG`, and `SENTRY_PROJECT` there as described above.
-The token needs Sentry project write/release administration access and must not
-be exposed as a `VITE_*` value, a build argument, or part of the final web image.
+Before the first deployment of this image, migrate the intended public
+`VITE_SENTRY_DSN`, `VITE_POSTHOG_PROJECT_TOKEN` and `VITE_POSTHOG_API_HOST` from
+the old build configuration to the web service's runtime environment. Set
+`VITE_POSTHOG_FEEDBACK_SURVEY_ID` for that project, and set
+`VITE_SENTRY_TRACES_SAMPLE_RATE` only if tracing is wanted. These names remain
+for compatibility with Vite and local `.env` files; production Docker builds no
+longer bake their values into the bundle. Leave an integration's values empty
+to disable it. Existing deployments keep running until a new image is deployed;
+this repository change does not change their configuration. Remove stale
+runtime `VITE_SENTRY_RELEASE`; the web image ignores it and uses the immutable
+release identifier stored alongside the source maps for that digest. Verify the
+generated JSON, effective CSP, and reporting in a safe environment before
+promoting the same API and web digests. The source-map upload continues to use
+`SENTRY_AUTH_TOKEN` as a BuildKit secret; never put it or a PostHog private key
+in a browser variable.
 
 Nginx listens on `PORT`, and both image and Railway healthchecks use that same
 value. Keep the public-domain target port and `PORT` aligned; `8080` is the

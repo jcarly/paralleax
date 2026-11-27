@@ -566,10 +566,7 @@ it('imports a QSP game and displays the compatibility coverage matrix', async ()
   expect(
     screen.queryByText('Automatic navigation was converted into an explicit choice.'),
   ).not.toBeInTheDocument();
-  expect(screen.getByRole('link', { name: 'Download report' })).toHaveAttribute(
-    'href',
-    '/api/imports/00000000-0000-4000-8000-000000000003/report',
-  );
+  expect(screen.getByRole('button', { name: 'Download preview' })).toBeVisible();
   expect(screen.queryByRole('button', { name: /Show more issues/ })).not.toBeInTheDocument();
   expect(screen.getByText('QSP compatibility coverage')).toBeInTheDocument();
   expect(screen.getByText('Variables, arrays, and expressions')).toBeInTheDocument();
@@ -766,7 +763,7 @@ it('displays the QSP conversion error report returned by the API', async () => {
   expect(within(alert).getByText('The source could not be converted into a story.')).toBeVisible();
   const errorReport = requireValue(
     screen
-      .getByRole('link', { name: 'Download report' })
+      .getByRole('button', { name: 'Download preview' })
       .closest<HTMLElement>('.choicescript-import-result'),
     'import error report',
   );
@@ -774,10 +771,7 @@ it('displays the QSP conversion error report returned by the API', async () => {
   expect(
     within(errorReport).queryByText('The QSP statement is malformed.'),
   ).not.toBeInTheDocument();
-  expect(within(errorReport).getByRole('link', { name: 'Download report' })).toHaveAttribute(
-    'href',
-    '/api/imports/00000000-0000-4000-8000-000000000008/report',
-  );
+  expect(within(errorReport).getByRole('button', { name: 'Download preview' })).toBeVisible();
   expect(screen.queryByRole('button', { name: 'Confirm import' })).not.toBeInTheDocument();
 });
 
@@ -790,10 +784,14 @@ it('downloads the report after a Story save failure', async () => {
       code: 'STORY_IMPORT_SAVE_FAILED',
       details: {
         importId: '00000000-0000-4000-8000-000000000009',
-        format: 'choicescript',
-        warningCount: 2,
-        errorCount: 0,
-        reportAvailable: true,
+        report: {
+          format: 'choicescript',
+          warningCount: 2,
+          errorCount: 0,
+          sceneCount: 1,
+          interactionCount: 1,
+          issues: [],
+        },
       },
     }),
   );
@@ -811,10 +809,7 @@ it('downloads the report after a Story save failure', async () => {
   );
   await user.click(screen.getByRole('button', { name: 'Import story' }));
 
-  expect(await screen.findByRole('link', { name: 'Download report' })).toHaveAttribute(
-    'href',
-    '/api/imports/00000000-0000-4000-8000-000000000009/report',
-  );
+  expect(await screen.findByRole('button', { name: 'Download preview' })).toBeVisible();
 });
 
 it('bundles multiple qsrc location files for the QSP importer', async () => {
@@ -1321,3 +1316,61 @@ function storyPage(
     ...overrides,
   };
 }
+
+it('allows retrying an import after a request failure', async () => {
+  const user = userEvent.setup();
+  vi.mocked(api.importChoiceScript)
+    .mockRejectedValueOnce(new Error('Network unavailable'))
+    .mockResolvedValueOnce({
+      status: 'confirmation_required',
+      importId: 'retry',
+      report: {
+        format: 'choicescript',
+        sourceFileCount: 1,
+        sceneCount: 1,
+        interactionCount: 1,
+        convertedCommandCount: 0,
+        approximatedCommandCount: 1,
+        ignoredCommandCount: 0,
+        warningCount: 1,
+        errorCount: 0,
+        issues: [{ severity: 'warning', code: 'approximation', message: 'Example warning' }],
+      },
+    });
+  await openEmptyStoryImport(user, 'choicescript');
+  await user.upload(
+    screen.getByLabelText('ChoiceScript scene files'),
+    new File(['*finish'], 'startup.txt'),
+  );
+  await user.click(screen.getByRole('button', { name: 'Import story' }));
+  expect(await screen.findByRole('alert')).toBeVisible();
+  await user.click(screen.getByRole('button', { name: 'Import story' }));
+  expect(await screen.findByRole('heading', { name: 'Review the import report' })).toBeVisible();
+  expect(screen.getByText('Warning: Example warning')).toBeVisible();
+  expect(api.importChoiceScript).toHaveBeenCalledTimes(2);
+});
+
+it('aborts a pending import when the dialog is cancelled', async () => {
+  const user = userEvent.setup();
+  let activeSignal: AbortSignal | undefined;
+  vi.mocked(api.importChoiceScript).mockImplementation((_files, _confirm, signal) => {
+    activeSignal = signal;
+    return new Promise((_resolve, reject) => {
+      signal?.addEventListener('abort', () => {
+        reject(new DOMException('Cancelled', 'AbortError'));
+      });
+    });
+  });
+  await openEmptyStoryImport(user, 'choicescript');
+  await user.upload(
+    screen.getByLabelText('ChoiceScript scene files'),
+    new File(['*finish'], 'startup.txt'),
+  );
+  await user.click(screen.getByRole('button', { name: 'Import story' }));
+  await waitFor(() => {
+    expect(activeSignal).toBeDefined();
+  });
+  await user.click(screen.getByRole('button', { name: 'Cancel' }));
+  expect(activeSignal?.aborted).toBe(true);
+  expect(screen.queryByRole('dialog')).not.toBeInTheDocument();
+});

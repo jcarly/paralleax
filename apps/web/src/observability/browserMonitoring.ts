@@ -1,3 +1,5 @@
+import { getBrowserConfig } from './browserConfig';
+
 let initialization: ReturnType<typeof loadBrowserMonitoring> | undefined;
 
 export function startBrowserMonitoring() {
@@ -6,7 +8,7 @@ export function startBrowserMonitoring() {
 }
 
 async function loadBrowserMonitoring() {
-  const dsnValue: unknown = import.meta.env.VITE_SENTRY_DSN;
+  const dsnValue: unknown = getBrowserConfig().sentryDsn;
   if (typeof dsnValue !== 'string' || dsnValue.trim() === '') {
     return null;
   }

@@ -1,11 +1,5 @@
+import { getBrowserConfig } from '../../observability/browserConfig';
 import packageMetadata from '../../../package.json';
-
-/**
- * PostHog survey that the header feedback button opens. The survey belongs to
- * the Paralleax PostHog project; override it per environment only when a
- * separate test survey is used.
- */
-export const DEFAULT_FEEDBACK_SURVEY_ID = '01a1f88c-830b-0000-a431-e0f5703c21fc';
 
 export interface PostHogFeedbackConfig {
   apiHost: string;
@@ -36,7 +30,7 @@ function normalizeApiHost(value: string | undefined): string | null {
 function normalizeSurveyId(value: string | undefined): string | null {
   const candidate = value?.trim();
   if (candidate === undefined || candidate === '') {
-    return DEFAULT_FEEDBACK_SURVEY_ID;
+    return null;
   }
   return SURVEY_ID.test(candidate) ? candidate : null;
 }
@@ -55,10 +49,11 @@ export function parsePostHogFeedbackConfig(
   return { apiHost, projectToken, surveyId };
 }
 
-export const postHogFeedbackConfig = parsePostHogFeedbackConfig(
-  import.meta.env.VITE_POSTHOG_PROJECT_TOKEN,
-  import.meta.env.VITE_POSTHOG_API_HOST,
-  import.meta.env.VITE_POSTHOG_FEEDBACK_SURVEY_ID,
-);
+export const getPostHogFeedbackConfig = () =>
+  parsePostHogFeedbackConfig(
+    getBrowserConfig().posthogProjectToken,
+    getBrowserConfig().posthogApiHost,
+    getBrowserConfig().posthogFeedbackSurveyId,
+  );
 
 export const paralleaxVersion = packageMetadata.version;

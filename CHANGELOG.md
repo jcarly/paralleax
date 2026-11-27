@@ -4,9 +4,13 @@
 
 - Documented a proposed isolated Railway staging environment (PAR-21): topology,
   immutable image promotion, email and test accounts, cookies and CORS,
-  migrations, healthchecks, browser journeys, costs, risks and teardown, with
-  ADR-051 (Proposed) and the decisions needed before provisioning. Documentation
-  only; no Railway resource was created and production is unchanged.
+  migrations, healthchecks, browser journeys, cost comparisons, access control,
+  risks and teardown, with ADR-051 (Proposed) and decisions needed before
+  provisioning. No Railway resource was created and production is unchanged.
+
+- Import diagnostics now return complete counts and a bounded preview without retaining a report on the server. Full report download remains planned.
+
+- Browser Sentry and PostHog configuration is generated at container startup, allowing one web image across isolated environments (PAR-26).
 - Added a chronological PostgreSQL migration test (PAR-20). Synthetic legacy
   Stories, owners, graph, Triggers, conditions, reader progress, comments and
   Groups are upgraded one migration at a time through the real migrator, with
