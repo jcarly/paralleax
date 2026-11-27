@@ -52,7 +52,7 @@ Before accepting valuable user-created project data, record evidence for all of
 the following. Test accounts and feedback remain subject to the alpha notice and
 the service's normal security, access, and privacy controls:
 
-- separate staging and production projects;
+- separate staging and production projects (see the proposed [staging plan](staging-environment.md); not provisioned yet);
 - a managed PostgreSQL database, configured as Railway `postgres-ssl:18` (confirm the running version with `SHOW server_version`; the repository verifies backups on 17 and 18) with encrypted connections;
 - automated encrypted backups in a separate failure domain;
 - a completed restore drill following the PostgreSQL recovery runbook;
@@ -78,10 +78,9 @@ EMAIL_FROM=Paralleax <accounts@alpha.example.com>
 # EMAIL_REPLY_TO is optional.
 POSTGRES_SSL=true
 
-# Optional Sentry monitoring. Set both DSNs to enable API/browser error reports.
-# The web image derives its release from the build tag; set the API release separately.
+# API runtime DSN; the API release identity is embedded in its immutable image.
 SENTRY_DSN=https://<api-public-key>@o<organization>.ingest.sentry.io/<project>
-SENTRY_RELEASE=<immutable-commit-or-image-digest>
+# Web runtime monitoring. Public browser configuration; never pass these as build arguments.
 VITE_SENTRY_DSN=https://<web-public-key>@o<organization>.ingest.sentry.io/<project>
 ```
 
@@ -91,8 +90,8 @@ do not require a mail-port exception.
 
 To enable the optional contextual feedback button, also set
 `VITE_POSTHOG_PROJECT_TOKEN`, `VITE_POSTHOG_API_HOST`, and
-`VITE_POSTHOG_FEEDBACK_SURVEY_ID` on the running web service. They are
-public runtime values, not server secrets. Follow the
+`VITE_POSTHOG_FEEDBACK_SURVEY_ID` on the running web service. Sentry and PostHog
+browser values are public runtime settings, not server secrets. Follow the
 [PostHog feedback runbook](posthog-feedback.md) before collecting tester
 responses.
 
@@ -136,14 +135,32 @@ required PRs and `Integration readiness`. Configure these repository rules
 outside the workflow. Use merge commits for promotion, then synchronize
 `main` back into integration branches.
 
-Create a version tag only on the intended commit of `main` after its own
-exhaustive CI succeeds. A newly created version tag in the exact `x.y.z`
-format runs exhaustive CI first;
-only after all required checks pass does the release job publish API and web
-images to GHCR and deploy those image digests to the Railway alpha. The job
-deploys the API first, waits for its healthcheck, then deploys the web image and
-runs the deployment smoke check. Re-tagging or deleting a version does not
-deploy. No branch push publishes images or runs the GitHub Actions release job.
+Create a version tag only on the intended commit of `main` after its
+Main-readiness checks succeed. A newly created version tag selects full change
+validation, but the current `production-images` job explicitly skips tags and
+the `release` job does not depend on `main-readiness`. The tag path therefore
+does not enforce the complete Main-readiness image gate. After its listed
+checks pass, the release job publishes API and web images to GHCR and deploys
+those digests directly to the Railway alpha. It deploys the API first, waits
+for its healthcheck, then deploys the web image and runs the production smoke
+check. Re-tagging or deleting a version does not deploy. No branch push
+publishes images or runs the GitHub Actions release job.
+
+This is the current workflow behavior: publishing and production deployment are
+one automatic release job. The PAR-21 staging-first pipeline and an enforced
+Main-readiness-equivalent tag gate are proposed but not implemented. Until the
+workflow is split, a version tag deploys directly to production and does not
+wait for staging validation.
+
+The proposed PAR-21 path requires every Main-readiness-equivalent check,
+including image validation of the exact candidate artifacts, before publication.
+It publishes each validated image once with an immutable manifest, then uses
+separate manual staging and production-promotion workflows. Production
+promotion must verify a successful staging record that names the exact
+publishing run and both image digests, then deploy those same digests without
+rebuilding. See the
+[staging plan](staging-environment.md#immutable-images); this proposal does not
+change the current release job.
 
 The release tags each image with the version and source commit for discovery,
 but Railway receives `ghcr.io/...@sha256:...` references. The web image stores
@@ -298,8 +315,11 @@ POSTGRES_SSL=true
 CORS_ORIGIN=https://${{web.RAILWAY_PUBLIC_DOMAIN}}
 REGISTRATION_MODE=open
 SENTRY_DSN=<api-sentry-dsn>
-SENTRY_RELEASE=<immutable-commit-or-image-digest>
 ```
+
+Do not override `SENTRY_RELEASE` at runtime. The API image gets the version tag
+at build time, just as the web image stores the release used for source-map
+upload.
 
 The `Postgres` and `web` names in reference variables are case-sensitive and
 must match the Railway service names. A custom public domain may replace the
@@ -327,18 +347,21 @@ same-origin `/runtime-config.json` with `Cache-Control: no-store`, and derives
 CSP origins from the validated configuration. No production value is a default.
 Use different projects and surveys for each environment.
 
-Before the first deployment of this image, an operator must configure the web
-service's runtime environment: copy the intended public `VITE_SENTRY_DSN`,
-`VITE_POSTHOG_PROJECT_TOKEN`, and `VITE_POSTHOG_API_HOST` from the old build
-configuration, explicitly set `VITE_POSTHOG_FEEDBACK_SURVEY_ID` to the survey
-for that project, and set `VITE_SENTRY_TRACES_SAMPLE_RATE` only if tracing is
-wanted. Leave an integration's values empty to disable it. Existing deployments
-keep running until a new image is deployed; this repository change does not
-change their configuration. Remove any stale runtime `VITE_SENTRY_RELEASE`:
-the new image ignores it and uses its own release tag. Verify the generated JSON,
-CSP and reporting in a safe environment before promoting a digest. The source-map
-upload continues to use `SENTRY_AUTH_TOKEN` as a build secret; never put it or a
-PostHog private key in a browser variable.
+Before the first deployment of this image, migrate the intended public
+`VITE_SENTRY_DSN`, `VITE_POSTHOG_PROJECT_TOKEN` and `VITE_POSTHOG_API_HOST` from
+the old build configuration to the web service's runtime environment. Set
+`VITE_POSTHOG_FEEDBACK_SURVEY_ID` for that project, and set
+`VITE_SENTRY_TRACES_SAMPLE_RATE` only if tracing is wanted. These names remain
+for compatibility with Vite and local `.env` files; production Docker builds no
+longer bake their values into the bundle. Leave an integration's values empty
+to disable it. Existing deployments keep running until a new image is deployed;
+this repository change does not change their configuration. Remove stale
+runtime `VITE_SENTRY_RELEASE`; the web image ignores it and uses the immutable
+release identifier stored alongside the source maps for that digest. Verify the
+generated JSON, effective CSP, and reporting in a safe environment before
+promoting the same API and web digests. The source-map upload continues to use
+`SENTRY_AUTH_TOKEN` as a BuildKit secret; never put it or a PostHog private key
+in a browser variable.
 
 Nginx listens on `PORT`, and both image and Railway healthchecks use that same
 value. Keep the public-domain target port and `PORT` aligned; `8080` is the

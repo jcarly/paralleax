@@ -2,10 +2,16 @@
 
 ## Unreleased
 
+- Refined the PAR-21 staging proposal and ADR-051 (Proposed): separate image
+  publication, manual staging validation and manual same-digest production
+  promotion; clarified that the current tag workflow still deploys production
+  immediately. Added explicit-stop, volume-retention and Serverless comparisons,
+  plus Basic Auth compatibility and regression requirements. No Railway
+  resource or production setting was changed.
+
 - Import diagnostics now return complete counts and a bounded preview without retaining a report on the server. Full report download remains planned.
 
 - Browser Sentry and PostHog configuration is generated at container startup, allowing one web image across isolated environments (PAR-26).
-
 - Added a chronological PostgreSQL migration test (PAR-20). Synthetic legacy
   Stories, owners, graph, Triggers, conditions, reader progress, comments and
   Groups are upgraded one migration at a time through the real migrator, with

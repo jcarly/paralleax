@@ -58,6 +58,7 @@ This folder records accepted architecture and product-shaping decisions.
 ## Proposals
 
 - [ADR-043 - Ink-Inspired Narrative Content Source](ADR-043-ink-inspired-narrative-source.md) (Proposed)
+- [ADR-051 - Isolated Railway Staging Project](ADR-051-isolated-railway-staging.md) (Proposed)
 
 ## Maintenance
 
