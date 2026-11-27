@@ -1,13 +1,9 @@
 import { Worker } from 'node:worker_threads';
-import { randomUUID } from 'node:crypto';
-import { rmSync } from 'node:fs';
-import { tmpdir } from 'node:os';
-import { dirname, join, resolve } from 'node:path';
+import { dirname, resolve } from 'node:path';
 import { fileURLToPath } from 'node:url';
 
 const repositoryRoot = resolve(dirname(fileURLToPath(import.meta.url)), '..');
 const workerPath = resolve(repositoryRoot, 'apps/api/dist/choicescript-import.worker.js');
-const reportPath = join(tmpdir(), `paralleax-choicescript-smoke-${randomUUID()}.jsonl`);
 
 const worker = new Worker(workerPath, {
   workerData: {
@@ -19,7 +15,6 @@ const worker = new Worker(workerPath, {
     ],
     storyId: 'choicescript-worker-smoke',
     timestamp: new Date().toISOString(),
-    reportPath,
   },
 });
 
@@ -51,7 +46,6 @@ worker.on('error', (error) => {
 });
 
 worker.on('exit', (code) => {
-  rmSync(reportPath, { force: true });
   if (code !== 0 || !success) {
     console.error(`ChoiceScript worker exited with code ${code}`);
     process.exitCode = 1;

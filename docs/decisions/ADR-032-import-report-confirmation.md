@@ -4,6 +4,15 @@ Status: Accepted
 
 Date: 2026-10-13
 
+## Amendment, 2026-11-25
+
+For the first alpha delivery, HTTP responses retain at most 50 issues, with
+blocking errors prioritized, while counts remain complete. The browser labels
+truncated previews; the API keeps no report. This temporarily supersedes the
+complete-report delivery described below. Warning confirmation and atomic
+persistence remain unchanged. Full report transfer with bounded memory is a
+separate follow-up described in [Roadmap history](../roadmap-history.md#next-delivery-tasks).
+
 ## Context
 
 ChoiceScript and QSP adapters already produce structured compatibility reports,

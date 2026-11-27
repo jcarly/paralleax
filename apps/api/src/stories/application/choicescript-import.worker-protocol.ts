@@ -10,7 +10,6 @@ export interface ChoiceScriptWorkerInput extends Pick<
   'storyId' | 'timestamp'
 > {
   files: ChoiceScriptSourceFile[];
-  reportPath: string;
 }
 
 export type ChoiceScriptWorkerMessage = ImportWorkerMessage<never, ChoiceScriptImportResult>;

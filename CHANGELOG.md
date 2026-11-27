@@ -2,6 +2,8 @@
 
 ## Unreleased
 
+- Import diagnostics now return complete counts and a bounded preview without retaining a report on the server. Full report download remains planned.
+
 - Added a chronological PostgreSQL migration test (PAR-20). Synthetic legacy
   Stories, owners, graph, Triggers, conditions, reader progress, comments and
   Groups are upgraded one migration at a time through the real migrator, with

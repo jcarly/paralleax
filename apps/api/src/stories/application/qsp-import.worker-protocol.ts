@@ -5,7 +5,6 @@ export interface QspWorkerInput {
   source: QspImportSource;
   storyId: string;
   timestamp: string;
-  reportPath: string;
 }
 
 export type QspWorkerMessage = ImportWorkerMessage<QspImportProgress, QspImportResult>;

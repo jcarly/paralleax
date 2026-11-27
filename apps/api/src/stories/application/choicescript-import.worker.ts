@@ -1,4 +1,5 @@
 import { randomUUID } from 'node:crypto';
+import { ImportIssuePreview } from './import-issue-preview.js';
 import { parentPort, workerData } from 'node:worker_threads';
 
 import {
@@ -7,7 +8,6 @@ import {
   type ChoiceScriptSourceFile,
 } from '@paralleax/shared';
 
-import { ImportReportWriter } from '../../imports/import-report-writer.js';
 import type {
   ChoiceScriptWorkerInput,
   ChoiceScriptWorkerMessage,
@@ -20,36 +20,23 @@ if (!port) {
 }
 
 const input = parseChoiceScriptWorkerInput(workerData);
-const writer = new ImportReportWriter({ reportPath: input.reportPath });
 
 void (async () => {
   try {
-    await writer.start();
-    let result: ChoiceScriptImportResult;
-    try {
-      result = importChoiceScript(input.files, {
-        storyId: input.storyId,
-        timestamp: input.timestamp,
-        createId: randomUUID,
-        maxPreviewIssues: 0,
-        onIssue: (issue) => {
-          writer.writeIssue(issue);
-        },
-      });
-    } finally {
-      await writer.close();
-    }
+    const preview = new ImportIssuePreview();
+    const result: ChoiceScriptImportResult = importChoiceScript(input.files, {
+      storyId: input.storyId,
+      timestamp: input.timestamp,
+      createId: randomUUID,
+      maxPreviewIssues: 0,
+      onIssue: preview.capture,
+    });
+    result.report.issues = preview.snapshot();
     port.postMessage({ type: 'result', result } satisfies ChoiceScriptWorkerMessage);
   } catch (caught) {
-    let error: unknown = caught;
-    try {
-      await writer.close();
-    } catch (closeError) {
-      error = new AggregateError([caught, closeError], 'ChoiceScript report finalization failed.');
-    }
     port.postMessage({
       type: 'error',
-      message: error instanceof Error ? error.message : String(error),
+      message: caught instanceof Error ? caught.message : String(caught),
     } satisfies ChoiceScriptWorkerMessage);
   }
 })();
@@ -58,9 +45,8 @@ function parseChoiceScriptWorkerInput(value: unknown): ChoiceScriptWorkerInput {
   if (!isRecord(value)) {
     throw new Error('Invalid ChoiceScript worker input.');
   }
-  const { files, reportPath, storyId, timestamp } = value;
+  const { files, storyId, timestamp } = value;
   if (
-    typeof reportPath !== 'string' ||
     typeof storyId !== 'string' ||
     typeof timestamp !== 'string' ||
     !Array.isArray(files) ||
@@ -68,7 +54,7 @@ function parseChoiceScriptWorkerInput(value: unknown): ChoiceScriptWorkerInput {
   ) {
     throw new Error('Invalid ChoiceScript worker input.');
   }
-  return { files, reportPath, storyId, timestamp };
+  return { files, storyId, timestamp };
 }
 
 function isChoiceScriptSourceFile(value: unknown): value is ChoiceScriptSourceFile {

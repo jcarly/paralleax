@@ -18,13 +18,9 @@ export class ChoiceScriptImportWorkerService extends AbortableImportWorkerServic
     files: ChoiceScriptSourceFile[],
     options: Pick<ChoiceScriptImportOptions, 'storyId' | 'timestamp'>,
     abortSignal?: AbortSignal,
-    reportPath?: string,
   ): Promise<ChoiceScriptImportResult> {
     if (this.activeImports >= 1) {
       throw new ServiceUnavailableException('Another ChoiceScript import is already running.');
-    }
-    if (reportPath === undefined || reportPath === '') {
-      throw new Error('A report path is required for ChoiceScript import execution.');
     }
 
     this.activeImports += 1;
@@ -33,7 +29,6 @@ export class ChoiceScriptImportWorkerService extends AbortableImportWorkerServic
         files,
         storyId: options.storyId,
         timestamp: options.timestamp,
-        reportPath,
       };
       return await this.executeWorker(resolve(__dirname, 'choicescript-import.worker.js'), input, {
         name: 'ChoiceScript import',

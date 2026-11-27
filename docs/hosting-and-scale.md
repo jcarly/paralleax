@@ -34,18 +34,12 @@ real-time service may supply infrastructure, but domain rules must not migrate
 into vendor-specific client APIs. This keeps the application portable and limits
 provider lock-in.
 
-## Import Report Storage
+## Import reports
 
-The API's local import-report adapter defaults to `storage/imports` (or the
-directory configured by `PARALLEAX_IMPORT_REPORT_DIR`) and creates private
-directories/files with exclusive filenames. This is suitable for local and
-single-process testing only. Container filesystems, including a Railway service's
-ordinary writable layer, are not durable across replacement and are not shared
-between API instances. Production must mount a durable volume at the configured
-directory or provide an object-storage implementation behind `ImportReportStorage`.
-Import-job ownership/state is currently in process memory, so durable files alone
-do not yet make report lookup survive API restarts or multi-instance routing; that
-requires the later persistent job-state work before production use.
+Import workers return complete counts and a preview of at most 50 diagnostics.
+No report files are stored by the API. The browser can download the preview;
+full bounded-memory delivery of truncated reports remains open work. Files left
+by older deployments are not removed automatically and require operator cleanup.
 
 ## Persistence Evolution
 

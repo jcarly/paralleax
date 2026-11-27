@@ -386,6 +386,9 @@ export const italianTranslation = {
         'Non è stata creata alcuna storia. Esamina gli errori bloccanti prima di correggere la sorgente.',
       errorReport: 'Rapporto di errore',
       downloadReport: 'Scarica rapporto',
+      downloadPreview: 'Scarica anteprima',
+      reportTruncated:
+        'Sono disponibili solo {{count}} elementi diagnostici. Non è ancora possibile scaricare il rapporto completo.',
       showMoreIssues: 'Mostra altri problemi ({{count}} rimanenti)',
       confirm: 'Conferma importazione',
       scenes: 'Scene',
