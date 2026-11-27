@@ -112,20 +112,14 @@ test('imports and plays repository QSP location fixtures through the real stack'
     report: {
       warningCount: number;
       errorCount: number;
+      issues: Array<{ code: string; severity: string }>;
     };
   };
 
   expect(firstResult.status).toBe('confirmation_required');
   expect(firstResult.report).toMatchObject({ warningCount: 2, errorCount: 0 });
 
-  const reportResponse = await page.request.get(`/api/imports/${firstResult.importId}/report`);
-  expect(reportResponse.ok()).toBe(true);
-  expect(reportResponse.headers()['content-type']).toContain('application/x-ndjson');
-  const reportIssues = (await reportResponse.text())
-    .split('\n')
-    .filter(Boolean)
-    .map((line) => JSON.parse(line) as { code: string; severity: string });
-  expect(reportIssues).toEqual(
+  expect(firstResult.report.issues).toEqual(
     expect.arrayContaining([
       expect.objectContaining({
         code: 'automatic_navigation_requires_choice',
