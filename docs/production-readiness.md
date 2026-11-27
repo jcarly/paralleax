@@ -170,7 +170,6 @@ the provider before collecting tester responses.
   follow-up after validation of that first lot; truncated reports cannot yet be
   downloaded in full.
 
-
 ### P2 — Before Public Story Reading
 
 - Separate editable drafts from immutable published versions.
