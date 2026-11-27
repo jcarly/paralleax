@@ -1,3 +1,4 @@
+import { getBrowserConfig } from './browserConfig';
 import * as Sentry from '@sentry/react';
 import packageMetadata from '../../../../package.json';
 
@@ -25,9 +26,9 @@ export function parseBrowserSentryConfig(
 }
 
 export const browserSentryConfig = parseBrowserSentryConfig(
-  import.meta.env.VITE_SENTRY_DSN,
-  import.meta.env.VITE_SENTRY_RELEASE,
-  import.meta.env.VITE_SENTRY_TRACES_SAMPLE_RATE,
+  getBrowserConfig().sentryDsn,
+  getBrowserConfig().sentryRelease,
+  getBrowserConfig().sentryTracesSampleRate,
 );
 
 export function initializeSentry(configuration = browserSentryConfig) {

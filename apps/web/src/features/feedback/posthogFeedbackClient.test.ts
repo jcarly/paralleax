@@ -222,6 +222,7 @@ describe('PostHog feedback client configuration', () => {
   it('does not import posthog-js until a configured client opens feedback', async () => {
     vi.stubEnv('VITE_POSTHOG_PROJECT_TOKEN', 'phc_token');
     vi.stubEnv('VITE_POSTHOG_API_HOST', 'https://eu.i.posthog.com');
+    vi.stubEnv('VITE_POSTHOG_FEEDBACK_SURVEY_ID', 'survey-1');
     vi.resetModules();
 
     const { postHogFeedbackClient } = await import('./posthogFeedbackClient');

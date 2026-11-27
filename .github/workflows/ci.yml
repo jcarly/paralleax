@@ -203,7 +203,7 @@ jobs:
         if: needs.changes.result == 'success' && needs.changes.outputs.build_api == 'true'
         run: npm run build -w @paralleax/api
 
-      # Match the Dockerfile, which defines these build variables as empty strings.
+      # Keep optional browser integrations disabled in the quality build.
       # Their values change chunk hashes and therefore compressed bundle sizes, so
       # the bundle budget check must see the same inputs as the production image.
       - name: Build web workspace
@@ -488,6 +488,12 @@ jobs:
         if: needs.changes.outputs.browser_e2e == 'true'
         run: npm run test:e2e -w @paralleax/web
 
+      - name: Validate production browser configuration
+        if: needs.changes.outputs.browser_e2e == 'true'
+        run: |
+          npm run build -w @paralleax/web
+          npm run test:runtime-browser -w @paralleax/web
+
       - name: Run scheduled browser performance baseline
         if: needs.changes.outputs.full == 'true'
         run: npm run test:performance -w @paralleax/web
@@ -535,9 +541,11 @@ jobs:
         run: docker build --target api --tag paralleax-api:ci .
 
       - name: Build production web image
-        run: docker build --target web --tag paralleax-web:ci .
+        run: docker build --target web --build-arg VITE_SENTRY_RELEASE=ci-image-release --tag paralleax-web:ci .
 
-      - name: Verify native Story upload limits through production Nginx
+      - name: Verify native Story uploads and runtime configuration through production Nginx
+        env:
+          EXPECTED_WEB_RELEASE: ci-image-release
         run: npm run test:production-proxy -- paralleax-web:ci
 
   # Stable required check for integration branches. Path-based skips are allowed
@@ -702,11 +710,6 @@ jobs:
         id: web-image
         env:
           TAG_NAME: ${{ github.ref_name }}
-          VITE_SENTRY_DSN: ${{ vars.VITE_SENTRY_DSN }}
-          VITE_SENTRY_TRACES_SAMPLE_RATE: ${{ vars.VITE_SENTRY_TRACES_SAMPLE_RATE }}
-          VITE_POSTHOG_PROJECT_TOKEN: ${{ vars.VITE_POSTHOG_PROJECT_TOKEN }}
-          VITE_POSTHOG_API_HOST: ${{ vars.VITE_POSTHOG_API_HOST }}
-          VITE_POSTHOG_FEEDBACK_SURVEY_ID: ${{ vars.VITE_POSTHOG_FEEDBACK_SURVEY_ID }}
           SENTRY_AUTH_TOKEN: ${{ secrets.SENTRY_AUTH_TOKEN }}
           SENTRY_ORG: ${{ vars.SENTRY_ORG }}
           SENTRY_PROJECT: ${{ vars.SENTRY_PROJECT }}
@@ -722,12 +725,7 @@ jobs:
             --label "org.opencontainers.image.source=https://github.com/$GITHUB_REPOSITORY" \
             --label "org.opencontainers.image.revision=$GITHUB_SHA" \
             --label "org.opencontainers.image.version=$TAG_NAME" \
-            --build-arg VITE_SENTRY_DSN \
             --build-arg "VITE_SENTRY_RELEASE=$TAG_NAME" \
-            --build-arg VITE_SENTRY_TRACES_SAMPLE_RATE \
-            --build-arg VITE_POSTHOG_PROJECT_TOKEN \
-            --build-arg VITE_POSTHOG_API_HOST \
-            --build-arg VITE_POSTHOG_FEEDBACK_SURVEY_ID \
             --build-arg SENTRY_ORG \
             --build-arg SENTRY_PROJECT \
             --build-arg SENTRY_URL \

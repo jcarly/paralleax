@@ -5,7 +5,7 @@ import type {
   Properties,
   SurveyCallback,
 } from 'posthog-js';
-import { postHogFeedbackConfig, type PostHogFeedbackConfig } from './feedbackConfig';
+import { getPostHogFeedbackConfig, type PostHogFeedbackConfig } from './feedbackConfig';
 import { sanitizeFeedbackEvent } from './feedbackEventPrivacy';
 import { buildPostHogInitConfig } from './posthogInitConfig';
 
@@ -134,24 +134,30 @@ class SurveyDisplayObserver {
  * explicit request, opens the configured survey, and never rejects.
  */
 export class PostHogFeedbackClient {
-  isConfigured: boolean;
   private readonly observer = new SurveyDisplayObserver();
   private sdkPromise: Promise<PostHogSurveySdk> | undefined;
 
   constructor(
     private readonly loadSdk: PostHogSdkLoader,
-    private readonly config: PostHogFeedbackConfig | null,
+    private readonly config: PostHogFeedbackConfig | null | (() => PostHogFeedbackConfig | null),
     private readonly timeouts: FeedbackClientTimeouts = DEFAULT_TIMEOUTS,
-  ) {
-    this.isConfigured = config !== null;
+  ) {}
+
+  private get currentConfig(): PostHogFeedbackConfig | null {
+    return typeof this.config === 'function' ? this.config() : this.config;
+  }
+
+  get isConfigured(): boolean {
+    return this.currentConfig !== null;
   }
 
   async openFeedback(language: string, context: Properties): Promise<FeedbackOpenResult> {
-    if (this.config === null) {
+    const config = this.currentConfig;
+    if (config === null) {
       return 'unavailable';
     }
     try {
-      return await this.display(this.config, language, context);
+      return await this.display(config, language, context);
     } catch {
       return 'unavailable';
     }
@@ -225,5 +231,5 @@ const loadPostHogSdk: PostHogSdkLoader = async (projectToken, initConfig) => {
 
 export const postHogFeedbackClient = new PostHogFeedbackClient(
   loadPostHogSdk,
-  postHogFeedbackConfig,
+  getPostHogFeedbackConfig,
 );

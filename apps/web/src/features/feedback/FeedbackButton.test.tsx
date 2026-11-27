@@ -6,11 +6,12 @@ import { changeInterfaceLanguage } from '../../i18n';
 import { FeedbackButton } from './FeedbackButton';
 import { postHogFeedbackClient } from './posthogFeedbackClient';
 
-const environmentConfiguration = postHogFeedbackClient.isConfigured;
+let configured = true;
 let notifySubmitted: () => void = () => undefined;
 
 beforeEach(() => {
-  postHogFeedbackClient.isConfigured = true;
+  configured = true;
+  vi.spyOn(postHogFeedbackClient, 'isConfigured', 'get').mockImplementation(() => configured);
   vi.spyOn(postHogFeedbackClient, 'openFeedback').mockResolvedValue('opened');
   vi.spyOn(postHogFeedbackClient, 'onSubmitted').mockImplementation((listener) => {
     notifySubmitted = listener;
@@ -19,7 +20,6 @@ beforeEach(() => {
 });
 
 afterEach(async () => {
-  postHogFeedbackClient.isConfigured = environmentConfiguration;
   vi.restoreAllMocks();
   cleanup();
   await changeInterfaceLanguage('en');
@@ -101,7 +101,7 @@ describe('FeedbackButton states', () => {
     expect(screen.queryByText('Thank you for your feedback!')).not.toBeInTheDocument();
   });
   it('stays absent when disabled and announces an unavailable survey', async () => {
-    postHogFeedbackClient.isConfigured = false;
+    configured = false;
     render(
       <MemoryRouter>
         <FeedbackButton />
@@ -110,7 +110,7 @@ describe('FeedbackButton states', () => {
     expect(screen.queryByRole('button', { name: 'Give feedback' })).not.toBeInTheDocument();
 
     cleanup();
-    postHogFeedbackClient.isConfigured = true;
+    configured = true;
     vi.mocked(postHogFeedbackClient.openFeedback).mockResolvedValue('unavailable');
     render(
       <MemoryRouter>
