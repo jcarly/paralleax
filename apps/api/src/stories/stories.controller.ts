@@ -110,6 +110,7 @@ export class StoriesController {
   }
 
   @Post('imports/choicescript')
+  @Header('Cache-Control', 'private, no-store')
   importChoiceScript(
     @Body() input: ImportChoiceScriptDto,
     @CurrentUser() user: RequestUser,
@@ -137,6 +138,7 @@ export class StoriesController {
   }
 
   @Post('imports/qsp')
+  @Header('Cache-Control', 'private, no-store')
   importQsp(
     @Body() input: ImportQspDto,
     @CurrentUser() user: RequestUser,
@@ -160,6 +162,7 @@ export class StoriesController {
   }
 
   @Post('imports/qsp/admin')
+  @Header('Cache-Control', 'private, no-store')
   async importUnlimitedQsp(
     @Query() input: QspImportQueryDto,
     @Req() request: Request,

@@ -371,11 +371,14 @@ export const frenchTranslation = {
       resultTitle: 'Histoire ChoiceScript importée',
       importedDescription: 'L’histoire complète a été créée en une seule opération.',
       reviewDescription:
-        'L’histoire n’a pas encore été créée. Vérifiez tous les avertissements, puis confirmez l’import pour continuer.',
+        'L’histoire n’a pas encore été créée. Vérifiez les avertissements disponibles, puis confirmez l’import pour continuer.',
       failureDescription:
         'Aucune histoire n’a été créée. Vérifiez les erreurs bloquantes ci-dessous avant de corriger la source.',
       errorReport: 'Rapport d’erreur',
       downloadReport: 'Télécharger le rapport',
+      downloadPreview: 'Télécharger l’aperçu',
+      reportTruncated:
+        'Seuls {{count}} diagnostics sont disponibles. Le rapport complet ne peut pas encore être téléchargé.',
       showMoreIssues: 'Afficher plus de problèmes ({{count}} restants)',
       confirm: 'Confirmer l’import',
       scenes: 'Scènes',

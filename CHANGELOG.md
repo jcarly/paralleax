@@ -2,6 +2,8 @@
 
 ## Unreleased
 
+- Import diagnostics now return complete counts and a bounded preview without retaining a report on the server. Full report download remains planned.
+
 - Browser Sentry and PostHog configuration is generated at container startup, allowing one web image across isolated environments (PAR-26).
 
 - Added a chronological PostgreSQL migration test (PAR-20). Synthetic legacy
@@ -1692,8 +1694,6 @@ All notable project changes are tracked here.
 This project follows a lightweight [Keep a Changelog](https://keepachangelog.com/en/1.1.0/) style while the MVP is still evolving quickly. Entries are grouped under `Unreleased` until the first tagged version.
 
 ## Unreleased
-
-- Browser Sentry and PostHog configuration is generated at container startup, allowing one web image across isolated environments (PAR-26).
 
 - Fixed PostgreSQL integration CI by installing the PostgreSQL 17 client instead
   of Debian Bookworm's PostgreSQL 15 client before backup/restore verification.

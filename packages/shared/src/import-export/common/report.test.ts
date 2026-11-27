@@ -47,3 +47,26 @@ describe('common import report', () => {
     expect(emptyPreview).toMatchObject({ warningCount: 1, errorCount: 0, issues: [] });
   });
 });
+
+it('keeps only the configured preview while delivering a large ordered sequence', () => {
+  const report = createReport();
+  let received = 0;
+  configureImportReport(report, {
+    maxPreviewIssues: 10,
+    onIssue: (issue) => {
+      expect(issue.message).toBe(String(received));
+      received += 1;
+    },
+  });
+
+  for (let index = 0; index < 100_000; index += 1) {
+    addImportIssue(report, { severity: 'warning', code: 'warning', message: String(index) });
+  }
+
+  expect(received).toBe(100_000);
+  expect(report.warningCount).toBe(100_000);
+  expect(report.issues).toHaveLength(10);
+  expect(report.issues.map((issue) => issue.message)).toEqual(
+    Array.from({ length: 10 }, (_, index) => String(index)),
+  );
+});

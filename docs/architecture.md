@@ -127,19 +127,13 @@ runtime. Source state that shares Paralleax semantics must use generic typed sta
 items, effects, and Trigger conditions instead of parallel models. API
 orchestration supplies IDs and persists the complete mapped Story in one
 transaction; web code owns only local file selection and report presentation.
-The API creates an owner-scoped import id and writes every diagnostic as ordered
-JSONL through the shared `onIssue` capture with an empty in-memory preview. QSP
-and ChoiceScript each run in cancellable workers, receive the report path with
-their source input, and write diagnostics from the worker. API responses
-retain format statistics and complete warning/error counts without embedding the
-diagnostic sequence. `GET /api/imports/:importId/report` validates the UUID and
-owner before streaming `application/x-ndjson` as an attachment. Infrastructure
-failures are surfaced as explicit import errors rather than fabricated source
-diagnostics. Warning confirmation still repeats deterministic analysis and
-atomically persists the new result; server-side result retention is a later
-workflow change. The local storage implementation uses private file permissions,
-but production requires durable storage and job metadata that survive container
-replacement.
+QSP and ChoiceScript run in cancellable workers. Each worker counts every
+issue but retains at most 50, prioritizing blocking errors, and returns that
+preview with the result. The browser can download the preview as JSONL. A
+truncated report cannot currently be downloaded in full; no report is retained
+server-side. Warning confirmation repeats analysis before atomic persistence.
+Infrastructure failures are surfaced as execution errors rather than fabricated
+diagnostics. Full bounded-memory report transfer remains unfinished (task 8).
 The standard QSP route retains its small JSON/base64 request boundary. An
 administrator-only binary route streams larger source files past the global JSON
 parser and reuses the same QSP mapping and persistence service. The production
@@ -382,7 +376,7 @@ React still escapes that text. This keeps transport diagnostics available for
 support without coupling Nest services to an interface language.
 
 External-story conversion failures keep the same localized stable-code summary,
-but the import dialog additionally renders the complete structured report carried
+but the import dialog additionally renders the bounded diagnostic preview carried
 in explicit `STORY_IMPORT_FAILED` error details. Arbitrary generic server messages
 remain hidden.
 

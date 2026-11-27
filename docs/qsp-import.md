@@ -30,19 +30,18 @@ the author explicitly confirms the import. Confirmation resubmits and reanalyses
 the same source before creating one private Story atomically. A clean report is
 persisted immediately. An invalid game, duplicate location name, or unresolved
 static `GOTO` target rejects the import before anything is persisted and still
-returns the report counts and statistics. Successful responses contain Story
-summary metadata rather than the complete Story. The interface displays the
-warning and error counts, and the full JSONL report from any outcome is available
-through the authenticated `GET /api/imports/:importId/report` download endpoint.
+returns report counts, statistics, and a bounded diagnostic preview. Successful
+responses contain Story summary metadata rather than the complete Story. The
+browser can download the preview as JSONL; when there are more than 50 issues,
+the complete report is not available. No report is retained by the API, and a
+preview closed without downloading is lost.
 An interpolated or otherwise calculated navigation target is not treated as a
 missing static location: it is skipped, retained as a localized compatibility
 warning, and the rest of the game remains importable for inspection.
 
-QSP and ChoiceScript use the shared `ImportDiagnostics` contract for warning
-and error counts. The API sends each issue to the file-backed report writer
-through `onIssue`, while `maxPreviewIssues: 0` prevents the import response from
-retaining detailed diagnostics in memory. Counts remain complete when the issue
-preview is empty.
+QSP and ChoiceScript use the shared `ImportDiagnostics` contract. Workers keep
+at most 50 issues, prioritizing errors, and count every issue. This limits the
+diagnostic preview but does not cap source size or the imported Story.
 
 For administrator uploads, the dialog displays the measured percentage of bytes
 sent. Once the upload reaches 100%, and for all standard imports, it displays
@@ -81,9 +80,8 @@ to a Node.js worker thread. It receives the complete result and remains
 responsible for warning confirmation and PostgreSQL persistence. A temporary
 per-API-instance limit allows one active QSP worker import. The web library
 reuses the existing import modal and report presentation.
-If a worker cannot complete an import, the API returns the same complete QSP
-report shape with a blocking `import_execution_failed` issue, so it remains
-visible and downloadable. Binary source buffers are transferred to the worker
+If a worker cannot complete an import, the API reports an execution error
+without fabricating a source diagnostic. Binary source buffers are transferred to the worker
 rather than cloned; active workers are terminated during graceful API shutdown.
 Warning confirmation does not create temporary server state: the existing import
 endpoint accepts `confirmWarnings`, reanalyses the submitted source, and persists
@@ -211,8 +209,8 @@ adopt the unaccepted native [Interaction inclusion proposal](interaction-inclusi
 
 The import response contains source counts, converted/approximated/unsupported
 statement counts, warning/error totals, and a stable feature matrix. The full
-source-positioned issues are streamed to the downloadable JSONL report. Every
-detected warning and blocking error is retained without an issue-count limit;
+source-positioned issues are included in a bounded downloadable preview. Every
+detected warning and blocking error is counted;
 statement and feature occurrence counters remain exact.
 The matrix reports three states:
 

@@ -19,13 +19,9 @@ export class QspImportWorkerService extends AbortableImportWorkerService {
     source: QspImportSource,
     onProgress?: (progress: QspImportProgress) => void,
     abortSignal?: AbortSignal,
-    reportPath?: string,
   ): Promise<QspImportResult> {
     if (this.activeImports >= 1) {
       throw new ServiceUnavailableException('Another QSP import is already running.');
-    }
-    if (reportPath === undefined || reportPath === '') {
-      throw new Error('A report path is required for QSP import execution.');
     }
 
     this.activeImports += 1;
@@ -35,7 +31,6 @@ export class QspImportWorkerService extends AbortableImportWorkerService {
         source,
         storyId: randomUUID(),
         timestamp: new Date().toISOString(),
-        reportPath,
       };
       return await this.executeWorker(resolve(__dirname, 'qsp-import.worker.js'), input, {
         name: 'QSP import',

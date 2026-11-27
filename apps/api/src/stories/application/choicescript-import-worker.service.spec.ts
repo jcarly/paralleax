@@ -12,8 +12,6 @@ jest.mock('node:worker_threads', () => ({ Worker: mockWorkerConstructor }));
 
 import { ChoiceScriptImportWorkerService } from './choicescript-import-worker.service';
 
-const reportPath = 'C:\\tmp\\choicescript-import-report.jsonl';
-
 class TestWorker extends EventEmitter {
   readonly terminate = jest.fn(() => Promise.resolve(1));
 }
@@ -61,13 +59,13 @@ describe('ChoiceScriptImportWorkerService', () => {
 
   it('runs ChoiceScript in its worker and returns the import result', async () => {
     const service = new ChoiceScriptImportWorkerService();
-    const pending = service.run(files, options, undefined, reportPath);
+    const pending = service.run(files, options, undefined);
 
     expect(mockWorkerConstructor).toHaveBeenCalledTimes(1);
     const [workerPath, workerOptions] = requiredWorkerInvocation();
     expect(workerPath).toMatch(/choicescript-import\.worker\.js$/);
     expect(workerOptions).toMatchObject({
-      workerData: { files, ...options, reportPath },
+      workerData: { files, ...options },
       transferList: [],
     });
 
@@ -80,7 +78,7 @@ describe('ChoiceScriptImportWorkerService', () => {
   it('terminates its worker when the import request is cancelled', async () => {
     const controller = new AbortController();
     const service = new ChoiceScriptImportWorkerService();
-    const pending = service.run(files, options, controller.signal, reportPath);
+    const pending = service.run(files, options, controller.signal);
 
     controller.abort();
 

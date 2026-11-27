@@ -1,8 +1,5 @@
 import { randomUUID } from 'node:crypto';
-import { mkdtemp, rm } from 'node:fs/promises';
 import { Server, type IncomingMessage, type ServerResponse } from 'node:http';
-import { tmpdir } from 'node:os';
-import { join } from 'node:path';
 import { ValidationPipe, type INestApplication } from '@nestjs/common';
 import { Test } from '@nestjs/testing';
 import * as request from 'supertest';
@@ -12,13 +9,12 @@ import { AuthService } from '../../auth/auth.service';
 import { DatabaseConnection } from '../../database/database.connection';
 import { DatabaseMigrator } from '../../database/database.migrator';
 import type { PostgresTestUser } from '../../database/postgres-test-database';
-import { ImportReportWriter } from '../../imports/import-report-writer';
-import { LocalImportReportStorage } from '../../imports/import-report-storage';
 import { ApiExceptionFilter } from '../../operations/api-exception.filter';
 import { configureRequestBodyParsing } from '../../operations/request-body';
 import { requestContextMiddleware } from '../../operations/request-context';
 import { ChoiceScriptImportWorkerService } from '../application/choicescript-import-worker.service';
 import { QspImportWorkerService } from '../application/qsp-import-worker.service';
+import { ImportIssuePreview } from '../application/import-issue-preview';
 import { StoriesRepository } from '../stories.repository';
 
 /**
@@ -58,53 +54,44 @@ export const storiesApiTestUsers: readonly PostgresTestUser[] = [
 
 function createQspImportWorkerMock() {
   return {
-    run: jest.fn(async (...args: Parameters<QspImportWorkerService['run']>) => {
-      const source = args[0];
-      const reportPath = args[3];
-      if (reportPath === undefined || reportPath === '') {
-        throw new Error('A test QSP report path is required.');
-      }
-      const writer = new ImportReportWriter({ reportPath });
-      await writer.start();
-      try {
-        return importQsp(source, {
+    run: jest.fn(
+      async (
+        source: Parameters<QspImportWorkerService['run']>[0],
+        onProgress?: Parameters<QspImportWorkerService['run']>[1],
+      ) => {
+        const preview = new ImportIssuePreview();
+        const result = importQsp(source, {
           storyId: randomUUID(),
           timestamp: new Date().toISOString(),
           createId: randomUUID,
           maxPreviewIssues: 0,
-          onIssue: (issue) => {
-            writer.writeIssue(issue);
-          },
-          onProgress: args[1],
+          onIssue: preview.capture,
+          onProgress,
         });
-      } finally {
-        await writer.close();
-      }
-    }),
+        result.report.issues = preview.snapshot();
+        return result;
+      },
+    ),
   };
 }
 function createChoiceScriptImportWorkerMock() {
   return {
-    run: jest.fn(async (...args: Parameters<ChoiceScriptImportWorkerService['run']>) => {
-      const [files, options, , reportPath] = args;
-      if (reportPath === undefined || reportPath === '') {
-        throw new Error('A test ChoiceScript report path is required.');
-      }
-      const writer = new ImportReportWriter({ reportPath });
-      await writer.start();
-      try {
-        return importChoiceScript(files, {
+    run: jest.fn(
+      async (
+        files: Parameters<ChoiceScriptImportWorkerService['run']>[0],
+        options: Parameters<ChoiceScriptImportWorkerService['run']>[1],
+      ) => {
+        const preview = new ImportIssuePreview();
+        const result = importChoiceScript(files, {
           ...options,
           createId: randomUUID,
           maxPreviewIssues: 0,
-          onIssue: (issue) => {
-            writer.writeIssue(issue);
-          },
+          onIssue: preview.capture,
         });
-      } finally {
-        await writer.close();
-      }
-    }),
+        result.report.issues = preview.snapshot();
+        return result;
+      },
+    ),
   };
 }
 
@@ -121,14 +108,12 @@ function userForTestToken(token?: string) {
   });
 }
 
-function createStoriesTestingModule(reportPath: string, options: StoriesApiOptions) {
+function createStoriesTestingModule(options: StoriesApiOptions) {
   let builder = Test.createTestingModule({ imports: [AppModule] })
     .overrideProvider(QspImportWorkerService)
     .useValue(createQspImportWorkerMock())
     .overrideProvider(ChoiceScriptImportWorkerService)
     .useValue(createChoiceScriptImportWorkerMock())
-    .overrideProvider(LocalImportReportStorage)
-    .useValue(new LocalImportReportStorage(reportPath))
     .overrideProvider(DatabaseMigrator)
     .useValue({ run: jest.fn().mockResolvedValue(undefined) })
     .overrideProvider(AuthService)
@@ -148,8 +133,7 @@ function isHttpServer(value: unknown): value is ApiHttpServer {
 
 /** Starts the API with the same global pipes, filters and prefix as production. */
 export async function startStoriesApi(options: StoriesApiOptions): Promise<StoriesApi> {
-  const reportDirectory = await mkdtemp(join(tmpdir(), 'paralleax-import-api-'));
-  const moduleFixture = await createStoriesTestingModule(reportDirectory, options);
+  const moduleFixture = await createStoriesTestingModule(options);
   const app = moduleFixture.createNestApplication({ bodyParser: false });
   configureRequestBodyParsing(app);
   app.use(requestContextMiddleware);
@@ -168,7 +152,6 @@ export async function startStoriesApi(options: StoriesApiOptions): Promise<Stori
     httpServer: server,
     async close() {
       await app.close();
-      await rm(reportDirectory, { recursive: true, force: true });
     },
   };
 }

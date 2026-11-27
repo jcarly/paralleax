@@ -13,8 +13,6 @@ jest.mock('node:worker_threads', () => ({ Worker: mockWorkerConstructor }));
 
 import { QspImportWorkerService } from './qsp-import-worker.service';
 
-const reportPath = 'C:\\tmp\\qsp-import-report.jsonl';
-
 class TestWorker extends EventEmitter {
   readonly terminate = jest.fn(() => Promise.resolve(1));
 }
@@ -73,13 +71,13 @@ it('transfers binary source ownership to the worker and returns its result', asy
     content: new Uint8Array([0x00, 0x01]).buffer,
   };
   const service = new QspImportWorkerService();
-  const pending = service.run(source, undefined, undefined, reportPath);
+  const pending = service.run(source, undefined, undefined);
 
   expect(mockWorkerConstructor).toHaveBeenCalledTimes(1);
   const [workerPath, workerOptions] = requiredWorkerInvocation();
   expect(workerPath).toMatch(/qsp-import\.worker\.js$/);
   expect(workerOptions).toMatchObject({
-    workerData: { source, reportPath },
+    workerData: { source },
     transferList: [source.content],
   });
 
@@ -91,7 +89,7 @@ it('transfers binary source ownership to the worker and returns its result', asy
 
 it('propagates worker crashes instead of returning a fabricated conversion report', async () => {
   const service = new QspImportWorkerService();
-  const pending = service.run(textSource(), undefined, undefined, reportPath);
+  const pending = service.run(textSource(), undefined, undefined);
 
   workers[0].emit('error', new Error('worker bootstrap failed'));
 
@@ -101,7 +99,7 @@ it('propagates worker crashes instead of returning a fabricated conversion repor
 it('forwards worker progress to the import orchestration', async () => {
   const progress = jest.fn();
   const service = new QspImportWorkerService();
-  const pending = service.run(textSource(), progress, undefined, reportPath);
+  const pending = service.run(textSource(), progress, undefined);
 
   workers[0].emit('message', {
     type: 'progress',
@@ -125,9 +123,9 @@ it('forwards worker progress to the import orchestration', async () => {
 
 it('keeps only one active worker import', async () => {
   const service = new QspImportWorkerService();
-  const first = service.run(textSource(), undefined, undefined, reportPath);
+  const first = service.run(textSource(), undefined, undefined);
 
-  await expect(service.run(textSource(), undefined, undefined, reportPath)).rejects.toBeInstanceOf(
+  await expect(service.run(textSource(), undefined, undefined)).rejects.toBeInstanceOf(
     ServiceUnavailableException,
   );
 
@@ -138,7 +136,7 @@ it('keeps only one active worker import', async () => {
 it('terminates a worker when the importing request is cancelled', async () => {
   const controller = new AbortController();
   const service = new QspImportWorkerService();
-  const pending = service.run(textSource(), undefined, controller.signal, reportPath);
+  const pending = service.run(textSource(), undefined, controller.signal);
 
   controller.abort();
 
@@ -148,7 +146,7 @@ it('terminates a worker when the importing request is cancelled', async () => {
 
 it('terminates active workers during graceful shutdown', async () => {
   const service = new QspImportWorkerService();
-  const pending = service.run(textSource(), undefined, undefined, reportPath);
+  const pending = service.run(textSource(), undefined, undefined);
 
   const stopping = service.onModuleDestroy();
   expect(workers[0].terminate).toHaveBeenCalledTimes(1);
@@ -156,7 +154,7 @@ it('terminates active workers during graceful shutdown', async () => {
 
   await stopping;
   await expect(pending).rejects.toThrow('QSP import worker exited before returning a result');
-  await expect(service.run(textSource(), undefined, undefined, reportPath)).rejects.toBeInstanceOf(
+  await expect(service.run(textSource(), undefined, undefined)).rejects.toBeInstanceOf(
     ServiceUnavailableException,
   );
 });
