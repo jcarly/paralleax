@@ -1,6 +1,7 @@
 # ADR-051 - Isolated Railway Staging Project
 
-**Status:** Proposed  
+**Status:** Proposed
+
 **Date:** 2026-11-27
 
 ## Context
