@@ -45,7 +45,7 @@
     "eslint-plugin-react-hooks": "^7.1.1",
     "eslint-plugin-react-refresh": "^0.5.8",
     "eslint-plugin-sonarjs": "^4.2.2",
-    "jscpd": "^4.3.0",
+    "jscpd": "^5.4.3",
     "prettier": "^3.10.1",
     "railway": "3.17.0",
     "stylelint": "^18.0.0",
