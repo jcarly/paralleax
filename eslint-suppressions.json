@@ -2224,7 +2224,7 @@
   },
   "apps/web/tests/acceptance/story-imports.spec.ts": {
     "@typescript-eslint/no-unsafe-type-assertion": {
-      "count": 4
+      "count": 3
     },
     "max-lines-per-function": {
       "count": 1
