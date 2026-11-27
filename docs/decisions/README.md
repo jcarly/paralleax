@@ -54,11 +54,11 @@ This folder records accepted architecture and product-shaping decisions.
 - [ADR-048 - PostHog Surveys for Voluntary In-App Feedback](ADR-048-posthog-survey-feedback.md)
 - [ADR-049 - Portable Trigger Probability Identity](ADR-049-portable-trigger-probability.md)
 - [ADR-050 - Editorial Change Batches: Preview, Diff and Commit](ADR-050-editorial-change-batches.md)
-- [ADR-051 - Isolated Railway Staging Project (Proposed)](ADR-051-isolated-railway-staging.md)
 
 ## Proposals
 
 - [ADR-043 - Ink-Inspired Narrative Content Source](ADR-043-ink-inspired-narrative-source.md) (Proposed)
+- [ADR-051 - Isolated Railway Staging Project](ADR-051-isolated-railway-staging.md) (Proposed)
 
 ## Maintenance
 

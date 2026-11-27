@@ -135,14 +135,32 @@ required PRs and `Integration readiness`. Configure these repository rules
 outside the workflow. Use merge commits for promotion, then synchronize
 `main` back into integration branches.
 
-Create a version tag only on the intended commit of `main` after its own
-exhaustive CI succeeds. A newly created version tag in the exact `x.y.z`
-format runs exhaustive CI first;
-only after all required checks pass does the release job publish API and web
-images to GHCR and deploy those image digests to the Railway alpha. The job
-deploys the API first, waits for its healthcheck, then deploys the web image and
-runs the deployment smoke check. Re-tagging or deleting a version does not
-deploy. No branch push publishes images or runs the GitHub Actions release job.
+Create a version tag only on the intended commit of `main` after its
+Main-readiness checks succeed. A newly created version tag selects full change
+validation, but the current `production-images` job explicitly skips tags and
+the `release` job does not depend on `main-readiness`. The tag path therefore
+does not enforce the complete Main-readiness image gate. After its listed
+checks pass, the release job publishes API and web images to GHCR and deploys
+those digests directly to the Railway alpha. It deploys the API first, waits
+for its healthcheck, then deploys the web image and runs the production smoke
+check. Re-tagging or deleting a version does not deploy. No branch push
+publishes images or runs the GitHub Actions release job.
+
+This is the current workflow behavior: publishing and production deployment are
+one automatic release job. The PAR-21 staging-first pipeline and an enforced
+Main-readiness-equivalent tag gate are proposed but not implemented. Until the
+workflow is split, a version tag deploys directly to production and does not
+wait for staging validation.
+
+The proposed PAR-21 path requires every Main-readiness-equivalent check,
+including image validation of the exact candidate artifacts, before publication.
+It publishes each validated image once with an immutable manifest, then uses
+separate manual staging and production-promotion workflows. Production
+promotion must verify a successful staging record that names the exact
+publishing run and both image digests, then deploy those same digests without
+rebuilding. See the
+[staging plan](staging-environment.md#immutable-images); this proposal does not
+change the current release job.
 
 The release tags each image with the version and source commit for discovery,
 but Railway receives `ghcr.io/...@sha256:...` references. The web image stores

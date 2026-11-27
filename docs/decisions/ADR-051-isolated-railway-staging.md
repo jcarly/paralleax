@@ -6,76 +6,122 @@
 
 ## Context
 
-The alpha runs in the Railway project `fearless-warmth` with one `production`
-environment. The alpha runbook requires separate staging and production projects
-before valuable data is accepted, but no staging exists. The release workflow,
-the IaC file and the Railway token all target production. PAR-26 now generates
-public browser observability configuration from validated runtime values and
-derives the production web CSP from those same values. The Sentry release
-identifier and matching source maps are fixed to the web image. Production mode
-is the only mode with `Secure` cookies, the exact-origin guard and the production
-CSP, while the test email outbox exists only in test mode.
+The alpha runs in the Railway project `fearless-warmth` with one production
+environment. There is no staging project. On a version tag, the current
+workflow selects full change validation, but `production-images` explicitly
+skips tags and `release` does not depend on `main-readiness`. It then builds and
+publishes API and web images to GHCR and immediately deploys those digests to
+production with `RAILWAY_API_TOKEN`. The tag path does not enforce the complete
+Main readiness image gate and has no staging validation or promotion gate.
+
+PAR-26 generates public browser observability configuration at web-container
+startup from validated runtime values and derives CSP origins from that
+configuration. The web image carries the immutable Sentry release used by its
+source maps. Empty or incomplete optional integrations are disabled, the
+application remains usable if runtime configuration is unavailable, and local
+development continues using Vite environment files.
 
 ## Proposed Decision
 
-- Create a separate Railway project (in the current workspace if a staging-only
-  token can deploy images, otherwise in a separate workspace) with its
-  own PostgreSQL service and volume, API without a public domain, and public web
-  service.
-- Deploy the exact immutable API and web GHCR digests that the release will
-  promote, through a manual `workflow_dispatch` from `main`, with digest-only
-  inputs and an isolated GitHub `staging` environment. Keep the workflow token
-  to `contents: read` (and `packages: read` only when the images are private) and
-  use a staging-only Railway token. Do not expose the production release token
-  or modify the production release job.
-- Run the staging API with `NODE_ENV=production` and real transactional email to
-  operator-controlled mailboxes. Automated acceptance keeps using ephemeral
-  `NODE_ENV=test` stacks with the outbox.
-- Keep staging IaC as a separate partial for a different project, never in the
-  production file.
-- Set public Sentry/PostHog values on each web service at runtime. The web image
-  creates `/runtime-config.json` with `Cache-Control: no-store`, validates the
-  values and builds CSP origins from the effective configuration. Empty or
-  incomplete configuration disables the corresponding integration; an
-  unavailable config does not prevent the app from running. No
-  environment-specific observability values or secrets belong in the web bundle.
-- Keep Sentry release identity immutable inside the web image so it matches the
-  uploaded source maps after digest promotion. Keep `SENTRY_AUTH_TOKEN` as a
-  BuildKit build secret only.
-- Prefer an on-demand staging environment: let web and API sleep between
-  campaigns and keep only the isolated PostgreSQL service/volume for easier
-  reactivation. The volume and database contents persist until explicitly
-  deleted. If the database baseline cost is unacceptable, use campaign-only
-  teardown and accept loss of test data.
-- Protect the web proxy with HTTP Basic Auth, leaving `/healthz` open for the
-  Railway web healthcheck. Keep the API healthcheck private. Deployment smoke
-  and browser journeys must send staging-only credentials; automated acceptance
-  remains on the existing test-mode stack.
+- Create a separate Railway project in the current workspace, with an isolated
+  PostgreSQL service and volume, a private API service, and a public web service.
+  Use a project-scoped staging `RAILWAY_TOKEN`. Use a separate workspace only
+  if that project token cannot perform the required image deployment. The
+  production `RAILWAY_API_TOKEN` remains restricted to the production promotion
+  job.
+- Require every Main-readiness-equivalent release check, including production
+  image validation, to pass on the exact tagged commit before publication. Build
+  each API and web candidate image once and validate those exact candidates.
+  After success, publish those same artifacts to GHCR without rebuilding, then
+  record the source commit, tag, publishing run id and both immutable GHCR
+  `@sha256:` references in a release manifest. The publish job must not deploy.
+- Let the single operator manually dispatch staging from `main`. The staging
+  job downloads and validates the release manifest, deploys the API then web
+  digest, and records the exact source run and digest pair after smoke and
+  browser checks pass. Give the job only `contents: read` and `actions: read` to
+  inspect the source run and download its manifest (plus `packages: read` if
+  images are private), and a project-scoped `RAILWAY_TOKEN` in a
+  branch-restricted GitHub staging environment. No extra GitHub approver is
+  required.
+- Make production promotion a separate manual dispatch from a successful
+  staging run. Before deployment, verify the successful staging validation
+  record matches the original release manifest, including both digests and the
+  source run id. Deploy those same references without rebuilding and run the
+  production smoke check. Only this job receives `RAILWAY_API_TOKEN`.
+- Run staging with `NODE_ENV=production` and real transactional email to
+  operator-controlled mailboxes. Automated acceptance retains its ephemeral
+  `NODE_ENV=test` stack and outbox.
+- Keep staging IaC as a separate partial for the staging project, never in the
+  production partial.
+- Set public Sentry/PostHog browser values on each web service at runtime. The
+  same image generates `/runtime-config.json` with `Cache-Control: no-store`,
+  validates values and derives CSP origins from accepted configuration. The web
+  bundle contains no environment-specific observability settings. Missing or
+  incomplete settings disable the relevant integration, and unavailable config
+  does not stop the app. Keep the Sentry release and uploaded source maps
+  image-bound; keep `SENTRY_AUTH_TOKEN` build-only.
+- Between campaigns, prefer removing the latest successful web, API and
+  PostgreSQL deployments with `railway down`, while retaining the project,
+  services and attached PostgreSQL volume. Re-deploy the pinned images from the
+  release manifest. Do not assume Serverless sleep will trigger while database
+  connections, telemetry or private-network traffic continues. Validate volume
+  retention, data integrity and restoration time during the first staging
+  campaign. Full project/volume destruction remains an option only if loss of
+  test data is accepted.
+- If D8 is approved, use Nginx Basic Auth at the public web proxy over HTTPS.
+  Write a pre-hashed staging credential to `/tmp/nginx/htpasswd` at startup as
+  the unprivileged `nginx` user, with restrictive permissions. Do not assume
+  `/run` is writable. Remove the file and disable auth when the secret is
+  unset. Protect the app, runtime config, API, SSE and import routes; exempt
+  only exact `/healthz`. Strip the Basic `Authorization` header before
+  forwarding API requests while preserving session cookies. The current local
+  MCP client sends a Paralleax session cookie and no Authorization header; add
+  optional staging Basic credentials to its HTTP transport if it must use the
+  protected proxy. Current remote OAuth/Bearer auth is not implemented and
+  cannot share the same Authorization header with Basic on one route without a
+  separate design.
 
-Operational details, risks, costs and teardown are in the
+The proposal and operational procedure are in the
 [staging plan](../operations/staging-environment.md).
 
-## Open Questions
+## Decisions and Gates
 
-D2 (real Brevo, production mode) and D3 (generated domain) are decided. D4 is
-implemented by PAR-26. D1 remains conditional on project-token capability; D5,
-D6 and D8 are the recommended operating choices above, pending human acceptance
-of cost, retention and shared-password trade-offs. D7 remains open until an
-authorized read-only `SHOW server_version` result is recorded. Keep this ADR
-**Proposed** until the operator has approved the remaining choices and the plan
-has been reviewed before provisioning.
+D2 (dedicated Brevo delivery and operator-controlled mailboxes) and D3 (generated
+Railway domain) are settled inputs. D4 is implemented by PAR-26. D5 is finalized
+as a single-operator manual workflow without an additional approver. D1
+(same-workspace project token), D6 (remove deployments but retain the volume),
+and D8 (shared Basic credential and MCP support) remain human choices before
+provisioning.
+
+D7 remains an operational prerequisite: the production image tag
+`postgres-ssl:18` does not establish the server version. An operator with
+authorized read-only access must run `SHOW server_version` and record only the
+result. The check has not been completed and must not be bypassed.
+
+Keep this ADR **Proposed** until a human accepts the remaining choices and the
+plan has been reviewed before provisioning. Operational gates do not block
+review of this documentation PR.
 
 ## Consequences
 
-- No Railway resource is created by this record.
-- A staging-only project token limits blast radius; if Railway requires a
-  workspace token for image deployment, use a separate workspace rather than
-  reusing the production token.
-- Production-mode staging cannot be driven by the outbox-based acceptance suite.
-  If manual verification becomes a bottleneck, a protected staging outbox needs
-  its own ADR because it changes configuration semantics.
-- Development continues to read local Vite environment configuration. The
-  production container's generated runtime configuration does not remove that
-  local workflow.
-- The D6 cost comparison, data-retention rules and D8 healthcheck/test
-  compatibility are in the [staging plan](../operations/staging-environment.md).
+- This ADR and PR #265 change documentation only. They do not modify the
+  production release workflow, create Railway resources, deploy images or
+  change production.
+- PAR-21 still needs the workflow split, immutable manifest, staging deploy,
+  verified manual promotion, staging IaC, runtime-variable migration, optional
+  Basic Auth and client/test support, and the operational checks listed in the
+  staging plan.
+- No production credential is available to staging. If a project token cannot
+  deploy the published image digests, use a separate workspace rather than
+  sharing the production token.
+- Production-mode staging cannot use the outbox-based acceptance suite. If
+  manual verification becomes a bottleneck, a protected staging outbox needs a
+  separate decision because it changes configuration semantics.
+- Development continues to use local Vite environment configuration; runtime
+  configuration applies to the production web image.
+- An explicitly stopped staging volume continues to store test data and incur
+  storage charges. Apply a retention period and verify restoration before
+  relying on this mode.
+- Basic Auth adds no hosting service but has a shared-secret lifecycle and no
+  per-user audit trail. When its secret is unset, production and local
+  development must remain unauthenticated.
