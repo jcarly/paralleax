@@ -9,7 +9,7 @@ ENV AWS_PAGER=
 WORKDIR /app
 
 RUN apt-get update \
-  && apt-get install --yes --no-install-recommends age awscli ca-certificates curl \
+  && apt-get install --yes --no-install-recommends age awscli ca-certificates curl tini \
   && install -d -m 0755 /usr/share/postgresql-common/pgdg \
   && curl --fail --show-error --silent \
     https://www.postgresql.org/media/keys/ACCC4CF8.asc \
@@ -31,6 +31,8 @@ COPY --chown=node:node package.json ./package.json
 COPY --chown=node:node \
   scripts/backup-postgres.mjs \
   scripts/postgres-operations.mjs \
+  scripts/postgres-backup-entrypoint.mjs \
+  scripts/postgres-backup-archive.mjs \
   scripts/postgres-backup-batch.mjs \
   scripts/postgres-backup-policy.mjs \
   scripts/postgres-backup-process.mjs \
@@ -39,4 +41,4 @@ COPY --chown=node:node \
 
 USER node
 
-ENTRYPOINT ["node", "scripts/postgres-backup-batch.mjs"]
+ENTRYPOINT ["/usr/bin/tini", "--", "node", "scripts/postgres-backup-entrypoint.mjs"]

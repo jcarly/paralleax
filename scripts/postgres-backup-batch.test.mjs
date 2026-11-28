@@ -5,18 +5,15 @@ import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 import test from 'node:test';
 import {
+  BACKUP_LIFECYCLE,
+  BACKUP_RETENTION,
   BackupError,
   createHeartbeat,
-  createPlainArchive,
-  createS3Storage,
   dailyObjectKey,
-  encryptArchive,
-  expiredObjectKeys,
   hasRecentDailyBackup,
   runBackupBatch,
   shouldKeepWeeklyCopy,
   validateConfiguration,
-  validatePlainArchive,
   weeklyObjectKey,
 } from './postgres-backup-batch.mjs';
 
@@ -38,10 +35,16 @@ const environment = {
 
 function createFakeStorage() {
   const objects = new Map();
+  const versions = new Map();
   const calls = [];
   return {
     objects,
+    versions,
     calls,
+    async getBucketVersioning() {
+      calls.push('versioning:Enabled');
+      return 'Enabled';
+    },
     async list(prefix) {
       calls.push(`list:${prefix}`);
       return [...objects.entries()]
@@ -54,8 +57,15 @@ function createFakeStorage() {
     },
     async put({ path, key }) {
       calls.push(`put:${key}`);
+      const content = await readFile(path);
+      const previous = objects.get(key);
+      if (previous) {
+        const noncurrent = versions.get(key) ?? [];
+        noncurrent.push(previous);
+        versions.set(key, noncurrent);
+      }
       objects.set(key, {
-        content: await readFile(path),
+        content,
         lastModified: runDate.toISOString(),
       });
     },
@@ -130,12 +140,18 @@ function createFixtureDependencies({ storage, heartbeat, events, temporaryRoot }
 }
 
 function createFixtureControls({ storage, heartbeat, events, temporaryRoot, dependencies }) {
+  let attemptNumber = 0;
   return {
     storage,
     events,
     heartbeat,
     temporaryRoot,
-    run: (overrides = {}) => runBackupBatch({ ...dependencies, ...overrides }),
+    run: (overrides = {}) =>
+      runBackupBatch({
+        ...dependencies,
+        attemptId: `attempt-${++attemptNumber}`,
+        ...overrides,
+      }),
     async assertTemporaryFilesRemoved() {
       assert.deepEqual(await readdir(temporaryRoot), []);
     },
@@ -169,9 +185,31 @@ test('configuration requires the database URL, age recipient, private S3 setting
     () => validateConfiguration({ ...environment, S3_ENDPOINT: 'http://s3.example.test' }),
     /S3_ENDPOINT must be a valid HTTPS URL/,
   );
+  assert.throws(
+    () => validateConfiguration({ ...environment, S3_ENDPOINT: 'http://127.0.0.1:9090' }),
+    /S3_ENDPOINT must be a valid HTTPS URL/,
+  );
+  assert.equal(
+    validateConfiguration({
+      ...environment,
+      S3_ENDPOINT: 'http://127.0.0.1:9090',
+      BACKUP_HEARTBEAT_URL: 'http://localhost:43210/monitor/test',
+      BACKUP_TEST_ALLOW_LOOPBACK_HTTP: '1',
+    }).endpoint,
+    'http://127.0.0.1:9090',
+  );
+  assert.throws(
+    () =>
+      validateConfiguration({
+        ...environment,
+        S3_ENDPOINT: 'http://s3.example.test',
+        BACKUP_TEST_ALLOW_LOOPBACK_HTTP: '1',
+      }),
+    /S3_ENDPOINT must be a valid HTTPS URL/,
+  );
 });
 
-test('backup object keys use UTC dates and weekly copies are created on Sunday UTC', () => {
+test('backup object keys are canonical per UTC date and weekly copies are created on Sunday UTC', () => {
   assert.equal(dailyObjectKey(runDate), 'daily/2026-11-29.dump.age');
   assert.equal(weeklyObjectKey(runDate), 'weekly/2026-11-29.dump.age');
   assert.equal(shouldKeepWeeklyCopy(runDate), true);
@@ -194,28 +232,36 @@ test('missing-backup detection rejects no object and an object older than the gr
     ),
     true,
   );
-});
-
-test('retention selects 14 daily and 8 weekly objects by their UTC date keys', () => {
-  const objects = Array.from({ length: 17 }, (_, index) => ({
-    key: `daily/2026-11-${String(index + 1).padStart(2, '0')}.dump.age`,
-  }));
-  assert.equal(expiredObjectKeys(objects, 'daily/', 14).length, 3);
-  assert.equal(expiredObjectKeys(objects, 'daily/', 14)[0], 'daily/2026-11-03.dump.age');
   assert.equal(
-    expiredObjectKeys(
-      Array.from({ length: 10 }, (_, index) => ({
-        key: `weekly/2026-${String(index + 1).padStart(2, '0')}-01.dump.age`,
-      })),
-      'weekly/',
-      8,
-    ).length,
-    2,
+    hasRecentDailyBackup(
+      [{ key: 'daily/2026-11-27.dump.age', lastModified: '2026-11-27T20:00:00.000Z' }],
+      runDate,
+    ),
+    true,
   );
-  assert.throws(() => expiredObjectKeys([], 'public/', 1), /Unsupported backup retention prefix/);
+  assert.equal(
+    hasRecentDailyBackup(
+      [{ key: 'daily/2026-11-27.dump.age', lastModified: '2026-11-27T19:59:59.000Z' }],
+      runDate,
+    ),
+    false,
+  );
 });
 
-test('nominal batch validates before encryption, verifies both remote objects, then reports success', async () => {
+test('provider lifecycle retains 14 daily and 8 weekly periods including noncurrent versions', () => {
+  assert.deepEqual(BACKUP_RETENTION, { daily: 14, weekly: 8 });
+  assert.deepEqual(BACKUP_LIFECYCLE, {
+    abortIncompleteMultipartDays: 1,
+    stagingCurrentDays: 1,
+    stagingNoncurrentDays: 1,
+    dailyCurrentDays: 14,
+    dailyNoncurrentDays: 14,
+    weeklyCurrentDays: 56,
+    weeklyNoncurrentDays: 56,
+  });
+});
+
+test('nominal batch verifies staging before promoting canonical daily and weekly objects', async () => {
   const fixture = await createFixture();
   try {
     const result = await fixture.run();
@@ -224,11 +270,41 @@ test('nominal batch validates before encryption, verifies both remote objects, t
     assert.deepEqual(result.keys, ['daily/2026-11-29.dump.age', 'weekly/2026-11-29.dump.age']);
     assert.equal(result.verified, true);
     assert.equal(result.previousBackupFresh, true);
-    assert.equal(fixture.storage.calls.filter((call) => call.startsWith('get:')).length, 2);
+    assert.equal(fixture.storage.calls.filter((call) => call.startsWith('get:')).length, 3);
+    assert.equal(fixture.storage.calls[0], 'versioning:Enabled');
+    assert.equal(
+      fixture.storage.calls.indexOf('put:staging/2026-11-29/attempt-1.dump.age') <
+        fixture.storage.calls.indexOf('put:daily/2026-11-29.dump.age'),
+      true,
+    );
     assert.equal(fixture.events.at(-1), 'heartbeat:success');
     assert.equal(fixture.events.includes('heartbeat:fail'), false);
     assert.equal(fixture.storage.objects.has(result.keys[0]), true);
     assert.equal(fixture.storage.objects.has(result.keys[1]), true);
+    await fixture.assertTemporaryFilesRemoved();
+  } finally {
+    await fixture.close();
+  }
+});
+
+test('concurrent executions stage independently and preserve prior canonical object versions', async () => {
+  const fixture = await createFixture();
+  try {
+    const [first, second] = await Promise.all([fixture.run(), fixture.run()]);
+    assert.notEqual(first.attemptId, second.attemptId);
+    assert.deepEqual(first.keys, second.keys);
+    assert.equal(
+      first.keys.every((key) => fixture.storage.objects.has(key)),
+      true,
+    );
+    assert.equal(
+      second.keys.every((key) => fixture.storage.objects.has(key)),
+      true,
+    );
+    assert.equal(fixture.storage.objects.size, 5);
+    assert.equal(fixture.storage.versions.get(first.keys[0]).length, 1);
+    assert.equal(fixture.storage.versions.get(first.keys[1]).length, 1);
+    assert.equal(fixture.events.filter((event) => event === 'heartbeat:success').length, 2);
     await fixture.assertTemporaryFilesRemoved();
   } finally {
     await fixture.close();
@@ -241,7 +317,7 @@ test('invalid archive fails before encryption or upload and removes temporary fi
     await assert.rejects(
       fixture.run({
         async validateArchive() {
-          throw new BackupError('PostgreSQL archive validation failed');
+          throw new BackupError('PostgreSQL archive validation failed', 'ARCHIVE_INVALID');
         },
       }),
       /PostgreSQL archive validation failed/,
@@ -264,12 +340,15 @@ test('encryption failure sends an alert and leaves no uploaded object or tempora
     await assert.rejects(
       fixture.run({
         async encrypt() {
-          throw new Error('synthetic error contains user data and credentials');
+          throw new BackupError(
+            'synthetic encryption failure with secret details omitted',
+            'ENCRYPTION_FAILED',
+          );
         },
       }),
       (error) =>
         error instanceof BackupError &&
-        error.message === 'Backup batch failed' &&
+        error.code === 'ENCRYPTION_FAILED' &&
         !error.message.includes('credentials'),
     );
     assert.equal(
@@ -304,7 +383,7 @@ test('a failed upload does not report success and removes temporary files', asyn
   }
 });
 
-test('a failed transfer can be retried on the same dated keys', async () => {
+test('a failed transfer retry uses a new staging key and then promotes canonical keys', async () => {
   const fixture = await createFixture();
   let failFirstUpload = true;
   const storage = {
@@ -326,7 +405,8 @@ test('a failed transfer can be retried on the same dated keys', async () => {
     assert.deepEqual(retry.keys, ['daily/2026-11-29.dump.age', 'weekly/2026-11-29.dump.age']);
     assert.equal(retry.verified, true);
     assert.equal(fixture.events.at(-1), 'heartbeat:success');
-    assert.equal(fixture.storage.objects.size, 3);
+    assert.equal(fixture.storage.objects.size, 4);
+    assert.equal(fixture.storage.objects.has('staging/2026-11-29/attempt-2.dump.age'), true);
     await fixture.assertTemporaryFilesRemoved();
   } finally {
     await fixture.close();
@@ -363,8 +443,16 @@ test('an interrupted transfer reports failure and removes temporary files', asyn
   }
 });
 
-test('retry overwrites the same dated object and succeeds after an integrity mismatch', async () => {
-  const fixture = await createFixture({ previousBackup: false });
+test('failed staging verification preserves a verified same-day backup before a retry', async () => {
+  const priorKey = 'daily/2026-11-29.dump.age';
+  const priorObject = {
+    content: Buffer.from('previously verified encrypted archive'),
+    lastModified: runDate.toISOString(),
+  };
+  const fixture = await createFixture({
+    previousBackup: false,
+    initialObjects: [[priorKey, priorObject]],
+  });
   let corruptFirstRead = true;
   try {
     const storage = {
@@ -380,14 +468,59 @@ test('retry overwrites the same dated object and succeeds after an integrity mis
       },
     };
 
-    await assert.rejects(fixture.run({ storage }), /Remote backup integrity check failed/);
+    await assert.rejects(
+      fixture.run({ storage }),
+      (error) => error.code === 'REMOTE_INTEGRITY_FAILED',
+    );
+    assert.deepEqual(fixture.storage.objects.get(priorKey), priorObject);
     const retry = await fixture.run({ storage });
     assert.deepEqual(retry.keys, ['daily/2026-11-29.dump.age', 'weekly/2026-11-29.dump.age']);
-    assert.equal(
-      [...fixture.storage.objects.keys()].filter((key) => key === retry.keys[0]).length,
-      1,
-    );
+    assert.deepEqual(fixture.storage.versions.get(priorKey)?.[0], priorObject);
     assert.equal(retry.verified, true);
+    assert.equal(fixture.events.at(-1), 'heartbeat:success');
+    await fixture.assertTemporaryFilesRemoved();
+  } finally {
+    await fixture.close();
+  }
+});
+
+test('failed canonical promotion keeps the verified prior version recoverable across retry', async () => {
+  const priorKey = 'daily/2026-11-29.dump.age';
+  const priorObject = {
+    content: Buffer.from('verified prior encrypted archive'),
+    lastModified: runDate.toISOString(),
+  };
+  const fixture = await createFixture({
+    previousBackup: false,
+    initialObjects: [[priorKey, priorObject]],
+  });
+  let failFirstPromotionRead = true;
+  const storage = {
+    ...fixture.storage,
+    async get({ key, path }) {
+      if (key === priorKey && failFirstPromotionRead) {
+        failFirstPromotionRead = false;
+        fixture.storage.calls.push(`get:${key}`);
+        await writeFile(path, Buffer.from('synthetic corrupt remote response'));
+        return;
+      }
+      await fixture.storage.get({ key, path });
+    },
+  };
+  try {
+    await assert.rejects(
+      fixture.run({ storage }),
+      (error) => error.code === 'REMOTE_INTEGRITY_FAILED',
+    );
+    assert.deepEqual(fixture.storage.versions.get(priorKey)?.[0], priorObject);
+    assert.equal(fixture.events.includes('heartbeat:success'), false);
+
+    const retry = await fixture.run({ storage });
+    assert.equal(retry.verified, true);
+    assert.equal(
+      fixture.storage.versions.get(priorKey)?.some((version) => version === priorObject),
+      true,
+    );
     assert.equal(fixture.events.at(-1), 'heartbeat:success');
     await fixture.assertTemporaryFilesRemoved();
   } finally {
@@ -408,139 +541,45 @@ test('a missing previous backup pings the external failure monitor before the re
   }
 });
 
-test('retention runs after all remote objects pass integrity checks', async () => {
-  const initialObjects = [];
-  for (let day = 1; day <= 16; day += 1) {
-    const date = `2026-11-${String(day).padStart(2, '0')}`;
-    initialObjects.push([
-      `daily/${date}.dump.age`,
-      { content: Buffer.from('old synthetic'), lastModified: `${date}T02:00:00.000Z` },
-    ]);
-  }
-  for (let week = 1; week <= 9; week += 1) {
-    const date = `2026-09-${String(week * 3).padStart(2, '0')}`;
-    initialObjects.push([
-      `weekly/${date}.dump.age`,
-      { content: Buffer.from('old synthetic'), lastModified: `${date}T02:00:00.000Z` },
-    ]);
-  }
-
-  const fixture = await createFixture({ initialObjects });
+test('retention is provider-managed and the batch never deletes storage objects', async () => {
+  const fixture = await createFixture();
   try {
-    await fixture.run();
-    const dailyKeys = [...fixture.storage.objects.keys()].filter((key) => key.startsWith('daily/'));
-    const weeklyKeys = [...fixture.storage.objects.keys()].filter((key) =>
-      key.startsWith('weekly/'),
+    const result = await fixture.run();
+    assert.equal(result.retention.dailyCurrentDays, 14);
+    assert.equal(result.retention.weeklyCurrentDays, 56);
+    assert.equal(result.retention.stagingCurrentDays, 1);
+    assert.equal(
+      fixture.storage.calls.some((call) => call.startsWith('delete:')),
+      false,
     );
-    assert.equal(dailyKeys.length, 14);
-    assert.equal(weeklyKeys.length, 8);
-    const lastVerification = Math.max(
-      fixture.storage.calls
-        .map((call, index) => (call.startsWith('get:') ? index : -1))
-        .sort((a, b) => b - a)[0],
-    );
-    const firstDeletion = fixture.storage.calls.findIndex((call) => call.startsWith('delete:'));
-    assert.ok(lastVerification < firstDeletion);
     await fixture.assertTemporaryFilesRemoved();
   } finally {
     await fixture.close();
   }
 });
 
-test('database backup invokes npm run db:backup without passing credentials in arguments or S3 environment', async () => {
-  const calls = [];
-  await createPlainArchive({
-    output: '/tmp/synthetic.dump',
-    configuration: validateConfiguration(environment),
-    environment,
-    run: async (...args) => calls.push(args),
-  });
-
-  const [command, args, options] = calls[0];
-  assert.equal(command, 'npm');
-  assert.deepEqual(args.slice(0, 3), ['run', 'db:backup', '--']);
-  assert.equal(
-    args.some((argument) => argument.includes('synthetic-db-secret')),
-    false,
-  );
-  assert.equal(options.environment.BACKUP_DATABASE_URL, environment.BACKUP_DATABASE_URL);
-  assert.equal(options.environment.AWS_SECRET_ACCESS_KEY, undefined);
-  assert.equal(options.environment.BACKUP_HEARTBEAT_URL, undefined);
-});
-
-test('archive validation and age encryption use quiet commands with only the required inputs', async () => {
-  const calls = [];
-  await validatePlainArchive({
-    path: '/tmp/synthetic.dump',
-    environment,
-    run: async (...args) => calls.push(args),
-  });
-  await encryptArchive({
-    input: '/tmp/synthetic.dump',
-    output: '/tmp/synthetic.dump.age',
-    recipient: environment.AGE_RECIPIENT,
-    environment,
-    run: async (...args) => calls.push(args),
-  });
-
-  assert.equal(calls[0][0], 'pg_restore');
-  assert.deepEqual(calls[0][1], ['--list', '/tmp/synthetic.dump']);
-  assert.equal(calls[0][2].environment.BACKUP_DATABASE_URL, undefined);
-  assert.equal(calls[0][2].environment.AWS_SECRET_ACCESS_KEY, undefined);
-  assert.equal(calls[1][0], 'age');
-  assert.equal(calls[1][1].includes(environment.AGE_RECIPIENT), true);
-  assert.equal(calls[1][2].environment.BACKUP_DATABASE_URL, undefined);
-});
-
-test('S3 adapter keeps credentials in its environment, paginates listings, and never puts a secret in argv', async () => {
-  const calls = [];
-  const storage = createS3Storage(validateConfiguration(environment), {
-    environment,
-    async invoke(args, options) {
-      calls.push({ args, options });
-      if (options.captureOutput) {
-        if (calls.filter((call) => call.options.captureOutput).length === 1) {
-          return JSON.stringify({
-            Contents: [
-              { Key: 'daily/2026-11-01.dump.age', LastModified: '2026-11-01T00:00:00Z', Size: 3 },
-            ],
-            IsTruncated: true,
-            NextContinuationToken: 'synthetic-next-token',
-          });
-        }
-        return JSON.stringify({
-          Contents: [
-            { Key: 'daily/2026-11-02.dump.age', LastModified: '2026-11-02T00:00:00Z', Size: 4 },
-          ],
-          IsTruncated: false,
-        });
-      }
-      return '';
-    },
-  });
-
-  const listed = await storage.list('daily/');
-  await storage.put({
-    path: '/tmp/synthetic.dump.age',
-    key: 'daily/2026-11-29.dump.age',
-    sha256: 'abcd',
-  });
-  assert.deepEqual(
-    listed.map(({ key }) => key),
-    ['daily/2026-11-01.dump.age', 'daily/2026-11-02.dump.age'],
-  );
-  assert.equal(calls[1].args.includes('synthetic-next-token'), true);
-  assert.equal(
-    calls.every(
-      (call) => call.args.join(' ').includes(environment.AWS_SECRET_ACCESS_KEY) === false,
-    ),
-    true,
-  );
-  assert.equal(
-    calls.at(-1).options.environment.AWS_SECRET_ACCESS_KEY,
-    environment.AWS_SECRET_ACCESS_KEY,
-  );
-  assert.equal(calls.at(-1).options.environment.BACKUP_DATABASE_URL, undefined);
+test('backup refuses writes when bucket versioning is unavailable or disabled', async () => {
+  const fixture = await createFixture();
+  try {
+    await assert.rejects(
+      fixture.run({
+        storage: {
+          ...fixture.storage,
+          async getBucketVersioning() {
+            return 'Suspended';
+          },
+        },
+      }),
+      (error) => error.code === 'S3_VERSIONING_REQUIRED',
+    );
+    assert.equal(
+      fixture.storage.calls.some((call) => call.startsWith('put:')),
+      false,
+    );
+    await fixture.assertTemporaryFilesRemoved();
+  } finally {
+    await fixture.close();
+  }
 });
 
 test('heartbeat uses success and failure paths without logging its opaque URL', async () => {

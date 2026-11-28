@@ -54,7 +54,7 @@ async function uploadObject({
       '--metadata',
       `sha256=${sha256}`,
     ],
-    { environment, signal, operation: 'S3 upload' },
+    { environment, signal, operation: 'S3 upload', errorCode: 'S3_UPLOAD_FAILED' },
   );
 }
 
@@ -72,8 +72,39 @@ async function downloadObject({ configuration, endpoint, invoke, environment, ke
       'json',
       path,
     ],
-    { environment, signal, operation: 'S3 verification download' },
+    {
+      environment,
+      signal,
+      operation: 'S3 verification download',
+      errorCode: 'S3_DOWNLOAD_FAILED',
+    },
   );
+}
+
+async function readBucketVersioning({ configuration, endpoint, invoke, environment, signal }) {
+  const output = await invoke(
+    [
+      's3api',
+      'get-bucket-versioning',
+      '--bucket',
+      configuration.bucket,
+      ...endpoint,
+      '--output',
+      'json',
+    ],
+    {
+      environment,
+      signal,
+      operation: 'S3 bucket versioning check',
+      errorCode: 'S3_VERSIONING_CHECK_FAILED',
+      captureOutput: true,
+    },
+  );
+  try {
+    return JSON.parse(output).Status ?? null;
+  } catch {
+    throw new BackupError('S3 bucket versioning check failed', 'S3_VERSIONING_CHECK_FAILED');
+  }
 }
 
 async function listPage({ configuration, endpoint, invoke, environment, prefix, token, signal }) {
@@ -99,12 +130,13 @@ async function listPage({ configuration, endpoint, invoke, environment, prefix, 
     environment,
     signal,
     operation: 'S3 listing',
+    errorCode: 'S3_LIST_FAILED',
     captureOutput: true,
   });
   try {
     return JSON.parse(output);
   } catch {
-    throw new BackupError('S3 listing failed');
+    throw new BackupError('S3 listing failed', 'S3_LIST_FAILED');
   }
 }
 
@@ -140,16 +172,9 @@ async function listObjects({ configuration, endpoint, invoke, environment, prefi
     }
     token = page.NextContinuationToken;
     if (!token) {
-      throw new BackupError('S3 listing failed');
+      throw new BackupError('S3 listing failed', 'S3_LIST_FAILED');
     }
   }
-}
-
-async function deleteObject({ configuration, endpoint, invoke, environment, key, signal }) {
-  await invoke(
-    ['s3api', 'delete-object', '--bucket', configuration.bucket, '--key', key, ...endpoint],
-    { environment, signal, operation: 'S3 retention deletion' },
-  );
 }
 
 export function createS3Storage(
@@ -163,7 +188,7 @@ export function createS3Storage(
   return {
     put: (request) => uploadObject({ ...context, ...request }),
     get: (request) => downloadObject({ ...context, ...request }),
+    getBucketVersioning: ({ signal } = {}) => readBucketVersioning({ ...context, signal }),
     list: (prefix, { signal } = {}) => listObjects({ ...context, prefix, signal }),
-    delete: (key, { signal } = {}) => deleteObject({ ...context, key, signal }),
   };
 }

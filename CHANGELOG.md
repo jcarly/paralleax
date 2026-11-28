@@ -27,9 +27,12 @@
   is still to be confirmed), and checks that an older client is refused.
 - Added a standalone PostgreSQL backup batch image (PAR-22). It reuses
   `npm run db:backup`, validates before `age` encryption, verifies S3-compatible
-  objects by downloading and hashing them, and implements repeatable uploads,
-  retention, and heartbeat monitoring. Synthetic tests pass locally; provider
-  resources and a real external backup remain unconfigured.
+  staging objects before promoting to canonical daily/weekly keys, requires
+  bucket versioning, and uses provider-managed lifecycle retention. It reports
+  safe error codes to an external monitor. Process groups stop before
+  temporary-file cleanup. CI now tests the built container through PostgreSQL
+  18, S3Mock, age decryption and a synthetic restore. Provider resources and a
+  real external backup remain unconfigured.
 - Change batches (ADR-050 amendment) now create and update stat definitions and
   assignments: `create_stat_definition`, `update_stat_definition`,
   `create_stat_assignment` and `update_stat_assignment`, with the editor's

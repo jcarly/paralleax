@@ -1,13 +1,24 @@
-const DAILY_KEY = /^daily\/\d{4}-\d{2}-\d{2}\.dump\.age$/;
-const WEEKLY_KEY = /^weekly\/\d{4}-\d{2}-\d{2}\.dump\.age$/;
+import { randomUUID } from 'node:crypto';
+
+const DAILY_KEY = /^daily\/\d{4}-\d{2}-\d{2}\.dump\.age$/i;
 const MAX_DAILY_AGE_MS = 30 * 60 * 60 * 1000;
 
 export const BACKUP_RETENTION = Object.freeze({ daily: 14, weekly: 8 });
+export const BACKUP_LIFECYCLE = Object.freeze({
+  abortIncompleteMultipartDays: 1,
+  stagingCurrentDays: 1,
+  stagingNoncurrentDays: 1,
+  dailyCurrentDays: BACKUP_RETENTION.daily,
+  dailyNoncurrentDays: BACKUP_RETENTION.daily,
+  weeklyCurrentDays: BACKUP_RETENTION.weekly * 7,
+  weeklyNoncurrentDays: BACKUP_RETENTION.weekly * 7,
+});
 
 export class BackupError extends Error {
-  constructor(message) {
+  constructor(message, code = 'BACKUP_FAILED') {
     super(message);
     this.name = 'BackupError';
+    this.code = code;
   }
 }
 
@@ -24,14 +35,23 @@ export function validateConfiguration(environment) {
   ];
   const missing = required.filter((name) => !environment[name]);
   if (missing.length) {
-    throw new BackupError(`Missing required configuration: ${missing.join(', ')}`);
+    throw new BackupError(
+      `Missing required configuration: ${missing.join(', ')}`,
+      'CONFIG_MISSING',
+    );
   }
   if (!environment.AGE_RECIPIENT.startsWith('age1')) {
-    throw new BackupError('AGE_RECIPIENT must be an age public key');
+    throw new BackupError('AGE_RECIPIENT must be an age public key', 'CONFIG_INVALID');
   }
 
-  validateHttpsUrl(environment.S3_ENDPOINT, 'S3_ENDPOINT', true);
-  validateHttpsUrl(environment.BACKUP_HEARTBEAT_URL, 'BACKUP_HEARTBEAT_URL');
+  const allowTestLoopbackHttp = environment.BACKUP_TEST_ALLOW_LOOPBACK_HTTP === '1';
+  validateHttpsUrl(environment.S3_ENDPOINT, 'S3_ENDPOINT', true, allowTestLoopbackHttp);
+  validateHttpsUrl(
+    environment.BACKUP_HEARTBEAT_URL,
+    'BACKUP_HEARTBEAT_URL',
+    false,
+    allowTestLoopbackHttp,
+  );
 
   return {
     databaseUrl: environment.BACKUP_DATABASE_URL,
@@ -45,23 +65,33 @@ export function validateConfiguration(environment) {
   };
 }
 
-function validateHttpsUrl(input, name, rootOnly = false) {
+function validateHttpsUrl(input, name, rootOnly = false, allowTestLoopbackHttp = false) {
   let value;
   try {
     value = new URL(input);
   } catch {
-    throw new BackupError(`${name} must be a valid HTTPS URL`);
+    throw new BackupError(`${name} must be a valid HTTPS URL`, 'CONFIG_INVALID');
   }
-  if (
-    value.protocol !== 'https:' ||
-    value.username ||
-    value.password ||
-    value.search ||
-    value.hash ||
-    (rootOnly && value.pathname !== '/')
-  ) {
-    throw new BackupError(`${name} must be a valid HTTPS URL`);
+  if (!isAllowedBackupUrl(value, rootOnly, allowTestLoopbackHttp)) {
+    throw new BackupError(`${name} must be a valid HTTPS URL`, 'CONFIG_INVALID');
   }
+}
+
+function isAllowedBackupUrl(value, rootOnly, allowTestLoopbackHttp) {
+  const secure = value.protocol === 'https:';
+  const testLoopback = isTestLoopbackUrl(value, allowTestLoopbackHttp);
+  const noCredentials = !value.username && !value.password;
+  const noQueryOrFragment = !value.search && !value.hash;
+  const expectedPath = !rootOnly || value.pathname === '/';
+  return (secure || testLoopback) && noCredentials && noQueryOrFragment && expectedPath;
+}
+
+function isTestLoopbackUrl(value, enabled) {
+  return (
+    enabled &&
+    value.protocol === 'http:' &&
+    ['127.0.0.1', 'localhost', '[::1]'].includes(value.hostname.toLowerCase())
+  );
 }
 
 export function dailyObjectKey(date) {
@@ -70,6 +100,17 @@ export function dailyObjectKey(date) {
 
 export function weeklyObjectKey(date) {
   return `weekly/${date.toISOString().slice(0, 10)}.dump.age`;
+}
+
+export function attemptObjectKey(date, attemptId = randomUUID()) {
+  return `staging/${date.toISOString().slice(0, 10)}/${validateAttemptId(attemptId)}.dump.age`;
+}
+
+function validateAttemptId(attemptId) {
+  if (typeof attemptId !== 'string' || !/^[a-z0-9-]{1,64}$/i.test(attemptId)) {
+    throw new BackupError('Backup attempt identifier is invalid', 'CONFIG_INVALID');
+  }
+  return attemptId;
 }
 
 export function shouldKeepWeeklyCopy(date) {
@@ -88,17 +129,4 @@ export function hasRecentDailyBackup(objects, now, maximumAgeMs = MAX_DAILY_AGE_
 
   const age = now.getTime() - Math.max(...timestamps);
   return age >= -5 * 60 * 1000 && age <= maximumAgeMs;
-}
-
-export function expiredObjectKeys(objects, prefix, limit) {
-  const pattern = prefix === 'daily/' ? DAILY_KEY : prefix === 'weekly/' ? WEEKLY_KEY : null;
-  if (!pattern) {
-    throw new BackupError('Unsupported backup retention prefix');
-  }
-
-  return objects
-    .filter((object) => pattern.test(object.key ?? object.Key ?? ''))
-    .sort((left, right) => (right.key ?? right.Key).localeCompare(left.key ?? left.Key))
-    .slice(limit)
-    .map((object) => object.key ?? object.Key);
 }

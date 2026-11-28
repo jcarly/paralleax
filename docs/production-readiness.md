@@ -73,13 +73,20 @@ the provider before collecting tester responses.
   older than the server (PAR-19).
 - Implemented PAR-22 foundation, tested locally with synthetic data: a
   standalone cron image reuses `npm run db:backup`, validates before `age`
-  encryption, uploads to private S3-compatible storage, reads objects back for
-  SHA-256 verification, applies 14-daily/8-weekly retention, and reports through
-  an external heartbeat. No cron service, bucket, or monitor has been created
-  or configured; no real external backup exists. Keep the recovery gate open
-  until one is verified and monitored. Confirm the effective Railway SQL version
-  with `SHOW server_version` and `SHOW server_version_num` before scheduling it
-  (PAR-19). A complete restore drill remains PAR-23.
+  encryption, verifies each unique staging object before promoting it to one
+  canonical daily key and optional weekly key, and reports structured events
+  through an external heartbeat. The batch requires enabled bucket versioning
+  and cannot delete objects. Provider lifecycle retains staging for one day,
+  daily objects for 14 days, and weekly objects for 56 days. Real-child tests
+  cover interruption, process-group escalation and cleanup; CI exercises the
+  built image through PostgreSQL 18, S3Mock, age decryption and a synthetic
+  restore. IAM, lifecycle, and a 24-hour monitor with six-hour grace still
+  require operational configuration.
+  No cron service, bucket, or monitor has been created; no real external backup
+  exists. Keep the recovery gate open until one is verified and monitored.
+  Confirm the effective Railway SQL version with `SHOW server_version` and
+  `SHOW server_version_num` before scheduling it (PAR-19). A complete restore
+  drill remains PAR-23.
 - Implemented foundation: production requires an exact CORS origin, secure
   cookies, an explicit registration mode, and matching `Origin` headers for
   mutations. Add provider-managed staging/secrets and verify the complete HTTPS

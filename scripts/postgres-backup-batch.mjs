@@ -1,31 +1,33 @@
-import { createHash } from 'node:crypto';
-import { createReadStream } from 'node:fs';
-import { chmod, mkdtemp, rm, stat } from 'node:fs/promises';
+import { chmod, mkdtemp, rm } from 'node:fs/promises';
 import { tmpdir } from 'node:os';
-import { join, resolve } from 'node:path';
-import { fileURLToPath } from 'node:url';
+import { join } from 'node:path';
 import {
-  BACKUP_RETENTION,
+  BACKUP_LIFECYCLE,
   BackupError,
+  attemptObjectKey,
   dailyObjectKey,
-  expiredObjectKeys,
   hasRecentDailyBackup,
   shouldKeepWeeklyCopy,
   validateConfiguration,
   weeklyObjectKey,
 } from './postgres-backup-policy.mjs';
+import { MAX_BACKUP_DURATION_MS } from './postgres-backup-process.mjs';
 import {
-  ageCommandEnvironment,
-  databaseCommandEnvironment,
-  runQuietly,
-} from './postgres-backup-process.mjs';
+  createEncryptedArchive,
+  createPlainArchive,
+  encryptArchive,
+  sha256File,
+  validatePlainArchive,
+  verifiedFileSize,
+} from './postgres-backup-archive.mjs';
 import { createS3Storage } from './postgres-backup-s3.mjs';
 
 export {
+  BACKUP_LIFECYCLE,
   BACKUP_RETENTION,
   BackupError,
+  attemptObjectKey,
   dailyObjectKey,
-  expiredObjectKeys,
   hasRecentDailyBackup,
   shouldKeepWeeklyCopy,
   validateConfiguration,
@@ -33,60 +35,31 @@ export {
 } from './postgres-backup-policy.mjs';
 export { createS3Storage } from './postgres-backup-s3.mjs';
 
-export async function createPlainArchive({
-  output,
-  configuration,
-  environment,
-  signal,
-  run = runQuietly,
-}) {
-  await run('npm', ['run', 'db:backup', '--', `--output=${output}`], {
-    environment: databaseCommandEnvironment(environment, configuration.databaseUrl),
-    signal,
-    operation: 'PostgreSQL backup creation',
-  });
-}
-
-export async function validatePlainArchive({ path, environment, signal, run = runQuietly }) {
-  await run('pg_restore', ['--list', path], {
-    environment: ageCommandEnvironment(environment),
-    signal,
-    operation: 'PostgreSQL archive validation',
-  });
-}
-
-export async function encryptArchive({
-  input,
-  output,
-  recipient,
-  environment,
-  signal,
-  run = runQuietly,
-}) {
-  await run('age', ['--encrypt', '--recipient', recipient, '--output', output, input], {
-    environment: ageCommandEnvironment(environment),
-    signal,
-    operation: 'Age encryption',
-  });
-}
+export {
+  createPlainArchive,
+  encryptArchive,
+  validatePlainArchive,
+} from './postgres-backup-archive.mjs';
 
 function createMonitorPath(base, phase) {
   return new URL(`${base.pathname.replace(/\/+$/, '')}/${phase}`, base.origin);
 }
 
-async function sendHeartbeat(fetchRequest, url) {
+async function sendHeartbeat(fetchRequest, url, signal) {
   let response;
   try {
     response = await fetchRequest(url, {
       method: 'GET',
       cache: 'no-store',
-      signal: globalThis.AbortSignal.timeout(5000),
+      signal: signal
+        ? globalThis.AbortSignal.any([signal, globalThis.AbortSignal.timeout(5000)])
+        : globalThis.AbortSignal.timeout(5000),
     });
   } catch {
-    throw new BackupError('External backup monitor ping failed');
+    throw new BackupError('External backup monitor ping failed', 'MONITOR_UNAVAILABLE');
   }
   if (!response.ok) {
-    throw new BackupError('External backup monitor ping failed');
+    throw new BackupError('External backup monitor ping failed', 'MONITOR_UNAVAILABLE');
   }
 }
 
@@ -94,65 +67,14 @@ export function createHeartbeat(heartbeatUrl, { fetchRequest = fetch } = {}) {
   const base = new URL(heartbeatUrl);
   return {
     fail: () => sendHeartbeat(fetchRequest, createMonitorPath(base, 'fail')),
-    success: () => sendHeartbeat(fetchRequest, base),
+    success: ({ signal } = {}) => sendHeartbeat(fetchRequest, base, signal),
   };
 }
 
-async function sha256File(path) {
-  const hash = createHash('sha256');
-  try {
-    for await (const chunk of createReadStream(path)) {
-      hash.update(chunk);
-    }
-    return hash.digest('hex');
-  } catch {
-    throw new BackupError('Backup integrity check failed');
-  }
-}
-
-async function verifiedFileSize(path) {
-  try {
-    const details = await stat(path);
-    if (!details.isFile() || details.size === 0) {
-      throw new BackupError('Backup integrity check failed');
-    }
-    return details.size;
-  } catch (error) {
-    if (error instanceof BackupError) {
-      throw error;
-    }
-    throw new BackupError('Backup integrity check failed');
-  }
-}
-
-async function createEncryptedArchive({
-  temporaryDirectory,
-  configuration,
-  environment,
-  signal,
-  createArchive,
-  validateArchive,
-  encrypt,
-}) {
-  const archivePath = join(temporaryDirectory, 'backup.dump');
-  const encryptedPath = join(temporaryDirectory, 'backup.dump.age');
-  await createArchive({ output: archivePath, configuration, environment, signal });
-  await chmod(archivePath, 0o600);
-  await validateArchive({ path: archivePath, environment, signal });
-  await encrypt({
-    input: archivePath,
-    output: encryptedPath,
-    recipient: configuration.recipient,
-    environment,
-    signal,
-  });
-  await chmod(encryptedPath, 0o600);
-
-  return {
-    path: encryptedPath,
-    size: await verifiedFileSize(encryptedPath),
-    sha256: await sha256File(encryptedPath),
-  };
+function logEvent(level, event, values = {}) {
+  process.stdout.write(
+    `${JSON.stringify({ timestamp: new Date().toISOString(), level, event, ...values })}\n`,
+  );
 }
 
 async function verifyRemoteObject({ storage, key, path, sha256, size, signal }) {
@@ -161,7 +83,7 @@ async function verifyRemoteObject({ storage, key, path, sha256, size, signal }) 
   const remoteHash = await sha256File(path);
   await rm(path, { force: true });
   if (remoteSize !== size || remoteHash !== sha256) {
-    throw new BackupError('Remote backup integrity check failed');
+    throw new BackupError('Remote backup integrity check failed', 'REMOTE_INTEGRITY_FAILED');
   }
 }
 
@@ -180,40 +102,48 @@ async function uploadAndVerify({ storage, keys, archive, temporaryDirectory, sig
   }
 }
 
-async function prunePrefix({ storage, prefix, limit, signal }) {
-  let objects;
+async function requireVersioning(storage, signal) {
+  if (typeof storage.getBucketVersioning !== 'function') {
+    throw new BackupError('S3 bucket versioning could not be verified', 'S3_VERSIONING_REQUIRED');
+  }
+  let status;
   try {
-    objects = await storage.list(prefix, { signal });
+    status = await storage.getBucketVersioning({ signal });
   } catch {
-    throw new BackupError('S3 retention check failed');
+    throw new BackupError(
+      'S3 bucket versioning could not be verified',
+      'S3_VERSIONING_CHECK_FAILED',
+    );
   }
-
-  for (const key of expiredObjectKeys(objects, prefix, limit)) {
-    try {
-      await storage.delete(key, { signal });
-    } catch {
-      throw new BackupError('S3 retention deletion failed');
-    }
+  if (status !== 'Enabled') {
+    throw new BackupError('S3 bucket versioning must be enabled', 'S3_VERSIONING_REQUIRED');
   }
-}
-
-async function applyRetention({ storage, signal }) {
-  await prunePrefix({ storage, prefix: 'daily/', limit: BACKUP_RETENTION.daily, signal });
-  await prunePrefix({ storage, prefix: 'weekly/', limit: BACKUP_RETENTION.weekly, signal });
 }
 
 async function readPreviousBackupFreshness({ storage, now, signal }) {
   try {
-    return hasRecentDailyBackup(await storage.list('daily/', { signal }), now);
+    return {
+      recent: hasRecentDailyBackup(await storage.list('daily/', { signal }), now),
+      code: null,
+    };
   } catch {
-    return false;
+    return { recent: false, code: 'S3_LIST_FAILED' };
   }
 }
 
 async function checkPreviousBackup({ storage, heartbeat, now, signal }) {
-  const recent = await readPreviousBackupFreshness({ storage, now, signal });
+  const freshness = await readPreviousBackupFreshness({ storage, now, signal });
+  if (freshness.code) {
+    logEvent('warning', 'previous_backup_check_failed', { code: freshness.code });
+  }
+  const recent = freshness.recent;
   if (!recent) {
-    await heartbeat.fail().catch(() => {});
+    logEvent('warning', 'previous_backup_missing_or_stale', { code: 'BACKUP_STALE' });
+    try {
+      await heartbeat.fail();
+    } catch {
+      logEvent('warning', 'external_monitor_unavailable', { code: 'MONITOR_UNAVAILABLE' });
+    }
   }
   return recent;
 }
@@ -231,6 +161,7 @@ async function executeBackupBatch({
   environment,
   signal,
   now,
+  attemptId,
   storage,
   heartbeat,
   temporaryDirectory,
@@ -238,6 +169,7 @@ async function executeBackupBatch({
   validateArchive,
   encrypt,
 }) {
+  await requireVersioning(storage, signal);
   const previousBackupFresh = await checkPreviousBackup({ storage, heartbeat, now, signal });
   const archive = await createEncryptedArchive({
     temporaryDirectory,
@@ -248,21 +180,38 @@ async function executeBackupBatch({
     validateArchive,
     encrypt,
   });
+  const stagingKey = attemptObjectKey(now, attemptId);
+  await uploadAndVerify({ storage, keys: [stagingKey], archive, temporaryDirectory, signal });
   const keys = objectKeysForDate(now);
   await uploadAndVerify({ storage, keys, archive, temporaryDirectory, signal });
-  await applyRetention({ storage, signal });
-  return { keys, size: archive.size, previousBackupFresh, verified: true };
+  return {
+    attemptId,
+    keys,
+    size: archive.size,
+    previousBackupFresh,
+    retention: BACKUP_LIFECYCLE,
+    verified: true,
+  };
 }
 
 function publicFailure(error, signal) {
   if (signal?.aborted) {
-    return new BackupError('Backup interrupted');
+    if (signal.reason instanceof BackupError) {
+      return signal.reason;
+    }
+    const timeout = signal.reason?.name === 'TimeoutError';
+    return new BackupError('Backup interrupted', timeout ? 'BACKUP_TIMEOUT' : 'BACKUP_INTERRUPTED');
   }
   return error instanceof BackupError ? error : new BackupError('Backup batch failed');
 }
 
 async function reportFailure(heartbeat) {
-  await heartbeat.fail().catch(() => {});
+  try {
+    await heartbeat.fail();
+    return true;
+  } catch {
+    return false;
+  }
 }
 
 async function removeTemporaryDirectory(path) {
@@ -289,30 +238,59 @@ async function createPrivateTemporaryDirectory({ create, root, heartbeat }) {
   }
 }
 
-async function executeAndClean({ temporaryDirectory, heartbeat, signal, execute }) {
+async function runBatchOperation({ signal, execute }) {
   let result;
   let failure;
   try {
+    if (signal?.aborted) {
+      throw publicFailure(null, signal);
+    }
     result = await execute();
   } catch (error) {
     failure = publicFailure(error, signal);
   }
+  return { result, failure };
+}
 
-  if (!(await removeTemporaryDirectory(temporaryDirectory))) {
-    failure = new BackupError('Temporary backup cleanup failed');
-  }
-  if (failure) {
-    await reportFailure(heartbeat);
-    return { failure };
-  }
+async function reportExecutionFailure(failure, heartbeat) {
+  failure.monitorUnavailable = !(await reportFailure(heartbeat));
+  return { failure };
+}
 
+async function reportExecutionSuccess({ result, heartbeat, signal }) {
   try {
-    await heartbeat.success();
+    if (signal?.aborted) {
+      throw publicFailure(null, signal);
+    }
+    await heartbeat.success({ signal });
+    if (signal?.aborted) {
+      throw publicFailure(null, signal);
+    }
     return { result };
-  } catch {
-    await reportFailure(heartbeat);
-    return { failure: new BackupError('External backup monitor acknowledgement failed') };
+  } catch (error) {
+    let failure = publicFailure(error, signal);
+    if (!signal?.aborted && failure.code === 'BACKUP_FAILED') {
+      failure = new BackupError(
+        'External backup monitor acknowledgement failed',
+        'MONITOR_UNAVAILABLE',
+      );
+    }
+    return reportExecutionFailure(failure, heartbeat);
   }
+}
+
+async function executeAndClean({ temporaryDirectory, heartbeat, signal, execute }) {
+  const outcome = await runBatchOperation({ signal, execute });
+  if (!(await removeTemporaryDirectory(temporaryDirectory))) {
+    outcome.failure = new BackupError(
+      'Temporary backup cleanup failed',
+      'TEMPORARY_CLEANUP_FAILED',
+    );
+  }
+  if (outcome.failure) {
+    return reportExecutionFailure(outcome.failure, heartbeat);
+  }
+  return reportExecutionSuccess({ ...outcome, heartbeat, signal });
 }
 
 function parseRunDate(value) {
@@ -344,11 +322,43 @@ function resolveRunContext(options) {
     configuration,
     ...resolveBatchResources(options, environment, configuration),
     runDate: parseRunDate(options.now),
+    attemptId: options.attemptId ?? globalThis.crypto.randomUUID(),
   };
 }
 
 export async function runBackupBatch(options = {}) {
   const context = resolveRunContext(options);
+  const batchController = createBatchController(context.signal, options.timeoutMs);
+  try {
+    return await executeBatchWithCleanup(context, batchController.signal);
+  } finally {
+    batchController.dispose();
+  }
+}
+
+function createBatchController(parentSignal, timeoutMs = MAX_BACKUP_DURATION_MS) {
+  const controller = new globalThis.AbortController();
+  const timeout = globalThis.setTimeout(
+    () =>
+      controller.abort(new BackupError('Backup exceeded its maximum duration', 'BACKUP_TIMEOUT')),
+    timeoutMs,
+  );
+  const onAbort = () =>
+    controller.abort(new BackupError('Backup interrupted', 'BACKUP_INTERRUPTED'));
+  parentSignal?.addEventListener('abort', onAbort, { once: true });
+  if (parentSignal?.aborted) {
+    onAbort();
+  }
+  return {
+    signal: controller.signal,
+    dispose() {
+      globalThis.clearTimeout(timeout);
+      parentSignal?.removeEventListener('abort', onAbort);
+    },
+  };
+}
+
+async function executeBatchWithCleanup(context, signal) {
   const temporaryDirectory = await createPrivateTemporaryDirectory({
     create: context.createTemporaryDirectory,
     root: context.temporaryRoot,
@@ -357,20 +367,8 @@ export async function runBackupBatch(options = {}) {
   const outcome = await executeAndClean({
     temporaryDirectory,
     heartbeat: context.heartbeat,
-    signal: context.signal,
-    execute: () =>
-      executeBackupBatch({
-        configuration: context.configuration,
-        environment: context.environment,
-        signal: context.signal,
-        now: context.runDate,
-        storage: context.storage,
-        heartbeat: context.heartbeat,
-        temporaryDirectory,
-        createArchive: context.createArchive,
-        validateArchive: context.validateArchive,
-        encrypt: context.encrypt,
-      }),
+    signal,
+    execute: () => executeBackupBatchWithContext(context, signal, temporaryDirectory),
   });
   if (outcome.failure) {
     throw outcome.failure;
@@ -378,34 +376,18 @@ export async function runBackupBatch(options = {}) {
   return outcome.result;
 }
 
-async function main() {
-  const controller = new globalThis.AbortController();
-  let interruptedBy;
-  const interrupt = (signal) => {
-    interruptedBy ??= signal;
-    controller.abort();
-  };
-  const onSigint = () => interrupt('SIGINT');
-  const onSigterm = () => interrupt('SIGTERM');
-  process.once('SIGINT', onSigint);
-  process.once('SIGTERM', onSigterm);
-
-  try {
-    const result = await runBackupBatch({ signal: controller.signal });
-    process.stdout.write(
-      `[postgres-backup] verified ${result.keys.join(', ')} (${result.size} bytes); ` +
-        `previous=${result.previousBackupFresh ? 'fresh' : 'missing-or-stale'}\n`,
-    );
-  } catch {
-    const interruption = interruptedBy ? ` after ${interruptedBy}` : '';
-    process.stderr.write(`[postgres-backup] failed${interruption}; external alert requested\n`);
-    process.exitCode = interruptedBy === 'SIGINT' ? 130 : interruptedBy === 'SIGTERM' ? 143 : 1;
-  } finally {
-    process.off('SIGINT', onSigint);
-    process.off('SIGTERM', onSigterm);
-  }
-}
-
-if (process.argv[1] && fileURLToPath(import.meta.url) === resolve(process.argv[1])) {
-  await main();
+function executeBackupBatchWithContext(context, signal, temporaryDirectory) {
+  return executeBackupBatch({
+    configuration: context.configuration,
+    environment: context.environment,
+    signal,
+    now: context.runDate,
+    attemptId: context.attemptId,
+    storage: context.storage,
+    heartbeat: context.heartbeat,
+    temporaryDirectory,
+    createArchive: context.createArchive,
+    validateArchive: context.validateArchive,
+    encrypt: context.encrypt,
+  });
 }

@@ -25,15 +25,38 @@ S3-compatible bucket outside Railway. The matching private age identity remains
 outside Railway. The container uses the official AWS CLI v2 for object storage
 operations, keeping an S3 SDK out of the web and API dependency tree.
 
-Daily keys use UTC dates; a second weekly key is written on Sundays. The job
-downloads every newly written object and compares its size and SHA-256 before
-retention or a success heartbeat. A retry on the same date overwrites the same
-key. It keeps the newest 14 daily and 8 weekly keys and deletes older keys only
-after the new object is verified. A Healthchecks-compatible external heartbeat
-receives failures and success only after verification; its 30-hour grace period
-also alerts when the scheduled job does not run. Local synthetic tests prove
-the batch behavior, but provider setup and a real backup remain deployment
-gates.
+The job first checks that bucket versioning is enabled. It uploads each encrypted
+archive to a unique UTC-date staging key and downloads it to compare size and
+SHA-256. Only after that succeeds does it promote the same bytes to the
+date-canonical daily key, and on Sundays to a weekly key, verifying each
+promotion. Failed staging attempts never touch a verified canonical object.
+Provider versioning preserves an earlier canonical version if a promotion is
+interrupted or concurrent jobs overwrite the same date. Application-side
+deletion is prohibited. A separate bucket administrator enables versioning and
+configures provider lifecycle for 14 days of current daily objects, 56 days of
+current weekly objects, one day for staging objects, matching noncurrent-version
+periods, and one-day cleanup of incomplete multipart uploads.
+Healthchecks uses a 24-hour schedule and six-hour grace, for a 30-hour total
+since the last successful heartbeat.
+
+The Railway batch identity may check bucket versioning and list, read, and write
+the staging, daily, and weekly prefixes, but it cannot delete objects or
+versions or change bucket versioning and lifecycle. Object Lock was considered
+but is deferred for alpha: it adds
+provider constraints and storage/legal holds beyond the protection supplied by
+least-privilege credentials, versioning, and provider lifecycle. The recovery
+administrator remains separate and can access prior versions or perform an
+authorized purge. Retries can leave staging objects until one-day expiry and
+additional canonical versions until their noncurrent lifecycle expiry; age-based
+lifecycle is not an exact count-based retention mechanism. Provider
+configuration, a real external backup, and an operational restore remain
+deployment gates.
+
+The original PAR-22 implementation proposal used date-only keys, same-day
+overwrite, and application-side deletion. The 2026-11-28 review amendment
+supersedes those details because upload-before-verification and compromised
+Railway credentials could otherwise remove the last verified copy. No provider
+resource is created by this decision.
 
 CI restores the integration database into a temporary database and compares
 migration and core-table row counts. Hosted production must additionally use
@@ -56,14 +79,30 @@ verified restored database and connection cutover rather than down migrations.
   evidence of the running SQL version; confirm it with read-only `SHOW`
   queries before scheduling the job.
 - Backup secrets are runtime environment values and are kept out of process
-  arguments and output. The batch redirects child output, logs generic failures,
-  and removes its private temporary directory on completion, failure, or handled
-  interruption. The cron service has no public port or persistent local volume.
+  arguments and output. The batch uses structured safe error codes, discards
+  child output, and has a four-hour maximum runtime. It sends TERM to the child
+  process group, escalates to KILL after five seconds, waits for descendants,
+  then removes its private temporary directory. `tini` reaps orphaned
+  descendants. An interrupted run cannot report success. The cron service has
+  no public port or persistent local volume.
 - S3 uploads are verified by reading the encrypted object back. The bucket must
-  be private, use TLS, and live outside the hosting provider. A provider-side
-  lifecycle rule should abort incomplete multipart uploads; versioning or
-  object-lock protection can be enabled when its retention semantics fit the
-  14-daily/8-weekly deletion policy.
+  be private, use TLS, and live outside the hosting provider. The batch has no
+  deletion API and checks that versioning is enabled before any upload. It
+  verifies a unique staging object before promotion to a canonical daily key
+  and, on Sundays, a weekly key. Provider lifecycle expires staging after one
+  day, daily objects after 14 days, and weekly objects after 56 days, with
+  matching noncurrent-version periods. Current expiration creates delete
+  markers in a versioned bucket, so noncurrent versions may remain recoverable
+  for a further 1/14/56 days. Staging and overwritten versions add storage cost,
+  and a valid privacy purge must remove all object versions through the separate
+  recovery administrator. S3Mock exercises the versioning API in CI but does
+  not enforce lifecycle.
+- CI runs the actual backup image against synthetic PostgreSQL 18 and temporary
+  `adobe/s3mock:5.2.3` storage, then downloads, decrypts, restores into a new
+  database, and checks synthetic rows. S3Mock is Apache-2.0 and active, and
+  supports the S3 upload, listing, download, and versioning APIs this flow uses;
+  it does not enforce lifecycle. MinIO was not selected because its repository
+  is archived. This is separate from PAR-23's real provider restore.
 - Logical backups alone do not provide a tight RPO or point-in-time recovery.
 - Production remains blocked until scheduling, monitoring, encryption, and a
   real restoration drill are configured in the selected environment.

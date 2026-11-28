@@ -92,6 +92,8 @@ jobs:
               - 'scripts/backup-postgres.mjs'
               - 'scripts/restore-postgres.mjs'
               - 'scripts/verify-postgres-restore.mjs'
+              - 'scripts/postgres-backup-*.mjs'
+              - 'scripts/verify-postgres-backup-integration.mjs'
             tooling:
               - 'scripts/**'
               - '.railway/**'
@@ -119,6 +121,10 @@ jobs:
               - 'Dockerfile'
               - 'Dockerfile.postgres-backup'
               - 'Dockerfile.dev'
+              - 'scripts/backup-postgres.mjs'
+              - 'scripts/postgres-operations.mjs'
+              - 'scripts/postgres-backup-*.mjs'
+              - 'scripts/verify-postgres-backup-integration.mjs'
               - '.dockerignore'
               - 'compose.production.yaml'
               - 'deploy/**'
@@ -559,6 +565,11 @@ jobs:
             age --decrypt --identity "$temporary_directory/identity" --output "$temporary_directory/restored" "$temporary_directory/archive.age"
             cmp "$temporary_directory/source" "$temporary_directory/restored"
           '
+
+      - name: Verify PostgreSQL backup, S3 transfer, integrity, and restore end to end
+        env:
+          BACKUP_TEST_IMAGE: paralleax-postgres-backup:ci
+        run: npm run test:postgres-backup-integration
 
       - name: Verify native Story uploads and runtime configuration through production Nginx
         env:
