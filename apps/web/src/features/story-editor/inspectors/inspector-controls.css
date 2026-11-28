@@ -89,24 +89,6 @@
   width: min(720px, 100%);
 }
 
-.rich-text-dialog-header {
-  display: flex;
-  align-items: flex-start;
-  justify-content: space-between;
-  gap: 1rem;
-}
-
-.rich-text-dialog-header > div {
-  min-width: 0;
-}
-
-.rich-text-dialog-header .rich-text-dialog-close {
-  flex: 0 0 auto;
-  min-width: 2rem;
-  padding: 0.35rem;
-  font-size: 1.1rem;
-}
-
 .rich-text-variable-dialog-selection {
   padding: 0.65rem 0.75rem;
   border-radius: 0.5rem;

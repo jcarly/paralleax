@@ -739,9 +739,6 @@
   "apps/web/src/components/RichTextEditorDialog.tsx": {
     "@typescript-eslint/strict-boolean-expressions": {
       "count": 1
-    },
-    "jsx-a11y-x/no-noninteractive-element-interactions": {
-      "count": 1
     }
   },
   "apps/web/src/components/RichTextInteractionLinkDialog.tsx": {

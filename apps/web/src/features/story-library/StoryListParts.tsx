@@ -2,6 +2,7 @@ import { useTranslation } from 'react-i18next';
 import type { StorySummary } from '@paralleax/shared';
 import { StoryCard } from './StoryCard';
 import type { StoryFilter, StorySort, StoryView } from './storyListTypes';
+import { useStoryGridFocus, type StoryRemoval } from './useStoryGridFocus';
 
 export function StoryListHeading({
   isAuthenticated,
@@ -228,20 +229,19 @@ export type StoryListResultsProps = {
   isAuthenticated: boolean;
   retryLoading: () => void;
   loadMoreStories: () => void;
-  removeStory: (id: string) => Promise<string | null>;
+  removeStory: StoryRemoval;
   clearFilters: () => void;
   openCreationDialog: (trigger: HTMLElement) => void;
 };
 
 export function StoryListResults(props: StoryListResultsProps) {
+  const { focusProps, removeAndRefocus } = useStoryGridFocus(props.stories, props.removeStory);
   return (
     <>
-      <StoryListStatus
-        error={props.error}
-        loadError={props.loadError}
-        totalCount={props.totalCount}
-      />
-      <StoryResultsState {...props} />
+      <StoryListStatus {...props} />
+      <div {...focusProps}>
+        <StoryResultsState {...props} removeStory={removeAndRefocus} />
+      </div>
     </>
   );
 }

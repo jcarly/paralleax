@@ -6,6 +6,7 @@ import { ConfirmDialog } from '../../components/ConfirmDialog';
 import { FieldHelpTooltip } from '../../components/FieldHelpTooltip';
 import { CanvasActionIcon, type CanvasActionIconName } from '../../components/StoryCanvasToolbar';
 import { loadStoryEditor, loadStoryPlayer } from '../../pages/storyRouteLoaders';
+import type { StoryDeletionResult } from './useStoryListMutations';
 
 type StoryCardOnlyIconName = 'edit' | 'export' | 'access';
 type StoryCardIconName = CanvasActionIconName | StoryCardOnlyIconName;
@@ -17,7 +18,7 @@ export function StoryCard({
   deleteDisabled,
 }: {
   story: StorySummary;
-  remove: (id: string) => Promise<string | null>;
+  remove: (id: string) => Promise<StoryDeletionResult>;
   deleting: boolean;
   deleteDisabled: boolean;
 }) {
@@ -60,7 +61,7 @@ function StoryCardActions({
   deleteDisabled,
 }: {
   story: StorySummary;
-  remove: (id: string) => Promise<string | null>;
+  remove: (id: string) => Promise<StoryDeletionResult>;
   deleting: boolean;
   deleteDisabled: boolean;
 }) {
@@ -199,7 +200,7 @@ function StoryManageActions({
   deleteDisabled,
 }: {
   story: StorySummary;
-  remove: (id: string) => Promise<string | null>;
+  remove: (id: string) => Promise<StoryDeletionResult>;
   deleting: boolean;
   deleteDisabled: boolean;
 }) {
@@ -244,7 +245,7 @@ function StoryDeletionDialog({
   onClose,
 }: {
   story: StorySummary;
-  remove: (id: string) => Promise<string | null>;
+  remove: (id: string) => Promise<StoryDeletionResult>;
   onClose: () => void;
 }) {
   const { t } = useTranslation();
@@ -256,12 +257,17 @@ function StoryDeletionDialog({
     }
     setPending(true);
     setError('');
-    const failure = await remove(story.id);
-    if (failure === null) {
-      // The card unmounts with the deleted Story, taking this dialog with it.
-      return;
+    try {
+      const result = await remove(story.id);
+      if (result.status === 'deleted') {
+        // The card unmounts with the deleted Story, taking this dialog with it.
+        return;
+      }
+      // `busy` means another deletion is running: nothing was deleted.
+      setError(result.status === 'failed' ? result.message : t('library.deleteFailed'));
+    } catch {
+      setError(t('library.deleteFailed'));
     }
-    setError(failure);
     setPending(false);
   };
   return (

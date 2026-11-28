@@ -1,5 +1,5 @@
 import { useEffect, useRef, type RefObject } from 'react';
-import { RichTextEditorDialog } from './RichTextEditorDialog';
+import { ModalDialog } from './ModalDialog';
 
 interface ConfirmDialogProps {
   title: string;
@@ -15,9 +15,10 @@ interface ConfirmDialogProps {
 }
 
 /**
- * Modal confirmation built on the shared dialog. Cancel takes the initial focus so
+ * Modal confirmation built on `ModalDialog`. Cancel takes the initial focus so
  * an irreversible action is never one accidental Enter away. While `pending`, the
- * dialog cannot be dismissed or submitted again; on failure the caller keeps it
+ * dialog cannot be dismissed or submitted again (buttons use `aria-disabled` so the
+ * focus stays on the pressed button instead of falling to the page); on failure the caller keeps it
  * open and passes `error` so the author can retry.
  */
 export function ConfirmDialog({
@@ -43,11 +44,12 @@ export function ConfirmDialog({
   };
 
   return (
-    <RichTextEditorDialog
+    <ModalDialog
       className="confirm-dialog"
       title={title}
       description={description}
       closeLabel={closeLabel}
+      closeDisabled={pending}
       onCancel={cancelUnlessPending}
     >
       {error !== undefined && error !== '' ? (
@@ -64,7 +66,7 @@ export function ConfirmDialog({
         onConfirm={onConfirm}
         onCancel={cancelUnlessPending}
       />
-    </RichTextEditorDialog>
+    </ModalDialog>
   );
 }
 
@@ -91,7 +93,7 @@ function ConfirmDialogActions({
         ref={cancelButton}
         className="secondary"
         type="button"
-        disabled={pending}
+        aria-disabled={pending}
         onClick={onCancel}
       >
         {cancelLabel}
@@ -99,9 +101,13 @@ function ConfirmDialogActions({
       <button
         className={destructive ? 'danger' : undefined}
         type="button"
-        disabled={pending}
+        aria-disabled={pending}
         aria-busy={pending}
-        onClick={onConfirm}
+        onClick={() => {
+          if (!pending) {
+            onConfirm();
+          }
+        }}
       >
         {confirmLabel}
       </button>

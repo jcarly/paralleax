@@ -41,10 +41,13 @@ it('focuses Cancel, traps Tab and cancels on Escape', async () => {
 
 it('ignores dismissal while pending and announces an error', async () => {
   const user = userEvent.setup();
-  const { onCancel } = renderDialog({ pending: true, error: 'It failed' });
+  const { onCancel, onConfirm } = renderDialog({ pending: true, error: 'It failed' });
   expect(screen.getByRole('alert')).toHaveTextContent('It failed');
-  expect(screen.getByRole('button', { name: 'Remove' })).toBeDisabled();
+  expect(screen.getByRole('button', { name: 'Remove' })).toHaveAttribute('aria-disabled', 'true');
+  expect(screen.getByRole('button', { name: 'Close' })).toBeDisabled();
   await user.keyboard('{Escape}');
-  await user.click(screen.getByRole('button', { name: 'Close' }));
+  await user.click(screen.getByRole('button', { name: 'Remove' }));
+  await user.click(screen.getByRole('button', { name: 'Keep' }));
   expect(onCancel).not.toHaveBeenCalled();
+  expect(onConfirm).not.toHaveBeenCalled();
 });

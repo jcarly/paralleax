@@ -479,8 +479,13 @@ it('story deletion: deletes once and removes the card only after success', async
   const confirm = within(dialog).getByRole('button', { name: 'Delete' });
   await user.click(confirm);
   await user.click(confirm);
-  expect(confirm).toBeDisabled();
-  expect(within(dialog).getByRole('button', { name: 'Cancel' })).toBeDisabled();
+  expect(confirm).toHaveAttribute('aria-disabled', 'true');
+  expect(confirm).toHaveFocus();
+  expect(within(dialog).getByRole('button', { name: 'Cancel' })).toHaveAttribute(
+    'aria-disabled',
+    'true',
+  );
+  expect(within(dialog).getByRole('button', { name: 'Close' })).toBeDisabled();
   await user.keyboard('{Escape}');
   expect(screen.getByRole('dialog')).toBeInTheDocument();
   expect(screen.getByRole('heading', { name: 'First story' })).toBeInTheDocument();
@@ -493,6 +498,7 @@ it('story deletion: deletes once and removes the card only after success', async
   expect(api.deleteStory).toHaveBeenCalledTimes(1);
   expect(api.deleteStory).toHaveBeenCalledWith('story-1');
   expect(api.listStories).toHaveBeenCalledTimes(2);
+  expect(document.body).not.toHaveFocus();
 });
 
 it('story deletion: stays open with an error after a failure and allows a retry', async () => {
