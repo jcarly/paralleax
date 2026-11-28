@@ -10,6 +10,30 @@ export const S3MOCK_IMAGE = process.env.BACKUP_TEST_S3_IMAGE ?? 'adobe/s3mock:5.
 
 const COMMAND_TIMEOUT_MS = 15 * 60 * 1000;
 const VOLUME_USER = `${process.getuid()}:${process.getgid()}`;
+const BACKUP_FAILURE_CODES = new Set([
+  'ARCHIVE_INVALID',
+  'BACKUP_FAILED',
+  'BACKUP_INTERRUPTED',
+  'BACKUP_TIMEOUT',
+  'CONFIG_INVALID',
+  'CONFIG_MISSING',
+  'DB_BACKUP_FAILED',
+  'ENCRYPTION_FAILED',
+  'LOCAL_INTEGRITY_FAILED',
+  'MONITOR_UNAVAILABLE',
+  'PROCESS_FAILED',
+  'PROCESS_START_FAILED',
+  'PROCESS_TIMEOUT',
+  'PROCESS_TREE_LEAK',
+  'PROCESS_TREE_STOP_FAILED',
+  'REMOTE_INTEGRITY_FAILED',
+  'S3_DOWNLOAD_FAILED',
+  'S3_LIST_FAILED',
+  'S3_UPLOAD_FAILED',
+  'S3_VERSIONING_CHECK_FAILED',
+  'S3_VERSIONING_REQUIRED',
+  'TEMPORARY_CLEANUP_FAILED',
+]);
 
 function dockerEnvironment() {
   return selectedEnvironment(process.env, [
@@ -156,25 +180,60 @@ export async function createAgeRecipient(workDirectory, signal) {
 
 export async function runBackupContainer(environmentPath, signal) {
   const output = await runDocker(
-    ['run', '--rm', '--network=host', '--env-file', environmentPath, BACKUP_IMAGE],
+    [
+      'run',
+      '--rm',
+      '--network=host',
+      '--env-file',
+      environmentPath,
+      '--entrypoint',
+      '/bin/sh',
+      BACKUP_IMAGE,
+      '-c',
+      'node scripts/postgres-backup-entrypoint.mjs 2>&1; exit 0',
+    ],
     { signal, captureOutput: true, errorCode: 'INTEGRATION_BACKUP_CONTAINER_FAILED' },
   );
-  const events = output
+  const errorCode = backupContainerErrorCode(output);
+  if (errorCode) {
+    throw new BackupError('Synthetic backup container did not verify its backup', errorCode);
+  }
+}
+
+export function backupContainerErrorCode(output) {
+  const events = parseBackupContainerEvents(output);
+  if (events.some((event) => event.event === 'backup_verified')) {
+    return null;
+  }
+  const failure = events.find(
+    (event) => event.event === 'backup_failed' && BACKUP_FAILURE_CODES.has(event.code),
+  );
+  return failure?.code ?? 'INTEGRATION_BACKUP_FAILED';
+}
+
+export function parseBackupContainerEvents(output) {
+  return output
     .trim()
     .split('\n')
     .flatMap((line) => {
       try {
-        return [JSON.parse(line)];
+        const event = JSON.parse(line);
+        if (
+          typeof event === 'object' &&
+          event !== null &&
+          typeof event.event === 'string' &&
+          typeof event.code === 'string'
+        ) {
+          return [{ event: event.event, code: event.code }];
+        }
+        if (typeof event === 'object' && event !== null && typeof event.event === 'string') {
+          return [{ event: event.event }];
+        }
+        return [];
       } catch {
         return [];
       }
     });
-  if (!events.some((event) => event.event === 'backup_verified')) {
-    throw new BackupError(
-      'Synthetic backup container did not verify its backup',
-      'INTEGRATION_BACKUP_FAILED',
-    );
-  }
 }
 
 export async function runAws(
