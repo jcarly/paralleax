@@ -14,8 +14,8 @@ remain below the current content. The Simulation uses the same label, context,
 story-time, and narrative order while showing effects and author diagnostics.
 
 An untitled Interaction has no authored label, so the Reader shows none above
-its content and never shows an authoring placeholder such as `Start` or
-`New interaction`. As a choice, an untitled destination reads `Continue` when it
+its content and never shows an authoring placeholder such as the editor's
+`Title (optional)` hint or the content excerpt used in editor lists. As a choice, an untitled destination reads `Continue` when it
 is the only choice and `Option N` (its position among the shown choices) when
 several follow. This is a presentation fallback: nothing is stored and authored
 titles are unchanged. `Option N` is a Reader fallback only: the graph,

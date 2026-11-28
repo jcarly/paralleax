@@ -1,3 +1,4 @@
+import { interactionLabelForDisplay } from '../features/story/interactionTitlePresentation';
 import {
   variableReference,
   type StatCondition,
@@ -46,7 +47,7 @@ export function TriggerConditionFields({
             .filter(({ id }) => id !== currentInteractionId)
             .map((interaction) => (
               <option key={interaction.id} value={interaction.id}>
-                {interaction.title}
+                {interactionLabelForDisplay(interaction)}
               </option>
             ))}
         </select>

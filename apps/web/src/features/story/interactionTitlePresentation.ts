@@ -1,22 +1,50 @@
 import type { Interaction } from '@paralleax/shared';
 import type { TFunction } from 'i18next';
 
-export function interactionTitlePlaceholder(
-  interaction: Pick<Interaction, 'triggers'>,
-  t: TFunction,
-): string {
-  const hasInputlessTrigger = interaction.triggers.some(
-    ({ inputInteractionIds }) => inputInteractionIds.length === 0,
-  );
-  return t(
-    hasInputlessTrigger
-      ? 'interactionInspector.startTitlePlaceholder'
-      : 'interactionInspector.newTitlePlaceholder',
-  );
+/** The hint of an empty title field: generic, never a name that looks authored. */
+export function interactionTitlePlaceholder(t: TFunction): string {
+  return t('interactionInspector.titlePlaceholder');
 }
 
-export function interactionTitleForDisplay(interaction: Interaction, t: TFunction): string {
-  return interaction.title.trim() || interactionTitlePlaceholder(interaction, t);
+const EXCERPT_LENGTH = 40;
+
+function plainText(html: string): string {
+  return html
+    .replace(/<[^>]*>/g, ' ')
+    .replace(/&nbsp;/g, ' ')
+    .replace(/&lt;/g, '<')
+    .replace(/&gt;/g, '>')
+    .replace(/&quot;/g, '"')
+    .replace(/&#39;/g, "'")
+    .replace(/&amp;/g, '&')
+    .replace(/\s+/g, ' ')
+    .trim();
+}
+
+function excerpt(text: string): string {
+  if (text.length <= EXCERPT_LENGTH) {
+    return text;
+  }
+  const cut = text.slice(0, EXCERPT_LENGTH);
+  const lastSpace = cut.lastIndexOf(' ');
+  return `${(lastSpace > EXCERPT_LENGTH / 2 ? cut.slice(0, lastSpace) : cut).trimEnd()}…`;
+}
+
+/**
+ * Compact, language-neutral name of an Interaction for lists, history, search
+ * results and confirmations: its title, else the start of its content, else a short
+ * reference taken from its ID. Computed for display only, never stored, and never
+ * used in the Reader or in title fields.
+ */
+export function interactionLabelForDisplay(
+  interaction: Pick<Interaction, 'id' | 'title' | 'body'>,
+): string {
+  const title = interaction.title.trim();
+  if (title) {
+    return title;
+  }
+  const content = plainText(interaction.body);
+  return content ? excerpt(content) : `○ ${interaction.id.slice(-4)}`;
 }
 
 export interface ChoiceLabelPresentation {
@@ -57,21 +85,21 @@ export function choiceLabelForDisplay(
 }
 
 /**
- * The hint for an untitled Interaction in Simulation, from how it was reached:
- * `Start` for the starting point, `Continue` after a lone option, and an empty
- * label flagged as an error after several options.
+ * The hint for an untitled Interaction's title field in Simulation, from how it was
+ * reached: the generic placeholder for the starting point or after a lone option,
+ * and an empty label flagged as an error after several options.
  */
 export function simulationTitleHint(
   arrival: 'start' | { optionCount: number } | undefined,
   t: TFunction,
 ): { hint: string; needsLabel: boolean } {
   if (arrival === 'start') {
-    return { hint: t('player.startChoice'), needsLabel: false };
+    return { hint: interactionTitlePlaceholder(t), needsLabel: false };
   }
   if (arrival === undefined) {
     return { hint: '', needsLabel: false };
   }
   return arrival.optionCount > 1
     ? { hint: '', needsLabel: true }
-    : { hint: t('player.continueChoice'), needsLabel: false };
+    : { hint: interactionTitlePlaceholder(t), needsLabel: false };
 }

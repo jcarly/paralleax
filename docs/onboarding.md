@@ -45,9 +45,12 @@ not the starting one. A finished guide shows no completion card: three
 Interactions are not a finished Story. Opening the `Guide` control again
 restarts it from its first step.
 
-New Interaction titles and bodies are stored empty. Localized placeholders show
-`Start` or `New interaction` in English, `Départ` or `Nouvelle interaction` in
-French, and `Inizio` or `Nuova interazione` in Italian. Empty scene bodies show
+New Interaction titles and bodies are stored empty. An empty title field shows
+the generic, localized hint `Title (optional)`, `Titre (facultatif)` or
+`Titolo (facoltativo)`, never a name that looks authored. Outside title fields
+(navigation lists, search results, Simulation history, confirmations, link and
+condition pickers) an untitled Interaction is named by the start of its content,
+or by `○` and the last four characters of its ID when it has none. Empty scene bodies show
 `Describe what happens here.`, `Décrivez ce qui se passe ici.`, or
 `Descrivi cosa succede qui.` in the corresponding language. Existing authored
 titles and bodies are not translated or rewritten.

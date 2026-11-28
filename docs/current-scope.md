@@ -407,8 +407,9 @@ assertions are recorded as coverage references, not as passing results.
   readers and authors. The Story delete action calls the permanent delete API
   directly; the interaction and comment confirmations do not cover it.
 - Story creation seeds a linked root and child and focuses the root in the
-  editor. The graph creation helper still uses the English default title
-  `New interaction`; the broader first-use discovery report has not been
+  editor. No Interaction title is generated: titles stay empty. The graph
+  creation helper's `New interaction` is a layout projection that is never
+  stored or shown. The broader first-use discovery report has not been
   reproduced.
 - The Interaction Inspector's Context and timing and Effects disclosures start
   open. Available Reader and Simulation choices receive a condition summary in

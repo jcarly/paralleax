@@ -59,15 +59,14 @@ describe('condition operator resources', () => {
   });
 });
 
-describe('empty Interaction title placeholders', () => {
+describe('empty Interaction title placeholder', () => {
   it.each([
-    [englishTranslation, 'Start', 'New interaction'],
-    [frenchTranslation, 'Départ', 'Nouvelle interaction'],
-    [italianTranslation, 'Inizio', 'Nuova interazione'],
-  ])('localizes empty titles', (translation, start, next) => {
-    expect(translation.interactionInspector).toMatchObject({
-      startTitlePlaceholder: start,
-      newTitlePlaceholder: next,
-    });
+    [englishTranslation, 'Title (optional)'],
+    [frenchTranslation, 'Titre (facultatif)'],
+    [italianTranslation, 'Titolo (facoltativo)'],
+  ])('is a generic hint, not a name that looks authored', (translation, placeholder) => {
+    expect(translation.interactionInspector.titlePlaceholder).toBe(placeholder);
+    expect(translation.interactionInspector).not.toHaveProperty('startTitlePlaceholder');
+    expect(translation.interactionInspector).not.toHaveProperty('newTitlePlaceholder');
   });
 });

@@ -13,7 +13,7 @@ import {
   InspectorCommentField,
   type InspectorTextCommentProps,
 } from '../../comments/InspectorCommentField';
-import { interactionTitleForDisplay } from '../../story/interactionTitlePresentation';
+import { interactionLabelForDisplay } from '../../story/interactionTitlePresentation';
 
 type ReviewTargetInspectorProps = {
   interaction?: Interaction;
@@ -94,7 +94,7 @@ function ReviewInteractionTarget({
         textCommentCounts={textCommentCounts}
         onOpenTextComments={onOpenTextComments}
       >
-        <h2 data-comment-field="title">{interactionTitleForDisplay(interaction, t)}</h2>
+        <h2 data-comment-field="title">{interactionLabelForDisplay(interaction)}</h2>
       </InspectorCommentField>
       <InspectorCommentField
         field="body"

@@ -1,5 +1,6 @@
 import type { Story, TriggerCondition } from '@paralleax/shared';
 import type { TFunction } from 'i18next';
+import { interactionLabelForDisplay } from './features/story/interactionTitlePresentation';
 import { getStatTargets, statTargetLabel } from './storyStats';
 
 export function describeTriggerCondition(
@@ -8,10 +9,10 @@ export function describeTriggerCondition(
   t: TFunction,
 ): string {
   if ('interactionId' in condition) {
-    const title = story.interactions.find(({ id }) => id === condition.interactionId)?.title;
+    const target = story.interactions.find(({ id }) => id === condition.interactionId);
     return t(
       condition.hasBeenVisited ? 'player.condition.visited' : 'player.condition.notVisited',
-      { title: title ?? condition.interactionId },
+      { title: target ? interactionLabelForDisplay(target) : condition.interactionId },
     );
   }
   if ('locationId' in condition) {

@@ -2,7 +2,10 @@ import { useTranslation } from 'react-i18next';
 import type { Character, Interaction, StatValue, Story } from '@paralleax/shared';
 import { getItemDefinitionIdForInstance, getItemOwnerIdForInstance } from '@paralleax/shared';
 import { ChoiceLabelErrorIcon } from '../../story/ChoiceLabelError';
-import { simulationTitleHint } from '../../story/interactionTitlePresentation';
+import {
+  interactionLabelForDisplay,
+  simulationTitleHint,
+} from '../../story/interactionTitlePresentation';
 import type { SimulationArrival, SimulationArrivals } from '../simulation/useSimulationArrivals';
 
 function shouldShowPlayerContextPanel(
@@ -175,7 +178,7 @@ export function PlayerContextPanels({
                 {visitedIds.map((id, index) => (
                   <SimulationHistoryEntry
                     key={id}
-                    title={story.interactions.find((item) => item.id === id)?.title ?? ''}
+                    interaction={story.interactions.find((item) => item.id === id)}
                     arrival={simulationArrivals?.get(id, index)}
                   />
                 ))}
@@ -215,20 +218,25 @@ export function PlayerContextPanels({
 }
 
 function SimulationHistoryEntry({
-  title,
+  interaction,
   arrival,
 }: {
-  title: string;
+  interaction: Interaction | undefined;
   arrival: SimulationArrival | undefined;
 }) {
   const { t } = useTranslation();
-  if (title.trim()) {
-    return <li>{title}</li>;
+  if (!interaction) {
+    return null;
   }
-  const { hint, needsLabel } = simulationTitleHint(arrival, t);
+  const label = interactionLabelForDisplay(interaction);
+  if (interaction.title.trim()) {
+    return <li>{label}</li>;
+  }
+  const { needsLabel } = simulationTitleHint(arrival, t);
   return (
     <li className="interaction-label-fallback">
-      {needsLabel ? <ChoiceLabelErrorIcon /> : hint || t('player.untitledInteraction')}
+      {label}
+      {needsLabel ? <ChoiceLabelErrorIcon /> : null}
     </li>
   );
 }

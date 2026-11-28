@@ -3,7 +3,7 @@ import type { useTranslation } from 'react-i18next';
 import type { GraphDecoration, Interaction, Story } from '@paralleax/shared';
 import type { useStoryEditorPersistence } from '../../../hooks/useStoryEditorPersistence';
 import { isRealtimeEditableTarget } from '../../realtime/storyRealtime';
-import { interactionTitleForDisplay } from '../../story/interactionTitlePresentation';
+import { interactionLabelForDisplay } from '../../story/interactionTitlePresentation';
 import type { useStoryEditorSelection } from '../selection/useStoryEditorSelection';
 import type {
   CanvasContextMenuState,
@@ -28,7 +28,7 @@ function confirmGraphElementDeletion(
     }
     return window.confirm(
       t('editor.confirmDeleteInteraction', {
-        title: interactionTitleForDisplay(interaction, t),
+        title: interactionLabelForDisplay(interaction),
       }),
     );
   }
