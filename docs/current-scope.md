@@ -404,8 +404,9 @@ assertions are recorded as coverage references, not as passing results.
 - Login and registration retain standalone routes. `AuthPage` still renders a
   decorative showcase panel on wide layouts; the auth modal is not implemented.
 - Story cards display an abstract graph cover and the Interaction count to
-  readers and authors. The Story delete action calls the permanent delete API
-  directly; the interaction and comment confirmations do not cover it.
+  readers and authors. Story deletion asks for confirmation in the design-system
+  `ConfirmDialog`, which names the Story, focuses Cancel first and stays open
+  with a retry on failure; other confirmations still use the native prompt.
 - Story creation seeds a linked root and child and focuses the root in the
   editor. The graph creation helper still uses the English default title
   `New interaction`; the broader first-use discovery report has not been
