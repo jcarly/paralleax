@@ -24,6 +24,11 @@ encrypts it with `age` using a public recipient key, and uploads it to a private
 S3-compatible bucket outside Railway. The matching private age identity remains
 outside Railway. The container uses the official AWS CLI v2 for object storage
 operations, keeping an S3 SDK out of the web and API dependency tree.
+The backup image pins AWS CLI 2.42.5 from the official AWS distribution. Debian
+Bookworm's packaged AWS CLI 2.9.19 failed against the synthetic S3 endpoint:
+its bundled Botocore did not accept a valid HTTP `100 Continue` response without
+a reason phrase. The newer pinned client includes the upstream fix while keeping
+the storage adapter on the CLI's supported S3 interface.
 
 The job first checks that bucket versioning is enabled. It uploads each encrypted
 archive to a unique UTC-date staging key and downloads it to compare size and
