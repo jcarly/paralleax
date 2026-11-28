@@ -1,0 +1,57 @@
+FROM node:26-bookworm-slim
+
+ARG POSTGRES_CLIENT_MAJOR=18
+ARG AWS_CLI_VERSION=2.42.5
+ARG TARGETARCH
+
+ENV NODE_ENV=production
+ENV TZ=UTC
+ENV AWS_PAGER=
+
+WORKDIR /app
+
+RUN apt-get update \
+  && apt-get install --yes --no-install-recommends age ca-certificates curl tini unzip \
+  && case "${TARGETARCH:-amd64}" in \
+    amd64) aws_cli_arch=x86_64 ;; \
+    arm64) aws_cli_arch=aarch64 ;; \
+    *) echo "Unsupported AWS CLI architecture" >&2; exit 1 ;; \
+  esac \
+  && curl --fail --show-error --silent --location --retry 3 \
+    "https://awscli.amazonaws.com/awscli-exe-linux-${aws_cli_arch}-${AWS_CLI_VERSION}.zip" \
+    --output /tmp/awscli.zip \
+  && unzip -q /tmp/awscli.zip -d /tmp \
+  && /tmp/aws/install --install-dir /usr/local/aws-cli --bin-dir /usr/local/bin \
+  && aws --version 2>&1 | grep -F "aws-cli/${AWS_CLI_VERSION} " \
+  && rm -rf /tmp/aws /tmp/awscli.zip \
+  && install -d -m 0755 /usr/share/postgresql-common/pgdg \
+  && curl --fail --show-error --silent \
+    https://www.postgresql.org/media/keys/ACCC4CF8.asc \
+    --output /usr/share/postgresql-common/pgdg/apt.postgresql.org.asc \
+  && . /etc/os-release \
+  && echo "deb [signed-by=/usr/share/postgresql-common/pgdg/apt.postgresql.org.asc] https://apt.postgresql.org/pub/repos/apt ${VERSION_CODENAME}-pgdg main" \
+    > /etc/apt/sources.list.d/pgdg.list \
+  && apt-get update \
+  && apt-get install --yes --no-install-recommends "postgresql-client-${POSTGRES_CLIENT_MAJOR}" \
+  && pg_dump --version | grep -E " ${POSTGRES_CLIENT_MAJOR}([.]|$)" \
+  && pg_restore --version | grep -E " ${POSTGRES_CLIENT_MAJOR}([.]|$)" \
+  && psql --version | grep -E " ${POSTGRES_CLIENT_MAJOR}([.]|$)" \
+  && rm -rf /var/lib/apt/lists/*
+
+RUN npm install --global npm@12.0.1
+
+COPY --chown=node:node package.json ./package.json
+COPY --chown=node:node \
+  scripts/backup-postgres.mjs \
+  scripts/postgres-operations.mjs \
+  scripts/postgres-backup-entrypoint.mjs \
+  scripts/postgres-backup-archive.mjs \
+  scripts/postgres-backup-batch.mjs \
+  scripts/postgres-backup-policy.mjs \
+  scripts/postgres-backup-process.mjs \
+  scripts/postgres-backup-s3.mjs \
+  ./scripts/
+
+USER node
+
+ENTRYPOINT ["/usr/bin/tini", "--", "node", "scripts/postgres-backup-entrypoint.mjs"]
