@@ -75,9 +75,7 @@ export function PlayerChoices({
                   ref={editingChoiceInputRef}
                   className="choice-title-input"
                   aria-label={t('player.newOptionTitle')}
-                  placeholder={
-                    choiceLabel.needsLabel ? '' : interactionTitlePlaceholder(interaction, t)
-                  }
+                  placeholder={choiceLabel.needsLabel ? '' : interactionTitlePlaceholder(t)}
                   aria-invalid={choiceLabel.needsLabel ? true : undefined}
                   value={interaction.title}
                   onChange={(event) => {

@@ -2,6 +2,17 @@
 
 ## Unreleased
 
+- Untitled Interactions no longer show generated names (PAR-7, Lot A). The empty
+  title field shows one generic hint (`Title (optional)`, `Titre (facultatif)`,
+  `Titolo (facoltativo)`) instead of `Start`, `New interaction` or their
+  translations. Everywhere else (navigation list and search results, Simulation
+  history, deletion and save confirmations, link and condition pickers, graph
+  comment labels) an untitled Interaction is named by the start of its content,
+  or by `○` and four characters of its ID when it is empty, through one shared
+  `interactionLabelForDisplay`. Nothing is stored and existing Stories are
+  unchanged; the Reader's `Continue`, `Option N` and the author's missing-label
+  error are untouched.
+
 - Refined the PAR-21 staging proposal and ADR-051 (Proposed): separate image
   publication, manual staging validation and manual same-digest production
   promotion; clarified that the current tag workflow still deploys production

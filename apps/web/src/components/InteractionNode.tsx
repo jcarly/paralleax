@@ -4,6 +4,7 @@ import { useTranslation } from 'react-i18next';
 import { InteractionContext } from '../features/story/InteractionContext';
 import { ChoiceLabelErrorIcon } from '../features/story/ChoiceLabelError';
 import { InteractionLabel } from '../features/story/InteractionLabel';
+import { interactionLabelForDisplay } from '../features/story/interactionTitlePresentation';
 export interface InteractionNodeData extends Record<string, unknown> {
   title: string;
   body: string;
@@ -55,16 +56,10 @@ export function InteractionNode({ id, data }: NodeProps<Node<InteractionNodeData
   const d = data;
   useCreationHandleRegistration(id, d.onCreateChild !== undefined, d.onCreateParent !== undefined);
   const rootTriggerId = d.rootTriggerId;
-  const fallbackTitle = t(
-    rootTriggerId !== undefined && rootTriggerId.length > 0
-      ? 'interactionInspector.startTitlePlaceholder'
-      : 'interactionInspector.newTitlePlaceholder',
-  );
   const authoredTitle = d.title.trim();
   const needsChoiceLabel = d.needsChoiceLabel === true && !authoredTitle;
-  const title =
-    authoredTitle || (rootTriggerId !== undefined && rootTriggerId.length > 0 ? fallbackTitle : '');
-  const commentEntityTitle = authoredTitle || fallbackTitle;
+  const commentEntityTitle =
+    authoredTitle || interactionLabelForDisplay({ id, title: d.title, body: d.body });
   const characters = d.characters ?? [];
   const createParent = (event: NodeActionEvent) => {
     event.preventDefault();
@@ -171,12 +166,10 @@ export function InteractionNode({ id, data }: NodeProps<Node<InteractionNodeData
           isConnectable={false}
         />
       ))}
-      {title || needsChoiceLabel ? (
+      {authoredTitle || needsChoiceLabel ? (
         <InteractionLabel
-          label={title}
-          className={`interaction-node-label${authoredTitle ? '' : ' interaction-label-fallback'}${
-            needsChoiceLabel ? ' choice-label-error' : ''
-          }`}
+          label={authoredTitle}
+          className={`interaction-node-label${needsChoiceLabel ? ' choice-label-error' : ''}`}
           leadingIcon="→"
           suffix={
             <>

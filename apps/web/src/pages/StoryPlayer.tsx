@@ -1,3 +1,4 @@
+import { interactionLabelForDisplay } from '../features/story/interactionTitlePresentation';
 import { useCallback, useEffect, useMemo, useRef, useState, type FocusEvent } from 'react';
 import { useTranslation } from 'react-i18next';
 import { useLocation, useParams, useSearchParams } from 'react-router-dom';
@@ -637,7 +638,12 @@ export function StoryPlayer({
     () =>
       !story || !current
         ? []
-        : story.interactions.filter((interaction) => interaction.id !== current.id),
+        : story.interactions
+            .filter((interaction) => interaction.id !== current.id)
+            .map((interaction) => ({
+              id: interaction.id,
+              title: interactionLabelForDisplay(interaction),
+            })),
     [current, story],
   );
 

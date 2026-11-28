@@ -3,11 +3,11 @@ import { ReactFlowProvider, type Node, type NodeProps } from '@xyflow/react';
 import { afterEach, describe, expect, it } from 'vitest';
 import { InteractionNode, type InteractionNodeData } from './InteractionNode';
 
-function renderNode(data: Partial<InteractionNodeData>) {
+function renderNode(data: Partial<InteractionNodeData>, rootTriggerId?: string) {
   const props: NodeProps<Node<InteractionNodeData>> = {
     id: 'node-1',
     type: 'interaction',
-    data: { title: '', body: '', selected: false, ...data },
+    data: { title: '', body: '', selected: false, rootTriggerId, ...data },
     selected: false,
     dragging: false,
     draggable: true,
@@ -43,5 +43,17 @@ describe('InteractionNode choice label', () => {
 
     expect(screen.getByText('Leave')).toBeInTheDocument();
     expect(screen.queryByRole('img', { name: /Label required/ })).not.toBeInTheDocument();
+  });
+});
+
+describe('InteractionNode without a title', () => {
+  it('shows no generated title on a starting Interaction, only its content', () => {
+    renderNode({ body: '<p>The storm is coming</p>' }, 'trigger-1');
+
+    expect(screen.getByText('The storm is coming')).toBeInTheDocument();
+    expect(screen.queryByText('Start')).not.toBeInTheDocument();
+    expect(screen.queryByText('Départ')).not.toBeInTheDocument();
+    expect(screen.queryByText('New interaction')).not.toBeInTheDocument();
+    expect(document.querySelector('.interaction-node-label')).toBeNull();
   });
 });

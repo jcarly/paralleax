@@ -36,7 +36,7 @@ import {
 } from '../features/story/choiceLabelDiagnostics';
 import {
   choiceLabelForDisplay,
-  interactionTitleForDisplay,
+  interactionLabelForDisplay,
   interactionTitlePlaceholder,
 } from '../features/story/interactionTitlePresentation';
 
@@ -364,9 +364,9 @@ function InteractionInspectorView({
     }
   }, [editingDuration]);
   const characters = story.characters ?? [];
-  const interactionLinkTargets = story.interactions.filter(
-    (candidate) => candidate.id !== interaction.id,
-  );
+  const interactionLinkTargets = story.interactions
+    .filter((candidate) => candidate.id !== interaction.id)
+    .map((candidate) => ({ id: candidate.id, title: interactionLabelForDisplay(candidate) }));
   const statTargets = getStatTargets(story);
   const statEffects = interaction.statEffects ?? [];
   const availableStatTarget = statTargets.find(
@@ -400,7 +400,9 @@ function InteractionInspectorView({
   const durationTooltip = durationSummary;
   const optionDestinations = getOptionDestinations(story, interaction.id);
   const needsChoiceLabel = interactionNeedsChoiceLabel(story, interaction);
-  const displayedTitle = needsChoiceLabel ? '' : interactionTitleForDisplay(interaction, t);
+  const displayedTitle = needsChoiceLabel
+    ? ''
+    : interaction.title.trim() || interactionTitlePlaceholder(t);
   const effectUnavailableReasons: Record<EffectType, string | undefined> = {
     stat: availableStatTarget
       ? undefined
@@ -559,9 +561,7 @@ function InteractionInspectorView({
                   ? {
                       className: 'interaction-inspector-title-input',
                       'aria-label': t('interactionInspector.title'),
-                      placeholder: needsChoiceLabel
-                        ? ''
-                        : interactionTitlePlaceholder(interaction, t),
+                      placeholder: needsChoiceLabel ? '' : interactionTitlePlaceholder(t),
                       'aria-invalid': needsChoiceLabel ? true : undefined,
                       value: interaction.title,
                       onChange: (event) => {

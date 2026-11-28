@@ -126,7 +126,9 @@ first authoring journey. Keep optional redesign out of this gate.
   high for authors using a non-English interface; generated text appears at the
   start of a new graph branch. **Status:** one untranslated default is confirmed
   statically: `storyGraphCreationLayout.ts` assigns the literal `New interaction`.
-  A full inventory of generated defaults has not been completed. **Backlog:**
+  **Superseded (2026-11-28):** the product decision replaced translating the
+  default by removing generated names. Titles are never generated or stored; the
+  layout literal is a projection only; see the CHANGELOG entry. **Backlog:**
   new narrow item; the broader terminology/translation follow-up remains separate.
   **Dependencies:**
   existing English, French, and Italian translation catalogues.

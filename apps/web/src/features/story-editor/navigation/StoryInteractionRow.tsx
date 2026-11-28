@@ -1,6 +1,5 @@
 import type { Interaction } from '@paralleax/shared';
-import { useTranslation } from 'react-i18next';
-import { interactionTitleForDisplay } from '../../story/interactionTitlePresentation';
+import { interactionLabelForDisplay } from '../../story/interactionTitlePresentation';
 
 export function StoryInteractionRow({
   interaction,
@@ -17,8 +16,7 @@ export function StoryInteractionRow({
   onKeyDown?: (event: React.KeyboardEvent<HTMLButtonElement>) => void;
   onSelect: () => void;
 }) {
-  const { t } = useTranslation();
-  const title = interactionTitleForDisplay(interaction, t);
+  const title = interactionLabelForDisplay(interaction);
   return (
     <button
       type="button"

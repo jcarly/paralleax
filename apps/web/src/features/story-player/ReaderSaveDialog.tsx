@@ -12,7 +12,7 @@ import { api } from '../../api';
 import { apiErrorMessage } from '../../apiErrorMessages';
 import { handleModalDialogKeyDown } from '../../components/modalDialogKeyboard';
 import { ModalPortal } from '../../components/ModalPortal';
-import { interactionTitleForDisplay } from '../story/interactionTitlePresentation';
+import { interactionLabelForDisplay } from '../story/interactionTitlePresentation';
 
 export function ReaderSaveDialog({
   story,
@@ -62,10 +62,10 @@ export function ReaderSaveDialog({
       new Map(
         story.interactions.map((interaction) => [
           interaction.id,
-          interactionTitleForDisplay(interaction, t),
+          interactionLabelForDisplay(interaction),
         ]),
       ),
-    [story.interactions, t],
+    [story.interactions],
   );
 
   const snapshot = {
