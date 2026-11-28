@@ -416,21 +416,8 @@ it('opens a newly created story in the editor', async () => {
   expect(onStoryCreated).toHaveBeenCalledWith('story-3');
 });
 
-it('deletes a story from the list', async () => {
-  const user = userEvent.setup();
-  const confirm = vi.spyOn(window, 'confirm').mockReturnValue(false);
-  vi.mocked(api.listStories)
-    .mockResolvedValueOnce(storyPage([structuredClone(stories[0])]))
-    .mockResolvedValueOnce(storyPage([]));
-  vi.mocked(api.deleteStory).mockResolvedValue(undefined);
-
-  render(
-    <MemoryRouter>
-      <StoryList user={standardUser} />
-    </MemoryRouter>,
-  );
+async function openDeleteDialog(user: ReturnType<typeof userEvent.setup>) {
   await screen.findByRole('heading', { name: 'First story' });
-
   const firstCard = requireValue(
     screen.getByRole('heading', { name: 'First story' }).closest('article'),
     'first story card',
@@ -442,18 +429,93 @@ it('deletes a story from the list', async () => {
     'is-visible',
   );
   await user.click(deleteButton);
-  expect(confirm).toHaveBeenCalledWith('Delete “First story”? This cannot be undone.');
+  const dialog = await screen.findByRole('dialog', { name: 'Delete this story?' });
+  expect(dialog).toHaveAccessibleDescription('Delete “First story”? This cannot be undone.');
+  return { deleteButton, dialog };
+}
+
+function renderStoryList() {
+  render(
+    <MemoryRouter>
+      <StoryList user={standardUser} />
+    </MemoryRouter>,
+  );
+}
+
+it('story deletion: focuses Cancel and leaves the story untouched on cancel or Escape', async () => {
+  const user = userEvent.setup();
+  vi.mocked(api.listStories).mockResolvedValue(storyPage([structuredClone(stories[0])]));
+  renderStoryList();
+  const { deleteButton, dialog } = await openDeleteDialog(user);
+  expect(within(dialog).getByRole('button', { name: 'Cancel' })).toHaveFocus();
+
+  await user.keyboard('{Escape}');
+  expect(screen.queryByRole('dialog')).not.toBeInTheDocument();
+  await user.click(deleteButton);
+  await user.click(
+    within(await screen.findByRole('dialog')).getByRole('button', { name: 'Cancel' }),
+  );
+  expect(screen.queryByRole('dialog')).not.toBeInTheDocument();
   expect(api.deleteStory).not.toHaveBeenCalled();
   expect(screen.getByRole('heading', { name: 'First story' })).toBeInTheDocument();
+});
 
-  confirm.mockReturnValue(true);
-  await user.click(deleteButton);
+it('story deletion: deletes once and removes the card only after success', async () => {
+  const user = userEvent.setup();
+  vi.mocked(api.listStories)
+    .mockResolvedValueOnce(storyPage([structuredClone(stories[0])]))
+    .mockResolvedValueOnce(storyPage([]));
+  let finish: () => void = () => undefined;
+  vi.mocked(api.deleteStory).mockReturnValue(
+    new Promise<undefined>((resolve) => {
+      finish = () => {
+        resolve(undefined);
+      };
+    }),
+  );
+  renderStoryList();
+  const { dialog } = await openDeleteDialog(user);
 
+  const confirm = within(dialog).getByRole('button', { name: 'Delete' });
+  await user.click(confirm);
+  await user.click(confirm);
+  expect(confirm).toBeDisabled();
+  expect(within(dialog).getByRole('button', { name: 'Cancel' })).toBeDisabled();
+  await user.keyboard('{Escape}');
+  expect(screen.getByRole('dialog')).toBeInTheDocument();
+  expect(screen.getByRole('heading', { name: 'First story' })).toBeInTheDocument();
+
+  finish();
   await waitFor(() => {
     expect(screen.queryByRole('heading', { name: 'First story' })).not.toBeInTheDocument();
   });
+  expect(screen.queryByRole('dialog')).not.toBeInTheDocument();
+  expect(api.deleteStory).toHaveBeenCalledTimes(1);
   expect(api.deleteStory).toHaveBeenCalledWith('story-1');
   expect(api.listStories).toHaveBeenCalledTimes(2);
+});
+
+it('story deletion: stays open with an error after a failure and allows a retry', async () => {
+  const user = userEvent.setup();
+  vi.mocked(api.listStories)
+    .mockResolvedValueOnce(storyPage([structuredClone(stories[0])]))
+    .mockResolvedValueOnce(storyPage([]));
+  vi.mocked(api.deleteStory)
+    .mockRejectedValueOnce(new Error('network down'))
+    .mockResolvedValueOnce(undefined);
+  renderStoryList();
+  const { dialog } = await openDeleteDialog(user);
+
+  await user.click(within(dialog).getByRole('button', { name: 'Delete' }));
+  expect(await within(dialog).findByRole('alert')).toBeInTheDocument();
+  expect(screen.getByRole('heading', { name: 'First story' })).toBeInTheDocument();
+  expect(within(dialog).getByRole('button', { name: 'Delete' })).toBeEnabled();
+
+  await user.click(within(dialog).getByRole('button', { name: 'Delete' }));
+  await waitFor(() => {
+    expect(screen.queryByRole('heading', { name: 'First story' })).not.toBeInTheDocument();
+  });
+  expect(api.deleteStory).toHaveBeenCalledTimes(2);
 });
 
 it('creates the demo story catalog from the list', async () => {

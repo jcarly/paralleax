@@ -228,7 +228,7 @@ export type StoryListResultsProps = {
   isAuthenticated: boolean;
   retryLoading: () => void;
   loadMoreStories: () => void;
-  removeStory: (id: string) => Promise<void>;
+  removeStory: (id: string) => Promise<string | null>;
   clearFilters: () => void;
   openCreationDialog: (trigger: HTMLElement) => void;
 };

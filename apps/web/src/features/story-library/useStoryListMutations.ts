@@ -144,9 +144,9 @@ export function useStoryDeletion({
   const deletingStoryRef = useRef(false);
   const [deletingStoryId, setDeletingStoryId] = useState('');
   const removeStory = useCallback(
-    async (id: string) => {
+    async (id: string): Promise<string | null> => {
       if (deletingStoryRef.current) {
-        return;
+        return null;
       }
       deletingStoryRef.current = true;
       setDeletingStoryId(id);
@@ -157,8 +157,9 @@ export function useStoryDeletion({
         setStories((items) => items.filter((item) => item.id !== id));
         setTotalCount((count) => Math.max(0, count - 1));
         setRefreshVersion((version) => version + 1);
+        return null;
       } catch (caught) {
-        setError(await describeApiError(caught, t, t('library.deleteFailed')));
+        return await describeApiError(caught, t, t('library.deleteFailed'));
       } finally {
         deletingStoryRef.current = false;
         setDeletingStoryId('');

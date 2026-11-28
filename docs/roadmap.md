@@ -177,7 +177,7 @@ feedback.
 
 | #          | Task                                                       | Status                                                                                                                                       |
 | ---------- | ---------------------------------------------------------- | -------------------------------------------------------------------------------------------------------------------------------------------- |
-| 2          | Complete confirmed Lot A quick fixes                       | 1 of 3 implemented (Story deletion confirmation, still untested); localized default Interaction text and the "add a choice" wording remain   |
+| 2          | Complete confirmed Lot A quick fixes                       | 1 of 3 done (Story deletion confirmation, tested); untitled Interaction presentation and the "add a choice" audit remain                     |
 | 5          | Complete the valuable-project safety gate (P0)             | To do: legacy-data migration test, scheduled encrypted off-host `pg_dump` and restore drill, staging and HTTPS verification                  |
 | 8          | Deliver import diagnostics without server-side retention   | First lot: bounded preview; full bounded-memory download is a separate follow-up                                                             |
 | 11         | Make the Interaction inspector legible                     | To do: mockup validated by the author first, then implementation                                                                             |

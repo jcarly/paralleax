@@ -266,6 +266,19 @@ button:disabled {
 .ghost.danger {
   color: var(--color-danger);
 }
+.modal-dialog.confirm-dialog {
+  max-width: 28rem;
+}
+.modal-dialog-actions.confirm-dialog-actions {
+  display: flex;
+  justify-content: flex-end;
+  margin-top: 1rem;
+}
+.confirm-dialog-error {
+  margin: 0.75rem 0 0;
+  color: var(--color-danger);
+  font-size: var(--type-size-control);
+}
 .error {
   color: var(--color-error);
 }
