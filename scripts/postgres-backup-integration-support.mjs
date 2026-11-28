@@ -10,6 +10,24 @@ export const S3MOCK_IMAGE = process.env.BACKUP_TEST_S3_IMAGE ?? 'adobe/s3mock:5.
 
 const COMMAND_TIMEOUT_MS = 15 * 60 * 1000;
 const VOLUME_USER = `${process.getuid()}:${process.getgid()}`;
+const S3_ERROR_CLASSIFICATIONS = [
+  'ACCESS_DENIED',
+  'BUCKET_NOT_FOUND',
+  'CHECKSUM_REJECTED',
+  'ENDPOINT_INVALID',
+  'ENDPOINT_UNAVAILABLE',
+  'INVALID_ACCESS_KEY',
+  'OBJECT_TOO_SMALL',
+  'OPERATION_UNSUPPORTED',
+  'REGION_REJECTED',
+  'REMOTE_REJECTED',
+  'REQUEST_REJECTED',
+  'REQUEST_TIMEOUT',
+  'SERVICE_ERROR',
+  'SERVICE_UNAVAILABLE',
+  'SIGNATURE_REJECTED',
+  'THROTTLED',
+];
 const BACKUP_FAILURE_CODES = new Set([
   'ARCHIVE_INVALID',
   'BACKUP_FAILED',
@@ -33,6 +51,12 @@ const BACKUP_FAILURE_CODES = new Set([
   'S3_VERSIONING_CHECK_FAILED',
   'S3_VERSIONING_REQUIRED',
   'TEMPORARY_CLEANUP_FAILED',
+  ...S3_ERROR_CLASSIFICATIONS.flatMap((classification) => [
+    `S3_DOWNLOAD_${classification}`,
+    `S3_LIST_${classification}`,
+    `S3_UPLOAD_${classification}`,
+    `S3_VERSIONING_CHECK_${classification}`,
+  ]),
 ]);
 
 function dockerEnvironment() {

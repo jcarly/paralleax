@@ -18,6 +18,10 @@ test('synthetic backup integration exposes only allowlisted container failure co
     'INTEGRATION_BACKUP_FAILED',
   );
   assert.equal(
+    backupContainerErrorCode('{"event":"backup_failed","code":"S3_UPLOAD_INVALID_ACCESS_KEY"}'),
+    'S3_UPLOAD_INVALID_ACCESS_KEY',
+  );
+  assert.equal(
     backupContainerErrorCode('not json\n{"event":"unknown","code":"S3_UPLOAD_FAILED"}'),
     'INTEGRATION_BACKUP_FAILED',
   );

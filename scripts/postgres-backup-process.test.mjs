@@ -5,6 +5,7 @@ import { dirname, join } from 'node:path';
 import test from 'node:test';
 import { runBackupBatch } from './postgres-backup-batch.mjs';
 import { isProcessGroupRunning, runQuietly } from './postgres-backup-process.mjs';
+import { classifyS3Failure } from './postgres-backup-s3.mjs';
 
 const commandEnvironment = { PATH: process.env.PATH };
 const batchEnvironment = {
@@ -163,6 +164,30 @@ test('child process launch errors expose a safe structured error code', async ()
       operation: 'Synthetic command',
     }),
     (error) => error.code === 'PROCESS_START_FAILED' && !error.message.includes('/definitely'),
+  );
+});
+
+test('real child stderr is reduced to an allowlisted S3 error code', async () => {
+  const privateDiagnostic =
+    'upload failed for synthetic-object: private-access-key ' +
+    'An error occurred (InvalidAccessKeyId) when calling the PutObject operation';
+  const command = runQuietly(
+    process.execPath,
+    ['-e', `process.stderr.write(${JSON.stringify(privateDiagnostic)}); process.exitCode = 1;`],
+    {
+      environment: commandEnvironment,
+      operation: 'Synthetic S3 upload',
+      errorCode: 'S3_UPLOAD_FAILED',
+      failureCodeFromStderr: (stderr) => classifyS3Failure(stderr, 'S3_UPLOAD_FAILED'),
+    },
+  );
+
+  await assert.rejects(
+    command,
+    (error) =>
+      error.code === 'S3_UPLOAD_INVALID_ACCESS_KEY' &&
+      !error.message.includes('private-access-key') &&
+      !error.message.includes('synthetic-object'),
   );
 });
 

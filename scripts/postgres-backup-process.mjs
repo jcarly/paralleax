@@ -119,6 +119,9 @@ function createProcessState(options, resolve, reject) {
     captureOutput: options.captureOutput ?? false,
     output: '',
     outputBytes: 0,
+    stderr: '',
+    stderrBytes: 0,
+    failureCodeFromStderr: options.failureCodeFromStderr,
     failure: null,
     stopPromise: null,
     resolve,
@@ -179,13 +182,35 @@ function captureStdout(child, state) {
   });
 }
 
+function captureFailureCode(child, state) {
+  if (typeof state.failureCodeFromStderr !== 'function') {
+    return;
+  }
+  child.stderr.on('data', (chunk) => {
+    if (state.stderrBytes + chunk.length > MAX_COMMAND_OUTPUT_BYTES) {
+      return;
+    }
+    state.stderrBytes += chunk.length;
+    state.stderr += chunk.toString('utf8');
+  });
+}
+
 function completeFromExit(state, code, childSignal) {
   if (state.failure) {
     completeProcessState(state, state.failure);
   } else if (code === 0 && childSignal === null) {
     completeProcessState(state, null, state.output);
   } else {
-    completeProcessState(state, new BackupError(`${state.operation} failed`, state.errorCode));
+    let errorCode = state.errorCode;
+    try {
+      const candidate = state.failureCodeFromStderr?.(state.stderr);
+      if (typeof candidate === 'string' && /^[A-Z][A-Z0-9_]{1,63}$/.test(candidate)) {
+        errorCode = candidate;
+      }
+    } catch {
+      // Ignore diagnostic parsing errors and retain the operation's safe fallback code.
+    }
+    completeProcessState(state, new BackupError(`${state.operation} failed`, errorCode));
   }
 }
 
@@ -205,6 +230,7 @@ async function handleChildClose(child, state, code, childSignal) {
 
 function superviseChild(child, state) {
   captureStdout(child, state);
+  captureFailureCode(child, state);
   child.once('error', () =>
     completeProcessState(
       state,
@@ -233,7 +259,14 @@ function spawnCommand(command, args, options) {
     return spawn(command, args, {
       env: options.environment,
       detached: true,
-      stdio: options.captureOutput ? ['ignore', 'pipe', 'ignore'] : 'ignore',
+      stdio:
+        options.captureOutput || typeof options.failureCodeFromStderr === 'function'
+          ? [
+              'ignore',
+              options.captureOutput ? 'pipe' : 'ignore',
+              typeof options.failureCodeFromStderr === 'function' ? 'pipe' : 'ignore',
+            ]
+          : 'ignore',
       windowsHide: true,
     });
   } catch {

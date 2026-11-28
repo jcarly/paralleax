@@ -1,6 +1,45 @@
 import { BackupError } from './postgres-backup-policy.mjs';
 import { runQuietly, selectedEnvironment } from './postgres-backup-process.mjs';
 
+const AWS_ERROR_CLASSIFICATIONS = new Map([
+  ['AccessDenied', 'ACCESS_DENIED'],
+  ['AuthorizationHeaderMalformed', 'REGION_REJECTED'],
+  ['BadDigest', 'CHECKSUM_REJECTED'],
+  ['EntityTooSmall', 'OBJECT_TOO_SMALL'],
+  ['InternalError', 'SERVICE_ERROR'],
+  ['InvalidAccessKeyId', 'INVALID_ACCESS_KEY'],
+  ['InvalidArgument', 'REQUEST_REJECTED'],
+  ['InvalidDigest', 'CHECKSUM_REJECTED'],
+  ['InvalidRequest', 'REQUEST_REJECTED'],
+  ['NoSuchBucket', 'BUCKET_NOT_FOUND'],
+  ['NotImplemented', 'OPERATION_UNSUPPORTED'],
+  ['PermanentRedirect', 'REGION_REJECTED'],
+  ['RequestTimeout', 'REQUEST_TIMEOUT'],
+  ['ServiceUnavailable', 'SERVICE_UNAVAILABLE'],
+  ['SignatureDoesNotMatch', 'SIGNATURE_REJECTED'],
+  ['SlowDown', 'THROTTLED'],
+  ['XAmzContentSHA256Mismatch', 'CHECKSUM_REJECTED'],
+]);
+
+export function classifyS3Failure(stderr, fallbackCode) {
+  const match = stderr.match(/An error occurred \(([A-Za-z0-9]+)\) when calling the /);
+  let classification = match ? AWS_ERROR_CLASSIFICATIONS.get(match[1]) : null;
+  if (!classification && match) {
+    classification = 'REMOTE_REJECTED';
+  } else if (!classification && /Could not connect to the endpoint URL/i.test(stderr)) {
+    classification = 'ENDPOINT_UNAVAILABLE';
+  } else if (!classification && /Invalid endpoint/i.test(stderr)) {
+    classification = 'ENDPOINT_INVALID';
+  }
+  if (!classification) {
+    return fallbackCode;
+  }
+  const prefix = fallbackCode.endsWith('_FAILED')
+    ? fallbackCode.slice(0, -'_FAILED'.length)
+    : 'S3_OPERATION';
+  return `${prefix}_${classification}`;
+}
+
 function awsCommandEnvironment(configuration, environment) {
   return {
     ...selectedEnvironment(environment, [
@@ -54,7 +93,13 @@ async function uploadObject({
       '--metadata',
       `sha256=${sha256}`,
     ],
-    { environment, signal, operation: 'S3 upload', errorCode: 'S3_UPLOAD_FAILED' },
+    {
+      environment,
+      signal,
+      operation: 'S3 upload',
+      errorCode: 'S3_UPLOAD_FAILED',
+      failureCodeFromStderr: (stderr) => classifyS3Failure(stderr, 'S3_UPLOAD_FAILED'),
+    },
   );
 }
 
@@ -77,6 +122,7 @@ async function downloadObject({ configuration, endpoint, invoke, environment, ke
       signal,
       operation: 'S3 verification download',
       errorCode: 'S3_DOWNLOAD_FAILED',
+      failureCodeFromStderr: (stderr) => classifyS3Failure(stderr, 'S3_DOWNLOAD_FAILED'),
     },
   );
 }
@@ -98,6 +144,7 @@ async function readBucketVersioning({ configuration, endpoint, invoke, environme
       operation: 'S3 bucket versioning check',
       errorCode: 'S3_VERSIONING_CHECK_FAILED',
       captureOutput: true,
+      failureCodeFromStderr: (stderr) => classifyS3Failure(stderr, 'S3_VERSIONING_CHECK_FAILED'),
     },
   );
   try {
@@ -132,6 +179,7 @@ async function listPage({ configuration, endpoint, invoke, environment, prefix, 
     operation: 'S3 listing',
     errorCode: 'S3_LIST_FAILED',
     captureOutput: true,
+    failureCodeFromStderr: (stderr) => classifyS3Failure(stderr, 'S3_LIST_FAILED'),
   });
   try {
     return JSON.parse(output);

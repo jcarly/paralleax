@@ -7,6 +7,7 @@ import {
   validateConfiguration,
   validatePlainArchive,
 } from './postgres-backup-batch.mjs';
+import { classifyS3Failure } from './postgres-backup-s3.mjs';
 
 const environment = {
   BACKUP_DATABASE_URL:
@@ -128,4 +129,28 @@ test('S3 adapter checks versioning, paginates listings, and keeps secrets out of
     environment.AWS_SECRET_ACCESS_KEY,
   );
   assert.equal(calls.at(-1).options.environment.BACKUP_DATABASE_URL, undefined);
+});
+
+test('S3 failures map only known provider error names to safe diagnostic codes', () => {
+  assert.equal(
+    classifyS3Failure(
+      'An error occurred (InvalidAccessKeyId) when calling the PutObject operation: private detail',
+      'S3_UPLOAD_FAILED',
+    ),
+    'S3_UPLOAD_INVALID_ACCESS_KEY',
+  );
+  assert.equal(
+    classifyS3Failure(
+      'An error occurred (PrivateCredentialDetail) when calling the PutObject operation',
+      'S3_UPLOAD_FAILED',
+    ),
+    'S3_UPLOAD_REMOTE_REJECTED',
+  );
+  assert.equal(
+    classifyS3Failure(
+      'Could not connect to the endpoint URL: https://private-storage.example',
+      'S3_UPLOAD_FAILED',
+    ),
+    'S3_UPLOAD_ENDPOINT_UNAVAILABLE',
+  );
 });
