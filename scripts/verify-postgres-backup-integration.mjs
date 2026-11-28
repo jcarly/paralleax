@@ -48,11 +48,11 @@ async function startServiceContainers({ names, postgresEnvironmentPath, signal }
         '127.0.0.1::5432',
         POSTGRES_IMAGE,
       ],
-      { signal },
+      { signal, errorCode: 'INTEGRATION_SERVICE_START_FAILED' },
     ),
     runDocker(
       ['run', '--detach', '--name', names.s3, '--publish', '127.0.0.1::9090', S3MOCK_IMAGE],
-      { signal },
+      { signal, errorCode: 'INTEGRATION_SERVICE_START_FAILED' },
     ),
   ]);
   const failure = results.find((result) => result.status === 'rejected');
@@ -75,10 +75,11 @@ async function seedSyntheticDatabases(postgresName, signal) {
       '--set=ON_ERROR_STOP=1',
       "--command=CREATE TABLE synthetic_backup_rows (id integer PRIMARY KEY, payload text NOT NULL); INSERT INTO synthetic_backup_rows VALUES (1, 'synthetic-alpha'), (2, 'synthetic-beta');",
     ],
-    { signal },
+    { signal, errorCode: 'INTEGRATION_DATABASE_SEED_FAILED' },
   );
   await runDocker(['exec', postgresName, 'createdb', '--username=backup_test', 'restore_db'], {
     signal,
+    errorCode: 'INTEGRATION_DATABASE_SEED_FAILED',
   });
 }
 
@@ -95,7 +96,10 @@ async function createBucket({ s3EnvironmentPath, endpoint, signal }) {
       '--region',
       'test-region-1',
     ],
-    signal,
+    {
+      signal,
+      errorCode: 'INTEGRATION_S3_BUCKET_CREATE_FAILED',
+    },
   );
 }
 
@@ -114,7 +118,10 @@ async function setBucketVersioning({ s3EnvironmentPath, endpoint, signal }) {
       '--region',
       'test-region-1',
     ],
-    signal,
+    {
+      signal,
+      errorCode: 'INTEGRATION_S3_VERSIONING_ENABLE_FAILED',
+    },
   );
 }
 
@@ -133,8 +140,11 @@ async function verifyBucketVersioning({ s3EnvironmentPath, endpoint, signal }) {
       '--output',
       'json',
     ],
-    signal,
-    true,
+    {
+      signal,
+      captureOutput: true,
+      errorCode: 'INTEGRATION_S3_VERSIONING_CHECK_FAILED',
+    },
   );
   if (JSON.parse(result).Status !== 'Enabled') {
     throw new BackupError(
@@ -167,8 +177,11 @@ async function listDailyObject({ s3EnvironmentPath, endpoint, signal }) {
       '--output',
       'json',
     ],
-    signal,
-    true,
+    {
+      signal,
+      captureOutput: true,
+      errorCode: 'INTEGRATION_S3_OBJECT_LIST_FAILED',
+    },
   );
   const objectKey = JSON.parse(result).Contents?.[0]?.Key;
   if (!objectKey) {
@@ -194,8 +207,11 @@ async function verifyObjectVersion({ s3EnvironmentPath, endpoint, objectKey, sig
       '--output',
       'json',
     ],
-    signal,
-    true,
+    {
+      signal,
+      captureOutput: true,
+      errorCode: 'INTEGRATION_S3_OBJECT_VERSION_FAILED',
+    },
   );
   const versions = JSON.parse(result).Versions ?? [];
   const hasVersion = versions.some(

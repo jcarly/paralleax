@@ -22,12 +22,20 @@ function dockerEnvironment() {
   ]);
 }
 
-export function runDocker(args, { signal, captureOutput = false, tolerateFailure = false } = {}) {
+export function runDocker(
+  args,
+  {
+    signal,
+    captureOutput = false,
+    tolerateFailure = false,
+    errorCode = 'INTEGRATION_CONTAINER_FAILED',
+  } = {},
+) {
   return runQuietly('docker', args, {
     environment: dockerEnvironment(),
     signal,
     operation: 'Synthetic backup integration container',
-    errorCode: 'INTEGRATION_CONTAINER_FAILED',
+    errorCode,
     captureOutput,
     timeoutMs: COMMAND_TIMEOUT_MS,
   }).catch((error) => {
@@ -58,7 +66,11 @@ function hostPort(value) {
 }
 
 export async function publishedPort(containerName, port, signal) {
-  const output = await runDocker(['port', containerName, port], { signal, captureOutput: true });
+  const output = await runDocker(['port', containerName, port], {
+    signal,
+    captureOutput: true,
+    errorCode: 'INTEGRATION_PORT_LOOKUP_FAILED',
+  });
   return hostPort(output);
 }
 
@@ -133,7 +145,7 @@ export async function createAgeRecipient(workDirectory, signal) {
       '-c',
       'age-keygen --output /integration/identity 2>/dev/null && age-keygen -y /integration/identity > /integration/recipient && chmod 600 /integration/identity && cat /integration/recipient',
     ],
-    { signal, captureOutput: true },
+    { signal, captureOutput: true, errorCode: 'INTEGRATION_AGE_FAILED' },
   );
   const recipient = result.trim();
   if (!recipient.startsWith('age1')) {
@@ -145,7 +157,7 @@ export async function createAgeRecipient(workDirectory, signal) {
 export async function runBackupContainer(environmentPath, signal) {
   const output = await runDocker(
     ['run', '--rm', '--network=host', '--env-file', environmentPath, BACKUP_IMAGE],
-    { signal, captureOutput: true },
+    { signal, captureOutput: true, errorCode: 'INTEGRATION_BACKUP_CONTAINER_FAILED' },
   );
   const events = output
     .trim()
@@ -165,7 +177,11 @@ export async function runBackupContainer(environmentPath, signal) {
   }
 }
 
-export async function runAws(environmentPath, args, signal, captureOutput = false) {
+export async function runAws(
+  environmentPath,
+  args,
+  { signal, captureOutput = false, errorCode = 'INTEGRATION_S3_COMMAND_FAILED' } = {},
+) {
   return runDocker(
     [
       'run',
@@ -179,7 +195,7 @@ export async function runAws(environmentPath, args, signal, captureOutput = fals
       ...args,
       '--no-cli-pager',
     ],
-    { signal, captureOutput },
+    { signal, captureOutput, errorCode },
   );
 }
 
@@ -209,7 +225,7 @@ export async function downloadEncryptedObject({
       '-c',
       `aws s3api get-object --bucket '${bucket}' --key '${key}' --endpoint-url '${endpoint}' --region test-region-1 /integration/download.dump.age >/dev/null`,
     ],
-    { signal },
+    { signal, errorCode: 'INTEGRATION_DOWNLOAD_FAILED' },
   );
 }
 
@@ -236,7 +252,7 @@ export async function runRestoreAndReadData(workDirectory, environmentPath, sign
       '-c',
       command,
     ],
-    { signal, captureOutput: true },
+    { signal, captureOutput: true, errorCode: 'INTEGRATION_RESTORE_FAILED' },
   );
 }
 
