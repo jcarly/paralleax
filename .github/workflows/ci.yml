@@ -117,6 +117,7 @@ jobs:
               - 'packages/*/package.json'
             docker:
               - 'Dockerfile'
+              - 'Dockerfile.postgres-backup'
               - 'Dockerfile.dev'
               - '.dockerignore'
               - 'compose.production.yaml'
@@ -542,6 +543,22 @@ jobs:
 
       - name: Build production web image
         run: docker build --target web --build-arg VITE_SENTRY_RELEASE=ci-image-release --tag paralleax-web:ci .
+
+      - name: Build standalone PostgreSQL backup image
+        run: docker build --file Dockerfile.postgres-backup --tag paralleax-postgres-backup:ci .
+
+      - name: Verify age encryption round-trip with synthetic data
+        run: |
+          docker run --rm --entrypoint /bin/sh paralleax-postgres-backup:ci -eu -c '
+            temporary_directory="$(mktemp -d)"
+            trap "rm -rf \"$temporary_directory\"" EXIT
+            age-keygen --output "$temporary_directory/identity" 2>/dev/null
+            recipient="$(age-keygen -y "$temporary_directory/identity")"
+            printf "%s\n" "synthetic PostgreSQL archive" > "$temporary_directory/source"
+            age --encrypt --recipient "$recipient" --output "$temporary_directory/archive.age" "$temporary_directory/source"
+            age --decrypt --identity "$temporary_directory/identity" --output "$temporary_directory/restored" "$temporary_directory/archive.age"
+            cmp "$temporary_directory/source" "$temporary_directory/restored"
+          '
 
       - name: Verify native Story uploads and runtime configuration through production Nginx
         env:

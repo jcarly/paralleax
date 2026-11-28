@@ -1,0 +1,42 @@
+FROM node:26-bookworm-slim
+
+ARG POSTGRES_CLIENT_MAJOR=18
+
+ENV NODE_ENV=production
+ENV TZ=UTC
+ENV AWS_PAGER=
+
+WORKDIR /app
+
+RUN apt-get update \
+  && apt-get install --yes --no-install-recommends age awscli ca-certificates curl \
+  && install -d -m 0755 /usr/share/postgresql-common/pgdg \
+  && curl --fail --show-error --silent \
+    https://www.postgresql.org/media/keys/ACCC4CF8.asc \
+    --output /usr/share/postgresql-common/pgdg/apt.postgresql.org.asc \
+  && . /etc/os-release \
+  && echo "deb [signed-by=/usr/share/postgresql-common/pgdg/apt.postgresql.org.asc] https://apt.postgresql.org/pub/repos/apt ${VERSION_CODENAME}-pgdg main" \
+    > /etc/apt/sources.list.d/pgdg.list \
+  && apt-get update \
+  && apt-get install --yes --no-install-recommends "postgresql-client-${POSTGRES_CLIENT_MAJOR}" \
+  && pg_dump --version | grep -E " ${POSTGRES_CLIENT_MAJOR}([.]|$)" \
+  && pg_restore --version | grep -E " ${POSTGRES_CLIENT_MAJOR}([.]|$)" \
+  && psql --version | grep -E " ${POSTGRES_CLIENT_MAJOR}([.]|$)" \
+  && aws --version 2>&1 | grep -E 'aws-cli/2([.]|$)' \
+  && rm -rf /var/lib/apt/lists/*
+
+RUN npm install --global npm@12.0.1
+
+COPY --chown=node:node package.json ./package.json
+COPY --chown=node:node \
+  scripts/backup-postgres.mjs \
+  scripts/postgres-operations.mjs \
+  scripts/postgres-backup-batch.mjs \
+  scripts/postgres-backup-policy.mjs \
+  scripts/postgres-backup-process.mjs \
+  scripts/postgres-backup-s3.mjs \
+  ./scripts/
+
+USER node
+
+ENTRYPOINT ["node", "scripts/postgres-backup-batch.mjs"]

@@ -71,12 +71,15 @@ the provider before collecting tester responses.
   PostgreSQL 17 and 18 clients explicitly and restores on a PostgreSQL 17 and a
   PostgreSQL 18 service (production is configured for 18, running version to be confirmed); the commands refuse a client
   older than the server (PAR-19).
-- Configure monitored, encrypted, off-host PostgreSQL backup scheduling and
-  complete a recorded restoration drill in the selected production provider.
-  Selected approach (2026-11-19): a scheduled `npm run db:backup` (`pg_dump`),
-  encrypted and uploaded to object storage outside the hosting provider, with
-  a failure alert and a retention window. Provider-native backups may be added
-  for fast restores but do not replace the off-host copy.
+- Implemented PAR-22 foundation, tested locally with synthetic data: a
+  standalone cron image reuses `npm run db:backup`, validates before `age`
+  encryption, uploads to private S3-compatible storage, reads objects back for
+  SHA-256 verification, applies 14-daily/8-weekly retention, and reports through
+  an external heartbeat. No cron service, bucket, or monitor has been created
+  or configured; no real external backup exists. Keep the recovery gate open
+  until one is verified and monitored. Confirm the effective Railway SQL version
+  with `SHOW server_version` and `SHOW server_version_num` before scheduling it
+  (PAR-19). A complete restore drill remains PAR-23.
 - Implemented foundation: production requires an exact CORS origin, secure
   cookies, an explicit registration mode, and matching `Origin` headers for
   mutations. Add provider-managed staging/secrets and verify the complete HTTPS
