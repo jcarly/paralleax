@@ -2,6 +2,15 @@
 
 ## Unreleased
 
+- Story deletion now asks for confirmation in a design-system dialog instead of
+  the browser's native prompt (PAR-7, Lot A). The new generic `ConfirmDialog`
+  names the Story, states that deletion is irreversible, focuses Cancel first,
+  blocks double submission, and stays open with an error and a retry when the API
+  fails. The Story leaves the list only after a successful deletion. The other
+  native confirmations are unchanged. The dialog shell was extracted as
+  `ModalDialog` and reused by `RichTextEditorDialog`; focus returns to the
+  Story list after a deletion.
+
 - Refined the PAR-21 staging proposal and ADR-051 (Proposed): separate image
   publication, manual staging validation and manual same-digest production
   promotion; clarified that the current tag workflow still deploys production

@@ -1,10 +1,12 @@
-import type { ReactNode } from 'react';
+import { useState, type ReactNode } from 'react';
 import { useTranslation } from 'react-i18next';
 import type { StorySummary } from '@paralleax/shared';
 import { Link } from 'react-router-dom';
+import { ConfirmDialog } from '../../components/ConfirmDialog';
 import { FieldHelpTooltip } from '../../components/FieldHelpTooltip';
 import { CanvasActionIcon, type CanvasActionIconName } from '../../components/StoryCanvasToolbar';
 import { loadStoryEditor, loadStoryPlayer } from '../../pages/storyRouteLoaders';
+import type { StoryDeletionResult } from './useStoryListMutations';
 
 type StoryCardOnlyIconName = 'edit' | 'export' | 'access';
 type StoryCardIconName = CanvasActionIconName | StoryCardOnlyIconName;
@@ -16,7 +18,7 @@ export function StoryCard({
   deleteDisabled,
 }: {
   story: StorySummary;
-  remove: (id: string) => Promise<void>;
+  remove: (id: string) => Promise<StoryDeletionResult>;
   deleting: boolean;
   deleteDisabled: boolean;
 }) {
@@ -59,7 +61,7 @@ function StoryCardActions({
   deleteDisabled,
 }: {
   story: StorySummary;
-  remove: (id: string) => Promise<void>;
+  remove: (id: string) => Promise<StoryDeletionResult>;
   deleting: boolean;
   deleteDisabled: boolean;
 }) {
@@ -198,11 +200,12 @@ function StoryManageActions({
   deleteDisabled,
 }: {
   story: StorySummary;
-  remove: (id: string) => Promise<void>;
+  remove: (id: string) => Promise<StoryDeletionResult>;
   deleting: boolean;
   deleteDisabled: boolean;
 }) {
   const { t } = useTranslation();
+  const [confirming, setConfirming] = useState(false);
   return (
     <>
       <StoryCardIconLink
@@ -218,27 +221,69 @@ function StoryManageActions({
         className="product-ghost danger-text compact library-card-delete"
         disabled={deleteDisabled}
         onClick={() => {
-          confirmStoryDeletion(
-            story,
-            remove,
-            t('library.card.deleteConfirm', { title: story.title }),
-          );
+          setConfirming(true);
         }}
       >
         <CanvasActionIcon name="delete" />
       </FieldHelpTooltip>
+      {confirming ? (
+        <StoryDeletionDialog
+          story={story}
+          remove={remove}
+          onClose={() => {
+            setConfirming(false);
+          }}
+        />
+      ) : null}
     </>
   );
 }
 
-function confirmStoryDeletion(
-  story: StorySummary,
-  remove: (id: string) => Promise<void>,
-  message: string,
-) {
-  if (window.confirm(message)) {
-    void remove(story.id);
-  }
+function StoryDeletionDialog({
+  story,
+  remove,
+  onClose,
+}: {
+  story: StorySummary;
+  remove: (id: string) => Promise<StoryDeletionResult>;
+  onClose: () => void;
+}) {
+  const { t } = useTranslation();
+  const [pending, setPending] = useState(false);
+  const [error, setError] = useState('');
+  const confirm = async () => {
+    if (pending) {
+      return;
+    }
+    setPending(true);
+    setError('');
+    try {
+      const result = await remove(story.id);
+      if (result.status === 'deleted') {
+        // The card unmounts with the deleted Story, taking this dialog with it.
+        return;
+      }
+      // `busy` means another deletion is running: nothing was deleted.
+      setError(result.status === 'failed' ? result.message : t('library.deleteFailed'));
+    } catch {
+      setError(t('library.deleteFailed'));
+    }
+    setPending(false);
+  };
+  return (
+    <ConfirmDialog
+      title={t('library.card.deleteTitle')}
+      description={t('library.card.deleteConfirm', { title: story.title })}
+      confirmLabel={t('library.card.delete')}
+      cancelLabel={t('library.card.deleteCancel')}
+      closeLabel={t('library.card.deleteClose')}
+      destructive
+      pending={pending}
+      error={error}
+      onConfirm={() => void confirm()}
+      onCancel={onClose}
+    />
+  );
 }
 
 function formatDate(value: string, locale: string, unknownDate: string) {

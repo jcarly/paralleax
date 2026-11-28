@@ -90,11 +90,13 @@ first authoring journey. Keep optional redesign out of this gate.
 - **Confirm permanent Story deletion.** **Priority:** P0. **Effort:** 2–4 hours.
   **Impact / frequency:** low-frequency action with potentially total loss of a
   Story; the direct delete affordance is available on every manageable Story
-  card. **Status (2026-11-19):** implemented on 2026-11-05 with the browser's
-  native confirmation naming the Story (`StoryCard.tsx`); no library test covers
-  confirm/cancel yet, and the native dialog does not follow the design system.
-  Remaining: the focused test, and a design-system dialog if the
-  [design pass](#design-and-clarity-2026-11-19) replaces native dialogs. **Dependencies:** none. **Risk:** an unclear prompt or
+  card. **Status (2026-11-28):** done. The native prompt was replaced by the
+  design-system `ConfirmDialog` (see [Design system](design-system.md#confirmation-dialog-2026-11-28)),
+  verified by component tests (cancel, Escape, single submission, failure then
+  retry) and by a real-stack browser run (API + PostgreSQL, Chromium): Cancel has
+  the initial focus, Escape closes without deleting, a failed deletion keeps the
+  dialog open with the error, and the card disappears only after the retry
+  succeeds. The other native confirmations are unchanged. **Dependencies:** none. **Risk:** an unclear prompt or
   keyboard-inaccessible icon could still lead to accidental deletion.
   **Acceptance:** show an explicit, accessible delete icon/action and a localized
   confirmation naming the Story; cancel leaves the Story unchanged, confirm

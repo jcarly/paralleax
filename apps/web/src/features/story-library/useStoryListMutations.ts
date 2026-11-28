@@ -126,6 +126,9 @@ export function useDemoStoryCreation({
   }, [pending, resetLibraryView, setError, setPending, setStories, setTotalCount, t, user]);
 }
 
+export type StoryDeletionResult =
+  { status: 'deleted' } | { status: 'busy' } | { status: 'failed'; message: string };
+
 export function useStoryDeletion({
   setError,
   setStories,
@@ -144,9 +147,9 @@ export function useStoryDeletion({
   const deletingStoryRef = useRef(false);
   const [deletingStoryId, setDeletingStoryId] = useState('');
   const removeStory = useCallback(
-    async (id: string) => {
+    async (id: string): Promise<StoryDeletionResult> => {
       if (deletingStoryRef.current) {
-        return;
+        return { status: 'busy' };
       }
       deletingStoryRef.current = true;
       setDeletingStoryId(id);
@@ -157,8 +160,12 @@ export function useStoryDeletion({
         setStories((items) => items.filter((item) => item.id !== id));
         setTotalCount((count) => Math.max(0, count - 1));
         setRefreshVersion((version) => version + 1);
+        return { status: 'deleted' };
       } catch (caught) {
-        setError(await describeApiError(caught, t, t('library.deleteFailed')));
+        return {
+          status: 'failed',
+          message: await describeApiError(caught, t, t('library.deleteFailed')),
+        };
       } finally {
         deletingStoryRef.current = false;
         setDeletingStoryId('');

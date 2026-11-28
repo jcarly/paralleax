@@ -188,6 +188,9 @@ a {
   inset: 0;
   z-index: var(--z-modal);
 }
+.library-results:focus {
+  outline: none;
+}
 .modal-dialog-backdrop {
   position: fixed;
   inset: 0;
@@ -204,6 +207,23 @@ a {
   padding: 1.25rem;
   background: var(--color-surface);
   box-shadow: var(--shadow-player);
+}
+.modal-dialog-header {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 1rem;
+}
+
+.modal-dialog-header > div {
+  min-width: 0;
+}
+
+.modal-dialog-header .modal-dialog-close {
+  flex: 0 0 auto;
+  min-width: 2rem;
+  padding: 0.35rem;
+  font-size: 1.1rem;
 }
 .modal-dialog h2 {
   margin: 0 0 0.4rem;
@@ -265,6 +285,19 @@ button:disabled {
 }
 .ghost.danger {
   color: var(--color-danger);
+}
+.modal-dialog.confirm-dialog {
+  max-width: 28rem;
+}
+.modal-dialog-actions.confirm-dialog-actions {
+  display: flex;
+  justify-content: flex-end;
+  margin-top: 1rem;
+}
+.confirm-dialog-error {
+  margin: 0.75rem 0 0;
+  color: var(--color-danger);
+  font-size: var(--type-size-control);
 }
 .error {
   color: var(--color-error);

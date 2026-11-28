@@ -141,6 +141,30 @@ text. Long-form story content and prominent headings keep their contextual
 sizes. The catalogue examples use these tokens and are the reference for their
 displayed values.
 
+### Confirmation dialog (2026-11-28)
+
+`ConfirmDialog` (`apps/web/src/components/ConfirmDialog.tsx`) confirms an action
+in a modal built on `ModalDialog`, the shared shell extracted from
+`RichTextEditorDialog` (which now wraps it). `ModalDialog` and `ModalPortal` own
+layering, background isolation, the Tab trap, Escape, backdrop dismissal and
+focus return. Header and close-button styles are the generic `.modal-dialog-header`
+and `.modal-dialog-close`.
+
+- Title and description name the target and state when the action is
+  irreversible. Labels are explicit verbs, never "OK".
+- Cancel takes the initial focus, so Enter never confirms by accident.
+  `destructive` styles the confirm button with `.danger`.
+- While `pending`, the close button is disabled; Cancel and the confirm button use
+  `aria-disabled` so keyboard focus stays on the pressed button; Escape and the
+  backdrop do not dismiss it. This prevents double submission.
+- On failure the caller keeps the dialog open and passes `error`, shown with
+  `role="alert"`; the author can retry or cancel. A caller that throws must not
+  leave the dialog pending: Story deletion turns any exception into the error.
+- After a successful action whose opener disappears (a deleted card), the caller
+  moves focus to a stable region. The Story library focuses its results region.
+- Only Story deletion uses it today. Other `window.confirm` calls (comments,
+  saves, graph deletion, stat definitions) are migrated separately.
+
 ### Approved field presentation (2026-10-25)
 
 Use the shared field styles in `apps/web/src/components/formFields.css` for

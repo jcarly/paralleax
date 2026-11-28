@@ -153,8 +153,10 @@ test('registers, verifies email, creates a story, signs out, and signs back in',
 
   await expect(page.getByRole('heading', { name: 'New story', exact: true })).toBeVisible();
   await page.getByRole('button', { name: 'Close guide' }).click();
-  page.once('dialog', (dialog) => dialog.accept());
   await page.getByRole('button', { name: 'Delete' }).click();
+  const dialog = page.getByRole('dialog', { name: 'Delete this story?' });
+  await expect(dialog.getByRole('button', { name: 'Cancel' })).toBeFocused();
+  await dialog.getByRole('button', { name: 'Delete' }).click();
   await expect(page.getByRole('heading', { name: 'New story', exact: true })).toHaveCount(0);
 });
 
